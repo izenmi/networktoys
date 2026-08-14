@@ -3,6 +3,7 @@ name: build
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -30,32 +31,23 @@ jobs:
       - name: テスト
         run: dotnet test tests/PastelNet.Core.Tests/PastelNet.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
 
-  # Phase 0 限定のマトリクス。
-  # WPF は PublishSingleFile と PublishReadyToRun を併用すると起動に失敗する報告があり
-  # (dotnet/wpf#7282, #11436)、実機がないと判断できない。また WPF はトリミングできないため
-  # self-contained のサイズが大きい。圧縮すると縮むが R2R の起動高速化と打ち消し合う。
-  # 所要時間とサイズを実測して採用形を決める。確定したら単一構成に畳む。
-  publish:
+  # Phase 0 の実測（CI ランナー上）で決めた 2 構成。
+  #   単一exe + R2R      : 起動 663ms / メモリ 93.5MB / 124.8MB
+  #   ランタイム別途     : 起動 683ms / メモリ 91.2MB / 0.2MB
+  # 圧縮版(-p:EnableCompressionInSingleFile)はサイズが 58.6MB まで縮む代わりに
+  # メモリ 182.7MB・初回起動 5 秒になるため不採用。
+  build:
     runs-on: windows-latest
     needs: test
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: single-r2r
-            label: 単一exe + R2R
+          - name: win-x64
+            label: 単一exe（.NET 同梱）
             args: '--self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true'
-          - name: single-r2r-compressed
-            label: 単一exe + R2R + 圧縮
-            args: '--self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -p:EnableCompressionInSingleFile=true'
-          - name: r2r-only
-            label: R2R のみ（フォルダ配布）
-            args: '--self-contained true -p:PublishSingleFile=false -p:PublishReadyToRun=true'
-          - name: single-only
-            label: 単一exe のみ（R2R なし）
-            args: '--self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=false'
-          - name: framework-dependent
-            label: ランタイム別途（軽量版）
+          - name: win-x64-runtime-required
+            label: 軽量版（.NET ランタイムが別途必要）
             args: '--self-contained false -p:PublishSingleFile=true'
 
     steps:
@@ -76,8 +68,8 @@ jobs:
             -o publish/${{ matrix.name }}
           if ($LASTEXITCODE -ne 0) { throw "publish が失敗しました" }
 
-      # 自己診断はウィンドウを出さないので、対話デスクトップの有無に関係なく必ず動く。
-      # これが Phase 0 の合否判定であり、構成間の比較指標でもある。
+      # ウィンドウを実際に開いてレイアウトまで通す検査。XAML の誤りやフォント初期化の
+      # 不具合はコンパイルを通り抜けるので、ここが実質唯一の防波堤になる。
       - name: 自己診断 (--selftest)
         shell: pwsh
         working-directory: publish/${{ matrix.name }}
@@ -92,35 +84,19 @@ jobs:
             return [pscustomobject]@{ Ms = $sw.ElapsedMilliseconds; Code = $proc.ExitCode }
           }
 
-          # 単一ファイル版の初回起動はネイティブライブラリを %TEMP%\.net へ展開するため
-          # 遅い。1 回目（初回展開込み）と 2 回目（キャッシュ後）の両方を測る。
+          # 単一ファイル版の初回起動はネイティブライブラリを %TEMP%\.net へ展開するため遅い
           $first  = Invoke-SelfTest
           $second = Invoke-SelfTest
 
           if (Test-Path 'selftest.log') { Get-Content 'selftest.log' | Write-Host }
           if (Test-Path 'crash.log')    { Get-Content 'crash.log'    | Write-Host }
 
-          $sizeMb = [math]::Round(((Get-ChildItem -Recurse -File $PWD | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
-          $exeMb  = [math]::Round((Get-Item $exe).Length / 1MB, 1)
-
-          Write-Host "初回: $($first.Ms) ms / 2回目: $($second.Ms) ms / exe: ${exeMb} MB / 一式: ${sizeMb} MB"
-
-          # ランナーは実機より遅いので絶対値は参考値。構成間の相対比較に使う。
-          # マトリクスのジョブごとにサマリが分かれるため、各ジョブで表ごと出力する
-          @(
-            "### ${{ matrix.label }}"
-            ""
-            "| 自己診断 初回 | 2回目 | exe | 一式 |"
-            "|---|---|---|---|"
-            "| $($first.Ms) ms | $($second.Ms) ms | ${exeMb} MB | ${sizeMb} MB |"
-          ) | Add-Content -Path $env:GITHUB_STEP_SUMMARY
-
           if ($second.Code -ne 0) { throw "自己診断が失敗しました (exit $($second.Code))" }
 
-      # ランナーには対話デスクトップがある（crash.log の「対話セッション: True」で確認済み）。
-      # 実際にウィンドウを出して生存を確かめる。
+          "SELFTEST_FIRST=$($first.Ms)"  | Add-Content -Path $env:GITHUB_ENV
+          "SELFTEST_SECOND=$($second.Ms)" | Add-Content -Path $env:GITHUB_ENV
+
       - name: GUI 起動スモークテスト
-        id: gui
         shell: pwsh
         working-directory: publish/${{ matrix.name }}
         run: |
@@ -143,14 +119,52 @@ jobs:
 
           $mem = [math]::Round($proc.WorkingSet64 / 1MB, 1)
           Stop-Process -Id $proc.Id -Force
-          Write-Host "GUI 起動: $($sw.ElapsedMilliseconds) ms / メモリ: ${mem} MB / InputIdle: $ready"
 
-          @("", "GUI 起動: $($sw.ElapsedMilliseconds) ms ・ メモリ ${mem} MB") |
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY
+          $sizeMb = [math]::Round(((Get-ChildItem -Recurse -File $PWD | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
+
+          # ランナーは実機より遅いので絶対値は参考値。構成間の相対比較に使う
+          @(
+            "### ${{ matrix.label }}"
+            ""
+            "| GUI 起動 | メモリ | 配布サイズ | 自己診断 初回 | 2回目 |"
+            "|---|---|---|---|---|"
+            "| $($sw.ElapsedMilliseconds) ms | ${mem} MB | ${sizeMb} MB | $env:SELFTEST_FIRST ms | $env:SELFTEST_SECOND ms |"
+          ) | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+
+      # 検査で出た副産物は配布物に混ぜない
+      - name: 後片付け
+        shell: pwsh
+        run: Remove-Item 'publish/${{ matrix.name }}/selftest.log', 'publish/${{ matrix.name }}/crash.log' -ErrorAction SilentlyContinue
 
       - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: PastelNet-${{ matrix.name }}
           path: publish/${{ matrix.name }}
-          retention-days: 14
+          retention-days: 30
+
+  # v* タグを push したときだけ Release を作る
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          path: artifacts
+
+      - name: zip にまとめて SHA256 を出す
+        run: |
+          mkdir -p release
+          for dir in artifacts/*/; do
+            name=$(basename "$dir")
+            (cd "$dir" && zip -qr "../../release/${name}-${GITHUB_REF_NAME}.zip" .)
+          done
+          cd release && sha256sum *.zip | tee SHA256SUMS.txt
+
+      - name: Release を作成
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/* --generate-notes --repo "$GITHUB_REPOSITORY"

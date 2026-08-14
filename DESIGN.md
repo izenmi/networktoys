@@ -296,7 +296,21 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 <TieredPGO>true</TieredPGO>
 ```
 
-**注意点(いずれもCIで実測して確定させる)**
+### Phase 0 の実測結果(確定)
+
+GitHub Actions の windows-latest 上で 5 構成を実測した。実機はこれより速いはずなので絶対値は参考値。
+
+| 構成 | GUI起動 | メモリ | 配布サイズ | 採否 |
+|---|---|---|---|---|
+| **単一exe + R2R** | 663 ms | 93.5 MB | 124.8 MB | **採用(既定)** |
+| 単一exe のみ | 639 ms | 93.3 MB | 124.7 MB | R2R と差がないので R2R 有効のままにする |
+| R2R のみ(フォルダ配布) | 641 ms | 91.1 MB | 131.2 MB | 単一exeの利点がない |
+| 単一exe + 圧縮 | 720 ms | **182.7 MB** | 58.6 MB | 不採用。メモリ2倍・初回起動5秒 |
+| **ランタイム別途** | 683 ms | 91.2 MB | **0.2 MB** | **併せて配布**(サイズ重視の選択肢) |
+
+**`InvariantGlobalization=true` は使えない。** ICU を落とすと `MS.Internal.FontCache.MajorLanguages` の型初期化に失敗し、最初の TextBlock を測った瞬間に落ちる。厄介なことに `dotnet publish` は正常に通り、ウィンドウを表示するまで気づけない。しかも self-contained ではサイズも変わらなかった(ICU ファイル自体は同梱され、設定だけが無効化される)ため、得るものが何もない。
+
+**注意点**
 
 - `PublishTrimmed` は **WPFでは使えない**。複数の既知不具合あり([dotnet/wpf#4216](https://github.com/dotnet/wpf/issues/4216) 他)。サイズ削減は諦める
 - `PublishSingleFile` + `PublishReadyToRun` の同時指定で起動失敗する報告がある([dotnet/wpf#7282](https://github.com/dotnet/wpf/issues/7282), [dotnet/wpf#11436](https://github.com/dotnet/wpf/issues/11436))。**Phase 0 のCIで「両方ON」「R2Rのみ」「SingleFileのみ」の3構成をビルドし、スモークテストで起動するものを採用する**

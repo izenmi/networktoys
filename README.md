@@ -19,10 +19,12 @@ Phase 0（骨組みと CI の構築）。まだ実際の測定はできません
 
 [Actions](../../actions) の最新ビルドから成果物をダウンロードしてください。
 
-| 成果物 | 中身 |
-|---|---|
-| `PastelNet-single-*` | 単一 exe。.NET のインストール不要 |
-| `PastelNet-framework-dependent` | 軽量版。別途 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要 |
+| 成果物 | サイズ | 中身 |
+|---|---|---|
+| `PastelNet-win-x64` | 約 125MB | 単一 exe。.NET のインストール不要。こちらを推奨 |
+| `PastelNet-win-x64-runtime-required` | 約 0.2MB | 軽量版。別途 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要 |
+
+WPF はトリミングできないため、.NET を同梱すると 125MB になります。単一ファイルの圧縮でサイズを半分にはできますが、メモリ消費が倍（約 183MB）になり初回起動も 5 秒近くかかるため採用していません。
 
 ### SmartScreen の警告について
 
