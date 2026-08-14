@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>PastelNet</AssemblyName>
+    <RootNamespace>PastelNet.App</RootNamespace>
+    <Version>0.1.0</Version>
+
+    <!-- 管理者権限を要求しない / 高DPI対応を宣言する -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- PDB を exe に埋め込む。配布物が 1 ファイルで済み、例外の行番号も残る -->
+    <DebugType>embedded</DebugType>
+
+    <!-- 起動速度・省メモリのための設定。publish 固有の設定(SelfContained /
+         PublishSingleFile / PublishReadyToRun)は CI のコマンドラインで渡す。
+         Phase 0 で 3 構成を実測して採用形を決めるため、ここには書かない。 -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+    <!-- WPF はトリミング非対応。true にすると NETSDK1168 でビルドが失敗する。
+         PublishAot も同様に使えない。単一 exe のサイズは削れないものと割り切り、
+         「軽量」はファイルサイズではなく起動時間とメモリで満たす。 -->
+    <PublishTrimmed>false</PublishTrimmed>
+
+    <!-- composite R2R はサイズが激増するので使わない -->
+    <PublishReadyToRunComposite>false</PublishReadyToRunComposite>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PastelNet.Core/PastelNet.Core.csproj" />
+  </ItemGroup>
+
+</Project>

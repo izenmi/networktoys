@@ -1,0 +1,45 @@
+<!--
+    PastelNet ダークテーマ。Palette.xaml と同じキーを同じ意味で定義する。
+    色相はライトと揃え、彩度を落として明度を上げたパステルにしている。
+    テーマ切替は Phase 1 で実装する(この時点では未使用)。
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    mc:Ignorable="po">
+
+    <SolidColorBrush x:Key="Brush.Background"   Color="#2B2733" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Surface"      Color="#363042" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#3E3750" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Border"       Color="#4A4259" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Text"         Color="#EDE7F3" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#A79FB8" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#2F5D4A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#8FE3C0" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#5E4526" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#FFD08A" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#5E3230" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#FFA8A3" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#234C63" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#9AD5F5" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#3D4270" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#B9C0F0" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#7FB8D9" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#2C4457" po:Freeze="True" />
+
+    <FontFamily x:Key="Font.Ui">Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
+    <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, MS Gothic</FontFamily>
+    <CornerRadius x:Key="Radius.Card">10</CornerRadius>
+    <CornerRadius x:Key="Radius.Badge">7</CornerRadius>
+    <sys:Double x:Key="Size.Body">13</sys:Double>
+    <sys:Double x:Key="Size.Caption">11.5</sys:Double>
+
+</ResourceDictionary>

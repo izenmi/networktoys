@@ -1,0 +1,201 @@
+<Window x:Class="PastelNet.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PastelNet"
+        Width="1120" Height="720"
+        MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource Brush.Background}"
+        Foreground="{DynamicResource Brush.Text}"
+        FontFamily="{DynamicResource Font.Ui}"
+        FontSize="{DynamicResource Size.Body}"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
+
+    <Grid Margin="18,14,18,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ===== ヘッダ ===== -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,14">
+            <Border Background="{DynamicResource Brush.Accent.Bg}"
+                    CornerRadius="9" Width="30" Height="30"
+                    VerticalAlignment="Center">
+                <TextBlock Text="◔" FontSize="17"
+                           Foreground="{DynamicResource Brush.Accent.Fg}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="PastelNet" FontSize="19" FontWeight="SemiBold"
+                       Margin="10,0,0,0" VerticalAlignment="Center" />
+            <TextBlock Text="ぜんぶ同時に測る、ネットワーク診断ツール"
+                       Style="{StaticResource Caption}"
+                       Margin="12,0,0,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="VersionText" Text="v0.1.0"
+                       Style="{StaticResource Caption}"
+                       Margin="10,0,0,0" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- ===== 本体 ===== -->
+        <TabControl Grid.Row="1">
+
+            <!-- ---------- 監視 ---------- -->
+            <TabItem Header="監視">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Heading}"
+                                   Text="宛先の同時監視" />
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                   Margin="0,0,0,12"
+                                   TextWrapping="Wrap"
+                                   Text="下は表示イメージです。宛先ごとに独立した周期で ping を打つので、応答しない宛先が他の宛先を待たせません。Phase 1 で実装します。" />
+
+                        <!-- 一覧のヘッダ -->
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="86" />
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="130" />
+                                <ColumnDefinition Width="76" />
+                                <ColumnDefinition Width="76" />
+                                <ColumnDefinition Width="64" />
+                                <ColumnDefinition Width="*" MinWidth="120" />
+                                <ColumnDefinition Width="150" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="状態"   Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="1" Text="宛先"   Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="2" Text="IP"     Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="3" Text="RTT"    Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="平均"   Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="5" Text="ロス"   Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="6" Text="推移"   Style="{StaticResource Caption}" Margin="12,0,0,0" />
+                            <TextBlock Grid.Column="7" Text="コメント" Style="{StaticResource Caption}" />
+                        </Grid>
+                        <Border DockPanel.Dock="Top" Height="1"
+                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,4" />
+
+                        <StackPanel x:Name="MockRows" VerticalAlignment="Top" />
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ---------- スキャン ---------- -->
+            <TabItem Header="スキャン">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Heading}" Text="IP スキャン" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Text="スキャン範囲は次の書き方を受け付ける予定です。実行前に対象ホスト数を表示し、既定 4096 件を超える場合は確認します。Phase 3 で実装します。" />
+                        <Border Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="9"
+                                Padding="12" Margin="0,10,0,0">
+                            <TextBlock Style="{StaticResource Mono}" LineHeight="20">
+                                192.168.1.0/24<LineBreak />
+                                192.168.1.1-192.168.1.100<LineBreak />
+                                192.168.1.1-100<LineBreak />
+                                10.0.0.0/24, 10.0.1.0/24
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ---------- DNS ---------- -->
+            <TabItem Header="DNS">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Heading}" Text="DNS テスト" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Text="同じ名前を複数の DNS サーバへ同時に問い合わせ、結果を横並びで比較します。A / AAAA / CNAME / MX / NS / TXT / SOA / SRV / PTR に対応。Phase 2 で実装します。" />
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ---------- 経路 ---------- -->
+            <TabItem Header="経路">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Heading}" Text="traceroute" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Text="TTL 1〜30 を並列に投げるので、経路全体が一度に埋まります。逆引きは後追いで解決し、判明した行から順に差し込みます。Phase 2 で実装します。" />
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ---------- 無線 ---------- -->
+            <TabItem Header="無線">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Heading}" Text="無線 LAN" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Text="接続中 AP の詳細、RSSI の時系列、周辺 AP のチャンネル混雑を表示します。Windows のスキャン頻度制限があるため、周辺 AP の更新は既定 30 秒間隔です。Phase 4 で実装します。" />
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ---------- 記録 ---------- -->
+            <TabItem Header="記録">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Heading}" Text="記録とレポート" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Text="測定結果はセッション単位で保存し、グラフ入りの HTML と CSV に書き出せます。HTML は 1 ファイル完結なのでそのままメールに添付できます。Phase 6 で実装します。" />
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ---------- 配色(Phase 0 の確認用。実装が進んだら削除する) ---------- -->
+            <TabItem Header="配色">
+                <Border Style="{StaticResource Card}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Heading}" Text="パステル配色の確認" />
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,14"
+                                       Text="この画面はモニタによる見え方を確認するためのものです。地色と文字色は必ずペアで使い、地色を敷くのは状態バッジだけにします。確認が済んだらこのタブは削除します。" />
+
+                            <TextBlock Text="状態バッジ" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <WrapPanel Margin="0,0,0,18">
+                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Ok.Bg}" Margin="0,0,8,8">
+                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Ok.Fg}" Text="● 応答" />
+                                </Border>
+                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Warn.Bg}" Margin="0,0,8,8">
+                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Warn.Fg}" Text="▲ 遅延" />
+                                </Border>
+                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Error.Bg}" Margin="0,0,8,8">
+                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Error.Fg}" Text="✕ 不達" />
+                                </Border>
+                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Info.Bg}" Margin="0,0,8,8">
+                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Info.Fg}" Text="◌ 測定中" />
+                                </Border>
+                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Accent.Bg}" Margin="0,0,8,8">
+                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Accent.Fg}" Text="◆ 選択中" />
+                                </Border>
+                            </WrapPanel>
+
+                            <TextBlock Text="色の一覧" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <UniformGrid x:Name="SwatchGrid" Columns="5" Margin="0,0,0,18" />
+
+                            <TextBlock Text="ボタンと入力欄" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="測定を開始" Margin="0,0,8,0" />
+                                <Button Content="停止" Style="{StaticResource Button.Subtle}" Margin="0,0,8,0" />
+                                <TextBox Width="220" Text="192.168.1.0/24" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </TabItem>
+        </TabControl>
+
+        <!-- ===== ステータスバー ===== -->
+        <Border Grid.Row="2" Margin="0,12,0,0" Padding="12,7"
+                Background="{DynamicResource Brush.Surface}"
+                BorderBrush="{DynamicResource Brush.Border}"
+                BorderThickness="1"
+                CornerRadius="9">
+            <StackPanel x:Name="StatusBarPanel" Orientation="Horizontal" />
+        </Border>
+    </Grid>
+</Window>

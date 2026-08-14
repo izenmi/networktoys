@@ -1,0 +1,332 @@
+# PastelNet — Windowsネイティブ ネットワーク診断ツール
+
+## Context
+
+現場のネットワーク調査で使われている **EXPing** には決定的な不満がある: pingが1宛先ずつ逐次実行されるため、宛先が増えるほど結果が出るまで待たされる。これを **全宛先同時並列** にするのが本ツールの第一の目的。
+
+あわせて、現場で別々のツールを立ち上げ直す手間(TCP疎通確認、DNS、traceroute、Wi-Fi電波状況)を1つのアプリに統合し、測定結果をそのまま証跡として残せるようにする。見た目はかわいいパステルカラーで、EXPingの素っ気なさとは対照的な、長時間眺めても疲れないUIを目指す。
+
+完全な新規プロジェクト。このワークスペースにC#/.NETの資産もWindows向けCIも存在しないため、ゼロからの立ち上げになる。
+
+## 確定した前提
+
+| 項目 | 決定 | 理由 |
+|---|---|---|
+| 技術 | C# + WPF + **.NET 10 (LTS)** | Wi-Fi/ICMP/TCP/DNSがすべて標準API・P-Invokeで素直に叩ける。単一プロセスで追加ランタイム不要 |
+| 配布 | self-contained 単一exe | 起動0.3〜0.6秒、メモリ60〜90MB目標 |
+| ビルド | GitHub Actions `windows-latest` | 開発環境はLinux devcontainerでdotnet SDK未導入 |
+| リポジトリ | 新規 `izenmi/pastelnet` (public) | 既存プロジェクトとは独立 |
+
+**.NET 10 を選ぶ理由**: .NET 9 は2026年11月10日にサポート終了(3ヶ月後)。.NET 10 は LTS で2028年11月まで。
+
+### 最大の制約 — ローカルで実行検証できない
+
+開発コンテナはLinuxで、Windows側ドライブも見えず dotnet SDK も無い。**私はexeを一度も実行できない**。対策を設計に組み込む:
+
+1. **ロジックをWindows非依存プロジェクトに分離** — IP範囲パース、MOS計算、OUI解決、レポート生成など「ネットワークにもUIにも触らない純粋関数」を `PastelNet.Core` (net10.0) に切り出し、xUnitでCI実行する。バグの大半をここで潰す。
+2. **CIスモークテスト** — GitHub-hosted の windows-latest はグラフィカルセッションを持つので、publish した exe を実際に起動し、5秒後にプロセスが生きていることを確認して終了させる。さらに `--selftest` 引数で全サービスを初期化して即終了するモードを作り、終了コードで判定する。
+3. **こまめにCIへ通す** — 後述のフェーズごとに必ずグリーンにしてから次へ進む。
+
+---
+
+## スコープ
+
+### 必須機能
+1. 宛先リストの編集(ホスト名/IP/コメント/グループ)
+2. **複数宛先への同時並列 ping** ← 最重要
+3. パステルカラーのUI
+4. TCP ping(任意ポートへのconnect所要時間)
+5. 無線LAN情報の取得(SSID/BSSID/RSSI/リンク速度/チャンネル/認証方式)
+6. テスト結果の保存
+7. DNSテスト
+8. traceroute
+9. わかりやすい結果表示
+10. 軽量・高速起動・低リソース
+
+### 採用した追加機能
+- **IPスキャン(範囲指定)** — CIDR / 開始-終了IP / 複数行指定
+- **ネットワーク自動探索** — サブネット並列pingスイープ、ARPからMAC・ベンダー名(OUI)解決、簡易ポートスキャン
+- **回線品質の計測** — ジッタ/パケットロスからのMOS値、traceroute定期実行による経路変化検知、Path MTU探索、Wi-Fiチャンネル混雑ビュー
+- **現場レポート出力** — グラフ入りHTML/CSVエクスポート、SSID/IPセグメント検知による宛先セット自動切替(プロファイル)
+
+### 採用しないもの
+タスクトレイ常駐、トースト通知、障害タイムライン。
+※ レイテンシのスパークライン程度の可視化は「わかりやすい表示」の一部として含める。
+
+---
+
+## プロジェクト構成
+
+```
+pastelnet/
+├── PastelNet.sln
+├── src/
+│   ├── PastelNet.Core/            # net10.0 — Windows非依存・テスト対象
+│   │   ├── Addressing/            # IpRangeParser, Cidr, IpMath
+│   │   ├── Quality/               # JitterCalculator, MosScore, LossStats
+│   │   ├── Oui/                   # OuiLookup + oui.tsv.gz(埋め込みリソース)
+│   │   ├── Reporting/             # HtmlReportBuilder, CsvWriter, SvgSparkline
+│   │   └── Models/                # PingSample, Target, ScanResult, Profile …
+│   └── PastelNet.App/             # net10.0-windows — WPF本体
+│       ├── App.xaml(.cs)          # --selftest 引数の処理もここ
+│       ├── Views/                 # MainWindow + 各タブのView
+│       ├── ViewModels/
+│       ├── Services/              # 実際にネットワークを叩く層
+│       ├── Interop/               # NativeMethods(iphlpapi)
+│       └── Resources/             # Palette.xaml, Controls.xaml, Icons.xaml
+├── tests/
+│   └── PastelNet.Core.Tests/      # xUnit — CIで必ず実行
+└── .github/workflows/build.yml
+```
+
+`PastelNet.App` は `PastelNet.Core` を参照する。逆参照は禁止(Coreがテスト可能であり続けるため)。
+
+---
+
+## 依存パッケージ(最小限に絞る)
+
+| パッケージ | 用途 | 備考 |
+|---|---|---|
+| `CommunityToolkit.Mvvm` | MVVM(`ObservableProperty` / `RelayCommand` のソースジェネレータ) | リフレクション不要で軽い |
+| `ManagedNativeWifi` **3.0.2** | Native Wifi API のラッパ | **依存パッケージなし**。これ以外の選択肢は自前P/Invokeになる |
+| `DnsClient` **1.8.0** | 任意レコードのDNS照会 | netstandard2.0、アクティブメンテ。A/AAAA/CNAME/MX/NS/TXT/SOA/SRV/PTR 等に対応 |
+| `xunit` (テストのみ) | Coreのユニットテスト | |
+
+グラフ描画・JSON・HTTP・SQLiteのライブラリは**入れない**(標準機能と自前実装で足りる)。バージョンは実装時に最新安定版を再確認する。
+
+---
+
+## 各機能の実装方式
+
+### ICMP ping — 並列実行の設計(本ツールの核)
+
+`System.Net.NetworkInformation.Ping` を使う。Windowsでは内部的に `IcmpSendEcho` を呼ぶため **管理者権限は不要**。
+
+重要な設計判断: **「全宛先を1ラウンドずつ Task.WhenAll で回す」のではなく、宛先ごとに独立した周期ループを持たせる。**
+ラウンド同期方式だと、タイムアウトする1宛先が他の全宛先を待たせてしまい、EXPingと同じ待たされ感が残る。宛先ごとに `PeriodicTimer` で独立して回せば、死んでいるホストが他に一切影響しない。
+
+- `Ping` インスタンスはスレッドセーフでないため **宛先ごとに1インスタンス**を保持し使い回す
+- 同時実行数は `SemaphoreSlim` で制限(既定64、設定で変更可)。数百宛先でもスレッドプールを枯渇させない
+- 各宛先の履歴は**固定長リングバッファ**(既定300サンプル)。無制限に貯めない
+- ホスト名は起動時に一度だけ解決してIPをキャッシュ。毎回DNSを引かない(EXPingより速い理由のひとつ)
+
+### UIへの反映(ここを外すと重くなる)
+
+- 測定スレッドから直接 `ObservableCollection` を触らない
+- 結果はロックフリーのキューに積み、**UI側で16ms間隔にまとめて反映**(1宛先1更新だと数百宛先で描画が破綻する)
+- 一覧は `DataGrid` ではなく `ItemsControl` + `VirtualizingStackPanel`(`IsVirtualizing=True`, `VirtualizationMode=Recycling`)
+- スパークラインは `Polyline` ではなく `DrawingVisual` への直接描画(数百個並べても軽い)
+
+### TCP ping
+
+`Socket.ConnectAsync` + `Stopwatch`、`CancellationTokenSource` でタイムアウト。
+**結果を3状態で区別して表示する**: `Open`(接続成功) / `Refused`(RSTが返る=ホストは生きているがポートは閉) / `Timeout`(無応答)。この区別は現場の切り分けで効くので、色も分ける。
+
+### DNS
+
+`System.Net.Dns` は A/AAAA/PTR しか引けない。任意レコードには **DnsClient.NET** (NuGet, MIT) を使う。
+DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由は **問い合わせ先DNSサーバを指定できる**こと。現場では「社内DNSでは引けるが外部DNSでは引けない」といった切り分けが必要になる。応答時間の計測も込みで取れる。
+
+- 対応レコード: A / AAAA / CNAME / MX / NS / TXT / SOA / SRV / PTR
+- サーバ指定: システム既定 / 手入力 / よく使うパブリックDNS(8.8.8.8, 1.1.1.1)のプリセット
+- 同じ名前を複数サーバに同時に投げて**結果を横並び比較**できるようにする(これはEXPingにない価値)
+
+### traceroute
+
+`Ping` + `PingOptions { Ttl = n, DontFragment = true }` で実装。
+ここも**TTL 1〜30 を並列に投げる**。逐次だと30ホップ分の待ち時間が積み上がる。逆引き(PTR)は経路表示をブロックしないよう後追いで非同期解決し、解決でき次第UIに差し込む。
+
+### Wi-Fi
+
+**ManagedNativeWifi 3.0.2**(依存なし、Native Wifi APIのマネージドラッパ)を使用。
+
+- 接続中: SSID / BSSID / シグナル品質(%) / RSSI(dBm) / チャンネル / 帯域 / 認証・暗号方式 / 送受信リンク速度
+- 周辺AP: `ScanNetworksAsync()`。**Windowsにはスキャン頻度の制限がある**ため、自動更新は最短でも10秒間隔、既定30秒とする(短すぎるとOSが黙って古い結果を返す)
+- チャンネル混雑ビュー: 2.4GHz/5GHz/6GHz帯ごとに、チャンネル軸 × RSSI の山型グラフを重ねて描画。自分のAPを濃色、他をパステルの半透明で
+- RSSI時系列: 接続中APのRSSIを1秒間隔でスパークライン表示(電波の弱い場所を歩いて特定する用途)
+
+### ARP / OUIベンダー解決
+
+- ARPテーブルは `arp -a` のパースではなく **iphlpapi.dll の `GetIpNetTable2`** を P/Invoke。ロケール非依存で堅牢
+- OUIは IEEE の MA-L 登録簿を前処理して `先頭3バイト(hex) → ベンダー名` の最小TSVにし、**gzip して埋め込みリソース**化(生4MB → 約400KB)。CIでのネット取得は不安定なので**前処理済みファイルをリポジトリにコミット**する
+- 更新用に、TSVを再生成する小さなスクリプトを `tools/` に置く(手動実行)
+
+### IPスキャン(範囲指定)
+
+入力欄は1つで、複数の書式を受け付ける(パーサは `PastelNet.Core` に置きテストする):
+
+```
+192.168.1.0/24              CIDR
+192.168.1.1-192.168.1.100   開始-終了
+192.168.1.1-100             最終オクテットのみの短縮
+192.168.1.10                単体
+10.0.0.0/24, 10.0.1.0/24    カンマ区切り(複数行入力も可)
+```
+
+- 実行前に**対象ホスト数を表示**して確認させる(`/16` を誤爆すると65534件になる)
+- 上限を設ける(既定4096件、超える場合は警告して続行可否を問う)
+- 並列ICMP + 応答があったホストにARP照会 → MAC/ベンダー名、逆引き、任意でポートスキャン
+- 現在のPCのIPとサブネットマスクから**既定値を自動入力**しておく
+
+### 簡易ポートスキャン
+
+- 既定は「よく使う22ポート」(22/80/443/445/3389/…)のプリセット。全65535は既定にしない
+- 同時接続数を制限(既定256)。無制限だとWindowsの一時ポートを食い潰す
+- **ウイルス対策ソフト・EDRに検知される可能性がある**ため、UIに注意書きを出し、機能自体を設定でOFFにできるようにする
+
+### 回線品質
+
+- **ジッタ**: RFC 3550 の移動平均方式 `J += (|D| - J) / 16`
+- **パケットロス率**: 直近N回のウィンドウで算出
+- **MOS値**: E-model(ITU-T G.107)の簡易版。R値 → MOS に変換し、5段階を色で表示。「遅延・ジッタ・ロスから見た通話品質の目安」として提示する(あくまで推定値である旨をUIに明記)
+- **Path MTU探索**: `DontFragment=true` でペイロード長を二分探索。1500→実効値を10回程度の試行で特定
+- **経路変化検知**: tracerouteを定期実行し、前回のホップ列と差分を取る。変化したらその行をハイライトし、変化履歴を残す
+
+### 永続化
+
+**SQLiteは入れない**(軽量要件を優先)。
+
+- 宛先リスト / 設定 / プロファイル: JSON。`System.Text.Json` の **source generator** を使いリフレクションを回避(起動速度に効く)
+- 測定結果: セッション単位の **JSONL**(1行1サンプル)。追記のみなので軽く、途中でクラッシュしても壊れない
+- 保存先: `%APPDATA%\PastelNet\`(`targets.json`, `settings.json`, `profiles.json`, `sessions\YYYYMMDD-HHmmss.jsonl`)
+- 古いセッションは既定30日で自動削除(設定可)
+
+### レポート出力
+
+外部ライブラリを使わず**自前でHTMLを生成**し、グラフは**インラインSVG**で描く(この方式は既存プロジェクトの「依存ゼロ自作SSG」と同じ流儀)。
+
+- 内容: 測定日時 / 実施者メモ / 接続環境(SSID・IP・GW・DNS) / 宛先ごとの成否・RTT統計・スパークライン / traceroute結果 / DNS結果 / スキャン結果一覧
+- 1ファイル完結(画像もCSSも埋め込み)なのでメール添付でそのまま送れる
+- CSVも同時出力(Excelで加工したい人向け。BOM付きUTF-8)
+
+### プロファイル(接続環境による自動切替)
+
+接続中SSIDまたは自PCのIPセグメントを条件に、宛先リストのセットを自動で切り替える。
+例: `SSID=office-wifi → 社内サーバ群`、`192.168.10.0/24 → A社現場`。
+検知したら**自動で切り替えず、まず画面上部に「A社現場のプロファイルに切り替えますか?」と控えめに提案する**(勝手に切り替わると事故になる)。
+
+---
+
+## UI構成
+
+### 画面
+
+上部にタブ(またはサイドのアイコンバー)、下部に共通ステータスバー(現在の接続環境: SSID / IP / GW / DNS)。
+
+| タブ | 内容 |
+|---|---|
+| 監視 | 宛先一覧 + 並列ping。各行に 状態バッジ / 最新RTT / 平均 / ロス率 / スパークライン。既定画面 |
+| スキャン | IP範囲入力 → 結果一覧(IP / ホスト名 / MAC / ベンダー / 開放ポート)。ここから宛先へ一括追加 |
+| DNS | 名前 + レコード種別 + サーバ(複数)→ 横並び比較 |
+| 経路 | traceroute。ホップ一覧 + 経路変化の履歴 |
+| 無線 | 接続中AP詳細 / RSSI時系列 / 周辺APのチャンネル混雑グラフ |
+| 記録 | 保存済みセッションの閲覧、HTML/CSVエクスポート |
+
+### パステル配色(`Resources/Palette.xaml` に定義)
+
+ライト:
+```
+背景          #FDFBF7   温かみのあるオフホワイト
+サーフェス     #FFFFFF
+罫線          #EFE9F4
+文字          #4A4458   真っ黒を避けた紫みのダークグレー
+文字(淡)      #8B839B
+
+成功/応答あり  #A8E6CF (地) / #2E7D5B (文字)   ミント
+警告/遅延      #FFE0B2 (地) / #A9631B (文字)   ピーチ
+エラー/不達    #FFC9C6 (地) / #B8433C (文字)   ローズ
+情報/実行中    #B5E2FA (地) / #1F6E96 (文字)   スカイ
+アクセント/選択 #C7CEEA (地) / #4A54A0 (文字)   ラベンダー
+```
+
+ダーク(背景 `#2B2733` / サーフェス `#363042`)では、同じ色相のまま彩度を落として明度を上げた版を用意する。
+
+**可読性の担保**: パステル地に淡色文字を置くと読めなくなるので、**地色と文字色は必ず上表のペアで使う**。RTT値などの数値は地色を敷かず文字色のみで表現し、状態バッジだけ地色を使う。
+
+### 「わかりやすい表示」の具体
+- 状態は色だけでなく**記号でも区別**(● 応答 / ▲ 遅延 / ✕ 不達)。色覚特性に依存しない
+- RTTは数値とスパークラインを併置。数字だけだと傾向が見えない
+- 数百行でも一覧性を保つため、行の高さを詰めた**コンパクト表示モード**を用意
+
+---
+
+## ビルド設定(csproj)
+
+```xml
+<TargetFramework>net10.0-windows</TargetFramework>
+<UseWPF>true</UseWPF>
+<Nullable>enable</Nullable>
+<SelfContained>true</SelfContained>
+<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+<PublishSingleFile>true</PublishSingleFile>
+<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+<PublishTrimmed>false</PublishTrimmed>       <!-- WPFは非対応。有効にすると起動時に落ちる -->
+<InvariantGlobalization>true</InvariantGlobalization>
+<ServerGarbageCollection>false</ServerGarbageCollection>
+<TieredPGO>true</TieredPGO>
+```
+
+**注意点(いずれもCIで実測して確定させる)**
+
+- `PublishTrimmed` は **WPFでは使えない**。複数の既知不具合あり([dotnet/wpf#4216](https://github.com/dotnet/wpf/issues/4216) 他)。サイズ削減は諦める
+- `PublishSingleFile` + `PublishReadyToRun` の同時指定で起動失敗する報告がある([dotnet/wpf#7282](https://github.com/dotnet/wpf/issues/7282), [dotnet/wpf#11436](https://github.com/dotnet/wpf/issues/11436))。**Phase 0 のCIで「両方ON」「R2Rのみ」「SingleFileのみ」の3構成をビルドし、スモークテストで起動するものを採用する**
+- `InvariantGlobalization=true` は ICU を落とせてサイズ・起動に効くが、`CultureInfo` が全て Invariant になる。**日付・数値の書式は必ず明示指定**(`"yyyy/MM/dd HH:mm:ss"` など)する規約にする。日本語の表示自体には影響しない
+
+---
+
+## GitHub Actions (`.github/workflows/build.yml`)
+
+`windows-latest` 単一ジョブ構成。既存プロジェクトのPages用ワークフローとは全く別物になる。
+
+1. **test** — `dotnet test tests/PastelNet.Core.Tests`(ネットワーク非依存の純粋ロジック)
+2. **build** — `dotnet publish src/PastelNet.App -c Release`(上記の設定)
+3. **smoke** — publishしたexeを起動 → 5秒待機 → プロセス生存確認 → 終了。加えて `PastelNet.exe --selftest` で全サービスの初期化を通し、終了コード0を確認
+4. **artifact** — exeをArtifactにアップロード(毎push)
+5. **release** — `v*` タグのpush時のみ、exeを添付してGitHub Releaseを作成
+
+トリガは `push (main)` / `pull_request` / `workflow_dispatch` / `push (tags: v*)`。
+
+---
+
+## 実装フェーズ
+
+各フェーズの終わりに必ずCIをグリーンにしてから次へ進む。ローカルで動作確認できない以上、これが唯一の安全網。
+
+| Phase | 内容 | 完了条件 |
+|---|---|---|
+| **0** | リポジトリ作成、sln + 3プロジェクトの骨組み、パステル配色の空ウィンドウ、CI(test/build/smoke/artifact)、ビルド設定3構成の実測 | exeがCI上で起動する。採用するpublish設定が確定する |
+| **1** | 宛先リストの編集・保存、**並列ping**、状態バッジ + スパークライン、UI基盤(仮想化・バッチ更新) | 手元のWindowsで数百宛先を同時監視できる |
+| **2** | TCP ping(3状態表示)、DNSテスト(複数サーバ比較)、traceroute(並列TTL) | 各タブが単体で使える |
+| **3** | IPスキャン(範囲パーサ + テスト)、ARP/OUI解決、簡易ポートスキャン | サブネットを指定してホスト一覧が出る |
+| **4** | Wi-Fi情報、RSSI時系列、チャンネル混雑グラフ | 無線タブが完成 |
+| **5** | ジッタ/ロス/MOS、Path MTU、経路変化検知 | 品質指標が監視画面に出る |
+| **6** | HTML/CSVレポート、プロファイル自動切替提案、セッション閲覧 | 現場の証跡として提出できる |
+
+Phase 1 の完了時点で「EXPingの不満を解消する」という当初目的は達成される。以降は付加価値。
+
+---
+
+## リスクと注意点
+
+| リスク | 対応 |
+|---|---|
+| **exeをローカルで実行検証できない** | Coreへのロジック分離 + xUnit + CIスモークテスト。それでもUIの見た目だけは実機確認が必要 — Phase 0 と 1 の完了時にスクリーンショットをいただきたい |
+| WPFのトリミング非対応・SingleFile+R2Rの不具合 | Phase 0 でCI実測して構成を確定 |
+| ICMPがブロックされる環境 | pingが全滅しても TCP ping / DNS で代替できる導線をUIに用意 |
+| ポートスキャンのEDR誤検知 | 既定は22ポートのプリセット、設定で機能OFF可、UIに注意書き |
+| Windowsのスキャン頻度制限で古いAP情報が返る | 自動更新は最短10秒・既定30秒。最終取得時刻をUIに表示 |
+| 大量宛先でのUI描画破綻 | 仮想化 + 16msバッチ更新 + DrawingVisual描画 |
+| `/16` などの誤爆スキャン | 実行前に対象件数を表示、既定上限4096件 |
+| 管理者権限 | **全機能を非管理者で動作させる**方針。ICMPもARP参照も権限不要 |
+
+---
+
+## 検証方法
+
+- **CI**: `dotnet test`(Coreロジック)、publish成功、exe起動スモークテスト、`--selftest` の終了コード
+- **手元のWindows**: Artifactからexeをダウンロードして起動。以下を実機確認していただく
+  - 起動時間(目標0.6秒以内)とタスクマネージャ上のメモリ(目標90MB以内)
+  - 宛先を100件以上登録して並列pingがカクつかないこと
+  - Wi-Fi情報が実際に取得できること(APIの挙動は実機でしか分からない)
+  - パステル配色の見え方(モニタによって印象が変わるため)
+- **回帰**: IP範囲パーサ、MOS計算、OUI解決、レポート生成には必ずユニットテストを書く

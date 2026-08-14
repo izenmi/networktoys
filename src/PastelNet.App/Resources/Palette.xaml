@@ -1,0 +1,57 @@
+<!--
+    PastelNet ライトテーマの配色。
+
+    使い方の約束: 地色(*.Bg)と文字色(*.Fg)は必ずペアで使う。
+    パステルの地に淡い文字を置くと読めなくなるため、組み合わせを崩さないこと。
+    地色を敷くのは状態バッジだけにし、RTT などの数値は文字色のみで表現する。
+
+    ブラシは po:Freeze="True" で凍結している。数百行を描画するので効く。
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    mc:Ignorable="po">
+
+    <!-- ベース -->
+    <SolidColorBrush x:Key="Brush.Background"   Color="#FDFBF7" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Surface"      Color="#FFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#F7F3FB" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Border"       Color="#EFE9F4" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Text"         Color="#4A4458" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#8B839B" po:Freeze="True" />
+
+    <!-- 状態: 応答あり(ミント) -->
+    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#A8E6CF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#2E7D5B" po:Freeze="True" />
+
+    <!-- 状態: 遅延・警告(ピーチ) -->
+    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#FFE0B2" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#A9631B" po:Freeze="True" />
+
+    <!-- 状態: 不達・エラー(ローズ) -->
+    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#FFC9C6" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#B8433C" po:Freeze="True" />
+
+    <!-- 状態: 実行中・情報(スカイ) -->
+    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#B5E2FA" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#1F6E96" po:Freeze="True" />
+
+    <!-- 選択・アクセント(ラベンダー) -->
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#C7CEEA" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#4A54A0" po:Freeze="True" />
+
+    <!-- グラフ描画用の淡色(スパークラインの塗り) -->
+    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#7FB8D9" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#D6ECF7" po:Freeze="True" />
+
+    <!-- 共通の寸法・書体 -->
+    <FontFamily x:Key="Font.Ui">Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
+    <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, MS Gothic</FontFamily>
+    <CornerRadius x:Key="Radius.Card">10</CornerRadius>
+    <CornerRadius x:Key="Radius.Badge">7</CornerRadius>
+    <sys:Double x:Key="Size.Body">13</sys:Double>
+    <sys:Double x:Key="Size.Caption">11.5</sys:Double>
+
+</ResourceDictionary>
