@@ -1,9 +1,10 @@
 <Window x:Class="PastelNet.App.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PastelNet.App.Controls"
         Title="PastelNet"
-        Width="1120" Height="720"
-        MinWidth="900" MinHeight="560"
+        Width="1140" Height="720"
+        MinWidth="940" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.Background}"
         Foreground="{DynamicResource Brush.Text}"
@@ -12,6 +13,110 @@
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display"
         TextOptions.TextRenderingMode="ClearType">
+
+    <Window.Resources>
+        <!-- 一覧 1 行。列幅はヘッダ側と合わせること -->
+        <DataTemplate x:Key="TargetRowTemplate">
+            <Grid Height="30">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="86" />
+                    <ColumnDefinition Width="180" />
+                    <ColumnDefinition Width="130" />
+                    <ColumnDefinition Width="76" />
+                    <ColumnDefinition Width="76" />
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="*" MinWidth="120" />
+                    <ColumnDefinition Width="150" />
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="Badge"
+                        Grid.Column="0"
+                        Style="{StaticResource Badge}"
+                        Background="{DynamicResource Brush.Info.Bg}"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="BadgeText"
+                               Style="{StaticResource Badge.Text}"
+                               Foreground="{DynamicResource Brush.Info.Fg}"
+                               Text="◌ 待機" />
+                </Border>
+
+                <TextBlock Grid.Column="1" Text="{Binding Host}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Grid.Column="2" Text="{Binding Address}"
+                           Style="{StaticResource Mono}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Grid.Column="3" Text="{Binding LatestRtt}"
+                           Style="{StaticResource Mono}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+
+                <TextBlock Grid.Column="4" Text="{Binding AverageRtt}"
+                           Style="{StaticResource Mono}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+
+                <TextBlock Grid.Column="5" Text="{Binding Loss}"
+                           Style="{StaticResource Mono}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+
+                <controls:Sparkline Grid.Column="6" Source="{Binding}"
+                                    Margin="12,7,12,7" />
+
+                <TextBlock Grid.Column="7" Text="{Binding Comment}"
+                           Style="{StaticResource Caption}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </Grid>
+
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Ok">
+                    <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                    <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                    <Setter TargetName="BadgeText" Property="Text" Value="● 応答" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Slow">
+                    <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                    <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                    <Setter TargetName="BadgeText" Property="Text" Value="▲ 遅延" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Down">
+                    <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                    <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                    <Setter TargetName="BadgeText" Property="Text" Value="✕ 不達" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Unresolved">
+                    <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                    <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                    <Setter TargetName="BadgeText" Property="Text" Value="? 名前" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- 行コンテナ。選択の見た目だけ差し替え、既定の青い選択色は使わない -->
+        <Style x:Key="TargetRowContainer" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
     <Grid Margin="18,14,18,12">
         <Grid.RowDefinitions>
@@ -34,9 +139,6 @@
             <TextBlock Text="ぜんぶ同時に測る、ネットワーク診断ツール"
                        Style="{StaticResource Caption}"
                        Margin="12,0,0,0" VerticalAlignment="Center" />
-            <TextBlock x:Name="VersionText" Text="v0.1.0"
-                       Style="{StaticResource Caption}"
-                       Margin="10,0,0,0" VerticalAlignment="Center" />
         </StackPanel>
 
         <!-- ===== 本体 ===== -->
@@ -46,15 +148,49 @@
             <TabItem Header="監視">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Heading}"
-                                   Text="宛先の同時監視" />
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
-                                   Margin="0,0,0,12"
-                                   TextWrapping="Wrap"
-                                   Text="下は表示イメージです。宛先ごとに独立した周期で ping を打つので、応答しない宛先が他の宛先を待たせません。Phase 1 で実装します。" />
 
-                        <!-- 一覧のヘッダ -->
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <!-- 操作列 -->
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0"
+                                    Content="{Binding RunButtonLabel}"
+                                    Command="{Binding StartCommand}"
+                                    Margin="0,0,8,0" />
+                            <Button Grid.Column="1"
+                                    Content="停止"
+                                    Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+
+                            <TextBox Grid.Column="3" Width="200"
+                                     Text="{Binding NewHost, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,8,0"
+                                     ToolTip="ホスト名または IP アドレス" />
+                            <TextBox Grid.Column="4" Width="150"
+                                     Text="{Binding NewComment, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,8,0"
+                                     ToolTip="コメント（任意）" />
+                            <Button Grid.Column="5"
+                                    Content="宛先を追加"
+                                    Command="{Binding AddCommand}"
+                                    Style="{StaticResource Button.Subtle}"
+                                    Margin="0,0,8,0" />
+                            <Button Grid.Column="6"
+                                    Content="選択を削除"
+                                    Command="{Binding RemoveCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </Grid>
+
+                        <!-- 一覧のヘッダ。列幅は TargetRowTemplate と合わせる -->
+                        <Grid DockPanel.Dock="Top" Margin="6,0,6,6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="86" />
                                 <ColumnDefinition Width="180" />
@@ -65,19 +201,37 @@
                                 <ColumnDefinition Width="*" MinWidth="120" />
                                 <ColumnDefinition Width="150" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="状態"   Style="{StaticResource Caption}" />
-                            <TextBlock Grid.Column="1" Text="宛先"   Style="{StaticResource Caption}" />
-                            <TextBlock Grid.Column="2" Text="IP"     Style="{StaticResource Caption}" />
-                            <TextBlock Grid.Column="3" Text="RTT"    Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                            <TextBlock Grid.Column="4" Text="平均"   Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                            <TextBlock Grid.Column="5" Text="ロス"   Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                            <TextBlock Grid.Column="6" Text="推移"   Style="{StaticResource Caption}" Margin="12,0,0,0" />
+                            <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="2" Text="IP"       Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="3" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="平均"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="5" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="6" Text="推移"     Style="{StaticResource Caption}" Margin="12,0,0,0" />
                             <TextBlock Grid.Column="7" Text="コメント" Style="{StaticResource Caption}" />
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,4" />
 
-                        <StackPanel x:Name="MockRows" VerticalAlignment="Top" />
+                        <!-- 状況メッセージ -->
+                        <TextBlock DockPanel.Dock="Bottom"
+                                   Text="{Binding StatusMessage}"
+                                   Style="{StaticResource Caption}"
+                                   Margin="6,8,0,0"
+                                   TextWrapping="Wrap" />
+
+                        <!-- 一覧本体。仮想化を効かせるため行高は固定にしている -->
+                        <ListBox ItemsSource="{Binding Rows}"
+                                 SelectedItem="{Binding SelectedRow}"
+                                 ItemTemplate="{StaticResource TargetRowTemplate}"
+                                 ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 HorizontalContentAlignment="Stretch"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.CanContentScroll="True"
+                                 VirtualizingStackPanel.IsVirtualizing="True"
+                                 VirtualizingStackPanel.VirtualizationMode="Recycling" />
                     </DockPanel>
                 </Border>
             </TabItem>
@@ -119,7 +273,7 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource Heading}" Text="traceroute" />
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="TTL 1〜30 を並列に投げるので、経路全体が一度に埋まります。逆引きは後追いで解決し、判明した行から順に差し込みます。Phase 2 で実装します。" />
+                                   Text="TTL 1〜30 を少しずつずらして並列に投げるので、経路全体が一度に埋まります。逆引きは後追いで解決し、判明した行から順に差し込みます。Phase 2 で実装します。" />
                     </StackPanel>
                 </Border>
             </TabItem>
@@ -130,7 +284,7 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource Heading}" Text="無線 LAN" />
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="接続中 AP の詳細、RSSI の時系列、周辺 AP のチャンネル混雑を表示します。Windows のスキャン頻度制限があるため、周辺 AP の更新は既定 30 秒間隔です。Phase 4 で実装します。" />
+                                   Text="接続中 AP の詳細、RSSI の時系列、周辺 AP のチャンネル混雑を表示します。Windows 11 24H2 以降は位置情報の許可が必要なため、この画面を開いたときに初めてスキャンします。Phase 4 で実装します。" />
                     </StackPanel>
                 </Border>
             </TabItem>
@@ -142,18 +296,21 @@
                         <TextBlock Style="{StaticResource Heading}" Text="記録とレポート" />
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
                                    Text="測定結果はセッション単位で保存し、グラフ入りの HTML と CSV に書き出せます。HTML は 1 ファイル完結なのでそのままメールに添付できます。Phase 6 で実装します。" />
+                        <Button Content="履歴を消去" Command="{Binding ClearHistoryCommand}"
+                                Style="{StaticResource Button.Subtle}"
+                                HorizontalAlignment="Left" Margin="0,14,0,0" />
                     </StackPanel>
                 </Border>
             </TabItem>
 
-            <!-- ===== 配色(Phase 0 の確認用。実装が進んだら削除する) ===== -->
+            <!-- ===== 配色（Phase 0 の確認用。実装が進んだら削除する） ===== -->
             <TabItem Header="配色">
                 <Border Style="{StaticResource Card}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <TextBlock Style="{StaticResource Heading}" Text="パステル配色の確認" />
                             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,14"
-                                       Text="この画面はモニタによる見え方を確認するためのものです。地色と文字色は必ずペアで使い、地色を敷くのは状態バッジだけにします。確認が済んだらこのタブは削除します。" />
+                                       Text="モニタによる見え方を確認するための画面です。地色と文字色は必ずペアで使い、地色を敷くのは状態バッジだけにします。" />
 
                             <TextBlock Text="状態バッジ" FontWeight="SemiBold" Margin="0,0,0,8" />
                             <WrapPanel Margin="0,0,0,18">
@@ -167,7 +324,7 @@
                                     <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Error.Fg}" Text="✕ 不達" />
                                 </Border>
                                 <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Info.Bg}" Margin="0,0,8,8">
-                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Info.Fg}" Text="◌ 測定中" />
+                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Info.Fg}" Text="◌ 待機" />
                                 </Border>
                                 <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Accent.Bg}" Margin="0,0,8,8">
                                     <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Accent.Fg}" Text="◆ 選択中" />
@@ -195,7 +352,20 @@
                 BorderBrush="{DynamicResource Brush.Border}"
                 BorderThickness="1"
                 CornerRadius="9">
-            <StackPanel x:Name="StatusBarPanel" Orientation="Horizontal" />
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="接続: " Style="{StaticResource Caption}" />
+                <TextBlock Text="{Binding InterfaceText}" TextTrimming="CharacterEllipsis" MaxWidth="220" />
+                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="12,0" />
+                <TextBlock Text="IP: " Style="{StaticResource Caption}" />
+                <TextBlock Text="{Binding LocalAddressText}" Style="{StaticResource Mono}" />
+                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="12,0" />
+                <TextBlock Text="ゲートウェイ: " Style="{StaticResource Caption}" />
+                <TextBlock Text="{Binding GatewayText}" Style="{StaticResource Mono}" />
+                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="12,0" />
+                <TextBlock Text="DNS: " Style="{StaticResource Caption}" />
+                <TextBlock Text="{Binding DnsText}" Style="{StaticResource Mono}"
+                           TextTrimming="CharacterEllipsis" MaxWidth="260" />
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

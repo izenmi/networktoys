@@ -97,6 +97,39 @@ internal static class SelfTest
             window.Close();
         });
 
+        Check("ICMP を実行できる(応答の有無は問わない)", () =>
+        {
+            // 管理者権限なしで Ping が動くこと自体の確認。
+            // CI や社内網ではループバックすら塞がれることがあるので、
+            // 応答が返るかどうかは合否に含めない。
+            using var ping = new System.Net.NetworkInformation.Ping();
+            System.Net.NetworkInformation.PingReply reply =
+                ping.Send(IPAddress.Loopback, TimeSpan.FromSeconds(2));
+            log.AppendLine($"        ループバックの応答: {reply.Status}");
+        });
+
+        Check("宛先リストを保存して読み戻せる", () =>
+        {
+            string path = Path.Combine(Path.GetTempPath(), $"pastelnet-selftest-{Guid.NewGuid():N}.json");
+            try
+            {
+                var document = new Core.Storage.TargetDocument
+                {
+                    Targets = [new Core.Models.Target { Host = "127.0.0.1", Comment = "自己診断" }],
+                };
+                Core.Storage.TargetStore.Save(path, document);
+
+                Core.Storage.TargetDocument loaded = Core.Storage.TargetStore.Load(path, out string? storeError);
+                Assert(storeError is null, $"読み込みに失敗: {storeError}");
+                Assert(loaded.Targets.Count == 1, "宛先の件数が合わない");
+                Assert(loaded.Targets[0].Comment == "自己診断", "日本語のコメントが壊れている");
+            }
+            finally
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        });
+
         Check("日本語テキストを整形できる(フォント初期化の確認)", () =>
         {
             var text = new FormattedText(
