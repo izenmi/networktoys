@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:PastelNet.App.Controls"
         Title="PastelNet"
         Width="1140" Height="720"
-        MinWidth="940" MinHeight="560"
+        MinWidth="900" MinHeight="480"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.Background}"
         Foreground="{DynamicResource Brush.Text}"
@@ -17,16 +17,16 @@
     <Window.Resources>
         <!-- 一覧 1 行。列幅はヘッダ側と合わせること -->
         <DataTemplate x:Key="TargetRowTemplate">
-            <Grid Height="30">
+            <Grid Height="{DynamicResource Size.RowHeight}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="86" />
+                    <ColumnDefinition Width="66" />
+                    <ColumnDefinition Width="158" />
+                    <ColumnDefinition Width="112" />
+                    <ColumnDefinition Width="62" />
+                    <ColumnDefinition Width="62" />
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" MinWidth="100" />
                     <ColumnDefinition Width="180" />
-                    <ColumnDefinition Width="130" />
-                    <ColumnDefinition Width="76" />
-                    <ColumnDefinition Width="76" />
-                    <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="*" MinWidth="120" />
-                    <ColumnDefinition Width="150" />
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="Badge"
@@ -59,8 +59,7 @@
                            Style="{StaticResource Mono}"
                            VerticalAlignment="Center" HorizontalAlignment="Right" />
 
-                <controls:Sparkline Grid.Column="6" Source="{Binding}"
-                                    Margin="12,7,12,7" />
+                <controls:Sparkline Grid.Column="6" Source="{Binding}" Margin="8,3,8,3" />
 
                 <TextBlock Grid.Column="7" Text="{Binding Comment}"
                            Style="{StaticResource Caption}"
@@ -93,14 +92,14 @@
 
         <!-- 行コンテナ。選択の見た目だけ差し替え、既定の青い選択色は使わない -->
         <Style x:Key="TargetRowContainer" TargetType="ListBoxItem">
-            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="Padding" Value="4,0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Bd"
                                 Background="Transparent"
-                                CornerRadius="7"
+                                CornerRadius="5"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter />
                         </Border>
@@ -118,7 +117,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="18,14,18,12">
+    <Grid Margin="10,8,10,6">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -126,19 +125,19 @@
         </Grid.RowDefinitions>
 
         <!-- ===== ヘッダ ===== -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,14">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,8">
             <Border Background="{DynamicResource Brush.Accent.Bg}"
-                    CornerRadius="9" Width="30" Height="30"
+                    CornerRadius="6" Width="22" Height="22"
                     VerticalAlignment="Center">
-                <TextBlock Text="◔" FontSize="17"
+                <TextBlock Text="◔" FontSize="13"
                            Foreground="{DynamicResource Brush.Accent.Fg}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
-            <TextBlock Text="PastelNet" FontSize="19" FontWeight="SemiBold"
-                       Margin="10,0,0,0" VerticalAlignment="Center" />
-            <TextBlock Text="ぜんぶ同時に測る、ネットワーク診断ツール"
+            <TextBlock Text="PastelNet" FontSize="15" FontWeight="SemiBold"
+                       Margin="8,0,0,0" VerticalAlignment="Center" />
+            <TextBlock Text="ぜんぶ同時に測る"
                        Style="{StaticResource Caption}"
-                       Margin="12,0,0,0" VerticalAlignment="Center" />
+                       Margin="10,0,0,0" VerticalAlignment="Center" />
         </StackPanel>
 
         <!-- ===== 本体 ===== -->
@@ -150,56 +149,35 @@
                     <DockPanel>
 
                         <!-- 操作列 -->
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <Button Grid.Column="0"
-                                    Content="{Binding RunButtonLabel}"
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button Content="{Binding RunButtonLabel}"
                                     Command="{Binding StartCommand}"
-                                    Margin="0,0,8,0" />
-                            <Button Grid.Column="1"
-                                    Content="停止"
+                                    Margin="0,0,6,0" />
+                            <Button Content="停止"
                                     Command="{Binding StopCommand}"
-                                    Style="{StaticResource Button.Subtle}" />
-
-                            <TextBox Grid.Column="3" Width="200"
-                                     Text="{Binding NewHost, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,8,0"
-                                     ToolTip="ホスト名または IP アドレス" />
-                            <TextBox Grid.Column="4" Width="150"
-                                     Text="{Binding NewComment, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,8,0"
-                                     ToolTip="コメント（任意）" />
-                            <Button Grid.Column="5"
-                                    Content="宛先を追加"
-                                    Command="{Binding AddCommand}"
                                     Style="{StaticResource Button.Subtle}"
-                                    Margin="0,0,8,0" />
-                            <Button Grid.Column="6"
-                                    Content="選択を削除"
-                                    Command="{Binding RemoveCommand}"
-                                    Style="{StaticResource Button.Subtle}" />
-                        </Grid>
+                                    Margin="0,0,6,0" />
+                            <Button Content="履歴を消去"
+                                    Command="{Binding ClearHistoryCommand}"
+                                    Style="{StaticResource Button.Subtle}"
+                                    Margin="0,0,12,0" />
+                            <TextBlock Text="{Binding CountText}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
 
                         <!-- 一覧のヘッダ。列幅は TargetRowTemplate と合わせる -->
-                        <Grid DockPanel.Dock="Top" Margin="6,0,6,6">
+                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="86" />
+                                <ColumnDefinition Width="66" />
+                                <ColumnDefinition Width="158" />
+                                <ColumnDefinition Width="112" />
+                                <ColumnDefinition Width="62" />
+                                <ColumnDefinition Width="62" />
+                                <ColumnDefinition Width="48" />
+                                <ColumnDefinition Width="*" MinWidth="100" />
                                 <ColumnDefinition Width="180" />
-                                <ColumnDefinition Width="130" />
-                                <ColumnDefinition Width="76" />
-                                <ColumnDefinition Width="76" />
-                                <ColumnDefinition Width="64" />
-                                <ColumnDefinition Width="*" MinWidth="120" />
-                                <ColumnDefinition Width="150" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
@@ -207,18 +185,11 @@
                             <TextBlock Grid.Column="3" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                             <TextBlock Grid.Column="4" Text="平均"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                             <TextBlock Grid.Column="5" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                            <TextBlock Grid.Column="6" Text="推移"     Style="{StaticResource Caption}" Margin="12,0,0,0" />
-                            <TextBlock Grid.Column="7" Text="コメント" Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="6" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="7" Text="備考"     Style="{StaticResource Caption}" />
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1"
-                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,4" />
-
-                        <!-- 状況メッセージ -->
-                        <TextBlock DockPanel.Dock="Bottom"
-                                   Text="{Binding StatusMessage}"
-                                   Style="{StaticResource Caption}"
-                                   Margin="6,8,0,0"
-                                   TextWrapping="Wrap" />
+                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
                         <!-- 一覧本体。仮想化を効かせるため行高は固定にしている -->
                         <ListBox ItemsSource="{Binding Rows}"
@@ -236,22 +207,58 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== 宛先(EXPing と同じ書き方でまとめて編集する) ===== -->
+            <TabItem Header="宛先">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Heading}" Text="宛先リスト" />
+
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="6" Padding="10,7" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                                    1 行に 1 宛先。アドレスの後ろに<Run FontWeight="SemiBold">半角スペース</Run>を空けると、そこから行末までが備考になります。
+                                    行頭が <Run FontWeight="SemiBold">#</Run> <Run FontWeight="SemiBold">;</Run> <Run FontWeight="SemiBold">'</Run> 全角スペース の行は注釈として読み飛ばします。
+                                </TextBlock>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0">
+                                    範囲でまとめて書けます（EXPing にはない拡張）:
+                                    <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.10-20</Run> ／
+                                    <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.1-192.168.1.50</Run> ／
+                                    <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.0/24</Run>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="一覧に反映" Command="{Binding ApplyListCommand}" Margin="0,0,10,0" />
+                                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                           Text="反映すると測定を停止し、履歴を作り直します。" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding ListSummary}" Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" Margin="0,6,0,0" />
+                        </StackPanel>
+
+                        <TextBox Text="{Binding TargetListText, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="{DynamicResource Font.Mono}"
+                                 AcceptsReturn="True"
+                                 AcceptsTab="False"
+                                 TextWrapping="NoWrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 VerticalContentAlignment="Top" />
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== スキャン ===== -->
             <TabItem Header="スキャン">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Style="{StaticResource Heading}" Text="IP スキャン" />
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="スキャン範囲は次の書き方を受け付ける予定です。実行前に対象ホスト数を表示し、既定 4096 件を超える場合は確認します。Phase 3 で実装します。" />
-                        <Border Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="9"
-                                Padding="12" Margin="0,10,0,0">
-                            <TextBlock Style="{StaticResource Mono}" LineHeight="20">
-                                192.168.1.0/24<LineBreak />
-                                192.168.1.1-192.168.1.100<LineBreak />
-                                192.168.1.1-100<LineBreak />
-                                10.0.0.0/24, 10.0.1.0/24
-                            </TextBlock>
-                        </Border>
+                                   Text="範囲を指定してサブネットを掃き、応答したホストの MAC・ベンダー名・開放ポートを一覧にします。Phase 3 で実装します。" />
                     </StackPanel>
                 </Border>
             </TabItem>
@@ -296,75 +303,30 @@
                         <TextBlock Style="{StaticResource Heading}" Text="記録とレポート" />
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
                                    Text="測定結果はセッション単位で保存し、グラフ入りの HTML と CSV に書き出せます。HTML は 1 ファイル完結なのでそのままメールに添付できます。Phase 6 で実装します。" />
-                        <Button Content="履歴を消去" Command="{Binding ClearHistoryCommand}"
-                                Style="{StaticResource Button.Subtle}"
-                                HorizontalAlignment="Left" Margin="0,14,0,0" />
                     </StackPanel>
-                </Border>
-            </TabItem>
-
-            <!-- ===== 配色（Phase 0 の確認用。実装が進んだら削除する） ===== -->
-            <TabItem Header="配色">
-                <Border Style="{StaticResource Card}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource Heading}" Text="パステル配色の確認" />
-                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,14"
-                                       Text="モニタによる見え方を確認するための画面です。地色と文字色は必ずペアで使い、地色を敷くのは状態バッジだけにします。" />
-
-                            <TextBlock Text="状態バッジ" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <WrapPanel Margin="0,0,0,18">
-                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Ok.Bg}" Margin="0,0,8,8">
-                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Ok.Fg}" Text="● 応答" />
-                                </Border>
-                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Warn.Bg}" Margin="0,0,8,8">
-                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Warn.Fg}" Text="▲ 遅延" />
-                                </Border>
-                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Error.Bg}" Margin="0,0,8,8">
-                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Error.Fg}" Text="✕ 不達" />
-                                </Border>
-                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Info.Bg}" Margin="0,0,8,8">
-                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Info.Fg}" Text="◌ 待機" />
-                                </Border>
-                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.Accent.Bg}" Margin="0,0,8,8">
-                                    <TextBlock Style="{StaticResource Badge.Text}" Foreground="{DynamicResource Brush.Accent.Fg}" Text="◆ 選択中" />
-                                </Border>
-                            </WrapPanel>
-
-                            <TextBlock Text="色の一覧" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <UniformGrid x:Name="SwatchGrid" Columns="5" Margin="0,0,0,18" />
-
-                            <TextBlock Text="ボタンと入力欄" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="測定を開始" Margin="0,0,8,0" />
-                                <Button Content="停止" Style="{StaticResource Button.Subtle}" Margin="0,0,8,0" />
-                                <TextBox Width="220" Text="192.168.1.0/24" />
-                            </StackPanel>
-                        </StackPanel>
-                    </ScrollViewer>
                 </Border>
             </TabItem>
         </TabControl>
 
         <!-- ===== ステータスバー ===== -->
-        <Border Grid.Row="2" Margin="0,12,0,0" Padding="12,7"
+        <Border Grid.Row="2" Margin="0,8,0,0" Padding="10,4"
                 Background="{DynamicResource Brush.Surface}"
                 BorderBrush="{DynamicResource Brush.Border}"
                 BorderThickness="1"
-                CornerRadius="9">
+                CornerRadius="7">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="接続: " Style="{StaticResource Caption}" />
-                <TextBlock Text="{Binding InterfaceText}" TextTrimming="CharacterEllipsis" MaxWidth="220" />
-                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="12,0" />
+                <TextBlock Text="{Binding InterfaceText}" TextTrimming="CharacterEllipsis" MaxWidth="200" />
+                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="8,0" />
                 <TextBlock Text="IP: " Style="{StaticResource Caption}" />
                 <TextBlock Text="{Binding LocalAddressText}" Style="{StaticResource Mono}" />
-                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="12,0" />
-                <TextBlock Text="ゲートウェイ: " Style="{StaticResource Caption}" />
+                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="8,0" />
+                <TextBlock Text="GW: " Style="{StaticResource Caption}" />
                 <TextBlock Text="{Binding GatewayText}" Style="{StaticResource Mono}" />
-                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="12,0" />
+                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="8,0" />
                 <TextBlock Text="DNS: " Style="{StaticResource Caption}" />
                 <TextBlock Text="{Binding DnsText}" Style="{StaticResource Mono}"
-                           TextTrimming="CharacterEllipsis" MaxWidth="260" />
+                           TextTrimming="CharacterEllipsis" MaxWidth="240" />
             </StackPanel>
         </Border>
     </Grid>

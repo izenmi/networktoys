@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Windows.Threading;
 using PastelNet.App.Mvvm;
 using PastelNet.App.Services;
@@ -22,10 +23,10 @@ public sealed class MonitorViewModel : ObservableObject
     private readonly DispatcherTimer _pump;
     private readonly string _storePath;
 
-    private MonitorSettings _settings;
+    private readonly MonitorSettings _settings;
     private bool _isRunning;
-    private string _newHost = string.Empty;
-    private string _newComment = string.Empty;
+    private string _targetListText = string.Empty;
+    private string _listSummary = string.Empty;
     private TargetRowViewModel? _selectedRow;
     private string _statusMessage = string.Empty;
 
@@ -48,12 +49,12 @@ public sealed class MonitorViewModel : ObservableObject
         foreach (Target target in document.Targets)
             AddRow(target);
 
+        _targetListText = TargetListParser.Format(document.Targets);
         NetworkInfo = NetworkEnvironment.Current();
 
         StartCommand = new RelayCommand(Start, () => !IsRunning && Rows.Count > 0);
         StopCommand = new RelayCommand(() => _ = StopAsync(), () => IsRunning);
-        AddCommand = new RelayCommand(AddTarget, () => !string.IsNullOrWhiteSpace(NewHost));
-        RemoveCommand = new RelayCommand(RemoveSelected, () => SelectedRow is not null);
+        ApplyListCommand = new RelayCommand(() => _ = ApplyListAsync());
         ClearHistoryCommand = new RelayCommand(ClearHistory);
 
         _pump = new DispatcherTimer(DispatcherPriority.Background) { Interval = PumpInterval };
@@ -82,8 +83,7 @@ public sealed class MonitorViewModel : ObservableObject
 
     public RelayCommand StartCommand { get; }
     public RelayCommand StopCommand { get; }
-    public RelayCommand AddCommand { get; }
-    public RelayCommand RemoveCommand { get; }
+    public RelayCommand ApplyListCommand { get; }
     public RelayCommand ClearHistoryCommand { get; }
 
     public bool IsRunning
@@ -101,30 +101,24 @@ public sealed class MonitorViewModel : ObservableObject
 
     public string RunButtonLabel => IsRunning ? "測定中" : "測定を開始";
 
-    public string NewHost
+    /// <summary>宛先タブで編集するテキスト。書式は EXPing に合わせている。</summary>
+    public string TargetListText
     {
-        get => _newHost;
-        set
-        {
-            if (SetProperty(ref _newHost, value))
-                AddCommand.RaiseCanExecuteChanged();
-        }
+        get => _targetListText;
+        set => SetProperty(ref _targetListText, value);
     }
 
-    public string NewComment
+    /// <summary>反映結果の要約とエラー。</summary>
+    public string ListSummary
     {
-        get => _newComment;
-        set => SetProperty(ref _newComment, value);
+        get => _listSummary;
+        private set => SetProperty(ref _listSummary, value);
     }
 
     public TargetRowViewModel? SelectedRow
     {
         get => _selectedRow;
-        set
-        {
-            if (SetProperty(ref _selectedRow, value))
-                RemoveCommand.RaiseCanExecuteChanged();
-        }
+        set => SetProperty(ref _selectedRow, value);
     }
 
     public string StatusMessage
@@ -133,7 +127,7 @@ public sealed class MonitorViewModel : ObservableObject
         private set => SetProperty(ref _statusMessage, value);
     }
 
-    public int IntervalMs => _settings.IntervalMs;
+    public string CountText => $"{Rows.Count} 件";
 
     private void Start()
     {
@@ -177,49 +171,49 @@ public sealed class MonitorViewModel : ObservableObject
             row.Refresh();
     }
 
-    private void AddTarget()
+    /// <summary>
+    /// テキストの内容で宛先リストを作り直す。
+    /// 測定中なら止めてから入れ替える（対象が変わった以上、履歴も引き継がない）。
+    /// </summary>
+    private async Task ApplyListAsync()
     {
-        string host = NewHost.Trim();
-        if (host.Length == 0) return;
+        await StopAsync();
 
-        var target = new Target
-        {
-            Host = host,
-            Comment = NewComment.Trim(),
-        };
+        TargetListParseResult parsed = TargetListParser.Parse(TargetListText);
 
-        if (!target.IsValid())
-        {
-            StatusMessage = "宛先を追加できませんでした。ホスト名か IP アドレスを入力してください。";
-            return;
-        }
+        Rows.Clear();
+        _rowsById.Clear();
+        SelectedRow = null;
 
-        AddRow(target);
-        NewHost = string.Empty;
-        NewComment = string.Empty;
+        foreach (Target target in parsed.Targets)
+            AddRow(target);
+
         Save();
 
-        StatusMessage = IsRunning
-            ? $"{host} を追加しました。測定を開始し直すと反映されます。"
-            : $"{host} を追加しました。";
-
+        ListSummary = BuildSummary(parsed);
+        StatusMessage = $"宛先を {parsed.Targets.Count} 件に更新しました。";
+        OnPropertyChanged(nameof(CountText));
         StartCommand.RaiseCanExecuteChanged();
     }
 
-    private void RemoveSelected()
+    private static string BuildSummary(TargetListParseResult parsed)
     {
-        if (SelectedRow is not { } row) return;
+        var builder = new StringBuilder();
+        builder.Append($"{parsed.Targets.Count} 件を登録しました。");
 
-        Rows.Remove(row);
-        _rowsById.Remove(row.Id);
-        SelectedRow = null;
-        Save();
+        if (parsed.ExpandedCount > 0)
+            builder.Append($"（うち範囲指定から {parsed.ExpandedCount} 件）");
 
-        StatusMessage = IsRunning
-            ? $"{row.Host} を削除しました。測定を開始し直すと反映されます。"
-            : $"{row.Host} を削除しました。";
+        if (parsed.CommentLines > 0)
+            builder.Append($" 注釈 {parsed.CommentLines} 行を読み飛ばしました。");
 
-        StartCommand.RaiseCanExecuteChanged();
+        foreach (TargetListError error in parsed.Errors.Take(10))
+            builder.Append($"\n{error.LineNumber} 行目: {error.Message}");
+
+        if (parsed.Errors.Count > 10)
+            builder.Append($"\nほか {parsed.Errors.Count - 10} 件の問題があります。");
+
+        return builder.ToString();
     }
 
     private void ClearHistory()

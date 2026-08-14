@@ -49,9 +49,12 @@
     <!-- 共通の寸法・書体 -->
     <FontFamily x:Key="Font.Ui">Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
     <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, MS Gothic</FontFamily>
-    <CornerRadius x:Key="Radius.Card">10</CornerRadius>
-    <CornerRadius x:Key="Radius.Badge">7</CornerRadius>
-    <sys:Double x:Key="Size.Body">13</sys:Double>
-    <sys:Double x:Key="Size.Caption">11.5</sys:Double>
+    <CornerRadius x:Key="Radius.Card">8</CornerRadius>
+    <CornerRadius x:Key="Radius.Badge">5</CornerRadius>
+    <sys:Double x:Key="Size.Body">12</sys:Double>
+    <sys:Double x:Key="Size.Caption">11</sys:Double>
+
+    <!-- 一覧の行の高さ。詰めるほど一覧性が上がるが、日本語が窮屈になるので 22 を下限にしている -->
+    <sys:Double x:Key="Size.RowHeight">22</sys:Double>
 
 </ResourceDictionary>

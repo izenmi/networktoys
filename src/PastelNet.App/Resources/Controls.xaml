@@ -11,13 +11,13 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{DynamicResource Radius.Card}" />
-        <Setter Property="Padding" Value="14" />
+        <Setter Property="Padding" Value="10" />
     </Style>
 
     <!-- ===== 状態バッジ(地色を敷いてよい唯一の要素) ===== -->
     <Style x:Key="Badge" TargetType="Border">
         <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
-        <Setter Property="Padding" Value="8,2" />
+        <Setter Property="Padding" Value="5,1" />
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
 
@@ -28,10 +28,10 @@
 
     <!-- ===== 見出し ===== -->
     <Style x:Key="Heading" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="Margin" Value="0,0,0,6" />
     </Style>
 
     <Style x:Key="Caption" TargetType="TextBlock">
@@ -53,7 +53,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TabControl">
                     <DockPanel>
-                        <TabPanel DockPanel.Dock="Top" IsItemsHost="True" Margin="0,0,0,12" />
+                        <TabPanel DockPanel.Dock="Top" IsItemsHost="True" Margin="0,0,0,8" />
                         <ContentPresenter ContentSource="SelectedContent" />
                     </DockPanel>
                 </ControlTemplate>
@@ -69,9 +69,9 @@
                 <ControlTemplate TargetType="TabItem">
                     <Border x:Name="Bd"
                             Background="Transparent"
-                            CornerRadius="9"
-                            Padding="16,7"
-                            Margin="0,0,6,0">
+                            CornerRadius="7"
+                            Padding="12,4"
+                            Margin="0,0,4,0">
                         <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -96,14 +96,14 @@
         <Setter Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
         <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Padding" Value="14,6" />
+        <Setter Property="Padding" Value="11,4" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Bd"
                             Background="{TemplateBinding Background}"
-                            CornerRadius="9"
+                            CornerRadius="7"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
@@ -138,7 +138,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
-        <Setter Property="Padding" Value="9,6" />
+        <Setter Property="Padding" Value="7,4" />
         <Setter Property="CaretBrush" Value="{DynamicResource Brush.Text}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -148,9 +148,9 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="9">
+                        <!-- 複数行 TextBox でも使うので、中央寄せは指定しない -->
                         <ScrollViewer x:Name="PART_ContentHost"
-                                      Margin="{TemplateBinding Padding}"
-                                      VerticalAlignment="Center" />
+                                      Margin="{TemplateBinding Padding}" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">

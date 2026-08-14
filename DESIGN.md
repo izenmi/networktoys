@@ -90,12 +90,13 @@ pastelnet/
 
 | パッケージ | 用途 | 備考 |
 |---|---|---|
-| `CommunityToolkit.Mvvm` | MVVM(`ObservableProperty` / `RelayCommand` のソースジェネレータ) | リフレクション不要で軽い |
 | `ManagedNativeWifi` **3.0.2** | Native Wifi API のラッパ | **依存パッケージなし**。これ以外の選択肢は自前P/Invokeになる |
 | `DnsClient` **1.8.0** | 任意レコードのDNS照会 | netstandard2.0、アクティブメンテ。A/AAAA/CNAME/MX/NS/TXT/SOA/SRV/PTR 等に対応 |
 | `xunit` (テストのみ) | Coreのユニットテスト | |
 
 グラフ描画・JSON・HTTP・SQLiteのライブラリは**入れない**(標準機能と自前実装で足りる)。バージョンは実装時に最新安定版を再確認する。
+
+**MVVM ライブラリも入れない**(Phase 1 で判断)。必要なのは `ObservableObject` と `RelayCommand` だけで、合わせて40行ほど。ローカルでビルドを確認できない状況で、ソースジェネレータのバージョン依存を持ち込む方がリスクが大きい。
 
 ---
 
@@ -118,7 +119,7 @@ pastelnet/
 ### UIへの反映(ここを外すと重くなる)
 
 - 測定スレッドから直接 `ObservableCollection` を触らない
-- 結果はロックフリーのキューに積み、**UI側で16ms間隔にまとめて反映**(1宛先1更新だと数百宛先で描画が破綻する)
+- 結果は `Channel` に積み、**UI側で100ms間隔(10Hz)にまとめて反映**(1宛先1更新だと数百宛先で描画が破綻する)。測定が1秒間隔なので10Hzで十分足りる
 - 一覧は `DataGrid` ではなく `ItemsControl` + `VirtualizingStackPanel`(`IsVirtualizing=True`, `VirtualizationMode=Recycling`)
 - スパークラインは `Polyline` ではなく `DrawingVisual` への直接描画(数百個並べても軽い)
 
