@@ -62,8 +62,11 @@ public sealed class MonitorViewModel : ObservableObject
 
     public ObservableCollection<TargetRowViewModel> Rows { get; } = [];
 
-    /// <summary>接続環境。System.Environment と紛らわしくならない名前にしている。</summary>
-    public NetworkSnapshot NetworkInfo { get; }
+    /// <summary>
+    /// 接続環境。System.Environment と紛らわしくならない名前にしている。
+    /// XAML からは下の文字列プロパティ経由で参照するので internal でよい。
+    /// </summary>
+    internal NetworkSnapshot NetworkInfo { get; }
 
     public string InterfaceText => NetworkInfo.InterfaceName ?? "—";
 
