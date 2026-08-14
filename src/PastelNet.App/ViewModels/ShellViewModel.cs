@@ -11,9 +11,12 @@ public sealed class ShellViewModel
 
         // 現在の DNS サーバを比較対象の既定値として渡す
         Dns = new DnsViewModel(Monitor.SystemDnsServers);
+        Trace = new TraceViewModel();
     }
 
     public MonitorViewModel Monitor { get; }
 
     public DnsViewModel Dns { get; }
+
+    public TraceViewModel Trace { get; }
 }

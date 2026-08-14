@@ -108,6 +108,17 @@ internal static class SelfTest
             log.AppendLine($"        ループバックの応答: {reply.Status}");
         });
 
+        Check("traceroute を実行できる", () =>
+        {
+            // ループバック相手なら 1 ホップで届くはず。ここでも見たいのは
+            // 経路探索の呼び出しが通ることで、ネットワークの状態ではない。
+            IReadOnlyList<Services.TraceHop> hops = Task.Run(() =>
+                Services.TraceProbe.TraceAsync(IPAddress.Loopback, 3, 1000, 0, CancellationToken.None))
+                .GetAwaiter().GetResult();
+
+            log.AppendLine($"        ループバックへの経路: {hops.Count} ホップ");
+        });
+
         Check("DnsClient がリンクされ、問い合わせを実行できる", () =>
         {
             // 応答が返るかはネットワーク次第なので合否に含めない。

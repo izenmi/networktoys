@@ -382,13 +382,88 @@
             </TabItem>
 
             <!-- ===== 経路 ===== -->
-            <TabItem Header="経路">
+            <TabItem Header="経路" DataContext="{Binding Trace}">
                 <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource Heading}" Text="traceroute" />
-                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="TTL 1〜30 を少しずつずらして並列に投げるので、経路全体が一度に埋まります。逆引きは後追いで解決し、判明した行から順に差し込みます。Phase 2 で実装します。" />
-                    </StackPanel>
+                    <DockPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="宛先" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBox Width="240"
+                                     Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,6,0" />
+                            <Button Content="経路を調べる" Command="{Binding TraceCommand}" Margin="0,0,6,0" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,0" />
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="34" />
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="70" />
+                                <ColumnDefinition Width="120" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="#"      Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="1" Text="IP"     Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="2" Text="ホスト名" Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="3" Text="RTT"    Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="状態"   Style="{StaticResource Caption}" Margin="10,0,0,0" />
+                        </Grid>
+                        <Border DockPanel.Dock="Top" Height="1"
+                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Hops}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Row" CornerRadius="5" Padding="4,0">
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="34" />
+                                                    <ColumnDefinition Width="140" />
+                                                    <ColumnDefinition Width="*" MinWidth="140" />
+                                                    <ColumnDefinition Width="70" />
+                                                    <ColumnDefinition Width="120" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock x:Name="TtlText" Grid.Column="0" Text="{Binding Ttl}"
+                                                           Style="{StaticResource Mono}" VerticalAlignment="Center" />
+                                                <TextBlock x:Name="AddressText" Grid.Column="1" Text="{Binding Address}"
+                                                           Style="{StaticResource Mono}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding HostName}"
+                                                           Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Rtt}"
+                                                           Style="{StaticResource Mono}" VerticalAlignment="Center"
+                                                           HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="4" Text="{Binding Note}"
+                                                           Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                                           Margin="10,0,0,0" />
+                                            </Grid>
+                                        </Border>
+
+                                        <DataTemplate.Triggers>
+                                            <!-- 応答が無かったホップは沈める -->
+                                            <DataTrigger Binding="{Binding Responded}" Value="False">
+                                                <Setter TargetName="AddressText" Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                <Setter TargetName="TtlText" Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                            </DataTrigger>
+                                            <!-- 宛先に届いた行を目立たせる -->
+                                            <DataTrigger Binding="{Binding IsDestination}" Value="True">
+                                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                                                <Setter TargetName="AddressText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                <Setter TargetName="AddressText" Property="FontWeight" Value="SemiBold" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
                 </Border>
             </TabItem>
 
