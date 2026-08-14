@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 namespace PastelNet.Core.Addressing;
@@ -138,7 +139,7 @@ public static class IpRangeParser
     /// 数字とドットだけの IPv4 表記のみ受け付ける。
     /// <see cref="IPAddress.TryParse"/> は "1" を 0.0.0.1 と解釈するなど寛容すぎるので使わない。
     /// </summary>
-    public static bool TryParseIPv4(string text, out IPAddress? address)
+    public static bool TryParseIPv4(string text, [NotNullWhen(true)] out IPAddress? address)
     {
         address = null;
 
