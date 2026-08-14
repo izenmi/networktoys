@@ -10,16 +10,18 @@ namespace PastelNet.App.Interop;
 /// 日本語環境と英語環境で壊れる。iphlpapi を直接叩けばロケールに左右されない。
 /// 読み取りに管理者権限は要らない。
 /// </summary>
-internal static partial class NativeMethods
+internal static class NativeMethods
 {
     private const int AfInet = 2;          // AF_INET
     private const int NoError = 0;
 
-    [LibraryImport("iphlpapi.dll")]
-    private static partial uint GetIpNetTable2(ushort family, out IntPtr table);
+    // LibraryImport は unsafe コードを生成するため AllowUnsafeBlocks が要る。
+    // 関数 2 つのために全体で unsafe を許可したくないので DllImport を使う。
+    [DllImport("iphlpapi.dll")]
+    private static extern uint GetIpNetTable2(ushort family, out IntPtr table);
 
-    [LibraryImport("iphlpapi.dll")]
-    private static partial void FreeMibTable(IntPtr memory);
+    [DllImport("iphlpapi.dll")]
+    private static extern void FreeMibTable(IntPtr memory);
 
     // MIB_IPNET_ROW2 の先頭部分だけを写している。
     // 必要なのは IP・MAC・状態の 3 つで、後続フィールドは読まない。
