@@ -96,7 +96,9 @@ internal static class TraceProbe
     {
         try
         {
-            IPHostEntry entry = await Dns.GetHostEntryAsync(address, token);
+            // IPAddress + CancellationToken のオーバーロードは無いので文字列版を使う。
+            // IP アドレスの形をした文字列を渡すと逆引きになる。
+            IPHostEntry entry = await Dns.GetHostEntryAsync(address.ToString(), token);
             return string.IsNullOrEmpty(entry.HostName) ? null : entry.HostName;
         }
         catch (Exception ex) when (ex is SocketException or ArgumentException or OperationCanceledException)

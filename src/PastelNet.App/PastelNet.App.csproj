@@ -40,6 +40,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- IEEE の MA-L 登録簿から作った OUI テーブル。初回の MAC 解決時にだけ展開する。
+         更新は tools/oui/build_oui.py を手で実行する。 -->
+    <EmbeddedResource Include="Resources/oui.tsv.gz" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- System.Net.Dns は A/AAAA/PTR しか引けず、問い合わせ先サーバも指定できない。
          「社内 DNS では引けるが外部 DNS では引けない」の切り分けに必要なので使う。
          ネイティブ依存がないので単一ファイル発行でも安全。 -->
