@@ -149,7 +149,7 @@
         <TabControl Grid.Row="1">
 
             <!-- ===== 監視 ===== -->
-            <TabItem Header="監視">
+            <TabItem Header="監視" DataContext="{Binding Monitor}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
@@ -213,7 +213,7 @@
             </TabItem>
 
             <!-- ===== 宛先(EXPing と同じ書き方でまとめて編集する) ===== -->
-            <TabItem Header="宛先">
+            <TabItem Header="宛先" DataContext="{Binding Monitor}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource Heading}" Text="宛先リスト" />
@@ -273,13 +273,111 @@
             </TabItem>
 
             <!-- ===== DNS ===== -->
-            <TabItem Header="DNS">
+            <TabItem Header="DNS" DataContext="{Binding Dns}">
                 <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource Heading}" Text="DNS テスト" />
-                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="同じ名前を複数の DNS サーバへ同時に問い合わせ、結果を横並びで比較します。A / AAAA / CNAME / MX / NS / TXT / SOA / SRV / PTR に対応。Phase 2 で実装します。" />
-                    </StackPanel>
+                    <DockPanel>
+
+                        <!-- 入力 -->
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="名前" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBox Width="240"
+                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,6,0" />
+                            <ComboBox Width="86"
+                                      ItemsSource="{Binding RecordTypes}"
+                                      SelectedItem="{Binding SelectedType}"
+                                      Margin="0,0,6,0" />
+                            <Button Content="問い合わせ" Command="{Binding QueryCommand}" Margin="0,0,10,0" />
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <!-- 問い合わせ先 -->
+                        <DockPanel DockPanel.Dock="Left" Width="164" Margin="0,0,10,0">
+                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" Margin="0,0,0,4"
+                                       Text="問い合わせ先（1 行に 1 台）。「システム既定」と書くと OS のリゾルバを使います。" />
+                            <TextBox Text="{Binding ServersText, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     VerticalContentAlignment="Top" />
+                        </DockPanel>
+
+                        <!-- 結果を横並びで比較する -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding Results}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Card"
+                                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                                BorderBrush="{DynamicResource Brush.Border}"
+                                                BorderThickness="1"
+                                                CornerRadius="7"
+                                                Padding="10,8"
+                                                Margin="0,0,8,8"
+                                                Width="278">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding ServerLabel}"
+                                                           FontWeight="SemiBold"
+                                                           FontFamily="{DynamicResource Font.Mono}" />
+                                                <TextBlock x:Name="SummaryText"
+                                                           Text="{Binding Summary}"
+                                                           Style="{StaticResource Caption}"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,2,0,6" />
+
+                                                <ItemsControl ItemsSource="{Binding Records}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,0,0,3">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="44" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <Border Grid.Column="0"
+                                                                        Style="{StaticResource Badge}"
+                                                                        Background="{DynamicResource Brush.Info.Bg}"
+                                                                        VerticalAlignment="Top">
+                                                                    <TextBlock Text="{Binding Type}"
+                                                                               Style="{StaticResource Badge.Text}"
+                                                                               Foreground="{DynamicResource Brush.Info.Fg}" />
+                                                                </Border>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Value}"
+                                                                           Style="{StaticResource Mono}"
+                                                                           TextWrapping="Wrap"
+                                                                           Margin="6,0,6,0" />
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{Binding TtlText}"
+                                                                           Style="{StaticResource Caption}"
+                                                                           VerticalAlignment="Top" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding HasError}" Value="True">
+                                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                                                <Setter TargetName="SummaryText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
                 </Border>
             </TabItem>
 
@@ -319,6 +417,7 @@
 
         <!-- ===== ステータスバー ===== -->
         <Border Grid.Row="2" Margin="0,8,0,0" Padding="10,4"
+                DataContext="{Binding Monitor}"
                 Background="{DynamicResource Brush.Surface}"
                 BorderBrush="{DynamicResource Brush.Border}"
                 BorderThickness="1"

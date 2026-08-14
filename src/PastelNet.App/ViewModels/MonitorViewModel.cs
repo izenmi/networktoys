@@ -81,6 +81,9 @@ public sealed class MonitorViewModel : ObservableObject
         ? string.Join(", ", NetworkInfo.DnsServers.Select(a => a.ToString()))
         : "—";
 
+    /// <summary>DNS 画面の比較対象の既定値に使う。</summary>
+    public IReadOnlyList<IPAddress> SystemDnsServers => NetworkInfo.DnsServers;
+
     public RelayCommand StartCommand { get; }
     public RelayCommand StopCommand { get; }
     public RelayCommand ApplyListCommand { get; }

@@ -6,13 +6,13 @@ namespace PastelNet.App.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly MonitorViewModel _viewModel = new();
+    private readonly ShellViewModel _shell = new();
     private bool _stopped;
 
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = _viewModel;
+        DataContext = _shell;
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ public partial class MainWindow : Window
 
         try
         {
-            await _viewModel.StopAsync();
+            await _shell.Monitor.StopAsync();
         }
         catch (Exception ex)
         {

@@ -108,6 +108,18 @@ internal static class SelfTest
             log.AppendLine($"        ループバックの応答: {reply.Status}");
         });
 
+        Check("DnsClient がリンクされ、問い合わせを実行できる", () =>
+        {
+            // 応答が返るかはネットワーク次第なので合否に含めない。
+            // ここで見たいのは型のロードと呼び出しが通ること。
+            // UI スレッドで待つとデッドロックするので、必ず Task.Run で逃がす。
+            Services.DnsLookupResult result = Task.Run(() =>
+                Services.DnsProbe.QueryAsync("1.1.1.1", "one.one.one.one", "A", 3000, CancellationToken.None))
+                .GetAwaiter().GetResult();
+
+            log.AppendLine($"        1.1.1.1 への問い合わせ: {result.Summary}");
+        });
+
         Check("宛先リストを保存して読み戻せる", () =>
         {
             string path = Path.Combine(Path.GetTempPath(), $"pastelnet-selftest-{Guid.NewGuid():N}.json");

@@ -77,11 +77,11 @@ public static class TargetListParser
             string comment = separator < 0 ? string.Empty : trimmed[(separator + 1)..].Trim();
 
             // 末尾の :ポート があれば TCP 接続で測る
-            ProbeKind kind = ProbeKind.Icmp;
+            ProbeKind probeKind = ProbeKind.Icmp;
             int port = 0;
             if (TrySplitPort(host, out string hostWithoutPort, out int parsedPort))
             {
-                kind = ProbeKind.Tcp;
+                probeKind = ProbeKind.Tcp;
                 port = parsedPort;
                 host = hostWithoutPort;
             }
@@ -102,12 +102,12 @@ public static class TargetListParser
 
                 case IpRangeKind.Expanded:
                     foreach (IPAddress address in expanded)
-                        result.Targets.Add(new Target { Host = address.ToString(), Comment = comment, Kind = kind, Port = port });
+                        result.Targets.Add(new Target { Host = address.ToString(), Comment = comment, Kind = probeKind, Port = port });
                     result.ExpandedCount += expanded.Count;
                     break;
 
                 default:
-                    result.Targets.Add(new Target { Host = host, Comment = comment, Kind = kind, Port = port });
+                    result.Targets.Add(new Target { Host = host, Comment = comment, Kind = probeKind, Port = port });
                     break;
             }
         }
