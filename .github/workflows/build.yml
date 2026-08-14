@@ -117,11 +117,10 @@ jobs:
 
           if ($second.Code -ne 0) { throw "自己診断が失敗しました (exit $($second.Code))" }
 
-      # ウィンドウを実際に表示できるかは、ランナーに対話デスクトップがあるかに依存する。
-      # 落ちても構成の可否は判断できるので、ここは情報収集にとどめて先へ進める。
-      - name: GUI 起動スモークテスト（参考・失敗しても続行）
+      # ランナーには対話デスクトップがある（crash.log の「対話セッション: True」で確認済み）。
+      # 実際にウィンドウを出して生存を確かめる。
+      - name: GUI 起動スモークテスト
         id: gui
-        continue-on-error: true
         shell: pwsh
         working-directory: publish/${{ matrix.name }}
         run: |

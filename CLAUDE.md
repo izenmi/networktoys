@@ -12,7 +12,8 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 1. **`PastelNet.Core` (net10.0) に純粋ロジックを押し出す** — ネットワークにも WPF にも触らないコード（IP 範囲パース、統計、MOS 算出、OUI 解決、レポート生成）はすべてここへ。CI の xUnit で検証できる面積を最大化する。
    原則: **テストできない部分（WPF・P/Invoke・実ネットワーク）を、テストできる純関数の薄いラッパーに追い込む。**
    例: traceroute なら「Ping を投げる部分」と「ホップ列を解析・整形する部分」を分け、後者を固定データでテストする。
-2. **`--selftest`** — `PastelNet.exe --selftest` で UI を出さずに自己診断し、終了コードを返す。**XAML のエラー（リソースキーの打ち間違いなど）はコンパイルを通り抜けて実行時に落ちる**ので、MainWindow を実際に生成するこの検査が実質唯一の防波堤。新しい画面やリソースを足したら必ずここに検査を追加する。
+2. **`--selftest`** — `PastelNet.exe --selftest` で自己診断し、終了コードを返す。**XAML のエラー（リソースキーの打ち間違いなど）はコンパイルを通り抜けて実行時に落ちる**ので、MainWindow を実際に生成・表示するこの検査が実質唯一の防波堤。新しい画面やリソースを足したら必ずここに検査を追加する。
+   **ウィンドウは `Show()` してから `UpdateLayout()` すること。** Show せずに `Measure()` を呼んでもテキスト整形まで到達せず、フォント初期化の不具合を見逃す（InvariantGlobalization の事故で実証済み）。
 3. **1 フェーズ = 1 まとまり = CI グリーン** — 大きな差分を積むと失敗の切り分けが不可能になる。
 
 ## 実装上の罠（調査済み。踏む前に読むこと）
@@ -22,7 +23,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **WPF はトリミングできない。** `PublishTrimmed=true` は NETSDK1168 でビルドエラー。`PublishAot` も不可。self-contained のサイズは削れない前提で、「軽量」は起動時間とメモリで満たす。
 - **`PublishSingleFile` + `PublishReadyToRun` は起動失敗の報告がある**（dotnet/wpf#7282, #11436）。Phase 0 のマトリクスで実測して採用形を決める。
 - **単一ファイルでは `Assembly.Location` が空文字を返す。** exe 横のファイルは `AppContext.BaseDirectory`、自分の exe パスは `Environment.ProcessPath` を使う。
-- **`InvariantGlobalization=true`** にしているので `CultureInfo` はすべて Invariant。**日付・数値の書式は必ず明示指定**（`"yyyy/MM/dd HH:mm:ss"`）。日本語の表示自体には影響しない。
+- **`InvariantGlobalization` は WPF では使えない（CI で実測）。** `true` にすると ICU が同梱されず、`MS.Internal.FontCache.MajorLanguages` の型初期化に失敗して**最初の TextBlock を測った瞬間に落ちる**。厄介なのは `dotnet publish` が正常に通ることで、ウィンドウを表示して初めて死ぬ。サイズ削減のために再度有効化しないこと。
 - 圧縮（`EnableCompressionInSingleFile`）はサイズを大きく削るが、圧縮アセンブリはメモリマップできず起動時展開が要るので R2R と打ち消し合う。
 
 ### 測定

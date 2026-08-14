@@ -20,7 +20,11 @@
     <!-- 起動速度・省メモリのための設定。publish 固有の設定(SelfContained /
          PublishSingleFile / PublishReadyToRun)は CI のコマンドラインで渡す。
          Phase 0 で 3 構成を実測して採用形を決めるため、ここには書かない。 -->
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- InvariantGlobalization は WPF では使えない。true にすると ICU が同梱されず、
+         MS.Internal.FontCache.MajorLanguages の型初期化に失敗して最初の TextBlock を
+         測った瞬間に落ちる(CI で実測。dotnet publish は通り、ウィンドウ表示時に死ぬ)。
+         ICU の分だけ大きくなるが、日本語の日付書式が正しく出せる利点もある。 -->
+    <InvariantGlobalization>false</InvariantGlobalization>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <TieredPGO>true</TieredPGO>

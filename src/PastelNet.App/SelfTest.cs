@@ -46,6 +46,9 @@ internal static class SelfTest
             if (!condition) throw new InvalidOperationException(message);
         }
 
+        // 検査でウィンドウを開閉するため、最後の 1 枚を閉じた時点でアプリが終わらないようにする
+        Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
         log.AppendLine($"PastelNet selftest  ({DateTime.Now:yyyy/MM/dd HH:mm:ss})");
         log.AppendLine($"  ランタイム: {Environment.Version} / OS: {Environment.OSVersion.VersionString}");
         log.AppendLine();
@@ -82,11 +85,29 @@ internal static class SelfTest
         Views.MainWindow? window = null;
         Check("MainWindow を生成できる(XAML の妥当性確認)", () => window = new Views.MainWindow());
 
-        Check("MainWindow のレイアウトが走る", () =>
+        // Show せずに Measure を呼んでもテキスト整形までは到達せず、
+        // フォント周りの初期化不良を見逃す(InvariantGlobalization の事故で実証済み)。
+        // 実際に表示してレイアウトを完了させること。
+        Check("MainWindow を表示してレイアウトできる", () =>
         {
-            Assert(window is not null, "ウィンドウが生成されていないため測定できない");
-            window!.Measure(new Size(1120, 720));
-            window.Arrange(new Rect(0, 0, 1120, 720));
+            Assert(window is not null, "ウィンドウが生成されていないため表示できない");
+            window!.Show();
+            window.UpdateLayout();
+            Assert(window.ActualWidth > 0 && window.ActualHeight > 0, "ウィンドウの実サイズが 0 のまま");
+            window.Close();
+        });
+
+        Check("日本語テキストを整形できる(フォント初期化の確認)", () =>
+        {
+            var text = new FormattedText(
+                "応答 12.4 ms ／ ロス 0%",
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Yu Gothic UI"),
+                13,
+                Brushes.Black,
+                1.0);
+            Assert(text.Width > 0, "整形結果の幅が 0");
         });
 
         log.AppendLine();
