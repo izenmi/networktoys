@@ -42,7 +42,7 @@
         <!-- ===== 本体 ===== -->
         <TabControl Grid.Row="1">
 
-            <!-- ---------- 監視 ---------- -->
+            <!-- ===== 監視 ===== -->
             <TabItem Header="監視">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
@@ -82,7 +82,7 @@
                 </Border>
             </TabItem>
 
-            <!-- ---------- スキャン ---------- -->
+            <!-- ===== スキャン ===== -->
             <TabItem Header="スキャン">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -102,7 +102,7 @@
                 </Border>
             </TabItem>
 
-            <!-- ---------- DNS ---------- -->
+            <!-- ===== DNS ===== -->
             <TabItem Header="DNS">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -113,7 +113,7 @@
                 </Border>
             </TabItem>
 
-            <!-- ---------- 経路 ---------- -->
+            <!-- ===== 経路 ===== -->
             <TabItem Header="経路">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -124,7 +124,7 @@
                 </Border>
             </TabItem>
 
-            <!-- ---------- 無線 ---------- -->
+            <!-- ===== 無線 ===== -->
             <TabItem Header="無線">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -135,7 +135,7 @@
                 </Border>
             </TabItem>
 
-            <!-- ---------- 記録 ---------- -->
+            <!-- ===== 記録 ===== -->
             <TabItem Header="記録">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -146,7 +146,7 @@
                 </Border>
             </TabItem>
 
-            <!-- ---------- 配色(Phase 0 の確認用。実装が進んだら削除する) ---------- -->
+            <!-- ===== 配色(Phase 0 の確認用。実装が進んだら削除する) ===== -->
             <TabItem Header="配色">
                 <Border Style="{StaticResource Card}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
