@@ -12,6 +12,9 @@ public sealed class ShellViewModel
         // 現在の DNS サーバを比較対象の既定値として渡す
         Dns = new DnsViewModel(Monitor.SystemDnsServers);
         Trace = new TraceViewModel();
+
+        // 自分のサブネットをスキャン範囲の既定値にしておく（現場で最もよく使う操作）
+        Scan = new ScanViewModel(Monitor.SubnetCidr, Monitor.AppendToTargetList);
     }
 
     public MonitorViewModel Monitor { get; }
@@ -19,4 +22,6 @@ public sealed class ShellViewModel
     public DnsViewModel Dns { get; }
 
     public TraceViewModel Trace { get; }
+
+    public ScanViewModel Scan { get; }
 }

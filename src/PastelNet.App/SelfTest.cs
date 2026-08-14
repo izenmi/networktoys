@@ -108,6 +108,23 @@ internal static class SelfTest
             log.AppendLine($"        ループバックの応答: {reply.Status}");
         });
 
+        Check("OUI テーブルを読める(埋め込みリソースの確認)", () =>
+        {
+            int count = Services.OuiCatalog.Current.Count;
+            Assert(count > 1000, $"登録件数が少なすぎます: {count}");
+
+            string? vendor = Services.OuiCatalog.FindVendor("00-15-5D-01-02-03");
+            Assert(vendor is not null, "既知の OUI を引けません");
+
+            log.AppendLine($"        {count:N0} 件 / 00-15-5D → {vendor}");
+        });
+
+        Check("ARP テーブルを読める(件数は問わない)", () =>
+        {
+            Dictionary<string, string> arp = Interop.NativeMethods.GetArpTable();
+            log.AppendLine($"        近隣キャッシュ: {arp.Count} 件");
+        });
+
         Check("traceroute を実行できる", () =>
         {
             // ループバック相手なら 1 ホップで届くはず。ここでも見たいのは

@@ -84,6 +84,27 @@ public sealed class MonitorViewModel : ObservableObject
     /// <summary>DNS 画面の比較対象の既定値に使う。</summary>
     public IReadOnlyList<IPAddress> SystemDnsServers => NetworkInfo.DnsServers;
 
+    /// <summary>自分が今いるサブネット。スキャン範囲の既定値に使う。</summary>
+    public string? SubnetCidr => NetworkInfo.SubnetCidr;
+
+    /// <summary>
+    /// スキャン結果などを宛先リストの末尾に書き足す。
+    /// 反映は手動（「宛先」タブの反映ボタン）にしてある。勝手に測定対象が
+    /// 増えると事故になるので、内容を確かめる機会を挟む。
+    /// </summary>
+    public void AppendToTargetList(IEnumerable<string> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+
+        string addition = string.Join('\n', lines);
+        if (addition.Length == 0) return;
+
+        string current = TargetListText.TrimEnd('\n', '\r');
+        TargetListText = current.Length == 0
+            ? addition + "\n"
+            : $"{current}\n{addition}\n";
+    }
+
     public RelayCommand StartCommand { get; }
     public RelayCommand StopCommand { get; }
     public RelayCommand ApplyListCommand { get; }

@@ -262,13 +262,99 @@
             </TabItem>
 
             <!-- ===== スキャン ===== -->
-            <TabItem Header="スキャン">
+            <TabItem Header="スキャン" DataContext="{Binding Scan}">
                 <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource Heading}" Text="IP スキャン" />
-                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="範囲を指定してサブネットを掃き、応答したホストの MAC・ベンダー名・開放ポートを一覧にします。Phase 3 で実装します。" />
-                    </StackPanel>
+                    <DockPanel>
+
+                        <!-- 操作 -->
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="範囲" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBox Width="260"
+                                         Text="{Binding RangeText, UpdateSourceTrigger=PropertyChanged}"
+                                         FontFamily="{DynamicResource Font.Mono}"
+                                         Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Preview}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" Margin="0,0,12,0" />
+                                <CheckBox Content="ホスト名を引く" IsChecked="{Binding ResolveNames}"
+                                          VerticalAlignment="Center" Margin="0,0,12,0" />
+                                <CheckBox Content="ポートも調べる" IsChecked="{Binding ScanPorts}"
+                                          VerticalAlignment="Center" Margin="0,0,12,0"
+                                          ToolTip="よく使う22ポートだけを調べます。ウイルス対策ソフトが反応する場合があります。" />
+                                <Button Content="スキャン" Command="{Binding ScanCommand}" Margin="0,0,6,0" />
+                                <Button Content="中断" Command="{Binding CancelCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                <Button Content="宛先に追加" Command="{Binding AddToTargetsCommand}"
+                                        Style="{StaticResource Button.Subtle}" />
+                            </StackPanel>
+
+                            <ProgressBar Value="{Binding Progress}" Maximum="100" Margin="0,8,0,0" />
+
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       Margin="0,6,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- 一覧のヘッダ -->
+                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="116" />
+                                <ColumnDefinition Width="62" />
+                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="132" />
+                                <ColumnDefinition Width="160" />
+                                <ColumnDefinition Width="150" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="IP"       Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="1" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="2" Text="ホスト名" Style="{StaticResource Caption}" Margin="10,0,0,0" />
+                            <TextBlock Grid.Column="3" Text="MAC"      Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="4" Text="ベンダー" Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="5" Text="開放ポート" Style="{StaticResource Caption}" />
+                        </Grid>
+                        <Border DockPanel.Dock="Top" Height="1"
+                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                        <ListBox ItemsSource="{Binding Results}"
+                                 ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 HorizontalContentAlignment="Stretch"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 VirtualizingStackPanel.IsVirtualizing="True"
+                                 VirtualizingStackPanel.VirtualizationMode="Recycling">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Height="{DynamicResource Size.RowHeight}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="116" />
+                                            <ColumnDefinition Width="62" />
+                                            <ColumnDefinition Width="*" MinWidth="140" />
+                                            <ColumnDefinition Width="132" />
+                                            <ColumnDefinition Width="160" />
+                                            <ColumnDefinition Width="150" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Address}"
+                                                   Style="{StaticResource Mono}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Rtt}"
+                                                   Style="{StaticResource Mono}" VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="2" Text="{Binding HostName}"
+                                                   VerticalAlignment="Center" Margin="10,0,0,0"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="3" Text="{Binding Mac}"
+                                                   Style="{StaticResource Mono}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="4" Text="{Binding Vendor}"
+                                                   Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="5" Text="{Binding Ports}"
+                                                   Style="{StaticResource Mono}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
                 </Border>
             </TabItem>
 
