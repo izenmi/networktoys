@@ -167,6 +167,54 @@ public class TargetListParserTests
     }
 
     [Fact]
+    public void A_trailing_port_selects_tcp()
+    {
+        Target target = TargetListParser.Parse("example.jp:443 Web サーバ").Targets[0];
+
+        Assert.Equal("example.jp", target.Host);
+        Assert.Equal(ProbeKind.Tcp, target.Kind);
+        Assert.Equal(443, target.Port);
+        Assert.Equal("Web サーバ", target.Comment);
+    }
+
+    [Fact]
+    public void A_port_applies_to_every_address_in_a_range()
+    {
+        TargetListParseResult result = TargetListParser.Parse("192.168.1.1-3:22 SSH");
+
+        Assert.Equal(3, result.Targets.Count);
+        Assert.All(result.Targets, t =>
+        {
+            Assert.Equal(ProbeKind.Tcp, t.Kind);
+            Assert.Equal(22, t.Port);
+        });
+        Assert.Equal("192.168.1.3", result.Targets[2].Host);
+    }
+
+    [Theory]
+    [InlineData("example.jp:0")]        // ポート番号として不正
+    [InlineData("example.jp:70000")]
+    [InlineData("example.jp:abc")]
+    [InlineData("example.jp:")]
+    [InlineData("fe80::1")]             // IPv6 リテラルはコロンが複数
+    public void Invalid_or_ambiguous_ports_stay_icmp(string token)
+    {
+        Target target = TargetListParser.Parse(token).Targets[0];
+        Assert.Equal(ProbeKind.Icmp, target.Kind);
+    }
+
+    [Fact]
+    public void Round_trips_a_tcp_target_through_Format()
+    {
+        TargetListParseResult first = TargetListParser.Parse("example.jp:443 Web\n192.168.1.1 GW");
+        TargetListParseResult second = TargetListParser.Parse(TargetListParser.Format(first.Targets));
+
+        Assert.Equal(ProbeKind.Tcp, second.Targets[0].Kind);
+        Assert.Equal(443, second.Targets[0].Port);
+        Assert.Equal(ProbeKind.Icmp, second.Targets[1].Kind);
+    }
+
+    [Fact]
     public void Round_trips_through_Format()
     {
         const string text = "192.168.1.1 ルータ\nexample.jp Web サーバ\n10.0.0.1\n";

@@ -19,6 +19,12 @@ public enum RowState
     /// <summary>応答なし。</summary>
     Down,
 
+    /// <summary>
+    /// TCP で接続を拒否された。ポートは閉じているが<b>ホストは生きている</b>ので、
+    /// 無応答とは区別して見せる。
+    /// </summary>
+    Refused,
+
     /// <summary>名前を解決できない。</summary>
     Unresolved,
 }
@@ -119,12 +125,16 @@ public sealed class TargetRowViewModel : ObservableObject
         {
             ProbeStatus.Success when latest.RttMs >= _settings.SlowThresholdMs => RowState.Slow,
             ProbeStatus.Success => RowState.Ok,
+            ProbeStatus.Refused => RowState.Refused,
             ProbeStatus.DnsFailure => RowState.Unresolved,
             ProbeStatus.Pending => RowState.Pending,
             _ => RowState.Down,
         };
 
-        LatestRtt = latest.Status.IsReachable() ? FormatMilliseconds(latest.RttMs) : "—";
+        // 拒否のときも RTT は意味を持つ（そこまで届いている証拠なので）
+        LatestRtt = latest.Status is ProbeStatus.Success or ProbeStatus.Refused
+            ? FormatMilliseconds(latest.RttMs)
+            : "—";
         AverageRtt = stats.Successes > 0 ? FormatMilliseconds(stats.AverageMs) : "—";
         Loss = stats.Attempts > 0 ? FormatLoss(stats.LossPercent) : "—";
 

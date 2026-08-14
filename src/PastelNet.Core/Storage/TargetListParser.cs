@@ -37,6 +37,7 @@ public sealed class TargetListParseResult
 /// これに加えて、まとめて登録しやすいよう次を独自に受け付ける:
 ///   ・区切りにタブも使える（表計算から貼り付けたとき用）
 ///   ・範囲記法 192.168.1.1-20 / 192.168.1.1-192.168.1.20 / 192.168.1.0/24 を展開する
+///   ・末尾に :ポート を付けると ICMP ではなく TCP 接続で測る（例 example.jp:443）
 /// </summary>
 public static class TargetListParser
 {
@@ -75,6 +76,16 @@ public static class TargetListParser
             string host = separator < 0 ? trimmed : trimmed[..separator];
             string comment = separator < 0 ? string.Empty : trimmed[(separator + 1)..].Trim();
 
+            // 末尾の :ポート があれば TCP 接続で測る
+            ProbeKind kind = ProbeKind.Icmp;
+            int port = 0;
+            if (TrySplitPort(host, out string hostWithoutPort, out int parsedPort))
+            {
+                kind = ProbeKind.Tcp;
+                port = parsedPort;
+                host = hostWithoutPort;
+            }
+
             if (result.Targets.Count >= limit)
             {
                 result.Errors.Add(new TargetListError(lineNumber, line, $"宛先が上限 {limit:N0} 件に達したため、これ以降を読み飛ばしました。"));
@@ -91,17 +102,41 @@ public static class TargetListParser
 
                 case IpRangeKind.Expanded:
                     foreach (IPAddress address in expanded)
-                        result.Targets.Add(new Target { Host = address.ToString(), Comment = comment });
+                        result.Targets.Add(new Target { Host = address.ToString(), Comment = comment, Kind = kind, Port = port });
                     result.ExpandedCount += expanded.Count;
                     break;
 
                 default:
-                    result.Targets.Add(new Target { Host = host, Comment = comment });
+                    result.Targets.Add(new Target { Host = host, Comment = comment, Kind = kind, Port = port });
                     break;
             }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 末尾の <c>:ポート</c> を切り出す。TCP 接続で測る宛先の指定。
+    /// コロンが 2 つ以上ある場合（IPv6 リテラル）は対象にしない。
+    /// </summary>
+    private static bool TrySplitPort(string host, out string hostWithoutPort, out int port)
+    {
+        hostWithoutPort = host;
+        port = 0;
+
+        int colon = host.LastIndexOf(':');
+        if (colon <= 0 || colon == host.Length - 1)
+            return false;
+
+        if (host.IndexOf(':') != colon)
+            return false;   // IPv6 リテラルなど
+
+        if (!int.TryParse(host[(colon + 1)..], out int parsed) || parsed is < 1 or > 65535)
+            return false;
+
+        hostWithoutPort = host[..colon];
+        port = parsed;
+        return true;
     }
 
     /// <summary>宛先リストを編集用のテキストに戻す。<see cref="Parse"/> で読み直せる形にする。</summary>
@@ -114,6 +149,12 @@ public static class TargetListParser
         foreach (Target target in targets)
         {
             builder.Append(target.Host);
+
+            if (target.Kind == ProbeKind.Tcp && target.Port > 0)
+            {
+                builder.Append(':');
+                builder.Append(target.Port);
+            }
 
             if (!string.IsNullOrWhiteSpace(target.Comment))
             {

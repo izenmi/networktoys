@@ -82,6 +82,11 @@
                     <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="BadgeText" Property="Text" Value="✕ 不達" />
                 </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Refused">
+                    <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                    <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                    <Setter TargetName="BadgeText" Property="Text" Value="⊘ 拒否" />
+                </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Unresolved">
                     <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
                     <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
@@ -226,6 +231,10 @@
                                     <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.10-20</Run> ／
                                     <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.1-192.168.1.50</Run> ／
                                     <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.0/24</Run>
+                                </TextBlock>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0">
+                                    末尾に <Run FontFamily="{DynamicResource Font.Mono}">:ポート</Run> を付けると、ICMP ではなく TCP 接続で測ります（例
+                                    <Run FontFamily="{DynamicResource Font.Mono}">example.jp:443</Run>）。ping が塞がれている相手の確認に使えます。
                                 </TextBlock>
                             </StackPanel>
                         </Border>

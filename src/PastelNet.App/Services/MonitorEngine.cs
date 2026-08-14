@@ -38,10 +38,6 @@ internal sealed class MonitorEngine : IAsyncDisposable
             if (!target.Enabled || !target.IsValid())
                 continue;
 
-            // Phase 1 では ICMP のみ。TCP は Phase 2 で追加する。
-            if (target.Kind != ProbeKind.Icmp)
-                continue;
-
             var monitor = new TargetMonitor(target, settings, _channel.Writer, _concurrency);
             _monitors.Add(monitor);
             monitor.Start();

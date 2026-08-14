@@ -23,7 +23,7 @@ internal sealed class TargetMonitor : IDisposable
 
     // Ping は同時に 1 リクエストしか扱えない（進行中に再度呼ぶと InvalidOperationException）。
     // 1 宛先 = 1 インスタンスで、その中では逐次に使う。
-    private readonly Ping _ping = new();
+    private readonly Ping? _ping;
     private readonly byte[] _payload;
     private readonly PingOptions _pingOptions = new() { DontFragment = false };
 
@@ -39,6 +39,9 @@ internal sealed class TargetMonitor : IDisposable
         _concurrency = concurrency;
         _payload = new byte[Math.Clamp(settings.PayloadBytes, 0, 65_500)];
         Array.Fill(_payload, (byte)'p');
+
+        if (target.Kind == ProbeKind.Icmp)
+            _ping = new Ping();
     }
 
     public string TargetId => _target.Id;
@@ -110,12 +113,28 @@ internal sealed class TargetMonitor : IDisposable
 
         int timeoutMs = _target.TimeoutMs ?? _settings.TimeoutMs;
 
-        // 同時に飛ばすパケット数の上限。数百宛先でも一斉には出さない。
+        // 同時に飛ばすプローブ数の上限。数百宛先でも一斉には出さない。
         await _concurrency.WaitAsync(token);
         try
         {
+            ProbeSample sample = _target.Kind == ProbeKind.Tcp
+                ? await ProbeTcpAsync(address, now, timeoutMs, token)
+                : await ProbeIcmpAsync(address, now, timeoutMs, token);
+
+            return new ProbeResult(_target.Id, sample, address.ToString());
+        }
+        finally
+        {
+            _concurrency.Release();
+        }
+    }
+
+    private async Task<ProbeSample> ProbeIcmpAsync(IPAddress address, long now, int timeoutMs, CancellationToken token)
+    {
+        try
+        {
             long startedAt = Stopwatch.GetTimestamp();
-            PingReply reply = await _ping.SendPingAsync(
+            PingReply reply = await _ping!.SendPingAsync(
                 address,
                 TimeSpan.FromMilliseconds(timeoutMs),
                 _payload,
@@ -126,7 +145,7 @@ internal sealed class TargetMonitor : IDisposable
             // 分解能も粗いので、自前で測った値を使う。
             double elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
 
-            ProbeSample sample = reply.Status switch
+            return reply.Status switch
             {
                 IPStatus.Success => ProbeSample.Success(now, elapsedMs),
                 IPStatus.TimedOut => ProbeSample.Failure(now, ProbeStatus.TimedOut),
@@ -137,20 +156,63 @@ internal sealed class TargetMonitor : IDisposable
                     or IPStatus.DestinationProhibited => ProbeSample.Failure(now, ProbeStatus.Unreachable),
                 _ => ProbeSample.Failure(now, ProbeStatus.Error),
             };
-
-            return new ProbeResult(_target.Id, sample, address.ToString());
         }
         catch (PingException)
         {
-            return new ProbeResult(_target.Id, ProbeSample.Failure(now, ProbeStatus.Error), address.ToString());
+            return ProbeSample.Failure(now, ProbeStatus.Error);
         }
         catch (SocketException)
         {
-            return new ProbeResult(_target.Id, ProbeSample.Failure(now, ProbeStatus.Error), address.ToString());
+            return ProbeSample.Failure(now, ProbeStatus.Error);
         }
-        finally
+    }
+
+    /// <summary>
+    /// 指定ポートへの接続にかかる時間を測る。ICMP が塞がれた環境ではこちらが頼りになる。
+    ///
+    /// 結果を 3 つに区別するのが肝。とくに「拒否」は<b>ホストが生きている</b>証拠であり、
+    /// 無応答とはまったく意味が違う。
+    /// </summary>
+    private async Task<ProbeSample> ProbeTcpAsync(IPAddress address, long now, int timeoutMs, CancellationToken token)
+    {
+        using var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeoutCts.CancelAfter(timeoutMs);
+
+        long startedAt = Stopwatch.GetTimestamp();
+
+        try
         {
-            _concurrency.Release();
+            await socket.ConnectAsync(new IPEndPoint(address, _target.Port), timeoutCts.Token);
+
+            double elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
+
+            // 用が済んだらすぐ閉じる。相手のセッションを掴んだままにしない
+            socket.Shutdown(SocketShutdown.Both);
+            return ProbeSample.Success(now, elapsedMs);
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused)
+        {
+            // RST が即返ってきた。ポートは閉じているがホストは応答している
+            double elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
+            return new ProbeSample(now, (float)elapsedMs, ProbeStatus.Refused);
+        }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            return ProbeSample.Failure(now, ProbeStatus.TimedOut);
+        }
+        catch (SocketException ex)
+        {
+            return ProbeSample.Failure(now, ex.SocketErrorCode switch
+            {
+                SocketError.HostUnreachable or SocketError.NetworkUnreachable => ProbeStatus.Unreachable,
+                SocketError.HostNotFound => ProbeStatus.DnsFailure,
+                _ => ProbeStatus.Error,
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            return ProbeSample.Failure(now, ProbeStatus.Error);
         }
     }
 
@@ -182,6 +244,6 @@ internal sealed class TargetMonitor : IDisposable
     public void Dispose()
     {
         _cts?.Dispose();
-        _ping.Dispose();
+        _ping?.Dispose();
     }
 }
