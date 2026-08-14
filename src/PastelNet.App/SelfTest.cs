@@ -103,8 +103,8 @@ internal static class SelfTest
             // CI や社内網ではループバックすら塞がれることがあるので、
             // 応答が返るかどうかは合否に含めない。
             using var ping = new System.Net.NetworkInformation.Ping();
-            System.Net.NetworkInformation.PingReply reply =
-                ping.Send(IPAddress.Loopback, TimeSpan.FromSeconds(2));
+            // 同期版の Send はミリ秒の int しか受け取らない（TimeSpan は SendPingAsync のみ）
+            System.Net.NetworkInformation.PingReply reply = ping.Send(IPAddress.Loopback, 2000);
             log.AppendLine($"        ループバックの応答: {reply.Status}");
         });
 
