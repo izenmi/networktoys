@@ -61,14 +61,15 @@ public sealed class DeviceCompareViewModel : ObservableObject
     public RelayCommand LoadBeforeCommand { get; }
     public RelayCommand LoadAfterCommand { get; }
 
-    public IReadOnlyList<string> Modes { get; } = ["show ip route", "show run", "そのまま比較"];
+    /// <summary>並び順は <see cref="DeviceCompareMode"/> と対応させること。</summary>
+    public string[] Modes { get; } = ["show ip route", "show run", "そのまま比較"];
 
     public string SelectedMode
     {
         get => Modes[(int)_mode];
         set
         {
-            int index = Modes.IndexOf(value);
+            int index = Array.IndexOf(Modes, value);
             if (index < 0) return;
 
             var mode = (DeviceCompareMode)index;
