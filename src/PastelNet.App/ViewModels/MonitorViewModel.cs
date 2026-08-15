@@ -24,6 +24,7 @@ public sealed class MonitorViewModel : ObservableObject
     private readonly HashSet<TargetRowViewModel> _touched = [];
     private readonly DispatcherTimer _pump;
     private readonly string _storePath;
+    private readonly string _profilePath;
 
     private readonly MonitorSettings _settings;
     private bool _isRunning;
@@ -32,6 +33,9 @@ public sealed class MonitorViewModel : ObservableObject
     private TargetRowViewModel? _selectedRow;
     private string _statusMessage = string.Empty;
     private string _detailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
+    private Profile? _selectedProfile;
+    private Profile? _suggestedProfile;
+    private string _newProfileName = string.Empty;
 
     public MonitorViewModel()
     {
@@ -54,6 +58,22 @@ public sealed class MonitorViewModel : ObservableObject
 
         _targetListText = TargetListParser.Format(document.Targets);
         NetworkInfo = NetworkEnvironment.Current();
+
+        _profilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "PastelNet",
+            "profiles.json");
+
+        foreach (Profile profile in ProfileStore.Load(_profilePath).Profiles)
+            Profiles.Add(profile);
+
+        SaveProfileCommand = new RelayCommand(SaveProfile, () => !string.IsNullOrWhiteSpace(NewProfileName));
+        LoadProfileCommand = new RelayCommand(LoadProfile, () => SelectedProfile is not null);
+        DeleteProfileCommand = new RelayCommand(DeleteProfile, () => SelectedProfile is not null);
+        ApplySuggestionCommand = new RelayCommand(ApplySuggestion, () => SuggestedProfile is not null);
+        DismissSuggestionCommand = new RelayCommand(() => SuggestedProfile = null);
+
+        DetectProfile();
 
         StartCommand = new RelayCommand(Start, () => !IsRunning && Rows.Count > 0);
         StopCommand = new RelayCommand(() => _ = StopAsync(), () => IsRunning);
@@ -112,6 +132,60 @@ public sealed class MonitorViewModel : ObservableObject
     public RelayCommand StopCommand { get; }
     public RelayCommand ApplyListCommand { get; }
     public RelayCommand ClearHistoryCommand { get; }
+    public RelayCommand SaveProfileCommand { get; }
+    public RelayCommand LoadProfileCommand { get; }
+    public RelayCommand DeleteProfileCommand { get; }
+    public RelayCommand ApplySuggestionCommand { get; }
+    public RelayCommand DismissSuggestionCommand { get; }
+
+    /// <summary>現場ごとの宛先セット。</summary>
+    public ObservableCollection<Profile> Profiles { get; } = [];
+
+    public Profile? SelectedProfile
+    {
+        get => _selectedProfile;
+        set
+        {
+            if (!SetProperty(ref _selectedProfile, value)) return;
+
+            LoadProfileCommand.RaiseCanExecuteChanged();
+            DeleteProfileCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string NewProfileName
+    {
+        get => _newProfileName;
+        set
+        {
+            if (SetProperty(ref _newProfileName, value))
+                SaveProfileCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    /// <summary>
+    /// いまの接続環境に合うプロファイル。
+    /// <b>自動では切り替えない。</b>測定対象が黙って入れ替わると事故になるので、
+    /// 画面上部で控えめに提案するだけにする。
+    /// </summary>
+    public Profile? SuggestedProfile
+    {
+        get => _suggestedProfile;
+        private set
+        {
+            if (!SetProperty(ref _suggestedProfile, value)) return;
+
+            OnPropertyChanged(nameof(HasSuggestion));
+            OnPropertyChanged(nameof(SuggestionText));
+            ApplySuggestionCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool HasSuggestion => SuggestedProfile is not null;
+
+    public string SuggestionText => SuggestedProfile is { } profile
+        ? $"この場所は「{profile.Name}」のようです。宛先を切り替えますか？"
+        : string.Empty;
 
     public bool IsRunning
     {
@@ -327,6 +401,102 @@ public sealed class MonitorViewModel : ObservableObject
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             StatusMessage = $"宛先リストを保存できませんでした: {ex.Message}";
+        }
+    }
+
+    /// <summary>いまの接続環境に合うプロファイルを探す。</summary>
+    private void DetectProfile()
+    {
+        if (Profiles.Count == 0) return;
+
+        try
+        {
+            // SSID は位置情報の許可が要るのでここでは取りに行かない。
+            // サブネットとゲートウェイだけで判定できる設計にしてある。
+            NetworkFingerprint fingerprint = NetworkEnvironment.GetFingerprint(NetworkInfo);
+            SuggestedProfile = ProfileMatcher.FindBest(Profiles, fingerprint);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MonitorViewModel.DetectProfile");
+        }
+    }
+
+    private void SaveProfile()
+    {
+        string name = NewProfileName.Trim();
+        if (name.Length == 0) return;
+
+        NetworkFingerprint fingerprint = NetworkEnvironment.GetFingerprint(NetworkInfo);
+
+        var profile = new Profile
+        {
+            Name = name,
+            SubnetCidr = fingerprint.SubnetCidr,
+            GatewayAddress = fingerprint.GatewayAddress,
+            GatewayMac = fingerprint.GatewayMac,
+            Ssid = fingerprint.Ssid,
+            TargetListText = TargetListText,
+        };
+
+        if (!profile.IsValid())
+        {
+            StatusMessage = "いまの接続環境を特定できないため、プロファイルを作れません。";
+            return;
+        }
+
+        // 同じ名前があれば上書きする
+        Profile? existing = Profiles.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.Ordinal));
+        if (existing is not null)
+            Profiles.Remove(existing);
+
+        Profiles.Add(profile);
+        SaveProfiles();
+
+        NewProfileName = string.Empty;
+        StatusMessage = $"「{name}」として保存しました（{profile.SubnetCidr ?? profile.GatewayAddress}）。";
+    }
+
+    private void LoadProfile()
+    {
+        if (SelectedProfile is not { } profile) return;
+
+        TargetListText = profile.TargetListText;
+        StatusMessage = $"「{profile.Name}」の宛先を読み込みました。「一覧に反映」で適用されます。";
+    }
+
+    private void DeleteProfile()
+    {
+        if (SelectedProfile is not { } profile) return;
+
+        Profiles.Remove(profile);
+        if (ReferenceEquals(SuggestedProfile, profile))
+            SuggestedProfile = null;
+
+        SelectedProfile = null;
+        SaveProfiles();
+        StatusMessage = $"「{profile.Name}」を削除しました。";
+    }
+
+    private void ApplySuggestion()
+    {
+        if (SuggestedProfile is not { } profile) return;
+
+        TargetListText = profile.TargetListText;
+        SuggestedProfile = null;
+        _ = ApplyListAsync();
+        StatusMessage = $"「{profile.Name}」に切り替えました。";
+    }
+
+    private void SaveProfiles()
+    {
+        try
+        {
+            ProfileStore.Save(_profilePath, new ProfileDocument { Profiles = [.. Profiles] });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            StatusMessage = $"プロファイルを保存できませんでした: {ex.Message}";
         }
     }
 

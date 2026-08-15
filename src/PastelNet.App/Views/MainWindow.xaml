@@ -153,6 +153,30 @@
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
+                        <!-- プロファイルの切り替え提案。勝手に切り替えず、こちらから聞く -->
+                        <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="10,6"
+                                Background="{DynamicResource Brush.Accent.Bg}" CornerRadius="7">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasSuggestion}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding SuggestionText}"
+                                           Foreground="{DynamicResource Brush.Accent.Fg}"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <Button Content="切り替える" Command="{Binding ApplySuggestionCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                <Button Content="そのまま" Command="{Binding DismissSuggestionCommand}"
+                                        Style="{StaticResource Button.Subtle}" />
+                            </StackPanel>
+                        </Border>
+
                         <!-- 操作列 -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
                             <Button Content="{Binding RunButtonLabel}"
@@ -256,6 +280,30 @@
                             </StackPanel>
                             <TextBlock Text="{Binding ListSummary}" Style="{StaticResource Caption}"
                                        TextWrapping="Wrap" Margin="0,6,0,0" />
+
+                            <!-- 現場ごとの宛先セット -->
+                            <Border Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="7"
+                                    Padding="10,7" Margin="0,8,0,0">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                               Text="この宛先リストを現場ごとに覚えておけます。次に同じネットワークへ繋いだとき、監視画面で切り替えを提案します（判定はサブネットとゲートウェイで行うので、有線でも働きます）。" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <ComboBox Width="180" ItemsSource="{Binding Profiles}"
+                                                  SelectedItem="{Binding SelectedProfile}"
+                                                  DisplayMemberPath="Name"
+                                                  Margin="0,0,6,0" />
+                                        <Button Content="読み込む" Command="{Binding LoadProfileCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                        <Button Content="削除" Command="{Binding DeleteProfileCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,20,0" />
+                                        <TextBox Width="150"
+                                                 Text="{Binding NewProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                                 ToolTip="現場の名前（例: A社 3階）"
+                                                 Margin="0,0,6,0" />
+                                        <Button Content="今の環境で保存" Command="{Binding SaveProfileCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
 
                         <TextBox Text="{Binding TargetListText, UpdateSourceTrigger=PropertyChanged}"

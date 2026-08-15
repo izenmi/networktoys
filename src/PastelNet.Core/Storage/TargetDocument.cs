@@ -23,4 +23,5 @@ public sealed class TargetDocument
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(TargetDocument))]
+[JsonSerializable(typeof(ProfileDocument))]
 public partial class PastelNetJsonContext : JsonSerializerContext;
