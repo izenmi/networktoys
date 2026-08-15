@@ -513,7 +513,7 @@
                 <ControlTemplate TargetType="Thumb">
                     <Border x:Name="Bd"
                             Background="{DynamicResource Brush.Scroll.Thumb}"
-                            CornerRadius="4"
+                            CornerRadius="5"
                             Margin="2" />
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -530,13 +530,14 @@
 
     <Style TargetType="ScrollBar">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Width" Value="12" />
+        <!-- 14px あればつまみの見え幅が 10px になり、狙って掴める -->
+        <Setter Property="Width" Value="14" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
                     <Grid Background="{TemplateBinding Background}">
                         <Border Background="{DynamicResource Brush.Scroll.Track}"
-                                CornerRadius="6"
+                                CornerRadius="7"
                                 Margin="1" />
                         <Track x:Name="PART_Track"
                                Orientation="{TemplateBinding Orientation}"
@@ -556,7 +557,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="Orientation" Value="Horizontal">
                             <Setter Property="Width" Value="Auto" />
-                            <Setter Property="Height" Value="12" />
+                            <Setter Property="Height" Value="14" />
                             <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
                         </Trigger>
                     </ControlTemplate.Triggers>
