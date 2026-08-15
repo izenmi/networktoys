@@ -332,7 +332,7 @@ public partial class MainWindow : Window
             this,
             "バージョン情報",
             $"PingWatcher {version}\n\n" +
-            "持ち出せるネットワーク診断ツール\n" +
+            "色々できるネットワーク診断ツール\n" +
             "https://github.com/izenmi/pastelnet");
     }
 
