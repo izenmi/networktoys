@@ -74,7 +74,8 @@
     -->
     <Style TargetType="TabItem">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-        <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
+        <!-- タブは 14 枚あるので、文字と余白を詰めて起動幅(740px)でも一列に収める -->
+        <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
@@ -84,8 +85,8 @@
                             BorderBrush="{DynamicResource Brush.Border}"
                             BorderThickness="1"
                             CornerRadius="{DynamicResource Radius.Control}"
-                            Padding="10,3"
-                            Margin="0,0,3,0">
+                            Padding="6,2"
+                            Margin="0,0,2,0">
                         <DockPanel>
                             <!-- 選択中の下線。面の色だけより、どこを見ているかが掴みやすい -->
                             <Rectangle x:Name="Underline" DockPanel.Dock="Bottom"
