@@ -22,13 +22,20 @@ public sealed class ConnectionsViewModel : ObservableObject
 
     private NetTraceSession? _trace;
     private ConnectionRates? _rates;
+    private const string AdminNotice =
+        "⚠ 通信量の表示には管理者権限が必要です。管理者として起動し直すと接続ごとの送受信 B/秒 が出ます。";
+
     private ConnectionSnapshot _last = ConnectionSnapshot.Empty;
     private bool _tickBusy;
     private bool _isActive;
-    private bool _isPaused;
+
+    // 既定は一時停止(ユーザー指示)。開いた瞬間の 1 枚だけ読んで止まり、
+    // チェックを外している間だけ 2 秒ごとに追いかける
+    private bool _isPaused = true;
+
     private string _filter = "";
-    private string _status = "タブを開くと 2 秒ごとに更新します。";
-    private string _rateNotice = "";
+    private string _status = "「一時停止」を外すと 2 秒ごとに更新します。";
+    private string _rateNotice = NetTraceSession.IsAdministrator ? "" : AdminNotice;
 
     public ConnectionsViewModel()
     {
@@ -48,7 +55,10 @@ public sealed class ConnectionsViewModel : ObservableObject
         }
     }
 
-    /// <summary>じっくり読みたい・コピーしたいとき用。更新だけ止める。</summary>
+    /// <summary>
+    /// 更新の一時停止。既定でオン(開いた瞬間の 1 枚だけ表示)。
+    /// 止まっている間は ETW セッションも回さない。
+    /// </summary>
     public bool IsPaused
     {
         get => _isPaused;
@@ -60,9 +70,11 @@ public sealed class ConnectionsViewModel : ObservableObject
             if (value)
             {
                 _timer.Stop();
+                StopTrace();
             }
             else if (_isActive)
             {
+                StartTraceIfPossible();
                 _timer.Start();
                 _ = RefreshAsync();
             }
@@ -88,16 +100,21 @@ public sealed class ConnectionsViewModel : ObservableObject
 
     public bool HasRateNotice => _rateNotice.Length > 0;
 
-    /// <summary>タブが表示されたら回り、隠れたら止まる。ETW も同じ寿命にする。</summary>
+    /// <summary>非管理者のときだけ「管理者として再起動」の導線を出す。</summary>
+    public bool CanRelaunchAsAdmin => !NetTraceSession.IsAdministrator;
+
+    /// <summary>タブが表示されたら動き、隠れたら止まる。ETW も同じ寿命にする。</summary>
     public void OnActivated()
     {
         _isActive = true;
-        StartTraceIfPossible();
 
-        if (IsPaused)
-            return;
+        if (!IsPaused)
+        {
+            StartTraceIfPossible();
+            _timer.Start();
+        }
 
-        _timer.Start();
+        // 一時停止中でも、開いた瞬間の 1 枚は出す(空のままだと壊れて見える)
         _ = RefreshAsync();
     }
 
@@ -105,18 +122,13 @@ public sealed class ConnectionsViewModel : ObservableObject
     {
         _isActive = false;
         _timer.Stop();
-
-        // カーネルセッションはシステム全体のコストなので、見ていない間は止める
-        _trace?.Dispose();
-        _trace = null;
-        _rates = null;
-        _aggregator.Drain();
+        StopTrace();
     }
 
     public void Reset()
     {
         Filter = "";
-        IsPaused = false;
+        IsPaused = true;   // 既定へ戻す
     }
 
     private async Task RefreshAsync()
@@ -144,7 +156,8 @@ public sealed class ConnectionsViewModel : ObservableObject
             RebuildRows();
 
             (int tcp, int udp, int processes) = ConnectionTableView.Count(_last.Rows);
-            Status = $"TCP {tcp} / UDP {udp} — {processes} プロセス（{DateTime.Now:HH:mm:ss} 時点）";
+            string suffix = IsPaused ? "・一時停止中" : "";
+            Status = $"TCP {tcp} / UDP {udp} — {processes} プロセス（{DateTime.Now:HH:mm:ss} 時点{suffix}）";
         }
         catch (Exception ex)
         {
@@ -163,6 +176,15 @@ public sealed class ConnectionsViewModel : ObservableObject
         OrderedListSync.Apply(Rows, desired, row => row.SortKey);
     }
 
+    private void StopTrace()
+    {
+        // カーネルセッションはシステム全体のコストなので、見ていない間は止める
+        _trace?.Dispose();
+        _trace = null;
+        _rates = null;
+        _aggregator.Drain();
+    }
+
     private void StartTraceIfPossible()
     {
         if (_trace is { IsRunning: true })
@@ -170,7 +192,7 @@ public sealed class ConnectionsViewModel : ObservableObject
 
         if (!NetTraceSession.IsAdministrator)
         {
-            RateNotice = "⚠ 通信量の表示には管理者権限が必要です。管理者として起動し直すと接続ごとの送受信 B/秒 が出ます。";
+            RateNotice = AdminNotice;
             return;
         }
 

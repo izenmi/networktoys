@@ -63,6 +63,45 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 接続タブの通信量(ETW)のための管理者再起動。asInvoker は変えない方針なので、
+    /// 昇格したい人だけがここから明示的に選ぶ。測定中の結果は失われるため確認を挟む。
+    /// </summary>
+    private void OnRelaunchAsAdmin(object sender, RoutedEventArgs e)
+    {
+        bool confirmed = ConfirmDialog.Confirm(
+            this,
+            "管理者として再起動",
+            "いったん終了して、管理者権限で起動し直します。\n" +
+            "測定中の結果と各画面の表示は失われます（宛先リストと設定は残ります）。\n\n" +
+            "続けますか？",
+            okLabel: "再起動する");
+
+        if (!confirmed) return;
+
+        try
+        {
+            // 単一ファイル発行では Assembly.Location が空になるので Environment.ProcessPath を使う
+            string exePath = Environment.ProcessPath
+                ?? throw new InvalidOperationException("実行ファイルの場所が分かりません");
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = exePath,
+                UseShellExecute = true,   // UAC の昇格ダイアログを出すのに必須
+                Verb = "runas",
+                WorkingDirectory = Environment.CurrentDirectory,
+            });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // UAC で「いいえ」が選ばれた(1223)か、起動できなかった。いまの窓のまま続ける
+            return;
+        }
+
+        Application.Current.Shutdown();
+    }
+
+    /// <summary>
     /// いまの画面を PNG にして logs フォルダへ残す。証跡は「見たままの画面」が
     /// 一番説明が早いので、レポートとは別にワンボタンで撮れるようにしている。
     /// </summary>
