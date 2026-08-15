@@ -126,9 +126,11 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <!-- 枠は持たない。1px の枠でも全行に付くと行間が 2px 太る -->
+                        <!-- 下辺だけ淡い線を引き、詰めた行の境目を示す(選択枠の透明ボーダーは持たない) -->
                         <Border x:Name="Bd"
                                 Background="Transparent"
+                                BorderThickness="0,0,0,1"
+                                BorderBrush="{DynamicResource Brush.Row.Line}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter />
                         </Border>
@@ -178,9 +180,11 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <!-- 枠は持たない。1px の枠でも全行に付くと行間が 2px 太る -->
+                        <!-- 下辺だけ淡い線を引き、詰めた行の境目を示す(選択枠の透明ボーダーは持たない) -->
                         <Border x:Name="Bd"
                                 Background="Transparent"
+                                BorderThickness="0,0,0,1"
+                                BorderBrush="{DynamicResource Brush.Row.Line}"
                                 Padding="{TemplateBinding Padding}">
                             <!--
                                 右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
@@ -226,9 +230,11 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <!-- 枠は持たない。1px の枠でも全行に付くと行間が 2px 太る -->
+                        <!-- 下辺だけ淡い線を引き、詰めた行の境目を示す(選択枠の透明ボーダーは持たない) -->
                         <Border x:Name="Bd"
                                 Background="Transparent"
+                                BorderThickness="0,0,0,1"
+                                BorderBrush="{DynamicResource Brush.Row.Line}"
                                 Padding="{TemplateBinding Padding}">
                             <!--
                                 右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。

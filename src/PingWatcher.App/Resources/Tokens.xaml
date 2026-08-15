@@ -13,7 +13,9 @@
 
     <!-- 書体 -->
     <FontFamily x:Key="Font.Ui">Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
-    <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, MS Gothic</FontFamily>
+    <!-- 等幅。日本語の受け皿に MS ゴシックを置くとビットマップ調で古臭くなるので、
+         BIZ UD が無い環境では UI と同じ游ゴシック系に落とす(全角は幅が揃うので実害がない) -->
+    <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, Yu Gothic UI, Meiryo UI</FontFamily>
 
     <!-- 角は四角。丸めたくなったらここを変える(直書き禁止) -->
     <CornerRadius x:Key="Radius.Card">0</CornerRadius>
@@ -28,8 +30,8 @@
     <sys:Double x:Key="Size.Caption">11</sys:Double>
     <sys:Double x:Key="Size.Micro">9</sys:Double>
 
-    <!-- 一覧の行の高さ。一覧で見える数を優先して 20 まで詰めた(2026-08-15 ユーザー指示)。
-         行の枠(1px×上下)も同時に廃止してあり、行ピッチは 20px ちょうど -->
-    <sys:Double x:Key="Size.RowHeight">20</sys:Double>
+    <!-- 一覧の行の高さ。一覧で見える数を優先して 18 まで詰めた(2026-08-15 ユーザー指示)。
+         行ピッチは 18 + 区切り線 1px = 19px -->
+    <sys:Double x:Key="Size.RowHeight">18</sys:Double>
 
 </ResourceDictionary>

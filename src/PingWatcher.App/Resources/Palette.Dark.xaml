@@ -59,6 +59,8 @@
     <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#5C616C" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Scroll.Thumb.Hover" Color="#8A909E" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Scroll.Track" Color="#1E2025" po:Freeze="True" />
+    <!-- 行の区切り線。罫線(Border)より一段淡く、詰めた行の境目だけを示す -->
+    <SolidColorBrush x:Key="Brush.Row.Line"     Color="#22252B" po:Freeze="True" />
 
     <!--
         面と枠のグラデーション。影(DropShadowEffect)は使わない。
