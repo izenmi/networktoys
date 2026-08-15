@@ -188,24 +188,6 @@
         </DataTemplate>
 
         <Style x:Key="CompactRowContainer" TargetType="ListBoxItem">
-            <!--
-                ContextMenu は論理ツリーが切れているため、RelativeSource で親の
-                DataContext を辿れない。PlacementTarget を経由させて、右クリックした
-                行そのものをメニューの DataContext にする。
-                こうすると選択を動かさずに済む（左クリックの挙動は今まで通り）。
-            -->
-            <Setter Property="ContextMenu">
-                <Setter.Value>
-                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
-                                               RelativeSource={RelativeSource Self}}">
-                        <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
-                        <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
-                        <Separator />
-                        <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
-                        <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
-                    </ContextMenu>
-                </Setter.Value>
-            </Setter>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -214,6 +196,25 @@
                                 BorderThickness="1.5"
                                 CornerRadius="6"
                                 Margin="0,0,3,3">
+                            <!--
+                                右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
+                                Style の Setter へ直接 ContextMenu を置くと、リソースが後から
+                                展開される都合で結線がずれ、起動時に落ちる（自己診断で実証済み）。
+
+                                メニューは論理ツリーが切れているので、PlacementTarget 経由で
+                                右クリックした行そのものを DataContext にする。
+                                選択は動かさない（左クリックの挙動は今まで通り）。
+                            -->
+                            <Border.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
+                                                           RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
+                                    <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
+                                    <Separator />
+                                    <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
+                                    <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -233,25 +234,6 @@
         <Style x:Key="TargetRowContainer" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="4,0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <!--
-                ContextMenu は論理ツリーが切れているため、RelativeSource で親の
-                DataContext を辿れない。PlacementTarget を経由させて、右クリックした
-                行そのものをメニューの DataContext にする。
-                こうすると選択を動かさずに済む（左クリックの挙動は今まで通り）。
-            -->
-            <Setter Property="ContextMenu">
-                <Setter.Value>
-                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
-                                               RelativeSource={RelativeSource Self}}">
-                        <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
-                        <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
-                        <Separator />
-                        <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
-                        <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
-                    </ContextMenu>
-                </Setter.Value>
-            </Setter>
-
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -259,6 +241,25 @@
                                 Background="Transparent"
                                 CornerRadius="5"
                                 Padding="{TemplateBinding Padding}">
+                            <!--
+                                右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
+                                Style の Setter へ直接 ContextMenu を置くと、リソースが後から
+                                展開される都合で結線がずれ、起動時に落ちる（自己診断で実証済み）。
+
+                                メニューは論理ツリーが切れているので、PlacementTarget 経由で
+                                右クリックした行そのものを DataContext にする。
+                                選択は動かさない（左クリックの挙動は今まで通り）。
+                            -->
+                            <Border.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
+                                                           RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
+                                    <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
+                                    <Separator />
+                                    <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
+                                    <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -394,30 +395,6 @@
                                        Text="書き換えると自動で反映されます（測定は止まりません。増えた宛先だけ測り始め、消えた宛先だけ止めます）。解釈できない行がある間は反映を保留します。" />
                             <TextBlock Text="{Binding ListSummary}" Style="{StaticResource Caption}"
                                        TextWrapping="Wrap" Margin="0,6,0,0" />
-
-                            <!-- 現場ごとの宛先セット -->
-                            <Border Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="7"
-                                    Padding="10,7" Margin="0,8,0,0">
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                               Text="この宛先リストを現場ごとに覚えておけます。次に同じネットワークへ繋いだとき、Ping 画面で切り替えを提案します（判定はサブネットとゲートウェイで行うので、有線でも働きます）。" />
-                                    <StackPanel Orientation="Horizontal">
-                                        <ComboBox Width="180" ItemsSource="{Binding Profiles}"
-                                                  SelectedItem="{Binding SelectedProfile}"
-                                                  DisplayMemberPath="Name"
-                                                  Margin="0,0,6,0" />
-                                        <Button Content="読み込む" Command="{Binding LoadProfileCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                                        <Button Content="削除" Command="{Binding DeleteProfileCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,20,0" />
-                                        <TextBox Width="150"
-                                                 Text="{Binding NewProfileName, UpdateSourceTrigger=PropertyChanged}"
-                                                 ToolTip="現場の名前（例: A社 3階）"
-                                                 Margin="0,0,6,0" />
-                                        <Button Content="今の環境で保存" Command="{Binding SaveProfileCommand}" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
                         </StackPanel>
 
                         <TextBox Text="{Binding TargetListText, UpdateSourceTrigger=PropertyChanged}"
@@ -436,30 +413,6 @@
             <TabItem Header="Ping" DataContext="{Binding Monitor}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
-
-                        <!-- プロファイルの切り替え提案。勝手に切り替えず、こちらから聞く -->
-                        <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="10,6"
-                                Background="{DynamicResource Brush.Accent.Bg}" CornerRadius="7">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasSuggestion}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding SuggestionText}"
-                                           Foreground="{DynamicResource Brush.Accent.Fg}"
-                                           VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <Button Content="切り替える" Command="{Binding ApplySuggestionCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                                <Button Content="そのまま" Command="{Binding DismissSuggestionCommand}"
-                                        Style="{StaticResource Button.Subtle}" />
-                            </StackPanel>
-                        </Border>
 
                         <!-- 操作列。開始・停止はヘッダへ移したので、ここに残すのは
                              この画面でしか使わないものだけ -->

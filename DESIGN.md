@@ -208,7 +208,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 
 - 宛先リスト / 設定 / プロファイル: JSON。`System.Text.Json` の **source generator** を使いリフレクションを回避(起動速度に効く)
 - 測定結果: セッション単位の **JSONL**(1行1サンプル)。追記のみなので軽く、途中でクラッシュしても壊れない
-- 保存先: `%APPDATA%\PastelNet\`(`targets.json`, `settings.json`, `profiles.json`, `sessions\YYYYMMDD-HHmmss.jsonl`)
+- 保存先: `%APPDATA%\PastelNet\`(`targets.json`, `settings.json`, `sessions\YYYYMMDD-HHmmss.jsonl`)
 - 古いセッションは既定30日で自動削除(設定可)
 
 ### レポート出力
@@ -219,7 +219,11 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 - 1ファイル完結(画像もCSSも埋め込み)なのでメール添付でそのまま送れる
 - CSVも同時出力(Excelで加工したい人向け。BOM付きUTF-8)
 
-### プロファイル(接続環境による自動切替)
+### プロファイル(接続環境による自動切替) — 取りやめ
+
+> **実装したが 2026-08-15 に削除した。** 現場ごとに宛先を覚えさせるより、
+> 宛先リストをテキストとして手元で管理するほうが早い、というのが実際に使った結論。
+> 以下は当時の設計。再提案しないこと。
 
 接続環境を条件に、宛先リストのセットを自動で切り替える。
 例: `SSID=office-wifi → 社内サーバ群`、`192.168.10.0/24 → A社現場`。

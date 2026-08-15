@@ -72,7 +72,6 @@ WPF はトリミングできないため、.NET を同梱すると 125MB にな�
 設定と宛先リストは `%APPDATA%\PastelNet\` に置かれます。
 
 - `targets.json` — 宛先リストと測定の既定値
-- `profiles.json` — 現場ごとの宛先セット
 
 ## ビルド
 

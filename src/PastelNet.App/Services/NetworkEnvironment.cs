@@ -86,27 +86,4 @@ internal static class NetworkEnvironment
 
         return NetworkSnapshot.Empty;
     }
-
-    /// <summary>
-    /// プロファイル判定に使う特徴。
-    ///
-    /// ゲートウェイの MAC まで見るのは、192.168.1.0/24 のようなありふれたサブネットが
-    /// 現場ごとに重複するため。SSID は取れないことがあるので、あくまで補助として渡す。
-    /// </summary>
-    public static Core.Models.NetworkFingerprint GetFingerprint(NetworkSnapshot snapshot, string? ssid = null)
-    {
-        string? gatewayMac = null;
-
-        if (snapshot.Gateway is { } gateway)
-        {
-            Dictionary<string, string> arp = Interop.NativeMethods.GetArpTable();
-            gatewayMac = arp.GetValueOrDefault(gateway.ToString());
-        }
-
-        return new Core.Models.NetworkFingerprint(
-            snapshot.SubnetCidr,
-            snapshot.Gateway?.ToString(),
-            gatewayMac,
-            ssid);
-    }
 }

@@ -41,13 +41,14 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **Wi-Fi 情報は Windows 11 24H2 以降、位置情報の同意がないと `ERROR_ACCESS_DENIED` になる。** 対象は `WlanScan` / `WlanGetAvailableNetworkList` / `WlanGetNetworkBssList` / `WlanQueryInterface`(現在の接続)。ManagedNativeWifi は `UnauthorizedAccessException` として投げる。
   - 起動時にスキャンしない。Wi-Fi 画面を開く、またはユーザーが「スキャン」を押したときに初めて呼ぶ。
   - 例外を捕捉して `ms-settings:privacy-location` への導線を出す。
-- **プロファイル判定を SSID に依存させない。** 上記の理由で SSID は取れないことがある。判定は「ローカル IPv4 サブネット → デフォルトゲートウェイ IP → ゲートウェイ MAC → SSID（取れたら加点）」の順で行う。有線環境でも動くようになる。
+- **接続環境の判定を SSID に依存させない。** 上記の理由で SSID は取れないことがある。有線でも成り立つよう、ローカル IPv4 サブネットとデフォルトゲートウェイを先に見る。
 - **`WlanScan` の再スキャン間隔は最短 5 秒、既定 10〜15 秒。** Windows の WLAN サービス自体が既定 60 秒間隔でしかスキャンしないので、短くしても新しい結果は返らない。
 - **`arp -a` をパースしない。** 出力が OS の表示言語でローカライズされるため日本語環境と英語環境で壊れる。`iphlpapi.dll` の `GetIpNetTable2` を P/Invoke する（管理者権限不要）。
 - 全機能を**非管理者で動作させる**方針。`app.manifest` は `asInvoker` 固定。
 
 ### UI
 
+- **`Style` の `Setter` の中に、イベントハンドラを持つ要素を置かない。** `<Setter Property="ContextMenu">` の下に `Click="..."` 付きの `MenuItem` を書くと、**ビルドは通り、起動した瞬間に `XamlParseException: Set connectionId threw an exception` で落ちる**（`MenuItem` を `Grid` にキャストできない、のように無関係な型が出る）。リソースは後から展開されるのに、結線の番号は文書順で振られるためずれる。`ControlTemplate` / `DataTemplate` の中は独自の結線を持つので安全。**メニューはテンプレートの中の要素に付ける**こと。
 - **測定結果ごとに `Dispatcher.Invoke` しない。** 500 宛先 × 1Hz = 500 通知/秒で UI が溶ける。`Channel<T>` に積んで 10Hz の単一ポンプでまとめて適用する。
 - `ObservableCollection` の**構造変化は宛先の追加/削除時のみ**。測定結果は既存の行 VM のプロパティ更新として流す。
 - 一覧は仮想化必須（`VirtualizationMode=Recycling`、行高固定）。ソート・フィルタはティックごとに `Refresh()` しない。
