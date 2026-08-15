@@ -20,7 +20,8 @@ internal static class ReportService
         IEnumerable<TargetRowViewModel> rows,
         NetworkSnapshot network,
         DateTime? startedAt,
-        int intervalMs)
+        int intervalMs,
+        string? ipConfig = null)
     {
         var reportRows = new List<ReportRow>();
         var buffer = new ProbeSample[SparklinePoints];
@@ -76,7 +77,8 @@ internal static class ReportService
             startedAt,
             intervalMs,
             environment,
-            reportRows);
+            reportRows,
+            ipConfig);
     }
 
     private static string DescribeKind(Target target)

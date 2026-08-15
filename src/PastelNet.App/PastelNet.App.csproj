@@ -54,6 +54,10 @@
     <!-- Native Wifi API のマネージドラッパ。依存パッケージなし。
          これ以外の選択肢は wlanapi の自前 P/Invoke になる。 -->
     <PackageReference Include="ManagedNativeWifi" Version="3.0.2" />
+
+    <!-- ipconfig の出力は CP932 で返る。.NET Core は既定で UTF-8 として読むため、
+         これが無いと日本語が化ける。ネイティブ依存なし。 -->
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

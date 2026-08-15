@@ -84,7 +84,21 @@ public sealed class MonitorViewModel : ObservableObject
         _pump.Tick += OnPump;
     }
 
+    /// <summary>全宛先。保存や測定の起動にはこちらを使う。</summary>
     public ObservableCollection<TargetRowViewModel> Rows { get; } = [];
+
+    /// <summary>応答が返っている宛先。</summary>
+    public ObservableCollection<TargetRowViewModel> AliveRows { get; } = [];
+
+    /// <summary>2 回続けて応答が無かった宛先。目立つ場所へ集めて気づけるようにする。</summary>
+    public ObservableCollection<TargetRowViewModel> DownRows { get; } = [];
+
+    public string AliveHeader => $"● 応答あり　{AliveRows.Count} 件";
+
+    public string DownHeader => $"✕ 応答なし　{DownRows.Count} 件";
+
+    /// <summary>応答なしが 1 件も無ければ、その欄は場所を取らない。</summary>
+    public bool HasDownRows => DownRows.Count > 0;
 
     /// <summary>
     /// 接続環境。System.Environment と紛らわしくならない名前にしている。
@@ -290,7 +304,13 @@ public sealed class MonitorViewModel : ObservableObject
         }
 
         foreach (TargetRowViewModel row in _touched)
+        {
+            bool wasDown = row.IsDown;
             row.Refresh();
+
+            if (row.IsDown != wasDown)
+                Reclassify(row);
+        }
 
         if (SelectedRow is { } selected && _touched.Contains(selected))
             UpdateDetail();
@@ -337,8 +357,7 @@ public sealed class MonitorViewModel : ObservableObject
 
         TargetListParseResult parsed = TargetListParser.Parse(TargetListText);
 
-        Rows.Clear();
-        _rowsById.Clear();
+        ClearRows();
         SelectedRow = null;
 
         foreach (Target target in parsed.Targets)
@@ -377,15 +396,55 @@ public sealed class MonitorViewModel : ObservableObject
         foreach (TargetRowViewModel row in Rows)
             row.Reset();
 
+        // 全員が「応答なし」判定から外れるので、欄も戻す
+        while (DownRows.Count > 0)
+            Reclassify(DownRows[0]);
+
         StartedAt = IsRunning ? DateTime.Now : null;
         StatusMessage = "履歴を消去しました。";
     }
 
     private void AddRow(Target target)
     {
-        var row = new TargetRowViewModel(target, _settings);
+        var row = new TargetRowViewModel(target, _settings) { Order = Rows.Count };
         Rows.Add(row);
+        AliveRows.Add(row);
         _rowsById[target.Id] = row;
+    }
+
+    /// <summary>
+    /// 応答の有無で欄を振り分ける。
+    /// 元の並び順を保ったまま移すので、宛先リストに書いた順序が崩れない。
+    /// </summary>
+    private void Reclassify(TargetRowViewModel row)
+    {
+        ObservableCollection<TargetRowViewModel> from = row.IsDown ? AliveRows : DownRows;
+        ObservableCollection<TargetRowViewModel> to = row.IsDown ? DownRows : AliveRows;
+
+        if (!from.Remove(row))
+            return;   // すでに正しい側にいる
+
+        int index = 0;
+        while (index < to.Count && to[index].Order < row.Order)
+            index++;
+
+        to.Insert(index, row);
+
+        OnPropertyChanged(nameof(AliveHeader));
+        OnPropertyChanged(nameof(DownHeader));
+        OnPropertyChanged(nameof(HasDownRows));
+    }
+
+    private void ClearRows()
+    {
+        Rows.Clear();
+        AliveRows.Clear();
+        DownRows.Clear();
+        _rowsById.Clear();
+
+        OnPropertyChanged(nameof(AliveHeader));
+        OnPropertyChanged(nameof(DownHeader));
+        OnPropertyChanged(nameof(HasDownRows));
     }
 
     private void Save()

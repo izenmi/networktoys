@@ -101,6 +101,14 @@ public static class HtmlReportWriter
             html.Append("</tbody>\n</table>\n");
         }
 
+        // ipconfig /all の出力をそのまま載せる
+        if (!string.IsNullOrWhiteSpace(data.IpConfig))
+        {
+            html.Append("<h2>ipconfig /all</h2>\n<pre class=\"console\">")
+                .Append(Escape(data.IpConfig))
+                .Append("</pre>\n");
+        }
+
         html.Append("<p class=\"footnote\">MOS 値は遅延・ジッタ・損失から算出した<strong>推定値</strong>です")
             .Append("（ITU-T G.107 の E-model の簡易版）。実際の音声品質はコーデックや機器にも左右されます。</p>\n");
 
@@ -183,6 +191,11 @@ public static class HtmlReportWriter
         .grade { display: block; font-size: 10px; color: var(--muted); }
         .spark-cell { width: 250px; }
         .spark { display: block; width: 240px; height: 40px; }
+        pre.console {
+          background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+          padding: 12px 14px; overflow-x: auto; white-space: pre;
+          font-family: Consolas, "BIZ UDGothic", monospace; font-size: 12px; line-height: 1.45;
+        }
         @media print {
           body { background: #fff; padding: 0; }
           table.result { border-color: #ddd; }

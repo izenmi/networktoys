@@ -27,6 +27,10 @@ public sealed record ReportRow(
 /// <param name="IntervalMs">測定間隔。</param>
 /// <param name="Environment">接続環境（項目名と値の並び）。</param>
 /// <param name="Rows">宛先ごとの結果。</param>
+/// <param name="IpConfig">
+/// <c>ipconfig /all</c> の出力そのまま。現場のレポートには見慣れた形で
+/// 載っている方が読み手に伝わるので、整形せずに載せる。
+/// </param>
 public sealed record ReportData(
     string Title,
     DateTime GeneratedAt,
@@ -34,4 +38,5 @@ public sealed record ReportData(
     DateTime? StartedAt,
     int IntervalMs,
     IReadOnlyList<(string Label, string Value)> Environment,
-    IReadOnlyList<ReportRow> Rows);
+    IReadOnlyList<ReportRow> Rows,
+    string? IpConfig = null);

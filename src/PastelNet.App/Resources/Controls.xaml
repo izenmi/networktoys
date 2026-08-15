@@ -61,26 +61,36 @@
         </Setter>
     </Style>
 
+    <!--
+        タブは「押せるもの」と一目で分かる必要がある。
+        文字だけを置くと、選択中以外がただのラベルに見えてしまうので、
+        非選択時にも面と枠を持たせてボタンの見た目にする。
+    -->
     <Style TargetType="TabItem">
-        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
         <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
+        <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
                     <Border x:Name="Bd"
-                            Background="Transparent"
+                            Background="{DynamicResource Brush.Surface}"
+                            BorderBrush="{DynamicResource Brush.Border}"
+                            BorderThickness="1"
                             CornerRadius="7"
-                            Padding="12,4"
-                            Margin="0,0,4,0">
+                            Padding="14,5"
+                            Margin="0,0,5,0">
                         <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <!-- ホバーを先に、選択を後に書く。順序を入れ替えると選択中もホバー色になる -->
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>

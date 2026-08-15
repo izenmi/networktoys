@@ -42,8 +42,16 @@ public sealed class TargetRowViewModel : ObservableObject
     private readonly MonitorSettings _settings;
     private readonly ProbeSample[] _scratch;
 
+    /// <summary>
+    /// 何回続けて応答が無ければ「落ちている」とみなすか。
+    /// 1 回のタイムアウトはよくあることなので、2 回連続を条件にする。
+    /// </summary>
+    private const int FailuresToDeclareDown = 2;
+
     private RttStatistics _statistics = RttStatistics.Empty;
     private RowState _state = RowState.Pending;
+    private int _consecutiveFailures;
+    private bool _isDown;
     private string _address = "—";
     private string _latestRtt = "—";
     private string _averageRtt = "—";
@@ -70,6 +78,19 @@ public sealed class TargetRowViewModel : ObservableObject
         get => _state;
         private set => SetProperty(ref _state, value);
     }
+
+    /// <summary>
+    /// 2 回続けて応答が無かったか。一覧を「応答あり」「応答なし」に分ける基準。
+    /// 1 回きりの取りこぼしで宛先が下段へ飛ぶと、かえって見づらくなる。
+    /// </summary>
+    public bool IsDown
+    {
+        get => _isDown;
+        private set => SetProperty(ref _isDown, value);
+    }
+
+    /// <summary>一覧内の並び順。振り分け後も元の順序を保つために使う。</summary>
+    internal int Order { get; set; }
 
     /// <summary>名前解決の結果。ホスト名で登録された宛先で意味を持つ。</summary>
     public string Address
@@ -136,6 +157,14 @@ public sealed class TargetRowViewModel : ObservableObject
             _ => RowState.Down,
         };
 
+        // TCP の「拒否」は応答が返っている＝ホストは生きているので、失敗に数えない
+        if (latest.Status is ProbeStatus.Success or ProbeStatus.Refused)
+            _consecutiveFailures = 0;
+        else if (latest.Status != ProbeStatus.Pending)
+            _consecutiveFailures++;
+
+        IsDown = _consecutiveFailures >= FailuresToDeclareDown;
+
         // 拒否のときも RTT は意味を持つ（そこまで届いている証拠なので）
         LatestRtt = latest.Status is ProbeStatus.Success or ProbeStatus.Refused
             ? FormatMilliseconds(latest.RttMs)
@@ -157,6 +186,8 @@ public sealed class TargetRowViewModel : ObservableObject
     {
         _history.Clear();
         _isDirty = false;
+        _consecutiveFailures = 0;
+        IsDown = false;
         State = RowState.Pending;
         LatestRtt = "—";
         AverageRtt = "—";

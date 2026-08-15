@@ -196,30 +196,6 @@
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
 
-                        <!-- 一覧のヘッダ。列幅は TargetRowTemplate と合わせる -->
-                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="66" />
-                                <ColumnDefinition Width="158" />
-                                <ColumnDefinition Width="112" />
-                                <ColumnDefinition Width="62" />
-                                <ColumnDefinition Width="62" />
-                                <ColumnDefinition Width="48" />
-                                <ColumnDefinition Width="*" MinWidth="100" />
-                                <ColumnDefinition Width="180" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
-                            <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
-                            <TextBlock Grid.Column="2" Text="IP"       Style="{StaticResource Caption}" />
-                            <TextBlock Grid.Column="3" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                            <TextBlock Grid.Column="4" Text="平均"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                            <TextBlock Grid.Column="5" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                            <TextBlock Grid.Column="6" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="7" Text="備考"     Style="{StaticResource Caption}" />
-                        </Grid>
-                        <Border DockPanel.Dock="Top" Height="1"
-                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
-
                         <!-- 選択行の詳細。一覧に列を増やさずに済ませるための置き場 -->
                         <Border DockPanel.Dock="Bottom"
                                 Background="{DynamicResource Brush.SurfaceAlt}"
@@ -229,18 +205,100 @@
                                        TextWrapping="Wrap" />
                         </Border>
 
-                        <!-- 一覧本体。仮想化を効かせるため行高は固定にしている -->
-                        <ListBox ItemsSource="{Binding Rows}"
-                                 SelectedItem="{Binding SelectedRow}"
-                                 ItemTemplate="{StaticResource TargetRowTemplate}"
-                                 ItemContainerStyle="{StaticResource TargetRowContainer}"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 HorizontalContentAlignment="Stretch"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 ScrollViewer.CanContentScroll="True"
-                                 VirtualizingStackPanel.IsVirtualizing="True"
-                                 VirtualizingStackPanel.VirtualizationMode="Recycling" />
+                        <!--
+                            応答のある宛先と、2 回続けて応答が無かった宛先を分けて置く。
+                            落ちている相手が一覧のどこかに埋もれず、色ごと目に入るようにする。
+                        -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" MinHeight="80" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- ===== 応答あり ===== -->
+                            <DockPanel Grid.Row="0">
+                                <Border DockPanel.Dock="Top"
+                                        Background="{DynamicResource Brush.Ok.Bg}"
+                                        CornerRadius="6" Padding="8,3" Margin="0,0,0,4">
+                                    <TextBlock Text="{Binding AliveHeader}"
+                                               Foreground="{DynamicResource Brush.Ok.Fg}"
+                                               FontWeight="SemiBold" />
+                                </Border>
+
+                                <!-- 一覧のヘッダ。列幅は TargetRowTemplate と合わせる -->
+                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="66" />
+                                        <ColumnDefinition Width="158" />
+                                        <ColumnDefinition Width="112" />
+                                        <ColumnDefinition Width="62" />
+                                        <ColumnDefinition Width="62" />
+                                        <ColumnDefinition Width="48" />
+                                        <ColumnDefinition Width="*" MinWidth="100" />
+                                        <ColumnDefinition Width="180" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="IP"       Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="4" Text="平均"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="5" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="6" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                    <TextBlock Grid.Column="7" Text="備考"     Style="{StaticResource Caption}" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1"
+                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                                <!-- 仮想化を効かせるため行高は固定にしている -->
+                                <ListBox ItemsSource="{Binding AliveRows}"
+                                         SelectedItem="{Binding SelectedRow}"
+                                         ItemTemplate="{StaticResource TargetRowTemplate}"
+                                         ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         HorizontalContentAlignment="Stretch"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         ScrollViewer.CanContentScroll="True"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling" />
+                            </DockPanel>
+
+                            <!-- ===== 応答なし（2 回連続で失敗） ===== -->
+                            <Border Grid.Row="1" Margin="0,8,0,0"
+                                    Background="{DynamicResource Brush.Error.Bg}"
+                                    CornerRadius="7" Padding="6">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasDownRows}" Value="False">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <DockPanel MaxHeight="188">
+                                    <TextBlock DockPanel.Dock="Top"
+                                               Text="{Binding DownHeader}"
+                                               Foreground="{DynamicResource Brush.Error.Fg}"
+                                               FontWeight="SemiBold"
+                                               Margin="4,0,0,4" />
+
+                                    <ListBox ItemsSource="{Binding DownRows}"
+                                             SelectedItem="{Binding SelectedRow}"
+                                             ItemTemplate="{StaticResource TargetRowTemplate}"
+                                             ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             HorizontalContentAlignment="Stretch"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             ScrollViewer.CanContentScroll="True"
+                                             VirtualizingStackPanel.IsVirtualizing="True"
+                                             VirtualizingStackPanel.VirtualizationMode="Recycling" />
+                                </DockPanel>
+                            </Border>
+                        </Grid>
                     </DockPanel>
                 </Border>
             </TabItem>

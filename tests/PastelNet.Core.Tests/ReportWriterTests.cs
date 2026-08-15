@@ -6,7 +6,7 @@ namespace PastelNet.Core.Tests;
 
 public class ReportWriterTests
 {
-    private static ReportData Sample(string comment = "1階 EPS") => new(
+    private static ReportData Sample(string comment = "1階 EPS", string? ipConfig = null) => new(
         Title: "疎通確認",
         GeneratedAt: new DateTime(2026, 8, 15, 9, 30, 0, DateTimeKind.Local),
         Note: "定期点検",
@@ -24,7 +24,8 @@ public class ReportWriterTests
                 4.4,
                 "非常に良い",
                 [1, 2, 1, 3, 1]),
-        ]);
+        ],
+        IpConfig: ipConfig);
 
     [Fact]
     public void Html_is_a_complete_document()
@@ -113,6 +114,35 @@ public class ReportWriterTests
     [InlineData("line\nbreak", "\"line\nbreak\"")]
     public void Csv_quotes_only_when_needed(string input, string expected)
         => Assert.Equal(expected, CsvReportWriter.Quote(input));
+
+    [Fact]
+    public void Ipconfig_output_is_included_verbatim()
+    {
+        const string output = "Windows IP 構成\n\n   ホスト名. . . . . . . . . . . . .: PC-01\n";
+        string html = HtmlReportWriter.Render(Sample(ipConfig: output));
+
+        Assert.Contains("ipconfig /all", html, StringComparison.Ordinal);
+        Assert.Contains("<pre class=\"console\">", html, StringComparison.Ordinal);
+        Assert.Contains("PC-01", html, StringComparison.Ordinal);
+        Assert.Contains("ホスト名", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_ipconfig_section_is_omitted_when_absent()
+    {
+        string html = HtmlReportWriter.Render(Sample());
+
+        Assert.DoesNotContain("<pre", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Ipconfig_output_is_escaped_too()
+    {
+        string html = HtmlReportWriter.Render(Sample(ipConfig: "<b>not markup</b>"));
+
+        Assert.DoesNotContain("<b>not markup</b>", html, StringComparison.Ordinal);
+        Assert.Contains("&lt;b&gt;", html, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void Sparkline_is_empty_without_data()

@@ -24,8 +24,8 @@ public sealed class ReportViewModel : ObservableObject
     {
         _monitor = monitor;
 
-        SaveHtmlCommand = new RelayCommand(() => Save(html: true), CanSave);
-        SaveCsvCommand = new RelayCommand(() => Save(html: false), CanSave);
+        SaveHtmlCommand = new RelayCommand(() => _ = SaveAsync(html: true), CanSave);
+        SaveCsvCommand = new RelayCommand(() => _ = SaveAsync(html: false), CanSave);
     }
 
     public RelayCommand SaveHtmlCommand { get; }
@@ -53,7 +53,7 @@ public sealed class ReportViewModel : ObservableObject
 
     private bool CanSave() => _monitor.Rows.Count > 0;
 
-    private void Save(bool html)
+    private async Task SaveAsync(bool html)
     {
         string extension = html ? "html" : "csv";
 
@@ -72,13 +72,21 @@ public sealed class ReportViewModel : ObservableObject
 
         try
         {
+            Status = "レポートを作成しています…";
+
+            // ipconfig /all は HTML にだけ載せる（CSV は表なので馴染まない）
+            string? ipConfig = html
+                ? await SystemInfoProbe.GetIpConfigAsync(CancellationToken.None)
+                : null;
+
             ReportData data = ReportService.Build(
                 Title,
                 Note,
                 _monitor.Rows,
                 _monitor.NetworkInfo,
                 _monitor.StartedAt,
-                _monitor.IntervalMs);
+                _monitor.IntervalMs,
+                ipConfig);
 
             if (html)
                 ReportService.SaveHtml(dialog.FileName, data);

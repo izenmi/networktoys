@@ -148,6 +148,16 @@ internal static class SelfTest
             log.AppendLine($"        1.1.1.1 への問い合わせ: {result.Summary}");
         });
 
+        Check("ipconfig /all を実行して読み取れる", () =>
+        {
+            string output = Task.Run(() =>
+                Services.SystemInfoProbe.GetIpConfigAsync(CancellationToken.None))
+                .GetAwaiter().GetResult();
+
+            Assert(output.Length > 0, "出力が空です");
+            log.AppendLine($"        ipconfig の出力: {output.Length} 文字 / {output.Split('\n').Length} 行");
+        });
+
         Check("宛先リストを保存して読み戻せる", () =>
         {
             string path = Path.Combine(Path.GetTempPath(), $"pastelnet-selftest-{Guid.NewGuid():N}.json");
