@@ -55,7 +55,10 @@
 
     <!-- 細部。ここも無彩色に寄せる -->
     <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#2A2D33" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#4A4E56" po:Freeze="True" />
+    <!-- つまみは一段明るく(以前の #4A4E56 は面に溶けて見つけにくかった) -->
+    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#5C616C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Scroll.Thumb.Hover" Color="#8A909E" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Scroll.Track" Color="#1E2025" po:Freeze="True" />
 
     <!--
         面と枠のグラデーション。影(DropShadowEffect)は使わない。

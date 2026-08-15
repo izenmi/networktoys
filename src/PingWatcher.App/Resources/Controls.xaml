@@ -501,15 +501,28 @@
         <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
     </Style>
 
-    <!-- ===== スクロールバー(細くして圧迫感を減らす) ===== -->
+    <!--
+        ===== スクロールバー =====
+        レール(溝)を敷いて「ここがスクロールできる場所」だと分かるようにする。
+        つまみは丸めの棒で、触れると色が濃くなり、掴んでいる間はアクセント色。
+    -->
     <Style x:Key="ScrollBar.Thumb" TargetType="Thumb">
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border Background="{DynamicResource Brush.Scroll.Thumb}"
-                            CornerRadius="{DynamicResource Radius.Chip}"
+                    <Border x:Name="Bd"
+                            Background="{DynamicResource Brush.Scroll.Thumb}"
+                            CornerRadius="4"
                             Margin="2" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Scroll.Thumb.Hover}" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Fg}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -517,11 +530,14 @@
 
     <Style TargetType="ScrollBar">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Width" Value="10" />
+        <Setter Property="Width" Value="12" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
                     <Grid Background="{TemplateBinding Background}">
+                        <Border Background="{DynamicResource Brush.Scroll.Track}"
+                                CornerRadius="6"
+                                Margin="1" />
                         <Track x:Name="PART_Track"
                                Orientation="{TemplateBinding Orientation}"
                                IsDirectionReversed="True">
@@ -540,7 +556,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="Orientation" Value="Horizontal">
                             <Setter Property="Width" Value="Auto" />
-                            <Setter Property="Height" Value="10" />
+                            <Setter Property="Height" Value="12" />
                             <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
                         </Trigger>
                     </ControlTemplate.Triggers>

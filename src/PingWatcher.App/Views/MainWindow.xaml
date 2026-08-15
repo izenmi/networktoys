@@ -484,7 +484,7 @@
                             </Grid.RowDefinitions>
 
                             <!-- ===== 応答なし（2 回連続で失敗） ===== -->
-                            <Border Grid.Row="0" Margin="0,0,0,5"
+                            <Border Grid.Row="0" Margin="0,0,0,7"
                                     Background="{DynamicResource Brush.Error.Bg}"
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource Brush.Error.Fg}"
@@ -517,28 +517,32 @@
                                 </DockPanel>
                             </Border>
 
-                            <!-- ===== 応答あり ===== -->
-                            <DockPanel Grid.Row="1">
-                                <!--
-                                    帯に地色を敷かない。暗い配色では地の緑が沈んで濁り、
-                                    その上の文字が読みにくかった。面の上に発光色の文字を
-                                    直接置き、左の細い棒で区切りを示す方がはっきり見える。
-                                -->
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
-                                            Margin="1,0,0,4">
-                                    <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
-                                            Background="{DynamicResource Brush.Ok.Fg}" />
-                                    <TextBlock Text="{Binding AliveHeader}"
-                                               Foreground="{DynamicResource Brush.Ok.Fg}"
-                                               FontWeight="SemiBold"
-                                               VerticalAlignment="Center" />
-                                </StackPanel>
+                            <!-- ===== 応答あり =====
+                                 応答なしの赤いカードと対になるよう、こちらも枠のある
+                                 カードにする。枠が無いと 2 つの欄の境目が読み取れない。
+                                 帯に地色は敷かない(暗い配色では地の緑が沈んで濁るため)。 -->
+                            <Border Grid.Row="1"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource Brush.Border}"
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                                                Margin="1,0,0,4">
+                                        <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                                Background="{DynamicResource Brush.Ok.Fg}" />
+                                        <TextBlock Text="{Binding AliveHeader}"
+                                                   Foreground="{DynamicResource Brush.Ok.Fg}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
 
-                                <!-- 仮想化を効かせるため行高は固定にしている -->
-                                <ListBox ItemsSource="{Binding AliveRows}"
-                                         SelectedItem="{Binding SelectedRow}"
-                                         Style="{StaticResource TargetListBox}" />
-                            </DockPanel>
+                                    <!-- 仮想化を効かせるため行高は固定にしている -->
+                                    <ListBox ItemsSource="{Binding AliveRows}"
+                                             SelectedItem="{Binding SelectedRow}"
+                                             Style="{StaticResource TargetListBox}" />
+                                </DockPanel>
+                            </Border>
                         </Grid>
                     </DockPanel>
                 </Border>
@@ -603,7 +607,7 @@
                                 <RowDefinition Height="*" MinHeight="80" />
                             </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0" Margin="0,0,0,5"
+                            <Border Grid.Row="0" Margin="0,0,0,7"
                                     Background="{DynamicResource Brush.Error.Bg}"
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource Brush.Error.Fg}"
@@ -634,19 +638,26 @@
                                 </DockPanel>
                             </Border>
 
-                            <DockPanel Grid.Row="1">
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="1,0,0,4">
-                                    <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
-                                            Background="{DynamicResource Brush.Ok.Fg}" />
-                                    <TextBlock Text="{Binding AliveHeader}"
-                                               Foreground="{DynamicResource Brush.Ok.Fg}"
-                                               FontWeight="SemiBold" VerticalAlignment="Center" />
-                                </StackPanel>
+                            <!-- 応答なしの赤いカードと対になる枠。境目をはっきりさせる -->
+                            <Border Grid.Row="1"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource Brush.Border}"
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="1,0,0,4">
+                                        <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                                Background="{DynamicResource Brush.Ok.Fg}" />
+                                        <TextBlock Text="{Binding AliveHeader}"
+                                                   Foreground="{DynamicResource Brush.Ok.Fg}"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
 
-                                <ListBox ItemsSource="{Binding AliveRows}"
-                                         SelectedItem="{Binding SelectedRow}"
-                                         Style="{StaticResource TargetListBox}" />
-                            </DockPanel>
+                                    <ListBox ItemsSource="{Binding AliveRows}"
+                                             SelectedItem="{Binding SelectedRow}"
+                                             Style="{StaticResource TargetListBox}" />
+                                </DockPanel>
+                            </Border>
                         </Grid>
                     </DockPanel>
                 </Border>
