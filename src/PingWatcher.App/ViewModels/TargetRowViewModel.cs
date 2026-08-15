@@ -106,7 +106,29 @@ public sealed class TargetRowViewModel : ObservableObject
     public string Address
     {
         get => _address;
-        private set => SetProperty(ref _address, value);
+        private set
+        {
+            if (SetProperty(ref _address, value))
+                OnPropertyChanged(nameof(HostDisplay));
+        }
+    }
+
+    /// <summary>
+    /// 一覧の「宛先」列。宛先はほとんど IP アドレスそのものなので 1 列に統合し、
+    /// ホスト名で登録されて解決先が分かっているときだけ IP を添える。
+    /// </summary>
+    public string HostDisplay
+    {
+        get
+        {
+            string address = Address;
+
+            return address.Length == 0
+                   || address == "—"
+                   || string.Equals(address, Host, StringComparison.OrdinalIgnoreCase)
+                ? Host
+                : $"{Host} ({address})";
+        }
     }
 
     public string LatestRtt

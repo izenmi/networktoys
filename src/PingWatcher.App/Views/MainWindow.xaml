@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:PingWatcher.App.Controls"
         Title="PingWatcher"
-        Width="980" Height="720"
-        MinWidth="820" MinHeight="480"
+        Width="860" Height="720"
+        MinWidth="720" MinHeight="480"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.Window.Backdrop}"
         Foreground="{DynamicResource Brush.Text}"
@@ -24,12 +24,12 @@
             使う側より前に置くこと。
         -->
         <GridLength x:Key="ColW.Ping.State">66</GridLength>
-        <GridLength x:Key="ColW.Ping.Host">158</GridLength>
-        <!-- IPv4 の最長 255.255.255.255 (15桁, Consolas 12px で約 94〜99px) ぎりぎりまで詰める。
-             全オクテット 3 桁のアドレスだけ末尾が省略されうるが、その分は備考に回す -->
-        <GridLength x:Key="ColW.Ping.Address">94</GridLength>
+        <!-- 宛先と IP は 1 列に統合。宛先はほとんど IP アドレスそのもので、
+             2 列に分けると同じ文字列が並ぶだけだった。ホスト名で登録された
+             宛先だけ「web-01 (192.168.1.20)」の形で解決先を添える -->
+        <GridLength x:Key="ColW.Ping.Target">170</GridLength>
+        <!-- 出すのは最新の RTT。平均は選択行の詳細欄で見られる -->
         <GridLength x:Key="ColW.Ping.Rtt">62</GridLength>
-        <GridLength x:Key="ColW.Ping.Average">62</GridLength>
         <GridLength x:Key="ColW.Ping.Loss">48</GridLength>
         <!-- 推移は傾向が読めれば足りるので固定幅。余った幅は備考に回す
              (以前は逆で、窓を広げてもグラフだけが伸びて備考は 180px のままだった) -->
@@ -40,10 +40,8 @@
             <Grid Height="{DynamicResource Size.RowHeight}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{StaticResource ColW.Ping.State}" />
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.Host}" />
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.Address}" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.Target}" />
                     <ColumnDefinition Width="{StaticResource ColW.Ping.Rtt}" />
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.Average}" />
                     <ColumnDefinition Width="{StaticResource ColW.Ping.Loss}" />
                     <ColumnDefinition Width="{StaticResource ColW.Ping.Spark}" />
                     <ColumnDefinition Width="*" MinWidth="180" />
@@ -60,30 +58,23 @@
                                Text="◌ 待機" />
                 </Border>
 
-                <TextBlock Grid.Column="1" Text="{Binding Host}"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Text="{Binding HostDisplay}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding HostDisplay}" />
 
-                <TextBlock Grid.Column="2" Text="{Binding Address}"
-                           Style="{StaticResource Mono}"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-
-                <TextBlock Grid.Column="3" Text="{Binding LatestRtt}"
+                <TextBlock Grid.Column="2" Text="{Binding LatestRtt}"
                            Style="{StaticResource Mono}"
                            VerticalAlignment="Center" HorizontalAlignment="Right" />
 
-                <TextBlock Grid.Column="4" Text="{Binding AverageRtt}"
+                <TextBlock Grid.Column="3" Text="{Binding Loss}"
                            Style="{StaticResource Mono}"
                            VerticalAlignment="Center" HorizontalAlignment="Right" />
 
-                <TextBlock Grid.Column="5" Text="{Binding Loss}"
-                           Style="{StaticResource Mono}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right" />
-
-                <controls:Sparkline Grid.Column="6" Source="{Binding}" Margin="8,3,8,3"
+                <controls:Sparkline Grid.Column="4" Source="{Binding}" Margin="8,3,8,3"
                                     LineBrush="{DynamicResource Brush.Chart.Line}"
                                     LostBrush="{DynamicResource Brush.Error.Fg}" />
 
-                <TextBlock Grid.Column="7" Text="{Binding Comment}"
+                <TextBlock Grid.Column="5" Text="{Binding Comment}"
                            Style="{StaticResource Caption}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                            ToolTip="{Binding Comment}" />
@@ -453,22 +444,18 @@
                             <Grid Margin="4,0,4,3">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{StaticResource ColW.Ping.State}" />
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Host}" />
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Address}" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Target}" />
                                     <ColumnDefinition Width="{StaticResource ColW.Ping.Rtt}" />
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Average}" />
                                     <ColumnDefinition Width="{StaticResource ColW.Ping.Loss}" />
                                     <ColumnDefinition Width="{StaticResource ColW.Ping.Spark}" />
                                     <ColumnDefinition Width="*" MinWidth="180" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
                                 <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
-                                <TextBlock Grid.Column="2" Text="IP"       Style="{StaticResource Caption}" />
-                                <TextBlock Grid.Column="3" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="4" Text="平均"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="5" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="6" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
-                                <TextBlock Grid.Column="7" Text="備考"     Style="{StaticResource Caption}" />
+                                <TextBlock Grid.Column="2" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="3" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="4" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                <TextBlock Grid.Column="5" Text="備考"     Style="{StaticResource Caption}" />
                             </Grid>
                             <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,4" />
                         </StackPanel>
