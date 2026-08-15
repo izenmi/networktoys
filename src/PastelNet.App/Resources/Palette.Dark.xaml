@@ -1,13 +1,16 @@
 <!--
-    PastelNet ダークテーマ。Palette.xaml と同じキーを同じ意味で定義する。
-    色相はライトと揃え、彩度を落として明度を上げたパステルにしている。
-    テーマ切替は Phase 1 で実装する(この時点では未使用)。
+    PastelNet ダークテーマ。既定の配色。
+
+    Palette.xaml と同じキーを同じ意味で定義する。片方にだけキーを足すと
+    切り替えた瞬間に色が消えるので、追加は必ず両方へ。自己診断が突き合わせている。
+
+    使い方の約束は Palette.xaml の冒頭コメントを参照（色は DynamicResource で引く、
+    コードで TryFindResource の結果をキャッシュしない）。
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                     xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     mc:Ignorable="po">
 
     <SolidColorBrush x:Key="Brush.Background"   Color="#2B2733" po:Freeze="True" />
@@ -34,13 +37,5 @@
 
     <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#7FB8D9" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#2C4457" po:Freeze="True" />
-
-    <FontFamily x:Key="Font.Ui">Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
-    <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, MS Gothic</FontFamily>
-    <CornerRadius x:Key="Radius.Card">8</CornerRadius>
-    <CornerRadius x:Key="Radius.Badge">5</CornerRadius>
-    <sys:Double x:Key="Size.Body">12</sys:Double>
-    <sys:Double x:Key="Size.Caption">11</sys:Double>
-    <sys:Double x:Key="Size.RowHeight">22</sys:Double>
 
 </ResourceDictionary>

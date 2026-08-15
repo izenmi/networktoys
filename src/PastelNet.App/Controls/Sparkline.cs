@@ -17,9 +17,48 @@ public sealed class Sparkline : FrameworkElement
     [ThreadStatic]
     private static ProbeSample[]? _scratch;
 
-    // Phase 1 はライトテーマ固定。テーマ切替を入れるときはここも作り直すこと。
-    private static Pen? _linePen;
-    private static Brush? _lostBrush;
+    /// <summary>
+    /// 線の Pen。<see cref="LineBrush"/> が変わるたびに作り直す。
+    ///
+    /// 以前はここを static にしていたが、それだと配色を切り替えても
+    /// 最初に引いた色を握ったままになる。インスタンスごとに持つこと。
+    /// </summary>
+    private Pen? _linePen;
+
+    public static readonly DependencyProperty LineBrushProperty = DependencyProperty.Register(
+        nameof(LineBrush),
+        typeof(Brush),
+        typeof(Sparkline),
+        new FrameworkPropertyMetadata(
+            Brushes.SteelBlue,
+            FrameworkPropertyMetadataOptions.AffectsRender,
+            OnLineBrushChanged));
+
+    public static readonly DependencyProperty LostBrushProperty = DependencyProperty.Register(
+        nameof(LostBrush),
+        typeof(Brush),
+        typeof(Sparkline),
+        new FrameworkPropertyMetadata(Brushes.IndianRed, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    /// <summary>
+    /// 折れ線の色。テンプレート側から DynamicResource で与えること。
+    /// そうすれば配色の切り替えにそのまま追随する。
+    /// </summary>
+    public Brush LineBrush
+    {
+        get => (Brush)GetValue(LineBrushProperty);
+        set => SetValue(LineBrushProperty, value);
+    }
+
+    /// <summary>応答が無かった位置に立てる印の色。</summary>
+    public Brush LostBrush
+    {
+        get => (Brush)GetValue(LostBrushProperty);
+        set => SetValue(LostBrushProperty, value);
+    }
+
+    private static void OnLineBrushChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        => ((Sparkline)d)._linePen = null;
 
     public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(
         nameof(Source),
@@ -76,7 +115,7 @@ public sealed class Sparkline : FrameworkElement
 
         double step = count > 1 ? width / (count - 1) : width;
         Pen pen = LinePen();
-        Brush lost = LostBrush();
+        Brush lost = LostBrush;
 
         var geometry = new StreamGeometry();
         using (StreamGeometryContext context = geometry.Open())
@@ -118,18 +157,8 @@ public sealed class Sparkline : FrameworkElement
     {
         if (_linePen is not null) return _linePen;
 
-        var brush = TryFindResource("Brush.Chart.Line") as Brush ?? Brushes.SteelBlue;
-        var pen = new Pen(brush, 1.4) { LineJoin = PenLineJoin.Round };
+        var pen = new Pen(LineBrush, 1.4) { LineJoin = PenLineJoin.Round };
         pen.Freeze();
         return _linePen = pen;
-    }
-
-    private Brush LostBrush()
-    {
-        if (_lostBrush is not null) return _lostBrush;
-
-        var brush = TryFindResource("Brush.Error.Fg") as Brush ?? Brushes.IndianRed;
-        if (brush.CanFreeze) brush.Freeze();
-        return _lostBrush = brush;
     }
 }

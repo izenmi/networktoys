@@ -14,6 +14,10 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) =>
             CrashLog.Write(args.Exception, "Application.DispatcherUnhandledException");
 
+        // 配色はウィンドウを作る前に決めておく。後から差し替えると、
+        // 明るい画面が一瞬出てから暗くなる。自己診断でも実際の配色で検査したい。
+        ThemeManager.Initialize();
+
         // CI からの起動確認用。UI を出さずに自己診断だけ行って終了コードを返す。
         if (e.Args.Any(a => string.Equals(a, "--selftest", StringComparison.OrdinalIgnoreCase)))
         {

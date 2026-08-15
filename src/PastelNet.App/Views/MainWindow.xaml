@@ -59,7 +59,9 @@
                            Style="{StaticResource Mono}"
                            VerticalAlignment="Center" HorizontalAlignment="Right" />
 
-                <controls:Sparkline Grid.Column="6" Source="{Binding}" Margin="8,3,8,3" />
+                <controls:Sparkline Grid.Column="6" Source="{Binding}" Margin="8,3,8,3"
+                                    LineBrush="{DynamicResource Brush.Chart.Line}"
+                                    LostBrush="{DynamicResource Brush.Error.Fg}" />
 
                 <TextBlock Grid.Column="7" Text="{Binding Comment}"
                            Style="{StaticResource Caption}"
@@ -141,7 +143,9 @@
                                HorizontalAlignment="Right"
                                VerticalAlignment="Center" />
 
-                    <controls:Sparkline Grid.Column="3" Source="{Binding}" Margin="5,4,0,4" />
+                    <controls:Sparkline Grid.Column="3" Source="{Binding}" Margin="5,4,0,4"
+                                        LineBrush="{DynamicResource Brush.Chart.Line}"
+                                        LostBrush="{DynamicResource Brush.Error.Fg}" />
                 </Grid>
             </Border>
 
@@ -353,6 +357,12 @@
                            VerticalAlignment="Center" MaxWidth="260"
                            TextTrimming="CharacterEllipsis" Margin="0,0,14,0" />
             </StackPanel>
+
+            <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
+            <Button x:Name="ThemeToggle" Click="OnThemeToggle"
+                    Style="{StaticResource Button.Icon}"
+                    Margin="0,0,8,0"
+                    ToolTip="明るい配色と暗い配色を切り替えます。" />
 
             <CheckBox x:Name="TopmostToggle" Content="最前面"
                       Checked="OnTopmostChanged" Unchecked="OnTopmostChanged"

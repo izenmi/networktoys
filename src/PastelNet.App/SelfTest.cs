@@ -77,9 +77,47 @@ internal static class SelfTest
 
         Check("リソース: Controls.xaml のスタイルが解決できる", () =>
         {
-            string[] keys = ["Card", "Badge", "Badge.Text", "Heading", "Caption", "Mono", "Button.Subtle", "ScrollBar.Thumb"];
+            string[] keys =
+            [
+                "Card", "Badge", "Badge.Text", "Heading", "Caption", "Mono",
+                "Button.Subtle", "Button.Icon", "ScrollBar.Thumb",
+            ];
             foreach (string key in keys)
                 Assert(Application.Current.TryFindResource(key) is Style, $"{key} が Style として引けない");
+        });
+
+        Check("リソース: Tokens.xaml の寸法と書体が解決できる", () =>
+        {
+            // DynamicResource は引けなくても例外にならず、既定値で静かに描かれてしまう。
+            // 打ち間違いに気づけるのはここだけ。
+            string[] radii = ["Radius.Card", "Radius.Control", "Radius.Badge", "Radius.Chip"];
+            foreach (string key in radii)
+                Assert(Application.Current.TryFindResource(key) is CornerRadius, $"{key} が CornerRadius として引けない");
+
+            string[] sizes = ["Size.Title", "Size.Heading", "Size.Body", "Size.Caption", "Size.Micro", "Size.RowHeight"];
+            foreach (string key in sizes)
+                Assert(Application.Current.TryFindResource(key) is double, $"{key} が double として引けない");
+
+            foreach (string key in new[] { "Font.Ui", "Font.Mono" })
+                Assert(Application.Current.TryFindResource(key) is FontFamily, $"{key} が FontFamily として引けない");
+        });
+
+        Check("配色: 明暗の 2 つのパレットが同じキーを持つ", () =>
+        {
+            // 片方にだけ色を足すと、切り替えた瞬間にその色が消える。
+            // 目視では気づけないので突き合わせる。
+            HashSet<string> dark = KeysOf("Resources/Palette.Dark.xaml");
+            HashSet<string> light = KeysOf("Resources/Palette.xaml");
+
+            Assert(dark.Count > 0, "ダークのパレットが空");
+
+            string[] missingInLight = [.. dark.Except(light).Order()];
+            string[] missingInDark = [.. light.Except(dark).Order()];
+
+            Assert(missingInLight.Length == 0, $"ライトに無いキー: {string.Join(", ", missingInLight)}");
+            Assert(missingInDark.Length == 0, $"ダークに無いキー: {string.Join(", ", missingInDark)}");
+
+            log.AppendLine($"        共通のキー: {dark.Count} 件");
         });
 
         Views.MainWindow? window = null;
@@ -94,6 +132,29 @@ internal static class SelfTest
             window!.Show();
             window.UpdateLayout();
             Assert(window.ActualWidth > 0 && window.ActualHeight > 0, "ウィンドウの実サイズが 0 のまま");
+        });
+
+        Check("配色を切り替えても表示し直せる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            AppTheme original = ThemeManager.Current;
+
+            foreach (AppTheme theme in new[] { AppTheme.Light, AppTheme.Dark })
+            {
+                ThemeManager.Apply(theme);
+                window!.UpdateLayout();
+
+                Assert(ThemeManager.Current == theme, $"{theme} に切り替わっていない");
+                Assert(window.ActualWidth > 0 && window.ActualHeight > 0, $"{theme} でウィンドウの実サイズが 0");
+
+                // 差し替えたパレットが実際に効いているか（色が引けるかまで見る）
+                Assert(Application.Current.TryFindResource("Brush.Background") is SolidColorBrush,
+                       $"{theme} で Brush.Background が引けない");
+            }
+
+            ThemeManager.Apply(original);
+            window!.UpdateLayout();
             window.Close();
         });
 
@@ -248,5 +309,17 @@ internal static class SelfTest
         }
 
         return failures.Count == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// パレット辞書を単独で読み込んで、定義しているキーを列挙する。
+    /// マージ済みの Application.Resources 越しでは、どちらのテーマが
+    /// そのキーを持っているのか分からないため、直接読む。
+    /// </summary>
+    private static HashSet<string> KeysOf(string relativeSource)
+    {
+        var dictionary = new ResourceDictionary { Source = new Uri(relativeSource, UriKind.Relative) };
+
+        return [.. dictionary.Keys.OfType<string>()];
     }
 }

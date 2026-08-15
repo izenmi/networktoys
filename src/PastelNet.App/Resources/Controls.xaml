@@ -141,6 +141,11 @@
         <Setter Property="FontWeight" Value="Normal" />
     </Style>
 
+    <!-- 記号を主体にした小さなボタン(配色の切り替えなど) -->
+    <Style x:Key="Button.Icon" TargetType="Button" BasedOn="{StaticResource Button.Subtle}">
+        <Setter Property="Padding" Value="8,3" />
+    </Style>
+
     <!-- ===== 入力欄 ===== -->
     <Style TargetType="TextBox">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />

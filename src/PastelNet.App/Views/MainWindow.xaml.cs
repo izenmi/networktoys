@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using PastelNet.App.ViewModels;
 
 namespace PastelNet.App.Views;
@@ -13,7 +14,37 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _shell;
+        UpdateThemeToggle();
     }
+
+    /// <summary>
+    /// タイトルバーの明暗を窓の中身に合わせる。ハンドルができてからでないと効かない。
+    /// </summary>
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        ApplyTitleBar();
+    }
+
+    private void ApplyTitleBar()
+    {
+        IntPtr handle = new WindowInteropHelper(this).Handle;
+        Interop.NativeMethods.SetTitleBarDark(handle, ThemeManager.Current == AppTheme.Dark);
+    }
+
+    private void OnThemeToggle(object sender, RoutedEventArgs e)
+    {
+        ThemeManager.Toggle();
+        UpdateThemeToggle();
+        ApplyTitleBar();
+    }
+
+    /// <summary>
+    /// ボタンには「切り替えた先」を出す。いまの状態を出すと、
+    /// 押すとどうなるのかが読み取れない。
+    /// </summary>
+    private void UpdateThemeToggle()
+        => ThemeToggle.Content = ThemeManager.Current == AppTheme.Dark ? "☀ 明るく" : "☾ 暗く";
 
     private void OnTopmostChanged(object sender, RoutedEventArgs e)
         => Topmost = TopmostToggle.IsChecked == true;

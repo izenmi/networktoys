@@ -120,4 +120,38 @@ internal static class NativeMethods
 
         return string.Join('-', bytes.Take(length).Select(b => b.ToString("X2")));
     }
+
+    // タイトルバーを暗くする属性。Windows 10 1809〜1903 では 19、それ以降は 20。
+    private const int DwmwaUseImmersiveDarkMode = 20;
+    private const int DwmwaUseImmersiveDarkModeOld = 19;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    /// <summary>
+    /// タイトルバーの明暗を窓の中身に合わせる。
+    ///
+    /// これをやらないと、暗い画面の上に白いタイトルバーが残って台無しになる。
+    /// 自前のタイトルバー（WindowChrome）を組むより遥かに安く、挙動も OS 標準のまま。
+    /// 古い Windows には属性が無いだけなので、失敗は無視してよい。
+    /// </summary>
+    public static void SetTitleBarDark(IntPtr hwnd, bool dark)
+    {
+        if (hwnd == IntPtr.Zero) return;
+
+        int value = dark ? 1 : 0;
+
+        try
+        {
+            if (DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref value, sizeof(int)) != 0)
+                DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkModeOld, ref value, sizeof(int));
+        }
+        catch (DllNotFoundException)
+        {
+            // dwmapi が無い環境。見た目が揃わないだけで動作に支障はない
+        }
+        catch (EntryPointNotFoundException)
+        {
+        }
+    }
 }

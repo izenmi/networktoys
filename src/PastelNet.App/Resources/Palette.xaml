@@ -6,12 +6,19 @@
     地色を敷くのは状態バッジだけにし、RTT などの数値は文字色のみで表現する。
 
     ブラシは po:Freeze="True" で凍結している。数百行を描画するので効く。
+
+    テーマ切替のための約束:
+    ・この辞書は ThemeManager が丸ごと差し替える。**色は必ず DynamicResource で引くこと。**
+      StaticResource で引いた箇所は切り替えても古い色のまま残る。
+    ・コードから TryFindResource した結果を static に**キャッシュしない**。
+      Sparkline で実際にやってしまい、切替に追随しない不具合になった。
+    ・Palette.Dark.xaml と**同じキーを過不足なく**定義する。ずれは自己診断が検出する。
+    ・凍結ブラシは Color をアニメーションできない。演出は Opacity 側で行う。
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                     xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     mc:Ignorable="po">
 
     <!-- ベース -->
@@ -45,16 +52,5 @@
     <!-- グラフ描画用の淡色(スパークラインの塗り) -->
     <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#7FB8D9" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#D6ECF7" po:Freeze="True" />
-
-    <!-- 共通の寸法・書体 -->
-    <FontFamily x:Key="Font.Ui">Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
-    <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, MS Gothic</FontFamily>
-    <CornerRadius x:Key="Radius.Card">8</CornerRadius>
-    <CornerRadius x:Key="Radius.Badge">5</CornerRadius>
-    <sys:Double x:Key="Size.Body">12</sys:Double>
-    <sys:Double x:Key="Size.Caption">11</sys:Double>
-
-    <!-- 一覧の行の高さ。詰めるほど一覧性が上がるが、日本語が窮屈になるので 22 を下限にしている -->
-    <sys:Double x:Key="Size.RowHeight">22</sys:Double>
 
 </ResourceDictionary>
