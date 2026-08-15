@@ -434,8 +434,12 @@
             </MenuItem>
         </Menu>
 
+        <!-- メニューの帯とヘッダを分ける罫線。ヘッダ下の罫線と同じ引き方 -->
+        <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1"
+                Background="{DynamicResource Brush.Border}" />
+
         <!-- ===== ヘッダ ===== -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="2,0,0,5">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="2,4,0,5">
             <TextBlock Text="PingWatcher"
                        FontSize="{DynamicResource Size.Title}"
                        Margin="0,0,14,0" VerticalAlignment="Center" />
