@@ -349,10 +349,19 @@
                 </Button.ContextMenu>
             </Button>
 
+            <!-- 画面の証跡。ウィンドウの中身を PNG にして logs フォルダへ残す -->
+            <Button x:Name="ScreenshotButton" Content="📷 画面" Click="OnScreenshot"
+                    Style="{StaticResource Button.Icon}"
+                    Margin="0,0,8,0"
+                    MinWidth="86"
+                    AutomationProperties.Name="画面を撮って保存"
+                    ToolTip="いまの画面を PNG で logs フォルダに保存します。" />
+
             <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
             <Button x:Name="ThemeToggle" Click="OnThemeToggle"
                     Style="{StaticResource Button.Icon}"
                     Margin="0,0,8,0"
+                    AutomationProperties.Name="配色の切り替え"
                     ToolTip="明るい配色と暗い配色を切り替えます。" />
 
             <CheckBox x:Name="TopmostToggle" Content="最前面"

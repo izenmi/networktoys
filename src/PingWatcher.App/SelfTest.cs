@@ -228,6 +228,17 @@ internal static class SelfTest
             Assert(window.ActualWidth > 0 && window.ActualHeight > 0, "ウィンドウの実サイズが 0 のまま");
         });
 
+        Check("画面を PNG に描き出せる(スクリーンショット機能)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // ファイルには書かない。描画とエンコードの経路が生きていることだけ確かめる
+            using var stream = new MemoryStream();
+            window!.CaptureWindow().Save(stream);
+
+            Assert(stream.Length > 1000, $"PNG が小さすぎる ({stream.Length} バイト)");
+        });
+
         Check("配色を切り替えても表示し直せる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
