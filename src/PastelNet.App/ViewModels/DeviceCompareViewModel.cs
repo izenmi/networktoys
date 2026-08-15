@@ -6,19 +6,6 @@ using PastelNet.Core.Work;
 
 namespace PastelNet.App.ViewModels;
 
-/// <summary>貼り付けた出力の種類。何を落として何を構造化するかが変わる。</summary>
-public enum DeviceCompareMode
-{
-    /// <summary>show ip route。経路として突き合わせる。</summary>
-    RouteTable,
-
-    /// <summary>show run。行として突き合わせる。</summary>
-    Configuration,
-
-    /// <summary>その他。素の行差分。</summary>
-    PlainText,
-}
-
 /// <summary>
 /// 機器の出力を作業前後で見比べる画面。
 ///
@@ -36,7 +23,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
     private bool _hideNoise = true;
     private bool _hasResult;
     private bool _isEditing = true;
-    private DeviceCompareMode _mode = DeviceCompareMode.RouteTable;
+    private string _note = string.Empty;
+    private DeviceOutputKind _mode = DeviceOutputKind.RouteTable;
 
     public DeviceCompareViewModel()
     {
@@ -51,8 +39,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
     /// <summary>左右に並べた差分。</summary>
     public ObservableCollection<SideBySideRow> Rows { get; } = [];
 
-    /// <summary>経路として比べたときの変化。show ip route のときだけ入る。</summary>
-    public ObservableCollection<RouteTableChange> RouteChanges { get; } = [];
+    /// <summary>構造として比べたときの変化。対象によっては空（show run など）。</summary>
+    public ObservableCollection<DeviceChange> Changes { get; } = [];
 
     public RelayCommand CompareCommand { get; }
     public RelayCommand EditCommand { get; }
@@ -61,8 +49,16 @@ public sealed class DeviceCompareViewModel : ObservableObject
     public RelayCommand LoadBeforeCommand { get; }
     public RelayCommand LoadAfterCommand { get; }
 
-    /// <summary>並び順は <see cref="DeviceCompareMode"/> と対応させること。</summary>
-    public string[] Modes { get; } = ["show ip route", "show run", "そのまま比較"];
+    /// <summary>並び順は <see cref="DeviceOutputKind"/> と対応させること。</summary>
+    public string[] Modes { get; } =
+    [
+        "show ip route",
+        "show ip interface brief",
+        "show cdp neighbors",
+        "show mac address-table",
+        "show run",
+        "そのまま比較",
+    ];
 
     public string SelectedMode
     {
@@ -72,23 +68,43 @@ public sealed class DeviceCompareViewModel : ObservableObject
             int index = Array.IndexOf(Modes, value);
             if (index < 0) return;
 
-            var mode = (DeviceCompareMode)index;
+            var mode = (DeviceOutputKind)index;
             if (_mode == mode) return;
 
             _mode = mode;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(IsRouteMode));
+            OnPropertyChanged(nameof(HasStructuredView));
             OnPropertyChanged(nameof(ModeHint));
         }
     }
 
-    public bool IsRouteMode => _mode == DeviceCompareMode.RouteTable;
+    /// <summary>構造として比べられる対象か。行差分より上に変化の一覧を出す。</summary>
+    public bool HasStructuredView => _mode
+        is DeviceOutputKind.RouteTable
+        or DeviceOutputKind.InterfaceBrief
+        or DeviceOutputKind.CdpNeighbors
+        or DeviceOutputKind.MacTable;
+
+    /// <summary>読むときの注意。対象によって出す。</summary>
+    public string Note
+    {
+        get => _note;
+        private set => SetProperty(ref _note, value);
+    }
+
+    public bool HasNote => Note.Length > 0;
 
     public string ModeHint => _mode switch
     {
-        DeviceCompareMode.RouteTable =>
+        DeviceOutputKind.RouteTable =>
             "経路として突き合わせます。経過時間（00:15:23 など）は無視するので、時間が経っただけの違いは差分になりません。",
-        DeviceCompareMode.Configuration =>
+        DeviceOutputKind.InterfaceBrief =>
+            "ポートの状態を突き合わせます。up から落ちたポートを見つけます。",
+        DeviceOutputKind.CdpNeighbors =>
+            "隣接機器と挿し口を突き合わせます。Holdtime は無視するので、時間が経っただけの違いは差分になりません。ケーブルを別のポートに挿し直していれば見つかります。",
+        DeviceOutputKind.MacTable =>
+            "MAC がどのポートに見えるかを突き合わせます。動的エントリは通信が無いと数分で消えるため、増減より「ポートが移った」を見てください。",
+        DeviceOutputKind.Configuration =>
             "行として突き合わせます。Building configuration や Last configuration change のような、設定を触らなくても毎回変わる行は既定で除きます。",
         _ => "行として、そのまま突き合わせます。",
     };
@@ -163,18 +179,13 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
     private void Compare()
     {
-        DiffNoiseFilter? filter = HideNoise
-            ? _mode switch
-            {
-                DeviceCompareMode.Configuration => DiffNoiseFilter.CiscoConfig,
-                _ => null,
-            }
-            : null;
+        DiffNoiseFilter? filter = HideNoise ? DeviceComparison.NoiseFilterFor(_mode) : null;
 
         SideBySideResult result = SideBySideDiff.Build(BeforeText, AfterText, filter);
 
         Rows.Clear();
-        RouteChanges.Clear();
+        Changes.Clear();
+        Note = string.Empty;
 
         if (result.TooLarge)
         {
@@ -189,10 +200,22 @@ public sealed class DeviceCompareViewModel : ObservableObject
         foreach (SideBySideRow row in rows)
             Rows.Add(row);
 
-        if (_mode == DeviceCompareMode.RouteTable)
-            CompareRoutes();
+        DeviceCompareOutcome? outcome = DeviceComparison.Compare(_mode, BeforeText, AfterText);
+
+        if (outcome is not null)
+        {
+            // 行の差分より先に、この結果を見てもらいたい（本当に知りたいのはこちらなので）
+            foreach (DeviceChange change in outcome.Changes)
+                Changes.Add(change);
+
+            Headline = outcome.Headline;
+            Note = outcome.Note ?? string.Empty;
+            OnPropertyChanged(nameof(HasNote));
+        }
         else
+        {
             Headline = result.HasChanges ? $"{result.ChangedCount} 行に違いがあります。" : "違いはありません。";
+        }
 
         string ignored = result.IgnoredLines > 0 ? $"（毎回変わる {result.IgnoredLines} 行は除いています）" : string.Empty;
         Status = Rows.Count == 0 && result.Rows.Count > 0
@@ -201,29 +224,6 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
         HasResult = true;
         IsEditing = false;
-    }
-
-    /// <summary>
-    /// 経路として突き合わせる。
-    /// 行の差分より先に、この結果を見てもらいたい（本当に知りたいのはこちらなので）。
-    /// </summary>
-    private void CompareRoutes()
-    {
-        IReadOnlyList<CiscoRoute> before = CiscoRouteParser.Parse(BeforeText);
-        IReadOnlyList<CiscoRoute> after = CiscoRouteParser.Parse(AfterText);
-
-        if (before.Count == 0 && after.Count == 0)
-        {
-            Headline = "経路を読み取れませんでした。show ip route の出力かどうか確かめてください。";
-            return;
-        }
-
-        RouteTableSummary summary = RouteTableDiff.Compare(before, after);
-
-        foreach (RouteTableChange change in summary.Changes)
-            RouteChanges.Add(change);
-
-        Headline = summary.Headline;
     }
 
     private void Swap()
@@ -239,7 +239,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
         BeforeText = string.Empty;
         AfterText = string.Empty;
         Rows.Clear();
-        RouteChanges.Clear();
+        Changes.Clear();
         Headline = string.Empty;
         HasResult = false;
         IsEditing = true;
