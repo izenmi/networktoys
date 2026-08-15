@@ -11,9 +11,14 @@ namespace PingWatcher.App;
 /// </summary>
 internal static class CrashLog
 {
+    /// <summary>これを超えたら追記をやめて書き直す。例外の嵐で無限に育てない。</summary>
+    private const long MaxBytes = 1024 * 1024;
+
     private static readonly object Gate = new();
 
-    public static string Path => System.IO.Path.Combine(Environment.CurrentDirectory, "crash.log");
+    // Environment.CurrentDirectory は使わない。保存ダイアログを一度使うと
+    // CWD が選択先フォルダに変わり、以降のクラッシュログが行方不明になる
+    public static string Path => System.IO.Path.Combine(AppData.DirectoryForLogs, "crash.log");
 
     public static void Write(Exception? exception, string source)
     {
@@ -40,7 +45,15 @@ internal static class CrashLog
         try
         {
             lock (Gate)
-                File.AppendAllText(Path, rendered, Encoding.UTF8);
+            {
+                string path = Path;
+                var info = new FileInfo(path);
+
+                if (info.Exists && info.Length > MaxBytes)
+                    File.WriteAllText(path, rendered, Encoding.UTF8);
+                else
+                    File.AppendAllText(path, rendered, Encoding.UTF8);
+            }
         }
         catch
         {

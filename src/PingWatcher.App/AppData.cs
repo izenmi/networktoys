@@ -63,6 +63,13 @@ internal static class AppData
     public static string PathOf(string fileName) => Path.Combine(Directory(), fileName);
 
     /// <summary>
+    /// クラッシュログの置き場所。場所の解決は失敗したこと自体をログに書くので、
+    /// ここから <see cref="Directory"/> を呼ぶと再帰する。未解決の間は exe の横へ出す
+    /// （CI が読むのも exe の横）。ロックは要らない（参照の読み取りは不可分）。
+    /// </summary>
+    public static string DirectoryForLogs => _resolved ?? ExecutableDirectory();
+
+    /// <summary>
     /// いま使っている場所が exe の横かどうか。逃がした事実を画面や記録に出すのに使う。
     /// </summary>
     public static bool IsBesideExecutable
@@ -157,10 +164,20 @@ internal static class AppData
 
             foreach (string file in System.IO.Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
             {
-                string destination = Path.Combine(current, Path.GetRelativePath(source, file));
+                // 1 ファイルの失敗でループごと諦めない。途中で抜けると
+                // 「一部だけコピー済み」の状態で HasData が真になり、
+                // 次回以降は引き継ぎ自体が二度と試されなくなる
+                try
+                {
+                    string destination = Path.Combine(current, Path.GetRelativePath(source, file));
 
-                System.IO.Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                File.Copy(file, destination, overwrite: false);
+                    System.IO.Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    File.Copy(file, destination, overwrite: false);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    CrashLog.Write(ex, $"AppData.MigrateInto({Path.GetFileName(file)})");
+                }
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

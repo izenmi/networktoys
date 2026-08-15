@@ -14,6 +14,14 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) =>
             CrashLog.Write(args.Exception, "Application.DispatcherUnhandledException");
 
+        // 待たれていない Task の例外はここにしか出てこない（拾わないと無音で消える）。
+        // 記録するだけで、アプリは落とさない。
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            CrashLog.Write(args.Exception, "TaskScheduler.UnobservedTaskException");
+            args.SetObserved();
+        };
+
         // 配色はウィンドウを作る前に決めておく。後から差し替えると、
         // 明るい画面が一瞬出てから暗くなる。自己診断でも実際の配色で検査したい。
         ThemeManager.Initialize();
