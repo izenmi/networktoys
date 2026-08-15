@@ -87,7 +87,7 @@ internal sealed class SnmpClient
 
             try
             {
-                await udp.SendAsync(packet, packet.Length, token: token).ConfigureAwait(false);
+                await udp.SendAsync(packet, token).ConfigureAwait(false);
 
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
                 timeout.CancelAfter(Timeout);

@@ -19,7 +19,7 @@
     ・Palette.Dark.xaml と**同じキーを過不足なく**定義する。ずれは自己診断が検出する。
     ・凍結ブラシは Color をアニメーションできない。演出は Opacity 側で行う。
 
-    **緑が 2 つあることに注意。** アクセントの葉緑（115°）と、応答ありのミント（165°）。
+    **アクセント(水色)と応答あり(ミント)は別系統。** アクセントは無職転生ロキシーの水色。
     この 50° の差を詰めると「選択中」と「応答あり」が見分けられなくなる。
     文字色と地色の組み合わせはすべてコントラスト比 4.5 以上（自己診断が検算する）。
 -->
@@ -37,7 +37,7 @@
     <SolidColorBrush x:Key="Brush.Text"         Color="#232529" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.TextMuted"    Color="#61646B" po:Freeze="True" />
 
-    <!-- 状態: 応答あり(ミント。アクセントの葉緑とは青緑側へ離す) -->
+    <!-- 状態: 応答あり(ミント) -->
     <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#BEEFDD" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#0B6851" po:Freeze="True" />
 
@@ -53,12 +53,12 @@
     <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#CDE9FB" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#0E5C84" po:Freeze="True" />
 
-    <!-- 選択・アクセント(パステルの葉緑)。色を使うのはここだけ -->
-    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#D2EFC7" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#2F6B2A" po:Freeze="True" />
+    <!-- 選択・アクセント(パステルの水色。ロキシー)。色を使うのはここだけ -->
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#D3E6F8" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#265795" po:Freeze="True" />
 
     <!-- グラフ描画用 -->
-    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#5FA455" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#3F86C6" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#E4F4DE" po:Freeze="True" />
 
     <!-- 細部。ここも無彩色に寄せる -->
@@ -90,10 +90,10 @@
         <GradientStop Offset="1" Color="#DEDFE3" />
     </LinearGradientBrush>
 
-    <!-- パステルの葉緑からミントへ。淡いまま繋ぐ -->
+    <!-- パステルの水色。淡いまま繋ぐ -->
     <LinearGradientBrush x:Key="Brush.Accent.Gradient" StartPoint="0,0" EndPoint="1,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#8ECB7E" />
-        <GradientStop Offset="1" Color="#6FC9AE" />
+        <GradientStop Offset="0" Color="#5AA0D8" />
+        <GradientStop Offset="1" Color="#7FC1EE" />
     </LinearGradientBrush>
 
 </ResourceDictionary>

@@ -213,9 +213,6 @@ public partial class MainWindow : Window
 
         if (ReportTab.IsSelected)
             _shell.Report.OnActivated();
-
-        if (WorkTab.IsSelected)
-            _shell.Work.OnActivated();
     }
 
     /// <summary>
