@@ -64,6 +64,33 @@ public partial class MainWindow : Window
     private void OnTopmostChanged(object sender, RoutedEventArgs e)
         => Topmost = TopmostToggle.IsChecked == true;
 
+    /// <summary>消す範囲を選ばせる。ボタンの下にメニューを出す。</summary>
+    private void OnClearMenu(object sender, RoutedEventArgs e)
+    {
+        if (ClearButton.ContextMenu is not { } menu) return;
+
+        menu.PlacementTarget = ClearButton;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
+    /// <summary>
+    /// 測った結果だけを消す。宛先も、作業の記録も、機器の貼り付けも残る。
+    ///
+    /// やり直しの範囲が小さく、Ping タブの「履歴を消去」と同じ重さなので確認は挟まない。
+    /// </summary>
+    private void OnClearPingResults(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _shell.Monitor.ResetResults();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnClearPingResults");
+        }
+    }
+
     /// <summary>
     /// 測った結果をすべて捨てて起動直後に戻す。宛先リストだけは残す。
     ///

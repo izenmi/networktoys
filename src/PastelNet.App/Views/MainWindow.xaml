@@ -401,13 +401,24 @@
             </StackPanel>
 
             <!--
-                測った結果をすべて捨てて、起動直後に戻す。宛先リストだけは残す。
-                取り返しがつかないので、押したら確認を挟む。
+                消す範囲を選ばせる。測り直したいだけのときに、作業前の記録や
+                機器の貼り付けまで巻き添えにするのは行き過ぎなので分けている。
+
+                メニューはボタンに直接付けている。Style の Setter に置くと
+                イベントの結線がずれて起動時に落ちる（CLAUDE.md 参照）。
             -->
-            <Button Content="クリア" Click="OnClearAll"
+            <Button x:Name="ClearButton" Content="クリア ▾" Click="OnClearMenu"
                     Style="{StaticResource Button.Subtle}"
                     Margin="0,0,8,0"
-                    ToolTip="測定結果・作業の記録・各画面の入力を、起動直後の状態に戻します（宛先リストは残ります）。" />
+                    ToolTip="消す範囲を選びます。">
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Ping の測定結果だけ消す" Click="OnClearPingResults" />
+                        <Separator />
+                        <MenuItem Header="すべて消す（起動直後に戻す）" Click="OnClearAll" />
+                    </ContextMenu>
+                </Button.ContextMenu>
+            </Button>
 
             <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
             <Button x:Name="ThemeToggle" Click="OnThemeToggle"
@@ -884,8 +895,10 @@
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="対象" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" />
-                                <ComboBox Width="180" ItemsSource="{Binding Modes}"
-                                          SelectedItem="{Binding SelectedMode}" Margin="0,0,10,0" />
+                                <ComboBox Width="214" ItemsSource="{Binding Modes}"
+                                          DisplayMemberPath="Label"
+                                          SelectedItem="{Binding SelectedMode}" Margin="0,0,10,0"
+                                          ToolTip="対象ごとに貼り付けた内容は保たれます。作業前にまとめて貼っておけます。" />
                                 <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,6,0" />
                                 <Button Content="貼り付けに戻る" Command="{Binding EditCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
@@ -911,6 +924,14 @@
 
                             <TextBlock Text="{Binding ModeHint}" Style="{StaticResource Caption}"
                                        TextWrapping="Wrap" />
+                            <!-- どの対象を貼り終えたか。作業前の取りこぼしに気づけるように -->
+                            <TextBlock Text="{Binding PastedSummary}" TextWrapping="Wrap" Margin="0,2,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <!-- 読むときの注意。Style は属性と要素の両方には書けないので、
                                  見た目もまとめてここで指定する -->
                             <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,2,0,0">

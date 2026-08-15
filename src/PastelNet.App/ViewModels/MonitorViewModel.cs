@@ -663,21 +663,34 @@ public sealed class MonitorViewModel : ObservableObject
     /// </summary>
     public void Reset()
     {
-        if (IsRunning)
-            _ = StopAsync();
-
-        ClearHistory();
-
-        // 不通の記録も捨てる。作業タブの判定がここを見ているため、
-        // 残すと「クリアしたのに前の障害が出てくる」ことになる
-        Tracker = new OutageTracker(_settings.IntervalMs);
-        StartedAt = null;
+        ResetResults();
 
         SelectedRow = null;
         DetailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
         TcpPort = "443";
         IsCompact = true;
         StatusMessage = string.Empty;
+    }
+
+    /// <summary>
+    /// 測った結果だけを捨てる。宛先も、他の画面の内容も触らない。
+    ///
+    /// 作業の途中で「ここから測り直したい」ときに使う。全体のクリアと違って
+    /// 作業前の記録や機器の貼り付けは残るので、やり直しの範囲が小さい。
+    /// </summary>
+    public void ResetResults()
+    {
+        if (IsRunning)
+            _ = StopAsync();
+
+        ClearHistory();
+
+        // 不通の記録も捨てる。作業タブの判定がここを見ているため、
+        // 残すと「消したのに前の障害が出てくる」ことになる
+        Tracker = new OutageTracker(_settings.IntervalMs);
+        StartedAt = null;
+
+        StatusMessage = "測定結果を消しました。";
     }
 
 }

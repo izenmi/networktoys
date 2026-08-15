@@ -388,7 +388,6 @@ public sealed class TraceViewModel : ObservableObject
         _pendingPath = null;
 
         Host = "8.8.8.8";
-        HostName = string.Empty;
         MtuText = string.Empty;
         Status = string.Empty;
     }

@@ -27,6 +27,15 @@ public sealed class DeviceCompareViewModel : ObservableObject
     private DeviceOutputKind _mode = DeviceOutputKind.RouteTable;
     private int _selectedIndex = -1;
 
+    /// <summary>
+    /// 対象ごとに貼り付けた内容。
+    ///
+    /// 1 回の作業で show ip route と show run の両方を見比べることが多い。
+    /// 作業前にまとめて貼っておき、作業後に順に突き合わせられるよう、
+    /// 対象を切り替えても消えないようにしている。
+    /// </summary>
+    private readonly Dictionary<DeviceOutputKind, PastedPair> _pasted = [];
+
     public DeviceCompareViewModel()
     {
         CompareCommand = new RelayCommand(Compare, () => BeforeText.Length > 0 || AfterText.Length > 0);
@@ -38,6 +47,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
         NextDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: true), () => DifferenceCount > 0);
         PreviousDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: false), () => DifferenceCount > 0);
+
+        RefreshModeMarks();
     }
 
     /// <summary>左右に並べた差分。</summary>
@@ -135,33 +146,100 @@ public sealed class DeviceCompareViewModel : ObservableObject
     public RelayCommand LoadAfterCommand { get; }
 
     /// <summary>並び順は <see cref="DeviceOutputKind"/> と対応させること。</summary>
-    public string[] Modes { get; } =
+    public DeviceModeViewModel[] Modes { get; } =
     [
-        "show ip route",
-        "show ip interface brief",
-        "show cdp neighbors",
-        "show mac address-table",
-        "show run",
-        "そのまま比較",
+        new(DeviceOutputKind.RouteTable, "show ip route"),
+        new(DeviceOutputKind.InterfaceBrief, "show ip interface brief"),
+        new(DeviceOutputKind.CdpNeighbors, "show cdp neighbors"),
+        new(DeviceOutputKind.MacTable, "show mac address-table"),
+        new(DeviceOutputKind.Configuration, "show run"),
+        new(DeviceOutputKind.PlainText, "そのまま比較"),
     ];
 
-    public string SelectedMode
+    public DeviceModeViewModel SelectedMode
     {
         get => Modes[(int)_mode];
         set
         {
-            int index = Array.IndexOf(Modes, value);
-            if (index < 0) return;
+            if (value is null || value.Kind == _mode) return;
 
-            var mode = (DeviceOutputKind)index;
-            if (_mode == mode) return;
+            // いまの対象の貼り付けを預けてから切り替え、行き先の分を出す
+            Remember();
+            _mode = value.Kind;
+            Restore();
 
-            _mode = mode;
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasStructuredView));
             OnPropertyChanged(nameof(ModeHint));
         }
     }
+
+    /// <summary>貼り付けの有無を選択肢に映す。どの対象を record 済みかが一目で分かる。</summary>
+    private void RefreshModeMarks()
+    {
+        foreach (DeviceModeViewModel mode in Modes)
+        {
+            (string before, string after) = mode.Kind == _mode
+                ? (BeforeText, AfterText)
+                : _pasted.TryGetValue(mode.Kind, out PastedPair? pair) ? (pair.Before, pair.After) : (string.Empty, string.Empty);
+
+            mode.SetState(before.Length > 0, after.Length > 0);
+        }
+
+        OnPropertyChanged(nameof(PastedSummary));
+    }
+
+    /// <summary>貼り付け済みの対象を並べた一言。作業前の取りこぼしに気づけるようにする。</summary>
+    public string PastedSummary
+    {
+        get
+        {
+            string[] done = [.. Modes.Where(m => m.HasAnything).Select(m => m.Name + m.StateMark)];
+
+            return done.Length == 0
+                ? "まだ何も貼り付けていません。"
+                : "貼り付け済み: " + string.Join(" ／ ", done);
+        }
+    }
+
+    private void Remember()
+    {
+        if (BeforeText.Length == 0 && AfterText.Length == 0)
+            _pasted.Remove(_mode);
+        else
+            _pasted[_mode] = new PastedPair(BeforeText, AfterText);
+    }
+
+    private void Restore()
+    {
+        _pasted.TryGetValue(_mode, out PastedPair? pair);
+
+        // 結果は対象ごとに持たない。切り替えたら貼り付け欄に戻し、必要なら比べ直す
+        Rows.Clear();
+        Changes.Clear();
+        Headline = string.Empty;
+        Note = string.Empty;
+        HasResult = false;
+        IsEditing = true;
+        SelectedIndex = -1;
+
+        BeforeText = pair?.Before ?? string.Empty;
+        AfterText = pair?.After ?? string.Empty;
+
+        OnPropertyChanged(nameof(HasNote));
+        RefreshDifferenceState();
+
+        Status = (BeforeText.Length, AfterText.Length) switch
+        {
+            (0, 0) => "作業前と作業後の出力を貼り付けて「比較」を押してください。",
+            (> 0, 0) => "作業前だけ貼ってあります。作業後を貼ると比べられます。",
+            (0, > 0) => "作業後だけ貼ってあります。作業前を貼ると比べられます。",
+            _ => "作業前と作業後が揃っています。「比較」を押してください。",
+        };
+    }
+
+    /// <summary>対象ごとに預けてある貼り付け。</summary>
+    private sealed record PastedPair(string Before, string After);
 
     /// <summary>構造として比べられる対象か。行差分より上に変化の一覧を出す。</summary>
     public bool HasStructuredView => _mode
@@ -199,8 +277,10 @@ public sealed class DeviceCompareViewModel : ObservableObject
         get => _beforeText;
         set
         {
-            if (SetProperty(ref _beforeText, value))
-                CompareCommand.RaiseCanExecuteChanged();
+            if (!SetProperty(ref _beforeText, value)) return;
+
+            CompareCommand.RaiseCanExecuteChanged();
+            RefreshModeMarks();
         }
     }
 
@@ -209,8 +289,10 @@ public sealed class DeviceCompareViewModel : ObservableObject
         get => _afterText;
         set
         {
-            if (SetProperty(ref _afterText, value))
-                CompareCommand.RaiseCanExecuteChanged();
+            if (!SetProperty(ref _afterText, value)) return;
+
+            CompareCommand.RaiseCanExecuteChanged();
+            RefreshModeMarks();
         }
     }
 
@@ -323,8 +405,11 @@ public sealed class DeviceCompareViewModel : ObservableObject
             Compare();
     }
 
+    /// <summary>いまの対象の貼り付けだけを消す。他の対象に貼ってある分は残す。</summary>
     private void Clear()
     {
+        _pasted.Remove(_mode);
+
         BeforeText = string.Empty;
         AfterText = string.Empty;
         Rows.Clear();
@@ -370,11 +455,57 @@ public sealed class DeviceCompareViewModel : ObservableObject
     /// <summary>貼り付けた内容と結果を起動時の状態へ戻す。</summary>
     public void Reset()
     {
+        _pasted.Clear();
         Clear();
         SelectedMode = Modes[0];
+        RefreshModeMarks();
         Note = string.Empty;
         OnPropertyChanged(nameof(HasNote));
         CompareCommand.RaiseCanExecuteChanged();
     }
 
+}
+
+/// <summary>
+/// 比較する対象ひとつ。貼り付けの有無を持たせて、
+/// どの対象を record 済みかを選択肢の上で分かるようにしている。
+/// </summary>
+public sealed class DeviceModeViewModel : ObservableObject
+{
+    private string _stateMark = string.Empty;
+
+    public DeviceModeViewModel(DeviceOutputKind kind, string name)
+    {
+        Kind = kind;
+        Name = name;
+    }
+
+    public DeviceOutputKind Kind { get; }
+
+    public string Name { get; }
+
+    /// <summary>「（前）」「（前後）」のような印。何も貼っていなければ空。</summary>
+    public string StateMark
+    {
+        get => _stateMark;
+        private set
+        {
+            if (SetProperty(ref _stateMark, value))
+                OnPropertyChanged(nameof(Label));
+        }
+    }
+
+    public bool HasAnything => StateMark.Length > 0;
+
+    /// <summary>選択肢に出す文字列。</summary>
+    public string Label => StateMark.Length == 0 ? Name : $"{Name}　{StateMark}";
+
+    internal void SetState(bool before, bool after)
+        => StateMark = (before, after) switch
+        {
+            (true, true) => "（前後）",
+            (true, false) => "（前）",
+            (false, true) => "（後）",
+            _ => string.Empty,
+        };
 }
