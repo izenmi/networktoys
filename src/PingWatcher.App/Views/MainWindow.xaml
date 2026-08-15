@@ -1160,7 +1160,7 @@
                                 <Button Content="比較を停止" Command="{Binding EditCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                         ToolTip="比較をやめて貼り付け欄に戻ります。貼り付けた内容は残ります。" />
-                                <CheckBox Content="違う行だけ" IsChecked="{Binding OnlyDifferences}"
+                                <CheckBox Content="異なる行だけ" IsChecked="{Binding OnlyDifferences}"
                                           VerticalAlignment="Center" Margin="0,0,12,2" />
 
                                 <!-- 差分をたどる。長い設定では目で探すのが現実的でない -->
@@ -2732,7 +2732,7 @@
                         </StackPanel>
 
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                   Text="いま監視画面に出ている結果を書き出します。HTML は 1 ファイル完結でオフライン環境でも開けます。CSV は Excel 用に BOM 付き UTF-8 です。下は書き出される内容(テキスト形式)のプレビューです。" />
+                                   Text="いま監視画面に出ている結果を書き出します。" />
 
                         <!-- 出力内容のプレビュー。コピーもできるよう読み取り専用の TextBox で出す -->
                         <TextBox Text="{Binding Preview, Mode=OneWay}"
