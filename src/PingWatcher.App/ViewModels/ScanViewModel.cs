@@ -1,8 +1,12 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Net;
+using System.Text;
+using Microsoft.Win32;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
 using PingWatcher.Core.Addressing;
+using PingWatcher.Core.Work;
 
 namespace PingWatcher.App.ViewModels;
 
@@ -67,6 +71,7 @@ public sealed class ScanViewModel : ObservableObject
         ScanCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         AddToTargetsCommand = new RelayCommand(AddToTargets, () => Results.Count > 0);
+        SaveCommand = new RelayCommand(Save, () => Results.Count > 0);
 
         UpdatePreview();
     }
@@ -76,6 +81,7 @@ public sealed class ScanViewModel : ObservableObject
     public RelayCommand ScanCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand AddToTargetsCommand { get; }
+    public RelayCommand SaveCommand { get; }
 
     public string RangeText
     {
@@ -161,6 +167,7 @@ public sealed class ScanViewModel : ObservableObject
         Progress = 0;
         Results.Clear();
         AddToTargetsCommand.RaiseCanExecuteChanged();
+        SaveCommand.RaiseCanExecuteChanged();
 
         _cts = new CancellationTokenSource();
         CancellationToken token = _cts.Token;
@@ -203,6 +210,36 @@ public sealed class ScanViewModel : ObservableObject
             _cts = null;
             IsBusy = false;
             AddToTargetsCommand.RaiseCanExecuteChanged();
+        SaveCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    /// <summary>スキャン結果を CSV に保存する(BOM 付き UTF-8。Excel でそのまま開ける)。</summary>
+    private void Save()
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = $"scan-{DateTime.Now:yyyyMMdd-HHmm}.csv",
+            DefaultExt = "csv",
+            Filter = "CSV ファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*",
+            AddExtension = true,
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var table = new CsvTable(
+                ["IP", "RTT", "ホスト名", "MAC", "ベンダー", "開放ポート"],
+                [.. Results.Select(r => new[] { r.Address, r.Rtt, r.HostName, r.Mac, r.Vendor, r.Ports })]);
+
+            File.WriteAllText(dialog.FileName, table.ToCsv(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました({Results.Count} 件)。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"保存できませんでした: {ex.Message}";
         }
     }
 
@@ -221,6 +258,7 @@ public sealed class ScanViewModel : ObservableObject
 
         Results.Clear();
         AddToTargetsCommand.RaiseCanExecuteChanged();
+        SaveCommand.RaiseCanExecuteChanged();
 
         RangeText = _defaultRange;
         ResolveNames = false;

@@ -1154,8 +1154,6 @@
                                 <Button Content="比較を停止" Command="{Binding EditCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                         ToolTip="比較をやめて貼り付け欄に戻ります。貼り付けた内容は残ります。" />
-                                <Button Content="消去" Command="{Binding ClearCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,12,2" />
                                 <CheckBox Content="違う行だけ" IsChecked="{Binding OnlyDifferences}"
                                           VerticalAlignment="Center" Margin="0,0,12,2" />
 
@@ -1423,7 +1421,10 @@
                                 <Button Content="中断" Command="{Binding CancelCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
                                 <Button Content="宛先に追加" Command="{Binding AddToTargetsCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                                <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
+                                        ToolTip="スキャン結果(IP・RTT・ホスト名・MAC・ベンダー・開放ポート)を CSV に保存します。" />
                             </WrapPanel>
 
                             <!-- RangeBase.Value は既定が TwoWay。読み取り専用プロパティに繋ぐので OneWay を明示する -->
@@ -2628,8 +2629,8 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== 変換(Cisco コマンド出力 → CSV) ===== -->
-            <TabItem Header="変換" DataContext="{Binding Converter}">
+            <!-- ===== パース(Cisco コマンド出力 → CSV) ===== -->
+            <TabItem Header="パース" DataContext="{Binding Converter}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">

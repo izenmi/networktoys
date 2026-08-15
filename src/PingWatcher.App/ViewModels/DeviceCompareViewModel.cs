@@ -43,7 +43,6 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
         CompareCommand = new RelayCommand(Compare, () => BeforeText.Length > 0 || AfterText.Length > 0);
         EditCommand = new RelayCommand(() => IsEditing = true);
-        ClearCommand = new RelayCommand(Clear);
         LoadBeforeCommand = new RelayCommand(() => LoadInto(before: true));
         LoadAfterCommand = new RelayCommand(() => LoadInto(before: false));
         SaveBeforeCommand = new RelayCommand(() => SaveFrom(before: true), () => BeforeText.Length > 0);
@@ -203,7 +202,6 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
     public RelayCommand CompareCommand { get; }
     public RelayCommand EditCommand { get; }
-    public RelayCommand ClearCommand { get; }
     public RelayCommand LoadBeforeCommand { get; }
     public RelayCommand LoadAfterCommand { get; }
     public RelayCommand SaveBeforeCommand { get; }
@@ -454,24 +452,6 @@ public sealed class DeviceCompareViewModel : ObservableObject
         IsEditing = false;
 
         // 比較し直したら先頭から見る
-        SelectedIndex = -1;
-        RefreshDifferenceState();
-    }
-
-    /// <summary>いまの対象の貼り付けだけを消す。他の対象に貼ってある分は残す。</summary>
-    private void Clear()
-    {
-        _selectedDevice.Remember(_mode, string.Empty, string.Empty);
-
-        BeforeText = string.Empty;
-        AfterText = string.Empty;
-        Rows.Clear();
-        Changes.Clear();
-        Headline = string.Empty;
-        HasResult = false;
-        IsEditing = true;
-        Status = "作業前と作業後の出力を貼り付けて「比較」を押してください。";
-
         SelectedIndex = -1;
         RefreshDifferenceState();
     }
