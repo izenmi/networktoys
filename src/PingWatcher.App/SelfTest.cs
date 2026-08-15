@@ -26,6 +26,11 @@ internal static class SelfTest
 
         void Check(string name, Action action)
         {
+            // catch できないクラッシュ(AccessViolation や fail-fast)で全ログが失われると
+            // 「どの検査で死んだか」すら分からない(ETW の構造体ずれで実際に起きた)。
+            // どの検査に入ったかだけ先にファイルへ残し、完走したら全文で上書きする
+            TryAppendProgress($"  実行中: {name}");
+
             try
             {
                 action();
@@ -38,6 +43,20 @@ internal static class SelfTest
                 log.AppendLine($"        {ex.GetType().Name}: {ex.Message}");
                 if (ex.InnerException is { } inner)
                     log.AppendLine($"        原因: {inner.GetType().Name}: {inner.Message}");
+            }
+        }
+
+        static void TryAppendProgress(string line)
+        {
+            try
+            {
+                File.AppendAllText(
+                    Path.Combine(Environment.CurrentDirectory, "selftest.log"),
+                    line + Environment.NewLine, Encoding.UTF8);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // 進捗が残せないだけ。検査は続ける
             }
         }
 

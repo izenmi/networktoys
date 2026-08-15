@@ -86,9 +86,12 @@ internal static class EtwNativeMethods
     }
 
     /// <summary>
-    /// EVENT_TRACE_LOGFILEW（x64 で 424 バイト）。読まないフィールドの
-    /// EVENT_TRACE(64B) と TRACE_LOGFILE_HEADER(280B) は不透明な塊として写す。
-    /// 塊のサイズを誤ると後続のコールバック欄がずれて即死するので変えないこと。
+    /// EVENT_TRACE_LOGFILEW（x64 で 448 バイト）。読まないフィールドの
+    /// EVENT_TRACE(88B) と TRACE_LOGFILE_HEADER(280B) は不透明な塊として写す。
+    /// EVENT_TRACE は Vista で InstanceId / ParentInstanceId / ParentGuid が
+    /// 増えて 88 バイトになっている（48+4+4+16+8+4+4）。ここを 64 と誤ると
+    /// 後続フィールドが 24 バイトずれ、OpenTrace がバッファ外へ書いて
+    /// ヒープ破壊（0xC0000409）で落ちる — CI で実際に踏んだ。
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct EventTraceLogfile
@@ -99,7 +102,7 @@ internal static class EtwNativeMethods
         public uint BuffersRead;
         public uint ProcessTraceMode;
 
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 64)]
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 88)]
         public byte[] CurrentEvent;
 
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 280)]

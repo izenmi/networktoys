@@ -111,7 +111,7 @@ internal sealed class NetTraceSession : IDisposable
             {
                 ProcessTraceMode = EtwNativeMethods.ProcessTraceModeRealTime | EtwNativeMethods.ProcessTraceModeEventRecord,
                 EventRecordCallback = _callback,
-                CurrentEvent = new byte[64],
+                CurrentEvent = new byte[88],
                 LogfileHeader = new byte[280],
             };
 
