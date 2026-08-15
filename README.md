@@ -1,4 +1,4 @@
-# PastelNet
+# PingWatcher
 
 ぜんぶ同時に測る、Windows 向けネットワーク診断ツール。
 
@@ -54,8 +54,8 @@ EXPing にはない拡張として、次も受け付けます。
 
 | 成果物 | サイズ | 中身 |
 |---|---|---|
-| `PastelNet-win-x64` | 約 125MB | 単一 exe。.NET のインストール不要。こちらを推奨 |
-| `PastelNet-win-x64-runtime-required` | 約 0.2MB | 軽量版。別途 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要 |
+| `PingWatcher-win-x64` | 約 125MB | 単一 exe。.NET のインストール不要。こちらを推奨 |
+| `PingWatcher-win-x64-runtime-required` | 約 0.2MB | 軽量版。別途 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要 |
 
 WPF はトリミングできないため、.NET を同梱すると 125MB になります。単一ファイルの圧縮でサイズを半分にはできますが、メモリ消費が倍（約 183MB）になり初回起動も 5 秒近くかかるため採用していません。
 
@@ -69,18 +69,18 @@ WPF はトリミングできないため、.NET を同梱すると 125MB にな�
 
 ## 保存先
 
-設定と宛先リストは `%APPDATA%\PastelNet\` に置かれます。
+設定と宛先リストは `%APPDATA%\PingWatcher\` に置かれます。
 
 - `targets.json` — 宛先リストと測定の既定値
 
 ## ビルド
 
 ```
-dotnet test tests/PastelNet.Core.Tests/PastelNet.Core.Tests.csproj
-dotnet publish src/PastelNet.App/PastelNet.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o publish
+dotnet test tests/PingWatcher.Core.Tests/PingWatcher.Core.Tests.csproj
+dotnet publish src/PingWatcher.App/PingWatcher.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o publish
 ```
 
-`PastelNet.exe --selftest` で自己診断を実行し、終了コードを返します（CI で使っています）。
+`PingWatcher.exe --selftest` で自己診断を実行し、終了コードを返します（CI で使っています）。
 
 MAC ベンダー名のテーブルを更新するには `python3 tools/oui/build_oui.py` を実行してください（IEEE の登録簿から生成します。CI では取得しません）。
 

@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/PastelNet.Core/PastelNet.Core.csproj" />
-    <Project Path="src/PastelNet.App/PastelNet.App.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/PastelNet.Core.Tests/PastelNet.Core.Tests.csproj" />
-  </Folder>
-</Solution>

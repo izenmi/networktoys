@@ -1,4 +1,4 @@
-# PastelNet 開発メモ
+# PingWatcher 開発メモ
 
 Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10 (LTS)。
 
@@ -9,10 +9,10 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 
 そのための設計:
 
-1. **`PastelNet.Core` (net10.0) に純粋ロジックを押し出す** — ネットワークにも WPF にも触らないコード（IP 範囲パース、統計、MOS 算出、OUI 解決、レポート生成）はすべてここへ。CI の xUnit で検証できる面積を最大化する。
+1. **`PingWatcher.Core` (net10.0) に純粋ロジックを押し出す** — ネットワークにも WPF にも触らないコード（IP 範囲パース、統計、MOS 算出、OUI 解決、レポート生成）はすべてここへ。CI の xUnit で検証できる面積を最大化する。
    原則: **テストできない部分（WPF・P/Invoke・実ネットワーク）を、テストできる純関数の薄いラッパーに追い込む。**
    例: traceroute なら「Ping を投げる部分」と「ホップ列を解析・整形する部分」を分け、後者を固定データでテストする。
-2. **`--selftest`** — `PastelNet.exe --selftest` で自己診断し、終了コードを返す。**XAML のエラー（リソースキーの打ち間違いなど）はコンパイルを通り抜けて実行時に落ちる**ので、MainWindow を実際に生成・表示するこの検査が実質唯一の防波堤。新しい画面やリソースを足したら必ずここに検査を追加する。
+2. **`--selftest`** — `PingWatcher.exe --selftest` で自己診断し、終了コードを返す。**XAML のエラー（リソースキーの打ち間違いなど）はコンパイルを通り抜けて実行時に落ちる**ので、MainWindow を実際に生成・表示するこの検査が実質唯一の防波堤。新しい画面やリソースを足したら必ずここに検査を追加する。
    **ウィンドウは `Show()` してから `UpdateLayout()` すること。** Show せずに `Measure()` を呼んでもテキスト整形まで到達せず、フォント初期化の不具合を見逃す（InvariantGlobalization の事故で実証済み）。
 3. **1 フェーズ = 1 まとまり = CI グリーン** — 大きな差分を積むと失敗の切り分けが不可能になる。
 
@@ -64,8 +64,8 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 ## 構成
 
 ```
-src/PastelNet.Core/   純粋ロジック。Windows 非依存。ここを厚くする
-src/PastelNet.App/    WPF 本体。Core を参照する（逆参照は禁止）
+src/PingWatcher.Core/   純粋ロジック。Windows 非依存。ここを厚くする
+src/PingWatcher.App/    WPF 本体。Core を参照する（逆参照は禁止）
 tests/                Core のユニットテスト
 tools/                OUI テーブル生成などの手動スクリプト
 ```

@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PingWatcher.Core/PingWatcher.Core.csproj" />
+    <Project Path="src/PingWatcher.App/PingWatcher.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PingWatcher.Core.Tests/PingWatcher.Core.Tests.csproj" />
+  </Folder>
+</Solution>

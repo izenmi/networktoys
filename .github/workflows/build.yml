@@ -29,7 +29,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: テスト
-        run: dotnet test tests/PastelNet.Core.Tests/PastelNet.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
+        run: dotnet test tests/PingWatcher.Core.Tests/PingWatcher.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
 
   # Phase 0 の実測（CI ランナー上）で決めた 2 構成。
   #   単一exe + R2R      : 起動 663ms / メモリ 93.5MB / 124.8MB
@@ -60,7 +60,7 @@ jobs:
       - name: publish (${{ matrix.name }})
         shell: pwsh
         run: |
-          dotnet publish src/PastelNet.App/PastelNet.App.csproj `
+          dotnet publish src/PingWatcher.App/PingWatcher.App.csproj `
             -c Release `
             -r win-x64 `
             -p:IncludeNativeLibrariesForSelfExtract=true `
@@ -74,8 +74,8 @@ jobs:
         shell: pwsh
         working-directory: publish/${{ matrix.name }}
         run: |
-          $exe = Join-Path $PWD 'PastelNet.exe'
-          if (-not (Test-Path $exe)) { throw "PastelNet.exe が生成されていません" }
+          $exe = Join-Path $PWD 'PingWatcher.exe'
+          if (-not (Test-Path $exe)) { throw "PingWatcher.exe が生成されていません" }
 
           function Invoke-SelfTest {
             $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -100,7 +100,7 @@ jobs:
         shell: pwsh
         working-directory: publish/${{ matrix.name }}
         run: |
-          $exe = Join-Path $PWD 'PastelNet.exe'
+          $exe = Join-Path $PWD 'PingWatcher.exe'
           Remove-Item 'crash.log' -ErrorAction SilentlyContinue
 
           $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -139,7 +139,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: PastelNet-${{ matrix.name }}
+          name: PingWatcher-${{ matrix.name }}
           path: publish/${{ matrix.name }}
           retention-days: 30
 

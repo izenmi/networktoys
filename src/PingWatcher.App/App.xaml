@@ -1,0 +1,18 @@
+<Application x:Class="PingWatcher.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!--
+                    既定はダーク。ThemeManager がこのパレットだけを差し替える
+                    （位置ではなく Source で探すので、並び順を変えても壊れない）。
+                    Tokens は色に依らない寸法。Controls は両方のキーに依存するので最後。
+                -->
+                <ResourceDictionary Source="Resources/Palette.Dark.xaml" />
+                <ResourceDictionary Source="Resources/Tokens.xaml" />
+                <ResourceDictionary Source="Resources/Controls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

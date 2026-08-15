@@ -12,9 +12,9 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 
-svg="$root/src/PastelNet.App/Resources/AppIcon.svg"
-small="$root/src/PastelNet.App/Resources/AppIcon.Small.svg"
-ico="$root/src/PastelNet.App/Resources/AppIcon.ico"
+svg="$root/src/PingWatcher.App/Resources/AppIcon.svg"
+small="$root/src/PingWatcher.App/Resources/AppIcon.Small.svg"
+ico="$root/src/PingWatcher.App/Resources/AppIcon.ico"
 
 for f in "$svg" "$small"; do
     [ -f "$f" ] || { echo "元の SVG が見つかりません: $f" >&2; exit 1; }
