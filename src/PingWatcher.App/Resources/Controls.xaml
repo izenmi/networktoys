@@ -109,6 +109,10 @@
                             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>
+                        <!-- Tab キーでの現在地。既定の FocusVisualStyle はテンプレート置換で消えている -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -126,8 +130,11 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
+                    <!-- 枠は常に確保しておき、フォーカス時に色だけ変える（寸法が動かない） -->
                     <Border x:Name="Bd"
                             Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent"
+                            BorderThickness="1.5"
                             CornerRadius="{DynamicResource Radius.Control}"
                             Padding="{TemplateBinding Padding}"
                             RenderTransformOrigin="0.5,0.5">
@@ -153,6 +160,14 @@
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
                             <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                        <!--
+                            Tab キーで操作する人のための現在地。既定テンプレートを
+                            置き換えた時点で標準の FocusVisualStyle は消えているので、
+                            テンプレート側で示す必要がある。
+                        -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -296,7 +311,19 @@
                                 </ScrollViewer>
                             </Border>
                         </Popup>
+
+                        <!-- Tab キーでの現在地。トグルは Focusable=False なので、本体側に枠を出す -->
+                        <Border x:Name="FocusRing"
+                                BorderBrush="Transparent"
+                                BorderThickness="1.5"
+                                CornerRadius="7"
+                                IsHitTestVisible="False" />
                     </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -336,6 +363,10 @@
                             <Setter TargetName="Box" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
                             <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
                             <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <!-- Tab キーでの現在地。既定の FocusVisualStyle はテンプレート置換で消えている -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -182,7 +182,15 @@ public sealed class WorkViewModel : ObservableObject
                 };
 
                 Comparisons.Clear();
+
+                // 判定は派生プロパティ経由で表示されているので、消したことも通知する。
+                // 通知しないと、撮り直したのに前回の「合格」バッジが画面に残る
                 _summary = null;
+                OnPropertyChanged(nameof(VerdictText));
+                OnPropertyChanged(nameof(HeadlineText));
+                OnPropertyChanged(nameof(VerdictLevelName));
+                OnPropertyChanged(nameof(HasComparison));
+
                 Status = thin > 0
                     ? $"作業前として記録しました。ただし {thin} 件は測定回数が少ないため、もう少し測ってから記録し直すことをお勧めします。"
                     : $"作業前として記録しました（{entries.Count} 件）。";

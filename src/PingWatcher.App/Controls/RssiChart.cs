@@ -31,6 +31,17 @@ public sealed class RssiChart : FrameworkElement
         set => SetValue(SourceProperty, value);
     }
 
+    public RssiChart()
+    {
+        // 色は OnRender のたびに引き直しているが、再描画のきっかけが RSSI の
+        // 更新しか無いと、無線の取れない端末（有線のみ等）では配色を切り替えても
+        // 旧テーマの色のまま止まる。切替そのものを再描画の合図にする
+        Loaded += (_, _) => ThemeManager.ThemeChanged += OnThemeChanged;
+        Unloaded += (_, _) => ThemeManager.ThemeChanged -= OnThemeChanged;
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e) => InvalidateVisual();
+
     private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var chart = (RssiChart)d;

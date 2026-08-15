@@ -269,6 +269,65 @@
             </Setter>
         </Style>
 
+        <!--
+            右クリックメニューを持たない行コンテナ。
+            スキャン結果・周辺 AP・作業比較・機器比較の一覧はこちらを使う。
+            メニュー付きのコンテナを流用すると、DataContext の型が違うため
+            「経路を調べる」などを押しても無反応のメニューが出てしまう。
+        -->
+        <Style x:Key="PlainRowContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                BorderThickness="1"
+                                BorderBrush="Transparent"
+                                CornerRadius="{DynamicResource Radius.Badge}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 上の枠付き版。機器比較の差分一覧が使う（選択を枠で示す） -->
+        <Style x:Key="PlainCompactContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Sel"
+                                BorderBrush="Transparent"
+                                BorderThickness="1.5"
+                                CornerRadius="{DynamicResource Radius.Control}"
+                                Margin="0,0,3,3">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Sel" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Sel" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- 行コンテナ。選択の見た目だけ差し替え、既定の青い選択色は使わない -->
         <Style x:Key="TargetRowContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
             <Setter Property="Padding" Value="4,0" />
@@ -323,7 +382,7 @@
             ・詳細（1 行 1 件）… 列で細かく見たいとき
             ・一覧（多段）      … 100 件を超える宛先を一目で見たいとき
 
-            仮想化が効くのは詳細表示のときだけ。多段は折り返しの都合で全件を組み立てる。
+            どちらも仮想化する。多段は VirtualizingTilePanel（タイル寸法固定が前提）。
             参照するテンプレートより後に置くこと（StaticResource は前方参照できない）。
         -->
         <!--
@@ -366,12 +425,20 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <!--
+                仮想化の指定は ListBox 側に付ける。VirtualizingStackPanel は自分の
+                属性ではなく ItemsControl 側の添付プロパティを読むため、パネル要素に
+                書いた VirtualizationMode は参照されず、Recycling が効かないまま
+                コンテナが使い捨てで生成され続ける。
+            -->
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
             <Setter Property="ItemTemplate" Value="{StaticResource TargetRowTemplate}" />
             <Setter Property="ItemContainerStyle" Value="{StaticResource TargetRowContainer}" />
             <Setter Property="ItemsPanel">
                 <Setter.Value>
                     <ItemsPanelTemplate>
-                        <VirtualizingStackPanel IsVirtualizing="True" VirtualizationMode="Recycling" />
+                        <VirtualizingStackPanel />
                     </ItemsPanelTemplate>
                 </Setter.Value>
             </Setter>
@@ -382,7 +449,12 @@
                     <Setter Property="ItemsPanel">
                         <Setter.Value>
                             <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal" />
+                                <!--
+                                    一望表示も仮想化する。WrapPanel は仮想化できず、
+                                    500 宛先で起動時に全タイルを組み立てていた。
+                                    タイルの寸法は Cell(322×19) + コンテナ余白(3,3)。
+                                -->
+                                <controls:VirtualizingTilePanel ItemWidth="325" ItemHeight="22" />
                             </ItemsPanelTemplate>
                         </Setter.Value>
                     </Setter>
@@ -876,7 +948,7 @@
                                         Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
                                 <ListBox ItemsSource="{Binding Comparisons}"
-                                         ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          Background="Transparent" BorderThickness="0"
                                          HorizontalContentAlignment="Stretch"
                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -1264,7 +1336,7 @@
                                 <!-- 左右並置。1 つのスクロールに収めるので、左右がずれない -->
                                 <ListBox x:Name="DiffList"
                                          ItemsSource="{Binding Rows}"
-                                         ItemContainerStyle="{StaticResource CompactRowContainer}"
+                                         ItemContainerStyle="{StaticResource PlainCompactContainer}"
                                          SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
                                          Background="Transparent" BorderThickness="0"
                                          HorizontalContentAlignment="Stretch"
@@ -1385,7 +1457,7 @@
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
                         <ListBox ItemsSource="{Binding Results}"
-                                 ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                 ItemContainerStyle="{StaticResource PlainRowContainer}"
                                  Background="Transparent"
                                  BorderThickness="0"
                                  HorizontalContentAlignment="Stretch"
@@ -1853,11 +1925,13 @@
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
                         <ListBox ItemsSource="{Binding AccessPoints}"
-                                 ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                 ItemContainerStyle="{StaticResource PlainRowContainer}"
                                  Background="Transparent"
                                  BorderThickness="0"
                                  HorizontalContentAlignment="Stretch"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 VirtualizingStackPanel.IsVirtualizing="True"
+                                 VirtualizingStackPanel.VirtualizationMode="Recycling">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Height="{DynamicResource Size.RowHeight}">

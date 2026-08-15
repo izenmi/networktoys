@@ -391,16 +391,22 @@ public sealed class MonitorViewModel : ObservableObject
             }
         }
 
+        bool selectedChanged = false;
+
         foreach (TargetRowViewModel row in _touched)
         {
             bool wasDown = row.IsDown;
-            row.Refresh();
+            bool changed = row.Refresh();
 
             if (row.IsDown != wasDown)
                 Reclassify(row);
+
+            if (changed && ReferenceEquals(row, SelectedRow))
+                selectedChanged = true;
         }
 
-        if (SelectedRow is { } selected && _touched.Contains(selected))
+        // 詳細欄の文字列は組み立てが安くないので、選択行が実際に変わったときだけ作り直す
+        if (selectedChanged)
             UpdateDetail();
     }
 
@@ -560,15 +566,18 @@ public sealed class MonitorViewModel : ObservableObject
 
     private static void SortInPlace(ObservableCollection<TargetRowViewModel> collection)
     {
-        // 件数が多くても並べ替えは宛先の編集時にしか走らないので、素直な挿入ソートで足りる
-        for (int i = 1; i < collection.Count; i++)
+        // Move は 1 回ごとに CollectionChanged が飛び、一覧がコンテナを動かす。
+        // 挿入ソートだと大きく入れ替えたとき通知が O(n²) 回になり、500 件を
+        // 表計算から貼り直しただけで UI が数秒固まる。並び順を先に決めて、
+        // 位置のずれた要素だけを Move する（通知は最大 n 回）
+        List<TargetRowViewModel> sorted = [.. collection.OrderBy(r => r.Order)];
+
+        for (int i = 0; i < sorted.Count; i++)
         {
-            int j = i;
-            while (j > 0 && collection[j - 1].Order > collection[j].Order)
-            {
-                collection.Move(j, j - 1);
-                j--;
-            }
+            if (ReferenceEquals(collection[i], sorted[i]))
+                continue;
+
+            collection.Move(collection.IndexOf(sorted[i]), i);
         }
     }
 

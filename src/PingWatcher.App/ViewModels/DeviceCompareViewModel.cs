@@ -417,6 +417,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
         Rows.Clear();
         Changes.Clear();
         Note = string.Empty;
+        OnPropertyChanged(nameof(HasNote));   // 空にした側も通知しないと前回の注意書きが残る
 
         if (result.TooLarge)
         {

@@ -158,10 +158,10 @@ public sealed class TargetRowViewModel : ObservableObject
             _isDirty = true;
     }
 
-    /// <summary>取り込んだ結果を表示へ反映する。変化が無ければ何もしない。</summary>
-    public void Refresh()
+    /// <summary>取り込んだ結果を表示へ反映する。変化が無ければ何もせず false を返す。</summary>
+    public bool Refresh()
     {
-        if (!_isDirty) return;
+        if (!_isDirty) return false;
         _isDirty = false;
 
         int count = _history.CopyTo(_scratch);
@@ -196,6 +196,7 @@ public sealed class TargetRowViewModel : ObservableObject
         Loss = stats.Attempts > 0 ? FormatLoss(stats.LossPercent) : "—";
 
         HistoryChanged?.Invoke(this, EventArgs.Empty);
+        return true;
     }
 
     /// <summary>
