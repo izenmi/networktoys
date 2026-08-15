@@ -18,21 +18,22 @@ public sealed class ColumnLayout : ObservableObject
 
     public static ColumnLayout Instance { get; } = Load();
 
-    // 備考を宛先の右隣に置いてから(ユーザー指示)、可変幅の星列は末尾の推移。
-    // 保存形式は列構成が変わったので v2(旧形式は既定幅で開き直す)
-    private const string FormatMarker = "v2";
+    // 備考は宛先の右隣(ユーザー指示)で、可変幅の星列。余った幅は備考が吸収し、
+    // 推移は固定幅で持つ(スクリーンショットで指定された配分)。
+    // 保存形式は列構成が変わるたびに番号を上げる(旧形式は既定幅で開き直す)
+    private const string FormatMarker = "v3";
 
-    private GridLength _state = new(66);
-    private GridLength _target = new(140);
-    private GridLength _note = new(110);
-    private GridLength _rtt = new(62);
-    private GridLength _loss = new(48);
+    private GridLength _state = new(84);
+    private GridLength _target = new(156);
+    private GridLength _rtt = new(76);
+    private GridLength _loss = new(66);
+    private GridLength _spark = new(110);
 
     public GridLength State { get => _state; set => SetProperty(ref _state, value); }
     public GridLength Target { get => _target; set => SetProperty(ref _target, value); }
-    public GridLength Note { get => _note; set => SetProperty(ref _note, value); }
     public GridLength Rtt { get => _rtt; set => SetProperty(ref _rtt, value); }
     public GridLength Loss { get => _loss; set => SetProperty(ref _loss, value); }
+    public GridLength Spark { get => _spark; set => SetProperty(ref _spark, value); }
 
     /// <summary>アプリを閉じるときに呼ぶ。書けなくても落とさない。</summary>
     public void Save()
@@ -40,7 +41,7 @@ public sealed class ColumnLayout : ObservableObject
         try
         {
             string line = FormatMarker + '\t' + string.Join('\t',
-                new[] { State, Target, Note, Rtt, Loss }
+                new[] { State, Target, Rtt, Loss, Spark }
                     .Select(w => w.Value.ToString("0", CultureInfo.InvariantCulture)));
 
             File.WriteAllText(AppData.PathOf(FileName), line);
@@ -71,9 +72,9 @@ public sealed class ColumnLayout : ObservableObject
 
             layout._state = Read(parts[1], layout._state);
             layout._target = Read(parts[2], layout._target);
-            layout._note = Read(parts[3], layout._note);
-            layout._rtt = Read(parts[4], layout._rtt);
-            layout._loss = Read(parts[5], layout._loss);
+            layout._rtt = Read(parts[3], layout._rtt);
+            layout._loss = Read(parts[4], layout._loss);
+            layout._spark = Read(parts[5], layout._spark);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
