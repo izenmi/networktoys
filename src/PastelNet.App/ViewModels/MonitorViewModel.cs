@@ -19,6 +19,13 @@ public sealed class MonitorViewModel : ObservableObject
     // 結果 1 件ごとに Dispatcher を叩くと数百宛先で描画が破綻する。
     private static readonly TimeSpan PumpInterval = TimeSpan.FromMilliseconds(100);
 
+    /// <summary>
+    /// 宛先テキストを打ち終わってから反映するまでの待ち。
+    /// 1 文字ごとに解釈すると、範囲指定を打っている途中で
+    /// 巨大な展開が走ってしまう。
+    /// </summary>
+    private static readonly TimeSpan ListDebounce = TimeSpan.FromMilliseconds(600);
+
     private readonly MonitorEngine _engine = new();
     private readonly Dictionary<string, TargetRowViewModel> _rowsById = [];
     private readonly HashSet<TargetRowViewModel> _touched = [];
@@ -36,6 +43,10 @@ public sealed class MonitorViewModel : ObservableObject
     private Profile? _selectedProfile;
     private Profile? _suggestedProfile;
     private string _newProfileName = string.Empty;
+    private DispatcherTimer? _listDebounce;
+    private string _tcpPort = "443";
+    private bool _isTcpMode;
+    private bool _isCompact = true;
 
     public MonitorViewModel()
     {
@@ -75,13 +86,17 @@ public sealed class MonitorViewModel : ObservableObject
 
         DetectProfile();
 
-        StartCommand = new RelayCommand(Start, () => !IsRunning && Rows.Count > 0);
+        StartCommand = new RelayCommand(() => Start(tcp: false), () => !IsRunning && Rows.Count > 0);
+        StartTcpCommand = new RelayCommand(() => Start(tcp: true), () => !IsRunning && Rows.Count > 0);
         StopCommand = new RelayCommand(() => _ = StopAsync(), () => IsRunning);
-        ApplyListCommand = new RelayCommand(() => _ = ApplyListAsync());
         ClearHistoryCommand = new RelayCommand(ClearHistory);
 
         _pump = new DispatcherTimer(DispatcherPriority.Background) { Interval = PumpInterval };
         _pump.Tick += OnPump;
+
+        // 宛先テキストは打ち終わってから自動で反映する（反映ボタンは置かない）
+        _listDebounce = new DispatcherTimer(DispatcherPriority.Background) { Interval = ListDebounce };
+        _listDebounce.Tick += OnListDebounceTick;
     }
 
     /// <summary>全宛先。保存や測定の起動にはこちらを使う。</summary>
@@ -143,9 +158,26 @@ public sealed class MonitorViewModel : ObservableObject
     }
 
     public RelayCommand StartCommand { get; }
+    public RelayCommand StartTcpCommand { get; }
     public RelayCommand StopCommand { get; }
-    public RelayCommand ApplyListCommand { get; }
     public RelayCommand ClearHistoryCommand { get; }
+
+    /// <summary>TCP Ping で使うポート。宛先に :ポート が書かれていればそちらが優先される。</summary>
+    public string TcpPort
+    {
+        get => _tcpPort;
+        set => SetProperty(ref _tcpPort, value);
+    }
+
+    /// <summary>
+    /// 1 行 1 件の詳しい表示ではなく、小さな枠を敷き詰めて一望する表示にするか。
+    /// 100 件を超える監視では、こちらが既定。
+    /// </summary>
+    public bool IsCompact
+    {
+        get => _isCompact;
+        set => SetProperty(ref _isCompact, value);
+    }
     public RelayCommand SaveProfileCommand { get; }
     public RelayCommand LoadProfileCommand { get; }
     public RelayCommand DeleteProfileCommand { get; }
@@ -209,18 +241,29 @@ public sealed class MonitorViewModel : ObservableObject
             if (!SetProperty(ref _isRunning, value)) return;
 
             OnPropertyChanged(nameof(RunButtonLabel));
+            OnPropertyChanged(nameof(TcpButtonLabel));
             StartCommand.RaiseCanExecuteChanged();
+            StartTcpCommand.RaiseCanExecuteChanged();
             StopCommand.RaiseCanExecuteChanged();
         }
     }
 
-    public string RunButtonLabel => IsRunning ? "測定中" : "測定を開始";
+    public string RunButtonLabel => IsRunning && !_isTcpMode ? "Ping 実行中" : "Ping";
+
+    public string TcpButtonLabel => IsRunning && _isTcpMode ? "TCP 実行中" : "TCP Ping";
 
     /// <summary>宛先タブで編集するテキスト。書式は EXPing に合わせている。</summary>
     public string TargetListText
     {
         get => _targetListText;
-        set => SetProperty(ref _targetListText, value);
+        set
+        {
+            if (!SetProperty(ref _targetListText, value)) return;
+
+            // 打ち終わってから反映する
+            _listDebounce?.Stop();
+            _listDebounce?.Start();
+        }
     }
 
     /// <summary>反映結果の要約とエラー。</summary>
@@ -264,16 +307,48 @@ public sealed class MonitorViewModel : ObservableObject
     /// <summary>最初に測定を始めた時刻。レポートに載せる。</summary>
     public DateTime? StartedAt { get; private set; }
 
-    private void Start()
+    /// <param name="tcp">
+    /// true なら全宛先を TCP 接続で測る。ICMP が塞がれている相手の確認に使う。
+    /// 宛先リスト側で :ポート を指定してある宛先は、そのポートを優先する。
+    /// </param>
+    private void Start(bool tcp)
     {
         if (IsRunning) return;
 
-        _engine.Start([.. Rows.Select(r => r.Target)], _settings);
+        int port = 0;
+        if (tcp && (!int.TryParse(TcpPort, out port) || port is < 1 or > 65535))
+        {
+            StatusMessage = "TCP Ping のポート番号が正しくありません（1〜65535）。";
+            return;
+        }
+
+        // 宛先の登録内容そのものは書き換えない。TCP はあくまで測り方の切り替え
+        List<Target> targets = [.. Rows.Select(r => tcp ? AsTcp(r.Target, port) : r.Target)];
+
+        _isTcpMode = tcp;
+        _engine.Start(targets, _settings);
         _pump.Start();
         StartedAt ??= DateTime.Now;
         IsRunning = true;
-        StatusMessage = $"{_engine.ActiveCount} 件を {_settings.IntervalMs} ms 間隔で測定しています。";
+
+        StatusMessage = tcp
+            ? $"{_engine.ActiveCount} 件を TCP:{port} へ {_settings.IntervalMs} ms 間隔で測定しています。"
+            : $"{_engine.ActiveCount} 件を {_settings.IntervalMs} ms 間隔で測定しています。";
     }
+
+    /// <summary>同じ Id のまま測り方だけ TCP に差し替えた複製を作る。</summary>
+    private static Target AsTcp(Target source, int defaultPort) => new()
+    {
+        Id = source.Id,
+        Host = source.Host,
+        Comment = source.Comment,
+        Group = source.Group,
+        Enabled = source.Enabled,
+        IntervalMs = source.IntervalMs,
+        TimeoutMs = source.TimeoutMs,
+        Kind = ProbeKind.Tcp,
+        Port = source.Kind == ProbeKind.Tcp && source.Port > 0 ? source.Port : defaultPort,
+    };
 
     public async Task StopAsync()
     {
@@ -347,28 +422,121 @@ public sealed class MonitorViewModel : ObservableObject
         ]);
     }
 
-    /// <summary>
-    /// テキストの内容で宛先リストを作り直す。
-    /// 測定中なら止めてから入れ替える（対象が変わった以上、履歴も引き継がない）。
-    /// </summary>
-    private async Task ApplyListAsync()
+    private void OnListDebounceTick(object? sender, EventArgs e)
     {
-        await StopAsync();
+        _listDebounce?.Stop();
+        ApplyListLive();
+    }
 
+    /// <summary>
+    /// 宛先テキストの内容を一覧へ反映する。反映ボタンは置かず、打ち終わりを待って自動で行う。
+    ///
+    /// 測定は止めない。同じ宛先は行も履歴もそのまま残し、<b>増えた分だけ測り始め、
+    /// 消えた分だけ止める</b>。宛先ごとに独立したループなので、これができる。
+    ///
+    /// ただし<b>書き間違いのある間は反映しない</b>。「192.168.1.0/2」のような
+    /// 打ちかけの入力で宛先が総入れ替えになると事故になるため。
+    /// </summary>
+    private void ApplyListLive()
+    {
         TargetListParseResult parsed = TargetListParser.Parse(TargetListText);
+        ListSummary = BuildSummary(parsed);
 
-        ClearRows();
-        SelectedRow = null;
+        if (parsed.HasErrors)
+        {
+            StatusMessage = "宛先リストに解釈できない行があるため、反映を保留しています。";
+            return;
+        }
+
+        var wanted = new Dictionary<string, Target>(StringComparer.OrdinalIgnoreCase);
+        foreach (Target target in parsed.Targets)
+            wanted.TryAdd(KeyOf(target), target);
+
+        // 消えた宛先を落とす
+        foreach (TargetRowViewModel row in Rows.Where(r => !wanted.ContainsKey(KeyOf(r.Target))).ToList())
+            RemoveRow(row);
+
+        // 増えた宛先を足す／残った宛先は備考だけ更新する
+        var existing = new Dictionary<string, TargetRowViewModel>(StringComparer.OrdinalIgnoreCase);
+        foreach (TargetRowViewModel row in Rows)
+            existing.TryAdd(KeyOf(row.Target), row);
 
         foreach (Target target in parsed.Targets)
-            AddRow(target);
+        {
+            string key = KeyOf(target);
 
+            if (existing.TryGetValue(key, out TargetRowViewModel? row))
+            {
+                row.UpdateComment(target.Comment);
+                continue;
+            }
+
+            TargetRowViewModel added = AddRow(target);
+            existing[key] = added;
+
+            if (IsRunning)
+                _engine.AddTarget(_isTcpMode ? AsTcp(target, ParsePortOrDefault()) : target);
+        }
+
+        Reorder(parsed.Targets);
         Save();
 
-        ListSummary = BuildSummary(parsed);
-        StatusMessage = $"宛先を {parsed.Targets.Count} 件に更新しました。";
+        StatusMessage = $"宛先を {Rows.Count} 件に更新しました。";
         OnPropertyChanged(nameof(CountText));
         StartCommand.RaiseCanExecuteChanged();
+        StartTcpCommand.RaiseCanExecuteChanged();
+    }
+
+    private int ParsePortOrDefault() => int.TryParse(TcpPort, out int port) && port is >= 1 and <= 65535 ? port : 443;
+
+    /// <summary>同じ宛先とみなす条件。ホストと測り方が同じなら、備考が変わっても同一とする。</summary>
+    private static string KeyOf(Target target) => $"{target.Host}|{target.Kind}|{target.Port}";
+
+    private void RemoveRow(TargetRowViewModel row)
+    {
+        Rows.Remove(row);
+        AliveRows.Remove(row);
+        DownRows.Remove(row);
+        _rowsById.Remove(row.Id);
+
+        if (ReferenceEquals(SelectedRow, row))
+            SelectedRow = null;
+
+        if (IsRunning)
+            _ = _engine.RemoveTargetAsync(row.Id);
+
+        OnPropertyChanged(nameof(AliveHeader));
+        OnPropertyChanged(nameof(DownHeader));
+        OnPropertyChanged(nameof(HasDownRows));
+    }
+
+    /// <summary>テキストに書かれた順序へ並べ直す。</summary>
+    private void Reorder(IReadOnlyList<Target> targets)
+    {
+        var order = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < targets.Count; i++)
+            order.TryAdd(KeyOf(targets[i]), i);
+
+        foreach (TargetRowViewModel row in Rows)
+            row.Order = order.GetValueOrDefault(KeyOf(row.Target), int.MaxValue);
+
+        SortInPlace(Rows);
+        SortInPlace(AliveRows);
+        SortInPlace(DownRows);
+    }
+
+    private static void SortInPlace(ObservableCollection<TargetRowViewModel> collection)
+    {
+        // 件数が多くても並べ替えは宛先の編集時にしか走らないので、素直な挿入ソートで足りる
+        for (int i = 1; i < collection.Count; i++)
+        {
+            int j = i;
+            while (j > 0 && collection[j - 1].Order > collection[j].Order)
+            {
+                collection.Move(j, j - 1);
+                j--;
+            }
+        }
     }
 
     private static string BuildSummary(TargetListParseResult parsed)
@@ -404,12 +572,16 @@ public sealed class MonitorViewModel : ObservableObject
         StatusMessage = "履歴を消去しました。";
     }
 
-    private void AddRow(Target target)
+    private TargetRowViewModel AddRow(Target target)
     {
         var row = new TargetRowViewModel(target, _settings) { Order = Rows.Count };
         Rows.Add(row);
         AliveRows.Add(row);
         _rowsById[target.Id] = row;
+
+        OnPropertyChanged(nameof(AliveHeader));
+        OnPropertyChanged(nameof(HasDownRows));
+        return row;
     }
 
     /// <summary>
@@ -541,9 +713,9 @@ public sealed class MonitorViewModel : ObservableObject
     {
         if (SuggestedProfile is not { } profile) return;
 
+        // テキストを差し替えれば、あとは自動反映に任せられる
         TargetListText = profile.TargetListText;
         SuggestedProfile = null;
-        _ = ApplyListAsync();
         StatusMessage = $"「{profile.Name}」に切り替えました。";
     }
 

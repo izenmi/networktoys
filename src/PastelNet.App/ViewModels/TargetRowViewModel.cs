@@ -178,6 +178,19 @@ public sealed class TargetRowViewModel : ObservableObject
     /// <summary>直近の統計。詳細表示に使う。</summary>
     internal RttStatistics Statistics => _statistics;
 
+    /// <summary>
+    /// 備考だけが書き換わったときに使う。宛先が同じなら測定も履歴も続けたいので、
+    /// 行を作り直さずに文言だけ差し替える。
+    /// </summary>
+    internal void UpdateComment(string comment)
+    {
+        if (string.Equals(Target.Comment, comment, StringComparison.Ordinal))
+            return;
+
+        Target.Comment = comment;
+        OnPropertyChanged(nameof(Comment));
+    }
+
     /// <summary>スパークライン描画用に履歴を書き出す。</summary>
     public int CopyHistory(Span<ProbeSample> destination)
         => _history.CopyLatestTo(destination, destination.Length);

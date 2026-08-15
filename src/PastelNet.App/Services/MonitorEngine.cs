@@ -16,6 +16,7 @@ internal sealed class MonitorEngine : IAsyncDisposable
 
     private readonly List<TargetMonitor> _monitors = [];
     private SemaphoreSlim? _concurrency;
+    private MonitorSettings? _settings;
 
     public ChannelReader<ProbeResult> Results => _channel.Reader;
 
@@ -32,18 +33,42 @@ internal sealed class MonitorEngine : IAsyncDisposable
             throw new InvalidOperationException("すでに測定中です。");
 
         _concurrency = new SemaphoreSlim(settings.MaxConcurrency, settings.MaxConcurrency);
+        _settings = settings;
+        IsRunning = true;
 
         foreach (Target target in targets)
-        {
-            if (!target.Enabled || !target.IsValid())
-                continue;
+            AddTarget(target);
+    }
 
-            var monitor = new TargetMonitor(target, settings, _channel.Writer, _concurrency);
-            _monitors.Add(monitor);
-            monitor.Start();
-        }
+    /// <summary>
+    /// 測定を止めずに宛先を 1 件足す。
+    /// 宛先ごとに独立したループなので、他の宛先には何の影響もない。
+    /// </summary>
+    public void AddTarget(Target target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
 
-        IsRunning = true;
+        if (!IsRunning || _settings is null || _concurrency is null)
+            return;
+
+        if (!target.Enabled || !target.IsValid())
+            return;
+
+        var monitor = new TargetMonitor(target, _settings, _channel.Writer, _concurrency);
+        _monitors.Add(monitor);
+        monitor.Start();
+    }
+
+    /// <summary>測定を止めずに宛先を 1 件外す。</summary>
+    public async Task RemoveTargetAsync(string targetId)
+    {
+        TargetMonitor? monitor = _monitors.FirstOrDefault(m => string.Equals(m.TargetId, targetId, StringComparison.Ordinal));
+        if (monitor is null) return;
+
+        _monitors.Remove(monitor);
+
+        await monitor.StopAsync();
+        monitor.Dispose();
     }
 
     public async Task StopAsync()
@@ -59,6 +84,7 @@ internal sealed class MonitorEngine : IAsyncDisposable
         _monitors.Clear();
         _concurrency?.Dispose();
         _concurrency = null;
+        _settings = null;
         IsRunning = false;
     }
 
