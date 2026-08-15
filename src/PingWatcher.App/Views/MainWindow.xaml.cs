@@ -59,6 +59,12 @@ public partial class MainWindow : Window
     /// <summary>
     /// Ping 一覧の列幅ドラッグ。掴んだ列だけを伸縮させ、余りは可変幅の備考列に
     /// 吸収させる(GridSplitter の「隣の列も動く」挙動を避けるための自前実装)。
+    ///
+    /// 備考(星列)より右の列は、幅を変えても<b>右端は動かず左端が動く</b>。
+    /// そのため RTT/ロス/推移のつまみは左端の境界にあり、符号を反転して
+    /// 「境界を右へ動かす=その列が縮む」にしている。こうすると境界が
+    /// カーソルに 1:1 で追従する(右端につまみを置くとカーソルから離れて
+    /// ドラッグ量が暴走する — 実際に起きた)。
     /// </summary>
     private void OnColumnResize(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
     {
@@ -67,16 +73,22 @@ public partial class MainWindow : Window
 
         ColumnLayout layout = ColumnLayout.Instance;
 
-        GridLength Adjust(GridLength current)
+        GridLength Grow(GridLength current)
             => new(Math.Clamp(current.Value + e.HorizontalChange, 36, 600));
+
+        GridLength Shrink(GridLength current)
+            => new(Math.Clamp(current.Value - e.HorizontalChange, 36, 600));
 
         switch (column)
         {
-            case "State": layout.State = Adjust(layout.State); break;
-            case "Target": layout.Target = Adjust(layout.Target); break;
-            case "Rtt": layout.Rtt = Adjust(layout.Rtt); break;
-            case "Loss": layout.Loss = Adjust(layout.Loss); break;
-            case "Spark": layout.Spark = Adjust(layout.Spark); break;
+            // 星列より左: 右端の境界が幅と一緒に動くので、そのまま足す
+            case "State": layout.State = Grow(layout.State); break;
+            case "Target": layout.Target = Grow(layout.Target); break;
+
+            // 星列より右: 左端の境界を掴んでいるので逆向き
+            case "Rtt": layout.Rtt = Shrink(layout.Rtt); break;
+            case "Loss": layout.Loss = Shrink(layout.Loss); break;
+            case "Spark": layout.Spark = Shrink(layout.Spark); break;
         }
     }
 

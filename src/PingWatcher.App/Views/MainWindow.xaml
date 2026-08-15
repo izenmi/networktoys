@@ -615,7 +615,10 @@
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
-                                <Thumb Grid.Column="3" Width="7" HorizontalAlignment="Right" Cursor="SizeWE"
+                                <!-- 備考(星列)より右の列は、幅を変えても右端は動かず左端が動く。
+                                     そのため、つまみは各列の左端の境界に置き、「境界を右へ動かす=
+                                     その列が縮む」の逆向きで幅を書く(境界がカーソルに 1:1 で追従する) -->
+                                <Thumb Grid.Column="3" Width="7" HorizontalAlignment="Left" Cursor="SizeWE"
                                        Tag="Rtt" DragDelta="OnColumnResize" Focusable="False">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
@@ -623,7 +626,7 @@
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
-                                <Thumb Grid.Column="4" Width="7" HorizontalAlignment="Right" Cursor="SizeWE"
+                                <Thumb Grid.Column="4" Width="7" HorizontalAlignment="Left" Cursor="SizeWE"
                                        Tag="Loss" DragDelta="OnColumnResize" Focusable="False">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
@@ -631,7 +634,7 @@
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
-                                <Thumb Grid.Column="5" Width="7" HorizontalAlignment="Right" Cursor="SizeWE"
+                                <Thumb Grid.Column="5" Width="7" HorizontalAlignment="Left" Cursor="SizeWE"
                                        Tag="Spark" DragDelta="OnColumnResize" Focusable="False">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
