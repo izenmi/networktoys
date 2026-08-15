@@ -314,6 +314,18 @@ internal static class SelfTest
             log.AppendLine($"        近隣キャッシュ: {arp.Count} 件");
         });
 
+        Check("FTP サーバを起動して停止できる", () =>
+        {
+            // 実際の転送は CI では確かめられない。ここで見たいのは
+            // 待受の開始と後始末が例外なく通ること。ポート 0 で衝突を避ける
+            string root = Path.Combine(Path.GetTempPath(), $"pingwatcher-ftp-{Guid.NewGuid():N}");
+            using var server = new Services.FtpServer(root);
+            server.Start(0);
+            Assert(server.IsRunning, "FTP サーバが起動していない");
+            server.Stop();
+            Assert(!server.IsRunning, "FTP サーバが停止していない");
+        });
+
         Check("traceroute を実行できる", () =>
         {
             // ループバック相手なら 1 ホップで届くはず。ここでも見たいのは

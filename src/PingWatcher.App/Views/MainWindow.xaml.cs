@@ -234,6 +234,7 @@ public partial class MainWindow : Window
             _shell.Monitor.BeginStop();
             _shell.Tcp.BeginStop();
             _shell.Wifi.OnDeactivated();
+            _shell.Ftp.Reset();
             ColumnLayout.Instance.Save();
         }
         catch (Exception ex)

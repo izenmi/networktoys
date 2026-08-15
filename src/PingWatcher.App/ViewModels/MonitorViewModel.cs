@@ -139,6 +139,9 @@ public sealed class MonitorViewModel : ObservableObject
     /// <summary>自分が今いるサブネット。スキャン範囲の既定値に使う。</summary>
     public string? SubnetCidr => NetworkInfo.SubnetCidr;
 
+    /// <summary>自分の IPv4。FTP の機器側コマンド例などに使う。</summary>
+    public string? LocalAddress => NetworkInfo.LocalAddress?.ToString();
+
     /// <summary>
     /// スキャン結果などを宛先リストの末尾に書き足す。
     /// 反映は手動（「宛先」タブの反映ボタン）にしてある。勝手に測定対象が

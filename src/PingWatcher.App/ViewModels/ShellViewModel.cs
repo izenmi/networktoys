@@ -23,6 +23,9 @@ public sealed class ShellViewModel
         // 電卓も自分のいるサブネットから始める
         Subnet = new SubnetViewModel(Monitor.SubnetCidr);
 
+        // FTP サーバ。機器側コマンド例に自分の IP を渡す
+        Ftp = new FtpViewModel(Monitor.LocalAddress);
+
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
 
@@ -45,6 +48,9 @@ public sealed class ShellViewModel
 
     /// <summary>サブネット電卓。</summary>
     public SubnetViewModel Subnet { get; }
+
+    /// <summary>使い捨て FTP サーバ。</summary>
+    public FtpViewModel Ftp { get; }
 
     public WifiViewModel Wifi { get; }
 
@@ -73,6 +79,7 @@ public sealed class ShellViewModel
         DeviceCompare.Reset();
         Scan.Reset();
         Subnet.Reset();
+        Ftp.Reset();
         Dns.Reset();
         Trace.Reset();
         Wifi.Reset();

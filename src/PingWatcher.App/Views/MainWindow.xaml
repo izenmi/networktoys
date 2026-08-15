@@ -1507,6 +1507,81 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== FTP（使い捨てサーバ。機器の config バックアップ受け） ===== -->
+            <TabItem Header="FTP" DataContext="{Binding Ftp}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="標準は 21。使えないときは 2121 などを試してください。" />
+                            <TextBlock Text="ユーザー" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="90" Text="{Binding User, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,8,0"
+                                     ToolTip="空欄なら誰でも接続できます（anonymous）。" />
+                            <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="90" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,12,0" />
+                            <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Text="機器から受け取ったファイルは、exe と同じ場所の ftp フォルダに入ります。機器側では次のように打ちます。" />
+                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
+                                         Margin="0,4,0,0" TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}"
+                                           Text="⚠ 通信は暗号化されません（平文）。使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールでこのPCの通信を許可する必要があります。" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <ListBox ItemsSource="{Binding Log}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="72" />
+                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== DNS ===== -->
             <TabItem x:Name="DnsTab" Header="DNS" DataContext="{Binding Dns}">
                 <Border Style="{StaticResource Card}">
