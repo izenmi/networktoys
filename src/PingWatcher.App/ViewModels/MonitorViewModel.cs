@@ -34,6 +34,9 @@ public sealed class MonitorViewModel : ObservableObject
 
     private readonly MonitorSettings _settings;
     private bool _isRunning;
+
+    /// <summary>進行中の停止処理。二重に呼ばれたとき同じ完了を待たせる。</summary>
+    private Task? _stopTask;
     private string _targetListText = string.Empty;
     private string _listSummary = string.Empty;
     private TargetRowViewModel? _selectedRow;
@@ -308,19 +311,36 @@ public sealed class MonitorViewModel : ObservableObject
         Port = source.Kind == ProbeKind.Tcp && source.Port > 0 ? source.Port : defaultPort,
     };
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
-        if (!IsRunning) return;
+        // 停止ボタンの直後にクリア操作が来ると、ここへ二重に入ってくる。
+        // 2 回目を素通しすると停止処理が二重に走り、即 return にすると
+        // 「停止を待ってから消す」つもりの呼び出し元が待てない。
+        // 進行中の停止処理そのものを返して、全員に同じ完了を待たせる
+        if (_stopTask is not null) return _stopTask;
+        if (!IsRunning) return Task.CompletedTask;
 
-        _pump.Stop();
-        await _engine.StopAsync();
-        OnPump(this, EventArgs.Empty);   // 残っている結果を取りこぼさない
+        return _stopTask = StopCoreAsync();
+    }
 
-        // 続いている不通は「復旧した」ではなく「測定を止めた」として閉じる
-        Tracker.CloseAll(DateTime.Now.Ticks, OutageCloseReason.Stopped);
+    private async Task StopCoreAsync()
+    {
+        try
+        {
+            _pump.Stop();
+            await _engine.StopAsync();
+            OnPump(this, EventArgs.Empty);   // 残っている結果を取りこぼさない
 
-        IsRunning = false;
-        StatusMessage = "測定を停止しました。";
+            // 続いている不通は「復旧した」ではなく「測定を止めた」として閉じる
+            Tracker.CloseAll(DateTime.Now.Ticks, OutageCloseReason.Stopped);
+
+            IsRunning = false;
+            StatusMessage = "測定を停止しました。";
+        }
+        finally
+        {
+            _stopTask = null;
+        }
     }
 
     /// <summary>
@@ -675,9 +695,9 @@ public sealed class MonitorViewModel : ObservableObject
     /// <b>宛先そのものは残す。</b>消したいのは測った記録であって、
     /// 打ち込んだ宛先リストではない。
     /// </summary>
-    public void Reset()
+    public async Task ResetAsync()
     {
-        ResetResults();
+        await ResetResultsAsync();
 
         SelectedRow = null;
         DetailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
@@ -692,10 +712,12 @@ public sealed class MonitorViewModel : ObservableObject
     /// 作業の途中で「ここから測り直したい」ときに使う。全体のクリアと違って
     /// 作業前の記録や機器の貼り付けは残るので、やり直しの範囲が小さい。
     /// </summary>
-    public void ResetResults()
+    public async Task ResetResultsAsync()
     {
+        // 停止を待ちきってから消す。待たないと、停止処理が最後に取り込む
+        // パイプ残りの結果が、クリア済みの行へ後から流れ込む
         if (IsRunning)
-            _ = StopAsync();
+            await StopAsync();
 
         ClearHistory();
 

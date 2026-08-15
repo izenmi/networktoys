@@ -59,10 +59,10 @@ public sealed class ShellViewModel
     ///
     /// 保存済みのレポートや作業セッションのファイルには触れない。
     /// </summary>
-    public void ClearAll()
+    public async Task ClearAllAsync()
     {
-        Monitor.Reset();
-        Tcp.Reset();
+        await Monitor.ResetAsync();
+        await Tcp.ResetAsync();
         Work.Reset();
         DeviceCompare.Reset();
         Scan.Reset();

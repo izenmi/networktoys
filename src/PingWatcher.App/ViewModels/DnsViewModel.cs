@@ -70,6 +70,7 @@ public sealed class DnsViewModel : ObservableObject
     /// <summary>起動時に組み立てた比較先。クリアで戻すために覚えておく。</summary>
     private readonly string _defaultServersText;
     private bool _isBusy;
+    private CancellationTokenSource? _cts;
 
     public DnsViewModel(IReadOnlyList<IPAddress> systemDnsServers)
     {
@@ -160,17 +161,35 @@ public sealed class DnsViewModel : ObservableObject
         string name = Name.Trim();
         string type = SelectedType;
 
+        using var cts = new CancellationTokenSource();
+        _cts = cts;
+
         try
         {
-            // 全サーバへ同時に投げる。遅い 1 台が他を待たせない
+            // 全サーバへ同時に投げる。遅い 1 台が他を待たせない。
+            // 1 台の失敗は 1 枠に閉じ込め、他のサーバの結果を巻き込まない
             await Task.WhenAll(pending.Select(async vm =>
             {
-                DnsLookupResult result = await DnsProbe.QueryAsync(vm.ServerLabel, name, type, TimeoutMs, CancellationToken.None);
-                vm.Apply(result);
+                try
+                {
+                    DnsLookupResult result = await DnsProbe.QueryAsync(vm.ServerLabel, name, type, TimeoutMs, cts.Token);
+                    vm.Apply(result);
+                }
+                catch (OperationCanceledException)
+                {
+                    vm.Apply(new DnsLookupResult(vm.ServerLabel, false, "中断しました", 0, []));
+                }
             }));
 
-            int ok = pending.Count(r => !r.HasError);
-            Status = $"{ok} / {pending.Count} 台から回答がありました。";
+            if (cts.IsCancellationRequested)
+            {
+                Status = "中断しました。";
+            }
+            else
+            {
+                int ok = pending.Count(r => !r.HasError);
+                Status = $"{ok} / {pending.Count} 台から回答がありました。";
+            }
         }
         catch (Exception ex)
         {
@@ -178,6 +197,8 @@ public sealed class DnsViewModel : ObservableObject
         }
         finally
         {
+            if (ReferenceEquals(_cts, cts))
+                _cts = null;
             IsBusy = false;
         }
     }
@@ -185,6 +206,7 @@ public sealed class DnsViewModel : ObservableObject
     /// <summary>結果と入力を起動時の状態へ戻す。</summary>
     public void Reset()
     {
+        _cts?.Cancel();
         Results.Clear();
         Name = "www.google.com";
         SelectedType = "A";

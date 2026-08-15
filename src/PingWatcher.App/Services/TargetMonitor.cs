@@ -43,7 +43,10 @@ internal sealed class TargetMonitor : IDisposable
         _payload = new byte[Math.Clamp(settings.PayloadBytes, 0, 65_500)];
         Array.Fill(_payload, (byte)'p');
 
-        if (target.Kind == ProbeKind.Icmp)
+        // ProbeOnceAsync は「TCP 以外はすべて ICMP」と分岐するので、生成条件も同じ形に
+        // 揃えておく。ここが「Icmp のとき」だと、測り方を将来 1 つ足した瞬間に
+        // _ping が null のまま ICMP 分岐へ落ちる。
+        if (target.Kind != ProbeKind.Tcp)
             _ping = new Ping();
     }
 
@@ -184,6 +187,12 @@ internal sealed class TargetMonitor : IDisposable
         {
             return ProbeSample.Failure(now, ProbeStatus.Error);
         }
+        catch (ObjectDisposedException)
+        {
+            // 停止のタイムアウト後に Ping が先に片付けられた。終了間際にしか起きず、
+            // ここで拾わないと catch-all 経由で crash.log に宛先の数だけ積もる
+            return ProbeSample.Failure(now, ProbeStatus.Error);
+        }
     }
 
     /// <summary>
@@ -195,6 +204,13 @@ internal sealed class TargetMonitor : IDisposable
     private async Task<ProbeSample> ProbeTcpAsync(IPAddress address, long now, int timeoutMs, CancellationToken token)
     {
         using var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+        // RST で閉じて TIME_WAIT を残さない。FIN で行儀よく閉じると一時ポートが
+        // 約 4 分塞がったままになり、200 宛先 × 1 秒間隔なら数分で 4 万件を超えて
+        // AddressNotAvailable が多発、全宛先が一斉に「エラー」になる。
+        // 周期測定の接続はデータを流さないので、RST で切っても相手は困らない
+        socket.LingerState = new LingerOption(true, 0);
+
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeoutCts.CancelAfter(timeoutMs);
 
@@ -205,9 +221,6 @@ internal sealed class TargetMonitor : IDisposable
             await socket.ConnectAsync(new IPEndPoint(address, _target.Port), timeoutCts.Token);
 
             double elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
-
-            // 用が済んだらすぐ閉じる。相手のセッションを掴んだままにしない
-            socket.Shutdown(SocketShutdown.Both);
             return ProbeSample.Success(now, elapsedMs);
         }
         catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused)

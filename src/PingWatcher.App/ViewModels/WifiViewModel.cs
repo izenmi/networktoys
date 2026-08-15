@@ -92,6 +92,7 @@ public sealed class WifiViewModel : ObservableObject
     private string _adapter = "—";
     private DateTime _lastScan = DateTime.MinValue;
     private CancellationTokenSource? _cts;
+    private bool _rssiTickBusy;
 
     public WifiViewModel()
     {
@@ -295,13 +296,26 @@ public sealed class WifiViewModel : ObservableObject
             target.Add(new ChannelBarViewModel(channel, counts.GetValueOrDefault(channel), channel == myChannel, max));
     }
 
-    private void OnRssiTick(object? sender, EventArgs e)
+    private async void OnRssiTick(object? sender, EventArgs e)
     {
-        int? rssi = WifiService.GetRssi();
-        if (rssi is not { } value) return;
+        // WLAN サービスへの問い合わせは同期 API で、アダプタの状態遷移中は
+        // 数百 ms 返らないことがある。UI スレッドで待つと毎秒引っかかるので
+        // ThreadPool で取り、詰まっている間は次のティックを重ねない
+        if (_rssiTickBusy) return;
+        _rssiTickBusy = true;
 
-        _rssiHistory.Add(value);
-        RssiHistoryChanged?.Invoke(this, EventArgs.Empty);
+        try
+        {
+            int? rssi = await Task.Run(WifiService.GetRssi);
+            if (rssi is not { } value) return;
+
+            _rssiHistory.Add(value);
+            RssiHistoryChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _rssiTickBusy = false;
+        }
     }
 
     private void OpenLocationSettings()

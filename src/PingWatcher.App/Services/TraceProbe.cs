@@ -38,7 +38,7 @@ internal static class TraceProbe
         for (int ttl = 1; ttl <= maxHops; ttl++)
             tasks.Add(ProbeHopAsync(destination, ttl, timeoutMs, staggerMs * (ttl - 1), token));
 
-        TraceHop[] hops = await Task.WhenAll(tasks);
+        TraceHop[] hops = await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // 宛先に届いた時点で経路は終わり。その先のホップは意味がないので落とす
         int arrival = Array.FindIndex(hops, h => h.IsDestination);
@@ -49,7 +49,7 @@ internal static class TraceProbe
         IPAddress destination, int ttl, int timeoutMs, int delayMs, CancellationToken token)
     {
         if (delayMs > 0)
-            await Task.Delay(delayMs, token);
+            await Task.Delay(delayMs, token).ConfigureAwait(false);
 
         // Ping インスタンスは同時に 1 リクエストしか扱えないので、ホップごとに用意する
         using var ping = new Ping();
@@ -65,7 +65,7 @@ internal static class TraceProbe
                 TimeSpan.FromMilliseconds(timeoutMs),
                 payload,
                 options,
-                token);
+                token).ConfigureAwait(false);
 
             double elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
 
@@ -100,7 +100,7 @@ internal static class TraceProbe
             // IP アドレスの形をした文字列を渡すと逆引きになる。
             // 引けない中継ルータは珍しくないので、待つ側で見切りをつける。
             IPHostEntry entry = await Dns.GetHostEntryAsync(address.ToString(), token)
-                .WaitAsync(TimeSpan.FromSeconds(3), token);
+                .WaitAsync(TimeSpan.FromSeconds(3), token).ConfigureAwait(false);
 
             return string.IsNullOrEmpty(entry.HostName) ? null : entry.HostName;
         }

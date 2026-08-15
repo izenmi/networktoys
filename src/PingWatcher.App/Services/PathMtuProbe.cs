@@ -43,7 +43,7 @@ internal static class PathMtuProbe
             try
             {
                 PingReply reply = await ping.SendPingAsync(
-                    destination, TimeSpan.FromMilliseconds(timeoutMs), buffer, options, token);
+                    destination, TimeSpan.FromMilliseconds(timeoutMs), buffer, options, token).ConfigureAwait(false);
 
                 switch (reply.Status)
                 {
@@ -67,7 +67,7 @@ internal static class PathMtuProbe
         }
 
         // 下限すら通らないなら、そもそも相手に届いていない
-        if (!await Fits(MinPayload))
+        if (!await Fits(MinPayload).ConfigureAwait(false))
         {
             return new PathMtuResult(0, false,
                 sawTooBig
@@ -76,7 +76,7 @@ internal static class PathMtuProbe
         }
 
         // 上限が通るなら探索は不要
-        if (await Fits(MaxPayload))
+        if (await Fits(MaxPayload).ConfigureAwait(false))
             return new PathMtuResult(MaxPayload + Overhead, true, "1500 バイトがそのまま通りました。");
 
         int low = MinPayload;    // 通ることが分かっている
@@ -88,7 +88,7 @@ internal static class PathMtuProbe
 
             int middle = low + (high - low) / 2;
 
-            if (await Fits(middle))
+            if (await Fits(middle).ConfigureAwait(false))
                 low = middle;
             else
                 high = middle;

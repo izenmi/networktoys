@@ -20,6 +20,7 @@ internal sealed class MonitorEngine : IAsyncDisposable
     private readonly List<TargetMonitor> _monitors = [];
     private SemaphoreSlim? _concurrency;
     private MonitorSettings? _settings;
+    private Task? _stopTask;
 
     public ChannelReader<ProbeResult> Results => _channel.Reader;
 
@@ -34,6 +35,13 @@ internal sealed class MonitorEngine : IAsyncDisposable
 
         if (IsRunning)
             throw new InvalidOperationException("すでに測定中です。");
+
+        // BeginStop() で止めた後は後片付けが済んでいない。残っていたら先に畳む
+        // （BeginStop はキャンセル済みなので、ここでの Dispose は待たされない）
+        foreach (TargetMonitor stale in _monitors)
+            stale.Dispose();
+        _monitors.Clear();
+        _stopTask = null;
 
         _concurrency = new SemaphoreSlim(settings.MaxConcurrency, settings.MaxConcurrency);
         _settings = settings;
@@ -86,33 +94,58 @@ internal sealed class MonitorEngine : IAsyncDisposable
         IsRunning = false;
     }
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
-        if (!IsRunning) return;
+        // BeginStop() の後でも後片付けが要るので、IsRunning ではなく
+        // モニタが残っているかで判定する。同時に 2 回呼ばれても
+        // （停止ボタン直後のクリア操作など）同じ後片付けを共有する。
+        if (_monitors.Count == 0 && _stopTask is null)
+            return Task.CompletedTask;
+
+        return _stopTask ??= StopCoreAsync();
+    }
+
+    private async Task StopCoreAsync()
+    {
+        IsRunning = false;
 
         // まず全員へ同時に停止を伝えてから、まとめて待つ
         foreach (TargetMonitor monitor in _monitors)
             monitor.BeginStop();
 
+        List<TargetMonitor> monitors = [.. _monitors];
+        _monitors.Clear();
+
+        List<Task> stops = [.. monitors.Select(m => m.StopAsync())];
         try
         {
             // 後片付けは待つが、長くは待たない。進行中のプローブが
             // タイムアウトするまで付き合う必要はない。
-            await Task.WhenAll(_monitors.Select(m => m.StopAsync())).WaitAsync(StopTimeout);
+            await Task.WhenAll(stops).WaitAsync(StopTimeout);
         }
         catch (TimeoutException)
         {
-            // 残りは Dispose とプロセス終了に任せる
+            // 待ちきれなかった分は下で選り分ける
         }
 
-        foreach (TargetMonitor monitor in _monitors)
-            monitor.Dispose();
+        // ループが終わったものだけ片付ける。生きているループの Ping を先に
+        // Dispose すると、進行中の SendPingAsync が ObjectDisposedException を
+        // 投げて crash.log を汚す。残りはプロセス終了と GC に任せる
+        bool allStopped = true;
+        for (int i = 0; i < monitors.Count; i++)
+        {
+            if (stops[i].IsCompleted)
+                monitors[i].Dispose();
+            else
+                allStopped = false;
+        }
 
-        _monitors.Clear();
-        _concurrency?.Dispose();
+        // 止まりきっていないモニタは _concurrency をまだ待っているかもしれない
+        if (allStopped)
+            _concurrency?.Dispose();
+
         _concurrency = null;
         _settings = null;
-        IsRunning = false;
     }
 
     public async ValueTask DisposeAsync()

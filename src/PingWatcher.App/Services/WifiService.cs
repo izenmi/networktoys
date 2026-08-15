@@ -226,13 +226,24 @@ internal static class WifiService
                     return rssi;
             }
         }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException)
+        catch (Exception ex)
         {
+            // ManagedNativeWifi はアダプタの抜き差しや無効化のタイミングで
+            // Win32Exception なども投げる。ここはタイマーから毎秒呼ばれるので、
+            // 型を絞って取り漏らすとアプリごと落ちる。初回だけ記録して黙る
+            if (!_rssiFailureLogged)
+            {
+                _rssiFailureLogged = true;
+                CrashLog.Write(ex, "WifiService.GetRssi");
+            }
+
             return null;
         }
 
         return null;
     }
+
+    private static bool _rssiFailureLogged;
 
     private static WifiSnapshot Denied(Exception ex) => new(
         null,

@@ -38,6 +38,13 @@ internal static class DnsProbe
     /// <summary>「システム既定」を指すときの擬似サーバ名。</summary>
     public const string SystemResolver = "システム既定";
 
+    /// <summary>
+    /// サーバごとに使い回すクライアント。LookupClient は内部に UDP ソケットの
+    /// プールを持つ長寿命前提の作りで、問い合わせのたびに作り直すと
+    /// プールが働かず一時ポートを無駄に消費する。
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, LookupClient> Clients = new();
+
     public static readonly string[] SupportedTypes =
         ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "SRV", "PTR"];
 
@@ -57,16 +64,16 @@ internal static class DnsProbe
         if (!Enum.TryParse(typeName, ignoreCase: true, out QueryType queryType))
             return new DnsLookupResult(server, false, $"未対応のレコード種別です: {typeName}", 0, []);
 
-        var options = new LookupClientOptions(serverAddress)
-        {
-            Timeout = TimeSpan.FromMilliseconds(timeoutMs),
-            UseCache = false,
-            Retries = 0,
-            UseTcpFallback = true,
-            ThrowDnsErrors = false,
-        };
+        LookupClient client = Clients.GetOrAdd($"{serverAddress}|{timeoutMs}", _ =>
+            new LookupClient(new LookupClientOptions(serverAddress)
+            {
+                Timeout = TimeSpan.FromMilliseconds(timeoutMs),
+                UseCache = false,
+                Retries = 0,
+                UseTcpFallback = true,
+                ThrowDnsErrors = false,
+            }));
 
-        var client = new LookupClient(options);
         long startedAt = Stopwatch.GetTimestamp();
 
         try
@@ -88,8 +95,12 @@ internal static class DnsProbe
         {
             return new DnsLookupResult(server, false, "タイムアウト", timeoutMs, []);
         }
-        catch (Exception ex) when (ex is SocketException or InvalidOperationException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // 型を絞ると、想定外の 1 例外（不正なドメイン名の ArgumentException など）が
+            // 呼び出し元の Task.WhenAll ごと巻き込み、他のサーバの結果まで空欄で残る。
+            // この画面の目的は「どのサーバで引けてどこで引けないか」の比較なので、
+            // 1 台の異常は 1 枠の失敗として閉じ込める
             return new DnsLookupResult(server, false, ex.Message, Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds, []);
         }
     }

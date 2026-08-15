@@ -52,7 +52,10 @@ internal sealed class ScanOptions
 /// </summary>
 internal sealed class ScanService
 {
-    public async Task<IReadOnlyList<ScanHit>> ScanAsync(
+    /// <summary>フェーズ 3 で同時に調べるホスト数の上限。ホスト内のポート並列(16)と掛け算になる。</summary>
+    private const int LookupConcurrency = 16;
+
+    public Task<IReadOnlyList<ScanHit>> ScanAsync(
         IReadOnlyList<IPAddress> targets,
         ScanOptions options,
         IProgress<ScanProgress>? progress,
@@ -61,8 +64,22 @@ internal sealed class ScanService
         ArgumentNullException.ThrowIfNull(targets);
         ArgumentNullException.ThrowIfNull(options);
 
+        // 呼び出し元は UI スレッド。ここで ThreadPool へ逃がさないと、数千個の
+        // async ラムダの同期部分・ARP の同期 P/Invoke・ソートがすべて
+        // Dispatcher 上で走り、スキャン中はウィンドウのドラッグすら効かなくなる。
+        // 進捗は Progress<T> が UI 文脈を覚えているので、そのまま画面に届く。
+        return Task.Run(() => ScanCoreAsync(targets, options, progress, token), token);
+    }
+
+    private static async Task<IReadOnlyList<ScanHit>> ScanCoreAsync(
+        IReadOnlyList<IPAddress> targets,
+        ScanOptions options,
+        IProgress<ScanProgress>? progress,
+        CancellationToken token)
+    {
+
         var alive = new List<(IPAddress Address, double RttMs)>();
-        var gate = new SemaphoreSlim(options.Concurrency, options.Concurrency);
+        using var gate = new SemaphoreSlim(options.Concurrency, options.Concurrency);
         int done = 0;
 
         // 1) 生きているホストを洗い出す
@@ -106,19 +123,33 @@ internal sealed class ScanService
         progress?.Report(new ScanProgress(targets.Count, targets.Count, alive.Count, "ホスト名とポートを調べています"));
 
         var results = new List<ScanHit>(alive.Count);
+
+        // ホスト間にも上限を掛ける。応答ホスト全件へ一斉に掛かると、/24 で 200 台
+        // 応答しただけで 200×16 = 3,200 接続が同時に開き、Windows 側のリソース上限に
+        // 当たった接続が「閉じている」と誤判定される（開いているポートを閉と報告する
+        // のは診断ツールとして最悪の壊れ方）。逆引きの同時数も同じ理由で絞る。
+        using var hostGate = new SemaphoreSlim(LookupConcurrency, LookupConcurrency);
         var lookups = alive.Select(async entry =>
         {
             string? mac = arp.GetValueOrDefault(entry.Address.ToString());
             string? vendor = mac is null ? null : OuiCatalog.FindVendor(mac);
 
-            string? hostName = options.ResolveNames ? await ResolveNameAsync(entry.Address, token) : null;
+            await hostGate.WaitAsync(token);
+            try
+            {
+                string? hostName = options.ResolveNames ? await ResolveNameAsync(entry.Address, token) : null;
 
-            IReadOnlyList<int> ports = options.ScanPorts
-                ? await ScanPortsAsync(entry.Address, options, token)
-                : [];
+                IReadOnlyList<int> ports = options.ScanPorts
+                    ? await ScanPortsAsync(entry.Address, options, token)
+                    : [];
 
-            lock (results)
-                results.Add(new ScanHit(entry.Address, entry.RttMs, mac, vendor, hostName, ports));
+                lock (results)
+                    results.Add(new ScanHit(entry.Address, entry.RttMs, mac, vendor, hostName, ports));
+            }
+            finally
+            {
+                hostGate.Release();
+            }
         });
 
         await Task.WhenAll(lookups);
@@ -169,7 +200,7 @@ internal sealed class ScanService
         var open = new List<int>();
 
         // 1 ホストあたりの同時接続は控えめに。相手にも自分にも優しくする
-        var gate = new SemaphoreSlim(16, 16);
+        using var gate = new SemaphoreSlim(16, 16);
 
         var probes = options.Ports.Select(async port =>
         {
@@ -177,6 +208,12 @@ internal sealed class ScanService
             try
             {
                 using var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+                // RST で閉じて TIME_WAIT を残さない。行儀よく FIN で閉じると
+                // ポートごとに約 4 分エフェメラルポートを掴んだままになり、
+                // スキャンを繰り返すと自分の一時ポートが枯渇する
+                socket.LingerState = new LingerOption(true, 0);
+
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
                 timeoutCts.CancelAfter(options.TimeoutMs);
 

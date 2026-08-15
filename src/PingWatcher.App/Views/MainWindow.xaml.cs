@@ -79,11 +79,11 @@ public partial class MainWindow : Window
     ///
     /// やり直しの範囲が小さく、Ping タブの「履歴を消去」と同じ重さなので確認は挟まない。
     /// </summary>
-    private void OnClearPingResults(object sender, RoutedEventArgs e)
+    private async void OnClearPingResults(object sender, RoutedEventArgs e)
     {
         try
         {
-            _shell.Monitor.ResetResults();
+            await _shell.Monitor.ResetResultsAsync();
         }
         catch (Exception ex)
         {
@@ -97,7 +97,7 @@ public partial class MainWindow : Window
     /// 作業中に誤って押すと、作業前の記録も不通の記録も消えて取り返しがつかない。
     /// 元に戻す手段が無い操作なので、ここだけは確認を挟む。
     /// </summary>
-    private void OnClearAll(object sender, RoutedEventArgs e)
+    private async void OnClearAll(object sender, RoutedEventArgs e)
     {
         MessageBoxResult answer = MessageBox.Show(
             this,
@@ -113,7 +113,7 @@ public partial class MainWindow : Window
 
         try
         {
-            _shell.ClearAll();
+            await _shell.ClearAllAsync();
         }
         catch (Exception ex)
         {
