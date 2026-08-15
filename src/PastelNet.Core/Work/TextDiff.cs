@@ -160,7 +160,7 @@ public static class TextDiff
 /// 作業と関係なく毎回変わる行を落とす。
 /// これが無いと差分がノイズで埋まり、本当の変化が見えなくなる。
 /// </summary>
-public sealed class DiffNoiseFilter
+public sealed partial class DiffNoiseFilter
 {
     private readonly string[] _contains;
     private readonly Func<string, string>? _normalize;
