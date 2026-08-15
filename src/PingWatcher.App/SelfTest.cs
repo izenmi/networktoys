@@ -314,6 +314,13 @@ internal static class SelfTest
             log.AppendLine($"        近隣キャッシュ: {arp.Count} 件");
         });
 
+        Check("TCP/UDP の接続表を読める(件数は問わない)", () =>
+        {
+            List<Core.Net.ConnectionRow> connections = Interop.NativeMethods.GetConnectionTable();
+            (int tcp, int udp, int processes) = Core.Net.ConnectionTableView.Count(connections);
+            log.AppendLine($"        TCP {tcp} / UDP {udp} / {processes} プロセス");
+        });
+
         Check("FTP サーバを起動して停止できる", () =>
         {
             // 実際の転送は CI では確かめられない。ここで見たいのは
