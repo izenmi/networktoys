@@ -193,6 +193,19 @@ public sealed partial class DiffNoiseFilter
     /// </summary>
     public static DiffNoiseFilter RouteTable { get; } = new([], NormalizeRouteLine);
 
+    /// <summary>
+    /// Cisco の <c>show run</c> 用。
+    /// 設定を何も変えていなくても、取得のたびに必ず変わる行がある。
+    /// </summary>
+    public static DiffNoiseFilter CiscoConfig { get; } = new(
+    [
+        "Building configuration",
+        "Current configuration :",
+        "Last configuration change",
+        "NVRAM config last updated",
+        "ntp clock-period",
+    ]);
+
     public string[] Apply(string[] lines)
     {
         var result = new List<string>(lines.Length);
