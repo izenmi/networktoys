@@ -46,7 +46,7 @@
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                                <Setter Property="FontWeight" Value="Medium" />
+                                <Setter Property="FontWeight" Value="Normal" />
                                 <Setter Property="Panel.ZIndex" Value="1" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
@@ -351,7 +351,7 @@
                                 <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
                                 <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                                 <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
-                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="FontWeight" Value="Normal" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -393,7 +393,7 @@
 
         <!-- ===== ヘッダ ===== -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,5">
-            <TextBlock Text="PingWatcher" FontWeight="Medium"
+            <TextBlock Text="PingWatcher"
                        FontSize="{DynamicResource Size.Title}"
                        Margin="0,0,14,0" VerticalAlignment="Center" />
 
@@ -469,7 +469,7 @@
                                 CornerRadius="{DynamicResource Radius.Control}" Padding="7,5" Margin="0,0,0,5">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
-                                    行頭が <Run FontWeight="Medium">#</Run> <Run FontWeight="Medium">;</Run> <Run FontWeight="Medium">'</Run> 全角スペース の行は注釈として読み飛ばします。
+                                    行頭が <Run>#</Run> <Run>;</Run> <Run>'</Run> 全角スペース の行は注釈として読み飛ばします。
                                 </TextBlock>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0">
                                     範囲でまとめて書けます（EXPing にはない拡張）:
@@ -603,7 +603,7 @@
                                                 Background="{DynamicResource Brush.Error.Fg}" />
                                         <TextBlock Text="{Binding DownHeader}"
                                                    Foreground="{DynamicResource Brush.Error.Fg}"
-                                                   FontWeight="Medium"
+
                                                    VerticalAlignment="Center" />
                                     </StackPanel>
 
@@ -630,7 +630,7 @@
                                                 Background="{DynamicResource Brush.Ok.Fg}" />
                                         <TextBlock Text="{Binding AliveHeader}"
                                                    Foreground="{DynamicResource Brush.Ok.Fg}"
-                                                   FontWeight="Medium"
+
                                                    VerticalAlignment="Center" />
                                     </StackPanel>
 
@@ -727,7 +727,7 @@
                                                 Background="{DynamicResource Brush.Error.Fg}" />
                                         <TextBlock Text="{Binding DownHeader}"
                                                    Foreground="{DynamicResource Brush.Error.Fg}"
-                                                   FontWeight="Medium" VerticalAlignment="Center" />
+ VerticalAlignment="Center" />
                                     </StackPanel>
 
                                     <ListBox ItemsSource="{Binding DownRows}"
@@ -749,7 +749,7 @@
                                                 Background="{DynamicResource Brush.Ok.Fg}" />
                                         <TextBlock Text="{Binding AliveHeader}"
                                                    Foreground="{DynamicResource Brush.Ok.Fg}"
-                                                   FontWeight="Medium" VerticalAlignment="Center" />
+ VerticalAlignment="Center" />
                                     </StackPanel>
 
                                     <ListBox ItemsSource="{Binding AliveRows}"
@@ -879,7 +879,7 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-                            <TextBlock Text="{Binding Headline}" FontWeight="Medium" Margin="0,4,0,0"
+                            <TextBlock Text="{Binding Headline}" Margin="0,4,0,0"
                                        TextWrapping="Wrap" />
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        TextWrapping="Wrap" Margin="0,2,0,0" />
@@ -910,7 +910,7 @@
 
                                 <DockPanel Grid.Column="0" Margin="0,0,5,0">
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="作業前" FontWeight="Medium" VerticalAlignment="Center" />
+                                        <TextBlock Text="作業前" VerticalAlignment="Center" />
                                         <Button Content="ファイルから" Command="{Binding LoadBeforeCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
                                         <Button Content="保存" Command="{Binding SaveBeforeCommand}"
@@ -927,7 +927,7 @@
 
                                 <DockPanel Grid.Column="1" Margin="5,0,0,0">
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="作業後" FontWeight="Medium" VerticalAlignment="Center" />
+                                        <TextBlock Text="作業後" VerticalAlignment="Center" />
                                         <Button Content="ファイルから" Command="{Binding LoadAfterCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
                                         <Button Content="保存" Command="{Binding SaveAfterCommand}"
@@ -972,7 +972,7 @@
 
                                     <DockPanel MaxHeight="180">
                                         <TextBlock DockPanel.Dock="Top" Text="何が変わったか"
-                                                   FontWeight="Medium" Margin="0,0,0,4" />
+ Margin="0,0,0,4" />
                                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                                             <ItemsControl ItemsSource="{Binding Changes}">
                                                 <ItemsControl.ItemTemplate>
@@ -982,7 +982,7 @@
                                                         <DataTemplate.Triggers>
                                                             <DataTrigger Binding="{Binding Severity}" Value="Critical">
                                                                 <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                                                                <Setter TargetName="ChangeText" Property="FontWeight" Value="SemiBold" />
+                                                                <Setter TargetName="ChangeText" Property="FontWeight" Value="Normal" />
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding Severity}" Value="Warning">
                                                                 <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
@@ -1003,8 +1003,8 @@
                                         <ColumnDefinition Width="42" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="1" Text="作業前" Style="{StaticResource Caption}" FontWeight="Medium" />
-                                    <TextBlock Grid.Column="3" Text="作業後" Style="{StaticResource Caption}" FontWeight="Medium" />
+                                    <TextBlock Grid.Column="1" Text="作業前" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="作業後" Style="{StaticResource Caption}" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1"
                                         Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -1230,7 +1230,7 @@
                                                 <StackPanel Margin="0,0,0,10">
                                                     <TextBlock Text="{Binding Header}"
                                                                Foreground="{DynamicResource Brush.Accent.Fg}"
-                                                               FontWeight="Medium" Margin="0,0,0,3" />
+ Margin="0,0,0,3" />
                                                     <ItemsControl ItemsSource="{Binding Rows}">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
@@ -1576,7 +1576,7 @@
                                                 Width="278">
                                             <StackPanel>
                                                 <TextBlock Text="{Binding ServerLabel}"
-                                                           FontWeight="Medium"
+
                                                            FontFamily="{DynamicResource Font.Mono}" />
                                                 <TextBlock x:Name="SummaryText"
                                                            Text="{Binding Summary}"
@@ -1748,7 +1748,7 @@
                                             <DataTrigger Binding="{Binding IsDestination}" Value="True">
                                                 <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
                                                 <Setter TargetName="AddressText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
-                                                <Setter TargetName="AddressText" Property="FontWeight" Value="SemiBold" />
+                                                <Setter TargetName="AddressText" Property="FontWeight" Value="Normal" />
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
@@ -1997,7 +1997,7 @@
 
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding ConnectionSummary}" FontWeight="Medium"
+                                <TextBlock Text="{Binding ConnectionSummary}"
                                            VerticalAlignment="Center" Margin="0,0,12,0" />
                                 <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,10,0" />
                                 <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
@@ -2217,7 +2217,7 @@
                                     </Grid>
                                     <DataTemplate.Triggers>
                                         <DataTrigger Binding="{Binding IsConnected}" Value="True">
-                                            <Setter TargetName="SsidText" Property="FontWeight" Value="SemiBold" />
+                                            <Setter TargetName="SsidText" Property="FontWeight" Value="Normal" />
                                             <Setter TargetName="SsidText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
                                         </DataTrigger>
                                     </DataTemplate.Triggers>

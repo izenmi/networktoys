@@ -29,13 +29,13 @@
 
     <Style x:Key="Badge.Text" TargetType="TextBlock">
         <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontWeight" Value="Normal" />
     </Style>
 
     <!-- ===== 見出し ===== -->
     <Style x:Key="Heading" TargetType="TextBlock">
         <Setter Property="FontSize" Value="{DynamicResource Size.Heading}" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
         <Setter Property="Margin" Value="0,0,0,4" />
     </Style>
@@ -107,7 +107,7 @@
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                             <Setter TargetName="Underline" Property="Visibility" Value="Visible" />
                             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
-                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="FontWeight" Value="Normal" />
                         </Trigger>
                         <!-- Tab キーでの現在地。既定の FocusVisualStyle はテンプレート置換で消えている -->
                         <Trigger Property="IsKeyboardFocused" Value="True">
@@ -124,7 +124,7 @@
         <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
         <Setter Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
         <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="Padding" Value="8,2" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
