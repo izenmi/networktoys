@@ -466,13 +466,7 @@
                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,-1" />
 
         <!-- ===== 本体 ===== -->
-        <!-- コンテンツ領域に枠と地色を持たせる(選択タブがここへ食い込んで地続きに見える)。
-             Background は TabItem スタイルの選択色と同じ Brush.Surface であること -->
-        <TabControl x:Name="MainTabs" Grid.Row="1" SelectionChanged="OnTabSelectionChanged"
-                    Background="{DynamicResource Brush.Surface}"
-                    BorderBrush="{DynamicResource Brush.Border}"
-                    BorderThickness="1"
-                    Padding="6">
+        <TabControl x:Name="MainTabs" Grid.Row="1" SelectionChanged="OnTabSelectionChanged">
 
             <!-- ===== 宛先(EXPing と同じ書き方でまとめて編集する) ===== -->
             <TabItem Header="宛先" DataContext="{Binding Monitor}">
