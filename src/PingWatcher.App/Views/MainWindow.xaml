@@ -1507,7 +1507,11 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== FTP（使い捨てサーバ。機器の config バックアップ受け） ===== -->
+            <!-- ===== TFP（FTP / TFTP / SFTP をまとめたファイル配布サーバ） ===== -->
+            <TabItem Header="TFP">
+                <TabControl>
+
+            <!-- FTP: 機器の config バックアップ受け・平文 -->
             <TabItem Header="FTP" DataContext="{Binding Ftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
@@ -1582,7 +1586,7 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== TFTP（使い捨てサーバ。認証なし・UDP） ===== -->
+            <!-- TFTP: 認証なし・UDP -->
             <TabItem Header="TFTP" DataContext="{Binding Tftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
@@ -1650,7 +1654,7 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== SFTP（使い捨てサーバ。SSH 越しで暗号化） ===== -->
+            <!-- SFTP: SSH 越しで暗号化 -->
             <TabItem Header="SFTP" DataContext="{Binding Sftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
@@ -1723,6 +1727,9 @@
                         </Border>
                     </DockPanel>
                 </Border>
+            </TabItem>
+
+                </TabControl>
             </TabItem>
 
             <!-- ===== DNS ===== -->
