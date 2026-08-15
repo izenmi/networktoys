@@ -217,10 +217,10 @@ internal static class WifiService
     {
         try
         {
+            // 接続していないアダプタでは Success にならないので、
+            // 接続状態を別途調べる必要はない（InterfaceInfo.IsConnected は 3.0.2 には無い）
             foreach (InterfaceInfo adapter in NativeWifi.EnumerateInterfaces())
             {
-                if (!adapter.IsConnected) continue;
-
                 (ActionResult result, int rssi) = NativeWifi.GetRssi(adapter.Id);
                 if (result == ActionResult.Success)
                     return rssi;

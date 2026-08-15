@@ -146,7 +146,7 @@
         </StackPanel>
 
         <!-- ===== 本体 ===== -->
-        <TabControl Grid.Row="1">
+        <TabControl Grid.Row="1" SelectionChanged="OnTabSelectionChanged">
 
             <!-- ===== 監視 ===== -->
             <TabItem Header="監視" DataContext="{Binding Monitor}">
@@ -554,13 +554,238 @@
             </TabItem>
 
             <!-- ===== 無線 ===== -->
-            <TabItem Header="無線">
+            <TabItem x:Name="WifiTab" Header="無線" DataContext="{Binding Wifi}">
                 <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource Heading}" Text="無線 LAN" />
-                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="接続中 AP の詳細、RSSI の時系列、周辺 AP のチャンネル混雑を表示します。Windows 11 24H2 以降は位置情報の許可が必要なため、この画面を開いたときに初めてスキャンします。Phase 4 で実装します。" />
-                    </StackPanel>
+                    <DockPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding ConnectionSummary}" FontWeight="SemiBold"
+                                           VerticalAlignment="Center" Margin="0,0,12,0" />
+                                <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,10,0" />
+                                <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+
+                            <!-- 位置情報が許可されていないときの案内 -->
+                            <Border Background="{DynamicResource Brush.Warn.Bg}"
+                                    CornerRadius="7" Padding="10,7" Margin="0,8,0,0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsDenied}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Foreground="{DynamicResource Brush.Warn.Fg}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center"
+                                               Text="Windows 11 24H2 以降、無線 LAN の情報を読むには位置情報の許可が必要です。設定で「位置情報」を有効にしてから、もう一度お試しください。" />
+                                    <Button Content="設定を開く" Command="{Binding OpenLocationSettingsCommand}"
+                                            Margin="10,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- 接続中 AP の詳細と RSSI 推移 -->
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Background="{DynamicResource Brush.SurfaceAlt}"
+                                    CornerRadius="7" Padding="10,8" Margin="0,0,5,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="SSID" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Ssid}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="信号" Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                    <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Signal}" />
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="BSSID" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Bssid}" Style="{StaticResource Mono}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="チャンネル" Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Channel}" />
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="機器" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Vendor}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="規格" Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                    <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding PhyType}" />
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="暗号化" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Security}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Row="3" Grid.Column="2" Text="リンク速度" Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                    <TextBlock Grid.Row="3" Grid.Column="3" Text="{Binding LinkRate}"
+                                               ToolTip="ネゴシエートされたリンク速度です。実際の通信速度ではありません。" />
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="アダプタ" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Adapter}"
+                                               Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="1" Background="{DynamicResource Brush.SurfaceAlt}"
+                                    CornerRadius="7" Padding="10,8" Margin="5,0,0,0">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="受信強度の推移（dBm・直近2分）"
+                                               Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                    <controls:RssiChart Source="{Binding}" MinHeight="86" />
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- チャンネル混雑 -->
+                        <Border DockPanel.Dock="Top" Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="7" Padding="10,8" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="チャンネルの混み具合（そのチャンネルを使っている AP の数）"
+                                           Style="{StaticResource Caption}" Margin="0,0,0,6" />
+                                <StackPanel Orientation="Horizontal">
+                                    <StackPanel Margin="0,0,24,0">
+                                        <ItemsControl ItemsSource="{Binding Channels24}" Height="76" VerticalAlignment="Bottom">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel VerticalAlignment="Bottom" Width="22">
+                                                        <TextBlock Text="{Binding Label}" Style="{StaticResource Caption}"
+                                                                   HorizontalAlignment="Center" />
+                                                        <Border x:Name="Bar" Width="14" Height="{Binding Height}"
+                                                                Background="{DynamicResource Brush.Accent.Bg}"
+                                                                CornerRadius="3,3,0,0"
+                                                                HorizontalAlignment="Center" />
+                                                        <TextBlock Text="{Binding Channel}" Style="{StaticResource Caption}"
+                                                                   HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                                    </StackPanel>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMine}" Value="True">
+                                                            <Setter TargetName="Bar" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="2.4 GHz" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                    </StackPanel>
+
+                                    <StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Channels5}" Height="76" VerticalAlignment="Bottom">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel VerticalAlignment="Bottom" Width="30">
+                                                        <TextBlock Text="{Binding Label}" Style="{StaticResource Caption}"
+                                                                   HorizontalAlignment="Center" />
+                                                        <Border x:Name="Bar5" Width="18" Height="{Binding Height}"
+                                                                Background="{DynamicResource Brush.Info.Bg}"
+                                                                CornerRadius="3,3,0,0"
+                                                                HorizontalAlignment="Center" />
+                                                        <TextBlock Text="{Binding Channel}" Style="{StaticResource Caption}"
+                                                                   HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                                    </StackPanel>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMine}" Value="True">
+                                                            <Setter TargetName="Bar5" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="5 GHz 以上" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 周辺 AP 一覧 -->
+                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="132" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="76" />
+                                <ColumnDefinition Width="56" />
+                                <ColumnDefinition Width="72" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="SSID"     Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="1" Text="BSSID"    Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="2" Text="機器"     Style="{StaticResource Caption}" />
+                            <TextBlock Grid.Column="3" Text="強度"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="ch"       Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="5" Text="帯域"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                        </Grid>
+                        <Border DockPanel.Dock="Top" Height="1"
+                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                        <ListBox ItemsSource="{Binding AccessPoints}"
+                                 ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 HorizontalContentAlignment="Stretch"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Height="{DynamicResource Size.RowHeight}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" MinWidth="140" />
+                                            <ColumnDefinition Width="132" />
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="76" />
+                                            <ColumnDefinition Width="56" />
+                                            <ColumnDefinition Width="72" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock x:Name="SsidText" Grid.Column="0" Text="{Binding Ssid}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Bssid}"
+                                                   Style="{StaticResource Mono}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Vendor}"
+                                                   Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="3" Text="{Binding Rssi}"
+                                                   Style="{StaticResource Mono}" VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="4" Text="{Binding Channel}"
+                                                   Style="{StaticResource Mono}" VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="5" Text="{Binding Band}"
+                                                   Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                                   Margin="8,0,0,0" />
+                                    </Grid>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                            <Setter TargetName="SsidText" Property="FontWeight" Value="SemiBold" />
+                                            <Setter TargetName="SsidText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
                 </Border>
             </TabItem>
 
