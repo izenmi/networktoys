@@ -20,6 +20,9 @@ public sealed class ShellViewModel
         // 自分のサブネットをスキャン範囲の既定値にしておく（現場で最もよく使う操作）
         Scan = new ScanViewModel(Monitor.SubnetCidr, Monitor.AppendToTargetList);
 
+        // 電卓も自分のいるサブネットから始める
+        Subnet = new SubnetViewModel(Monitor.SubnetCidr);
+
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
 
@@ -39,6 +42,9 @@ public sealed class ShellViewModel
     public TraceViewModel Trace { get; }
 
     public ScanViewModel Scan { get; }
+
+    /// <summary>サブネット電卓。</summary>
+    public SubnetViewModel Subnet { get; }
 
     public WifiViewModel Wifi { get; }
 
@@ -66,6 +72,7 @@ public sealed class ShellViewModel
         Work.Reset();
         DeviceCompare.Reset();
         Scan.Reset();
+        Subnet.Reset();
         Dns.Reset();
         Trace.Reset();
         Wifi.Reset();

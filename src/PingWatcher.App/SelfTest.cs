@@ -228,6 +228,28 @@ internal static class SelfTest
             Assert(window.ActualWidth > 0 && window.ActualHeight > 0, "ウィンドウの実サイズが 0 のまま");
         });
 
+        Check("すべてのタブを表示できる(遅延生成される中身の検査)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // TabControl は選ばれたタブしか実体化しないので、既定タブの表示だけでは
+            // 他のタブのテンプレート適用時のエラー(リソースキーの打ち間違いなど)を見逃す
+            object? original = window!.MainTabs.SelectedItem;
+
+            foreach (object? item in window.MainTabs.Items)
+            {
+                // 無線タブは選んだ時点で WLAN API に触れる作り(位置情報の同意の
+                // タイミングを人の操作に合わせるため)なので、ここでは選ばない
+                if (ReferenceEquals(item, window.WifiTab)) continue;
+
+                window.MainTabs.SelectedItem = item;
+                window.UpdateLayout();
+            }
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
         Check("画面を PNG に描き出せる(スクリーンショット機能)", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
