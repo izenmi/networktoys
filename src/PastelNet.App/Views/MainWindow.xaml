@@ -428,8 +428,11 @@
                 <Button Content="停止" Command="{Binding StopCommand}"
                         Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
 
-                <TextBlock Text="{Binding CountText}" Style="{StaticResource Caption}"
-                           VerticalAlignment="Center" Margin="0,0,8,0" />
+                <!--
+                    件数はここに出さない。宛先タブと一覧の見出しに出ているうえ、
+                    実行中かどうかはボタンの文字で分かる。
+                    ここに残すのは、伝えないと困ること（失敗など）だけにする。
+                -->
                 <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}"
                            VerticalAlignment="Center" MaxWidth="260"
                            TextTrimming="CharacterEllipsis" Margin="0,0,14,0" />
@@ -970,10 +973,24 @@
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="対象" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" />
-                                <ComboBox Width="214" ItemsSource="{Binding Modes}"
-                                          DisplayMemberPath="Label"
+                                <!--
+                                    DisplayMemberPath は使わない。閉じているときの表示は
+                                    SelectionBoxItemTemplate 経由で描かれるため、テンプレートを
+                                    明示しないと選択中の項目が型名のまま出てしまう。
+                                -->
+                                <ComboBox Width="230" ItemsSource="{Binding Modes}"
                                           SelectedItem="{Binding SelectedMode}" Margin="0,0,10,0"
-                                          ToolTip="対象ごとに貼り付けた内容は保たれます。作業前にまとめて貼っておけます。" />
+                                          ToolTip="対象ごとに貼り付けた内容は保たれます。作業前にまとめて貼っておけます。">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock VerticalAlignment="Center">
+                                                <Run Text="{Binding Name, Mode=OneWay}" />
+                                                <Run Text="{Binding StateMark, Mode=OneWay}"
+                                                     Foreground="{DynamicResource Brush.Info.Fg}" />
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,6,0" />
                                 <Button Content="貼り付けに戻る" Command="{Binding EditCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />

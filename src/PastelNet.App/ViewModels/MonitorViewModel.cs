@@ -279,9 +279,9 @@ public sealed class MonitorViewModel : ObservableObject
         StartedAt ??= DateTime.Now;
         IsRunning = true;
 
-        StatusMessage = tcp
-            ? $"{_engine.ActiveCount} 件を TCP:{port} へ {_settings.IntervalMs} ms 間隔で測定しています。"
-            : $"{_engine.ActiveCount} 件を {_settings.IntervalMs} ms 間隔で測定しています。";
+        // 実行中であることはボタンの文字で分かり、件数は一覧の見出しに出ている。
+        // ここに定型文を出しても場所を取るだけなので、前の用件だけ消しておく。
+        StatusMessage = string.Empty;
     }
 
     /// <summary>同じ Id のまま測り方だけ TCP に差し替えた複製を作る。</summary>
