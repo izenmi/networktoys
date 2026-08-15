@@ -39,15 +39,33 @@ public class ReportWriterTests
     [Fact]
     public void Html_carries_no_external_references()
     {
-        // 客先のオフライン環境で開ける必要がある
+        // 客先のオフライン環境で開ける必要がある。
+        // 「何も読みに行かない」ことを、読み込みを起こす書き方の不在で確かめる。
+        // SVG の xmlns は URL の形をしているが参照ではないので、対象にしない。
         string html = HtmlReportWriter.Render(Sample());
 
         Assert.DoesNotContain("<script", html, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("http://", html, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("<link", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<iframe", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("src=", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("@import", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("url(", html, StringComparison.OrdinalIgnoreCase);
+    }
 
-        // SVG の名前空間だけは URL の形をしている（参照ではない）
-        Assert.Contains("www.w3.org/2000/svg", html, StringComparison.Ordinal);
+    [Fact]
+    public void The_only_url_shaped_text_is_the_svg_namespace()
+    {
+        string html = HtmlReportWriter.Render(Sample());
+
+        int occurrences = 0;
+        for (int i = html.IndexOf("http", StringComparison.Ordinal); i >= 0;
+             i = html.IndexOf("http", i + 1, StringComparison.Ordinal))
+        {
+            occurrences++;
+            Assert.StartsWith("http://www.w3.org/2000/svg", html[i..], StringComparison.Ordinal);
+        }
+
+        Assert.Equal(1, occurrences);
     }
 
     [Fact]
