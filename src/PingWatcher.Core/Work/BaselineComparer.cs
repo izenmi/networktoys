@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace PingWatcher.Core.Work;
 
 /// <summary>作業前と作業後を突き合わせた結果。</summary>
