@@ -56,11 +56,24 @@ public partial class MainWindow : Window
     /// <summary>開始したら測定の画面へ移る。押した場所がどのタブでも、見たいのは結果。</summary>
     private void OnStartClicked(object sender, RoutedEventArgs e) => PingTab.IsSelected = true;
 
-    /// <summary>一覧の見出しクリックで並べ替える。列名は Tag で受け取る。</summary>
+    /// <summary>一覧の見出しクリックで並べ替える。列名は Tag、対象は DataContext で見分ける。</summary>
     private void OnListHeaderSort(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: MonitorViewModel vm, Tag: string column })
-            vm.SortBy(column);
+        if (sender is not FrameworkElement { Tag: string column } element)
+            return;
+
+        switch (element.DataContext)
+        {
+            case MonitorViewModel monitor:
+                monitor.SortBy(column);
+                break;
+            case ConnectionsViewModel connections:
+                connections.SortBy(column);
+                break;
+            case WifiViewModel wifi:
+                wifi.SortAccessPointsBy(column);
+                break;
+        }
     }
 
     /// <summary>

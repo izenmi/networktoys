@@ -255,6 +255,44 @@ public class ConnectionTableViewTests
         Assert.Equal("—", group.ReceivedText);   // 流れていない方向はゼロ = 「—」
     }
 
+    [Fact]
+    public void Sorting_by_local_orders_rows_within_the_group()
+    {
+        var rows = new[]
+        {
+            Tcp("10.0.0.1", 2000, "10.0.0.2", 80, TcpConnectionState.Established, 100),
+            Tcp("10.0.0.1", 1000, "10.0.0.2", 80, TcpConnectionState.Established, 100),
+        };
+
+        var ascending = ConnectionTableView.BuildRows(rows, Names, null, null, "Local", false)
+            .OfType<ConnectionDetailRow>().Select(d => d.Local).ToArray();
+        Assert.Equal(new[] { "10.0.0.1:1000", "10.0.0.1:2000" }, ascending);
+
+        var descending = ConnectionTableView.BuildRows(rows, Names, null, null, "Local", true)
+            .OfType<ConnectionDetailRow>().Select(d => d.Local).ToArray();
+        Assert.Equal(new[] { "10.0.0.1:2000", "10.0.0.1:1000" }, descending);
+    }
+
+    [Fact]
+    public void Sorting_by_sent_reorders_groups_by_their_totals()
+    {
+        var rows = new[]
+        {
+            Tcp("10.0.0.1", 1000, "10.0.0.2", 80, TcpConnectionState.Established, 100),   // Alpha
+            Tcp("10.0.0.1", 2000, "10.0.0.3", 80, TcpConnectionState.Established, 200),   // chrome
+        };
+
+        var aggregator = new TrafficAggregator();
+        aggregator.Add(TcpKey(100, "10.0.0.1", 1000, "10.0.0.2", 80), sent: true, 100);
+        aggregator.Add(TcpKey(200, "10.0.0.1", 2000, "10.0.0.3", 80), sent: true, 5000);
+        var rates = new ConnectionRates(aggregator.Drain(), elapsedSeconds: 1);
+
+        string[] groupNames = ConnectionTableView.BuildRows(rows, Names, null, rates, "Sent", true)
+            .OfType<ConnectionGroupRow>().Select(g => g.ProcessName).ToArray();
+
+        Assert.Equal(new[] { "chrome", "Alpha" }, groupNames);
+    }
+
     private static FlowKey TcpKey(uint pid, string a, ushort aPort, string b, ushort bPort)
         => FlowKey.ForTcp(false, pid,
             System.Net.IPAddress.Parse(a).GetAddressBytes(), aPort,

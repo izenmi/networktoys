@@ -26,7 +26,16 @@ public sealed class AccessPointViewModel
 
         // 電波の強さを 0〜1 に均す。-30dBm で満杯、-90dBm で空とする
         Strength = Math.Clamp((ap.Rssi + 90) / 60.0, 0, 1);
+
+        // 見出しクリックの並べ替え用。表示は整形済み文字列だが、ソートは数値で行う
+        RssiValue = ap.Rssi;
+        ChannelValue = ap.Channel;
+        BandValue = ap.Band;
     }
+
+    internal int RssiValue { get; }
+    internal int ChannelValue { get; }
+    internal float BandValue { get; }
 
     public string Ssid { get; }
     public string Bssid { get; }
@@ -227,8 +236,8 @@ public sealed class WifiViewModel : ObservableObject
         }
 
         AccessPoints.Clear();
-        foreach (WifiAccessPoint ap in snapshot.AccessPoints)
-            AccessPoints.Add(new AccessPointViewModel(ap));
+        foreach (AccessPointViewModel ap in SortedAccessPoints(snapshot.AccessPoints.Select(ap => new AccessPointViewModel(ap))))
+            AccessPoints.Add(ap);
 
         BuildChannelChart(snapshot);
 
@@ -400,6 +409,86 @@ public sealed class WifiViewModel : ObservableObject
     public string? ReportNote => DescribeForReport() is null
         ? "無線 LAN の情報は取得していません（「無線」タブを開くと取得します）。"
         : null;
+
+    // 周辺 AP 一覧の見出しクリックの並べ替え。空文字は既定(電波の強い順=取得順)
+    private string _apSortColumn = "";
+    private bool _apSortDescending;
+
+    /// <summary>一覧の見出し。ソート中の列に ▲/▼ を添える。</summary>
+    public string HeaderSsid => ApHeaderLabel("Ssid", "SSID");
+    public string HeaderBssid => ApHeaderLabel("Bssid", "BSSID");
+    public string HeaderVendor => ApHeaderLabel("Vendor", "機器");
+    public string HeaderRssi => ApHeaderLabel("Rssi", "強度");
+    public string HeaderChannel => ApHeaderLabel("Channel", "ch");
+    public string HeaderBand => ApHeaderLabel("Band", "帯域");
+
+    /// <summary>見出しクリックの並べ替え。昇順 → 降順 → 既定(強い順)と巡る。</summary>
+    public void SortAccessPointsBy(string column)
+    {
+        if (_apSortColumn == column)
+        {
+            if (!_apSortDescending)
+            {
+                _apSortDescending = true;
+            }
+            else
+            {
+                _apSortColumn = "";
+                _apSortDescending = false;
+            }
+        }
+        else
+        {
+            _apSortColumn = column;
+            _apSortDescending = false;
+        }
+
+        // 一覧はスキャン(10 秒以上間隔)でしか入れ替わらないので、作り直しで十分
+        List<AccessPointViewModel> sorted = SortedAccessPoints([.. AccessPoints]);
+        AccessPoints.Clear();
+        foreach (AccessPointViewModel ap in sorted)
+            AccessPoints.Add(ap);
+
+        OnPropertyChanged(nameof(HeaderSsid));
+        OnPropertyChanged(nameof(HeaderBssid));
+        OnPropertyChanged(nameof(HeaderVendor));
+        OnPropertyChanged(nameof(HeaderRssi));
+        OnPropertyChanged(nameof(HeaderChannel));
+        OnPropertyChanged(nameof(HeaderBand));
+    }
+
+    private string ApHeaderLabel(string column, string title)
+        => _apSortColumn == column ? $"{title} {(_apSortDescending ? "▼" : "▲")}" : title;
+
+    private List<AccessPointViewModel> SortedAccessPoints(IEnumerable<AccessPointViewModel> accessPoints)
+    {
+        var list = new List<AccessPointViewModel>(accessPoints);
+
+        if (_apSortColumn.Length == 0)
+            return list;   // 既定 = WifiService が返す電波の強い順
+
+        list.Sort((x, y) =>
+        {
+            int result = _apSortColumn switch
+            {
+                "Ssid" => string.Compare(x.Ssid, y.Ssid, StringComparison.OrdinalIgnoreCase),
+                "Bssid" => string.CompareOrdinal(x.Bssid, y.Bssid),
+                "Vendor" => string.Compare(x.Vendor, y.Vendor, StringComparison.OrdinalIgnoreCase),
+                "Rssi" => x.RssiValue.CompareTo(y.RssiValue),
+                "Channel" => x.ChannelValue.CompareTo(y.ChannelValue),
+                "Band" => x.BandValue.CompareTo(y.BandValue),
+                _ => 0,
+            };
+
+            if (_apSortDescending)
+                result = -result;
+
+            // 同値は強い順で安定させる
+            return result != 0 ? result : y.RssiValue.CompareTo(x.RssiValue);
+        });
+
+        return list;
+    }
 
     /// <summary>周辺 AP の一覧を記録用の形にする。画面表示と同じ整形済み文字列を渡す。</summary>
     public IReadOnlyList<WirelessAccessPoint> DescribeAccessPointsForReport()

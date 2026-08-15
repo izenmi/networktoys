@@ -18,11 +18,16 @@ public static class ConnectionTableView
     /// <param name="filter">部分一致の絞り込み。プロセス名に合えばグループ丸ごと、
     /// そうでなければ行単位で残す。空なら全件。</param>
     /// <param name="rates">通信量。null は通信量なし（非管理者）で、列は「—」になる。</param>
+    /// <param name="sortColumn">見出しクリックのソート列
+    /// （Protocol / Local / Remote / State / Sent / Received）。null は既定の並び。</param>
+    /// <param name="sortDescending">ソートの向き。</param>
     public static IReadOnlyList<ConnectionListRow> BuildRows(
         IReadOnlyList<ConnectionRow> rows,
         IReadOnlyDictionary<int, string> processNames,
         string? filter,
-        ConnectionRates? rates)
+        ConnectionRates? rates,
+        string? sortColumn = null,
+        bool sortDescending = false)
     {
         string trimmed = filter?.Trim() ?? "";
 
@@ -37,20 +42,18 @@ public static class ConnectionTableView
         var groups = byPid
             .Select(pair => (Pid: pair.Key, Name: ResolveProcessName(pair.Key, processNames), Rows: pair.Value))
             .OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(g => g.Pid);
+            .ThenBy(g => g.Pid)
+            .ToList();
 
-        var result = new List<ConnectionListRow>();
+        var built = new List<(string Name, int Pid, double Sent, double Received, List<ConnectionDetailRow> Details)>();
         var usedKeys = new Dictionary<string, int>(StringComparer.Ordinal);
 
         foreach ((int pid, string name, List<ConnectionRow> groupRows) in groups)
         {
             bool wholeGroup = trimmed.Length == 0 || name.Contains(trimmed, StringComparison.OrdinalIgnoreCase);
-            groupRows.Sort(CompareRows);
 
-            var details = new List<ConnectionDetailRow>();
-            double sentTotal = 0;
-            double receivedTotal = 0;
-
+            // 表示文字列とレートまで先に用意してからソートする(レート列のソートに要る)
+            var prepared = new List<PreparedRow>(groupRows.Count);
             foreach (ConnectionRow row in groupRows)
             {
                 string protocol = ProtocolText(row.Protocol);
@@ -62,29 +65,95 @@ public static class ConnectionTableView
                     continue;
 
                 (double sent, double received) = rates?.Lookup(row) ?? (0, 0);
-                sentTotal += sent;
-                receivedTotal += received;
-
-                string key = MakeUniqueKey($"d{pid}|{protocol}|{local}|{remote}", usedKeys);
-                details.Add(new ConnectionDetailRow(
-                    protocol, local, remote, stateText, stateKind,
-                    RateText(rates, sent), RateText(rates, received), key));
+                prepared.Add(new PreparedRow(row, protocol, local, remote, stateText, stateKind, sent, received));
             }
 
-            if (details.Count == 0)
+            if (prepared.Count == 0)
                 continue;
 
-            result.Add(new ConnectionGroupRow(
+            prepared.Sort((a, b) => ComparePrepared(a, b, sortColumn, sortDescending));
+
+            var details = new List<ConnectionDetailRow>(prepared.Count);
+            double sentTotal = 0;
+            double receivedTotal = 0;
+
+            foreach (PreparedRow item in prepared)
+            {
+                sentTotal += item.Sent;
+                receivedTotal += item.Received;
+
+                string key = MakeUniqueKey($"d{pid}|{item.Protocol}|{item.Local}|{item.Remote}", usedKeys);
+                details.Add(new ConnectionDetailRow(
+                    item.Protocol, item.Local, item.Remote, item.StateText, item.StateKind,
+                    RateText(rates, item.Sent), RateText(rates, item.Received), key));
+            }
+
+            built.Add((name, pid, sentTotal, receivedTotal, details));
+        }
+
+        // レート列のソートはグループ自体も合計で並べ直す(どのプロセスが太いかを上に)
+        if (sortColumn is "Sent" or "Received")
+        {
+            built.Sort((a, b) =>
+            {
+                double x = sortColumn == "Sent" ? a.Sent : a.Received;
+                double y = sortColumn == "Sent" ? b.Sent : b.Received;
+                int result = x.CompareTo(y);
+                if (sortDescending)
+                    result = -result;
+                return result != 0 ? result : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
+        var resultRows = new List<ConnectionListRow>();
+        foreach ((string name, int pid, double sentTotal, double receivedTotal, List<ConnectionDetailRow> details) in built)
+        {
+            resultRows.Add(new ConnectionGroupRow(
                 name,
                 pid > 0 ? $"PID {pid}" : "",
                 $"{details.Count} 件",
                 RateText(rates, sentTotal),
                 RateText(rates, receivedTotal),
                 $"g{pid}"));
-            result.AddRange(details);
+            resultRows.AddRange(details);
         }
 
-        return result;
+        return resultRows;
+    }
+
+    private readonly record struct PreparedRow(
+        ConnectionRow Row,
+        string Protocol,
+        string Local,
+        string Remote,
+        string StateText,
+        ConnectionStateKind StateKind,
+        double Sent,
+        double Received);
+
+    private static int ComparePrepared(in PreparedRow x, in PreparedRow y, string? sortColumn, bool descending)
+    {
+        int result = sortColumn switch
+        {
+            "Protocol" => x.Row.Protocol.CompareTo(y.Row.Protocol),
+            "Local" => CompareEndpoint(x.Row.LocalAddress, x.Row.LocalPort, y.Row.LocalAddress, y.Row.LocalPort),
+            "Remote" => CompareEndpoint(x.Row.RemoteAddress, x.Row.RemotePort, y.Row.RemoteAddress, y.Row.RemotePort),
+            "State" => ((int)x.Row.State).CompareTo((int)y.Row.State),
+            "Sent" => x.Sent.CompareTo(y.Sent),
+            "Received" => x.Received.CompareTo(y.Received),
+            _ => 0,
+        };
+
+        if (descending)
+            result = -result;
+
+        return result != 0 ? result : CompareRows(x.Row, y.Row);
+    }
+
+    private static int CompareEndpoint(string addressX, ushort portX, string addressY, ushort portY)
+    {
+        int result = string.CompareOrdinal(addressX, addressY);
+        return result != 0 ? result : portX.CompareTo(portY);
     }
 
     /// <summary>ステータス行用の集計（フィルタ前の全件）。</summary>

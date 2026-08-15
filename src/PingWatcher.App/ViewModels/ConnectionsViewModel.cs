@@ -37,6 +37,10 @@ public sealed class ConnectionsViewModel : ObservableObject
     private string _status = "「一時停止」を外すと 2 秒ごとに更新します。";
     private string _rateNotice = NetTraceSession.IsAdministrator ? "" : AdminNotice;
 
+    // 見出しクリックの並べ替え。空文字は既定の並び(プロセス名→PID)
+    private string _sortColumn = "";
+    private bool _sortDescending;
+
     public ConnectionsViewModel()
     {
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = RefreshInterval };
@@ -102,6 +106,51 @@ public sealed class ConnectionsViewModel : ObservableObject
 
     /// <summary>非管理者のときだけ「管理者として再起動」の導線を出す。</summary>
     public bool CanRelaunchAsAdmin => !NetTraceSession.IsAdministrator;
+
+    /// <summary>一覧の見出し。ソート中の列に ▲/▼ を添える。</summary>
+    public string HeaderProtocol => HeaderLabel("Protocol", "プロト");
+    public string HeaderLocal => HeaderLabel("Local", "ローカル");
+    public string HeaderRemote => HeaderLabel("Remote", "リモート");
+    public string HeaderState => HeaderLabel("State", "状態");
+    public string HeaderSent => HeaderLabel("Sent", "送信");
+    public string HeaderReceived => HeaderLabel("Received", "受信");
+
+    /// <summary>
+    /// 見出しクリックの並べ替え。昇順 → 降順 → 既定の並びと巡る。
+    /// 送信/受信の列はグループ自体も合計で並べ直す。
+    /// </summary>
+    public void SortBy(string column)
+    {
+        if (_sortColumn == column)
+        {
+            if (!_sortDescending)
+            {
+                _sortDescending = true;
+            }
+            else
+            {
+                _sortColumn = "";
+                _sortDescending = false;
+            }
+        }
+        else
+        {
+            _sortColumn = column;
+            _sortDescending = false;
+        }
+
+        RebuildRows();
+
+        OnPropertyChanged(nameof(HeaderProtocol));
+        OnPropertyChanged(nameof(HeaderLocal));
+        OnPropertyChanged(nameof(HeaderRemote));
+        OnPropertyChanged(nameof(HeaderState));
+        OnPropertyChanged(nameof(HeaderSent));
+        OnPropertyChanged(nameof(HeaderReceived));
+    }
+
+    private string HeaderLabel(string column, string title)
+        => _sortColumn == column ? $"{title} {(_sortDescending ? "▼" : "▲")}" : title;
 
     /// <summary>タブが表示されたら動き、隠れたら止まる。ETW も同じ寿命にする。</summary>
     public void OnActivated()
@@ -171,8 +220,9 @@ public sealed class ConnectionsViewModel : ObservableObject
 
     private void RebuildRows()
     {
-        IReadOnlyList<ConnectionListRow> desired =
-            ConnectionTableView.BuildRows(_last.Rows, _last.ProcessNames, Filter, _rates);
+        IReadOnlyList<ConnectionListRow> desired = ConnectionTableView.BuildRows(
+            _last.Rows, _last.ProcessNames, Filter, _rates,
+            _sortColumn.Length > 0 ? _sortColumn : null, _sortDescending);
         OrderedListSync.Apply(Rows, desired, row => row.SortKey);
     }
 
