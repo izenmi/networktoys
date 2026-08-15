@@ -280,7 +280,13 @@ public sealed class MonitorViewModel : ObservableObject
 
         long now = DateTime.Now.Ticks;
         foreach (TargetRowViewModel row in Rows)
+        {
             row.StartWindow(now);
+
+            // 前回の測定のサンプル時刻を持ち越さない。持ち越すと、再開直後に
+            // 最初の結果が届くまで全行が「… 停止」表示になる
+            row.NotifyResumed(now);
+        }
 
         StartedAt ??= DateTime.Now;
         IsRunning = true;
@@ -402,9 +408,13 @@ public sealed class MonitorViewModel : ObservableObject
         {
             long now = DateTime.Now.Ticks;
 
+            // 同時実行の上限を超える数の宛先が全滅していると、1 周に
+            // 「タイムアウト × 周回数」かかる。停止判定の閾値にもこれを織り込む
+            int queueRounds = (Rows.Count + _settings.MaxConcurrency - 1) / Math.Max(1, _settings.MaxConcurrency);
+
             foreach (TargetRowViewModel row in Rows)
             {
-                row.CheckStalled(now);
+                row.CheckStalled(now, queueRounds);
                 _touched.Add(row);
             }
         }

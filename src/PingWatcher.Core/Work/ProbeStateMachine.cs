@@ -135,6 +135,20 @@ public sealed class ProbeStateMachine
         return State != previous;
     }
 
+    /// <summary>
+    /// 測定を再開した直後に呼ぶ。前回の測定のサンプル時刻が残ったままだと、
+    /// 最初の結果が届くまでの間、全行が「停止」扱いになってしまう。
+    /// 停止表示になっていた行は、止まる直前の到達性へ戻す。
+    /// </summary>
+    public void NotifyResumed(long nowTicks)
+    {
+        if (LastSampleTicks is not null)
+            LastSampleTicks = nowTicks;
+
+        if (State == LinkState.Stalled)
+            State = StateBeforeStall;
+    }
+
     public void Reset()
     {
         State = LinkState.Pending;

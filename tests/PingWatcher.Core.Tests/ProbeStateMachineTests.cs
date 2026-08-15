@@ -232,4 +232,33 @@ public class ProbeStateMachineTests
         Assert.True(machine.CheckStalled(TimeSpan.FromSeconds(30).Ticks, intervalMs: 1000));
         Assert.Equal(LinkState.Stalled, machine.State);
     }
+
+    [Fact]
+    public void Resuming_does_not_flag_the_gap_as_a_stall()
+    {
+        // 測定を止めて数秒後に再開すると、前回のサンプル時刻との差だけで
+        // 「停止」になっていた。再開の合図で時計を合わせ直す
+        var machine = new ProbeStateMachine();
+        machine.Observe(ProbeSample.Success(TimeSpan.FromSeconds(0).Ticks, 5));
+
+        // 30 秒後に再開
+        machine.NotifyResumed(TimeSpan.FromSeconds(30).Ticks);
+
+        Assert.False(machine.CheckStalled(TimeSpan.FromSeconds(31).Ticks, intervalMs: 1000));
+        Assert.Equal(LinkState.Up, machine.State);
+    }
+
+    [Fact]
+    public void Resuming_restores_the_state_before_the_stall()
+    {
+        var machine = new ProbeStateMachine();
+        machine.Observe(ProbeSample.Failure(TimeSpan.FromSeconds(0).Ticks, ProbeStatus.TimedOut));
+        machine.Observe(ProbeSample.Failure(TimeSpan.FromSeconds(1).Ticks, ProbeStatus.TimedOut));
+        machine.CheckStalled(TimeSpan.FromSeconds(30).Ticks, intervalMs: 1000);
+        Assert.Equal(LinkState.Stalled, machine.State);
+
+        machine.NotifyResumed(TimeSpan.FromSeconds(60).Ticks);
+
+        Assert.Equal(LinkState.Down, machine.State);
+    }
 }

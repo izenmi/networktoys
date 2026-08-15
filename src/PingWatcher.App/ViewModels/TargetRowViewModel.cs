@@ -152,17 +152,30 @@ public sealed class TargetRowViewModel : ObservableObject
     /// 測定が止まっていないかを確かめる。止まっていれば表示を変える。
     /// 結果が届かなくなった宛先は Refresh が呼ばれないので、外から定期的に叩く。
     /// </summary>
-    public void CheckStalled(long nowTicks)
+    /// <param name="nowTicks">現在時刻。</param>
+    /// <param name="queueRounds">
+    /// 同時実行の上限による待ち行列の周回数（全宛先数 ÷ 同時実行数の切り上げ）。
+    /// 全滅時は 1 周に「タイムアウト × 周回数」かかるので、これを掛けないと
+    /// 宛先が多いだけで「止まった」と誤判定する。
+    /// </param>
+    public void CheckStalled(long nowTicks, int queueRounds)
     {
         // サンプルの実効周期は「間隔」と「タイムアウト」の長い方。応答しない宛先は
         // タイムアウトまで 1 回分の枠を使うので、間隔だけを基準にすると
         // 正常に測れているのに「止まった」と誤判定する
         int cadenceMs = Math.Max(
             Target.IntervalMs ?? _settings.IntervalMs,
-            Target.TimeoutMs ?? _settings.TimeoutMs);
+            Target.TimeoutMs ?? _settings.TimeoutMs) * Math.Max(1, queueRounds);
 
         if (_machine.CheckStalled(nowTicks, cadenceMs))
             _isDirty = true;
+    }
+
+    /// <summary>測定の再開時に呼ぶ。前回のサンプル時刻で「停止」と誤判定させない。</summary>
+    public void NotifyResumed(long nowTicks)
+    {
+        _machine.NotifyResumed(nowTicks);
+        _isDirty = true;
     }
 
     /// <summary>取り込んだ結果を表示へ反映する。変化が無ければ何もせず false を返す。</summary>
