@@ -4,8 +4,8 @@
         xmlns:controls="clr-namespace:PingWatcher.App.Controls"
         xmlns:vm="clr-namespace:PingWatcher.App.ViewModels"
         Title="PingWatcher"
-        Width="860" Height="720"
-        MinWidth="720" MinHeight="480"
+        Width="740" Height="720"
+        MinWidth="700" MinHeight="480"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.Window.Backdrop}"
         Foreground="{DynamicResource Brush.Text}"
@@ -371,7 +371,8 @@
                 止めたくなることが多い。
             -->
             <StackPanel Orientation="Horizontal" DataContext="{Binding Monitor}">
-                <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}"
+                        Click="OnStartClicked" Margin="0,0,5,0" />
                 <Button Content="停止" Command="{Binding StopCommand}"
                         Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
 
@@ -404,14 +405,6 @@
                     </ContextMenu>
                 </Button.ContextMenu>
             </Button>
-
-            <!-- 画面の証跡。ウィンドウの中身を PNG にして logs フォルダへ残す -->
-            <Button x:Name="ScreenshotButton" Content="📷 画面" Click="OnScreenshot"
-                    Style="{StaticResource Button.Icon}"
-                    Margin="0,0,8,0"
-                    MinWidth="86"
-                    AutomationProperties.Name="画面を撮って保存"
-                    ToolTip="いまの画面を PNG で logs フォルダに保存します。" />
 
             <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
             <Button x:Name="ThemeToggle" Click="OnThemeToggle"
@@ -479,7 +472,7 @@
             </TabItem>
 
             <!-- ===== Ping（測定と結果の表示） ===== -->
-            <TabItem Header="Ping" DataContext="{Binding Monitor}">
+            <TabItem x:Name="PingTab" Header="Ping" DataContext="{Binding Monitor}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
@@ -608,7 +601,8 @@
 
                         <!-- 操作 -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
-                            <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}"
+                        Click="OnStartClicked" Margin="0,0,5,0" />
                             <Button Content="停止" Command="{Binding StopCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,10,0" />
 

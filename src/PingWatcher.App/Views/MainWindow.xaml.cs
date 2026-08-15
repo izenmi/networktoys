@@ -1,12 +1,7 @@
 using System.ComponentModel;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
-using PingWatcher.App.Services;
 using PingWatcher.App.ViewModels;
 
 namespace PingWatcher.App.Views;
@@ -52,73 +47,8 @@ public partial class MainWindow : Window
         Interop.NativeMethods.SetTitleBarDark(handle, ThemeManager.Current == AppTheme.Dark);
     }
 
-    /// <summary>
-    /// いまの画面を PNG にして logs フォルダへ残す。証跡は「見たままの画面」が
-    /// 一番説明が早いので、レポートとは別にワンボタンで撮れるようにしている。
-    /// </summary>
-    private void OnScreenshot(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            string path = SessionLogService.NewScreenshotPath();
-            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
-
-            using (FileStream stream = File.Create(path))
-                CaptureWindow().Save(stream);
-
-            ShowScreenshotResult("✓ 保存しました");
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write(ex, "MainWindow.OnScreenshot");
-            ShowScreenshotResult("保存できません");
-        }
-    }
-
-    /// <summary>
-    /// ウィンドウの中身を実 DPI で描画して PNG エンコーダに載せる。
-    /// Window そのものを Render すると枠ぶんの余白がずれることがあるため、
-    /// VisualBrush で中身を描き直す。地色は Window 側が持っているので先に敷く。
-    /// </summary>
-    internal PngBitmapEncoder CaptureWindow()
-    {
-        var root = (FrameworkElement)Content;
-        var area = new Rect(new Size(root.ActualWidth, root.ActualHeight));
-
-        var visual = new DrawingVisual();
-        using (DrawingContext context = visual.RenderOpen())
-        {
-            context.DrawRectangle(Background, null, area);
-            context.DrawRectangle(new VisualBrush(root), null, area);
-        }
-
-        DpiScale dpi = VisualTreeHelper.GetDpi(this);
-        var bitmap = new RenderTargetBitmap(
-            (int)Math.Ceiling(area.Width * dpi.DpiScaleX),
-            (int)Math.Ceiling(area.Height * dpi.DpiScaleY),
-            dpi.PixelsPerInchX,
-            dpi.PixelsPerInchY,
-            PixelFormats.Pbgra32);
-        bitmap.Render(visual);
-
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        return encoder;
-    }
-
-    /// <summary>結果はボタンの文字で 2 秒だけ知らせる。トーストや別窓は出さない。</summary>
-    private void ShowScreenshotResult(string text)
-    {
-        ScreenshotButton.Content = text;
-
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            ScreenshotButton.Content = "📷 画面";
-        };
-        timer.Start();
-    }
+    /// <summary>開始したら測定の画面へ移る。押した場所がどのタブでも、見たいのは結果。</summary>
+    private void OnStartClicked(object sender, RoutedEventArgs e) => PingTab.IsSelected = true;
 
     private void OnThemeToggle(object sender, RoutedEventArgs e)
     {
