@@ -82,6 +82,13 @@
                 <controls:Sparkline Grid.Column="5" Source="{Binding}" Margin="8,3,0,3"
                                     LineBrush="{DynamicResource Brush.Chart.Line}"
                                     LostBrush="{DynamicResource Brush.Error.Fg}" />
+
+                <!-- 列の区切り線。行の区切り線と同じ淡さの縦線で、境目を目で追えるようにする -->
+                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
             </Grid>
 
             <DataTemplate.Triggers>
@@ -497,6 +504,13 @@
                                 <TextBlock Grid.Column="3" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                                 <TextBlock Grid.Column="4" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                                 <TextBlock Grid.Column="5" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
+
+                                <!-- 列の区切り線(行側と同じ色)。スプリッタの位置の目印にもなる -->
+                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
 
                                 <!--
                                     列幅の変更。ヘッダの境目を掴んで動かす。
