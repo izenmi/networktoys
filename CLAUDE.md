@@ -50,6 +50,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 
 - **`Style` の `Setter` の中に、イベントハンドラを持つ要素を置かない。** `<Setter Property="ContextMenu">` の下に `Click="..."` 付きの `MenuItem` を書くと、**ビルドは通り、起動した瞬間に `XamlParseException: Set connectionId threw an exception` で落ちる**（`MenuItem` を `Grid` にキャストできない、のように無関係な型が出る）。リソースは後から展開されるのに、結線の番号は文書順で振られるためずれる。`ControlTemplate` / `DataTemplate` の中は独自の結線を持つので安全。**メニューはテンプレートの中の要素に付ける**こと。
 - **既定スタイルを持つコントロールは、色を継承してくれない。** `ListBox` / `ListView` の既定スタイルは `Foreground` にシステム色（＝黒）を入れるため、暗い配色にしても行の中の `TextBlock` だけ黒く残る（`ItemsControl` は既定スタイルを持たないので継承される）。暗黙スタイルで上書きすること。**キー付きスタイルは暗黙スタイルを継承しない**ので、`BasedOn="{StaticResource {x:Type ListBox}}"` を明示する。`ContextMenu` / `MenuItem` / `ToolTip` も同様にシステム色で描かれる。
+- **既定のテンプレートが敷いている装飾は、色を指定しても消えない。** `ContextMenu` は左端にアイコン用の白い帯を持っており、`Background` を変えても残る。項目を自前で描くならテンプレートごと差し替えること。**メニュー内の区切り線は `{x:Static MenuItem.SeparatorStyleKey}` という専用のキーで引かれる**ので、`Separator` の暗黙スタイルは当たらない。
 - **`ComboBox` の閉じているときの表示に `DisplayMemberPath` は効かない。** 選択中の項目は `SelectionBoxItemTemplate` 経由で描かれるため、**型名がそのまま出る**。ドロップダウンを開いたときだけ正しく見えるので気づきにくい。`ItemTemplate` を明示すること。
 - **測定結果ごとに `Dispatcher.Invoke` しない。** 500 宛先 × 1Hz = 500 通知/秒で UI が溶ける。`Channel<T>` に積んで 10Hz の単一ポンプでまとめて適用する。
 - `ObservableCollection` の**構造変化は宛先の追加/削除時のみ**。測定結果は既存の行 VM のプロパティ更新として流す。
@@ -60,6 +61,23 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **状態は色だけで表さない。** 緑と赤は色覚多様性下で潰れる。`● 応答` / `▲ 遅延` / `✕ 不達` のように記号と文字を必ず併記し、色は補助にとどめる。
 - **地色と文字色はパレット表のペアで使う。** 地色を敷くのは状態バッジだけ。数値は文字色のみで表現する。
 - グラフで **RTT と損失率を 2 軸で重ねない**。存在しない相関を作り出す。分けて描く。
+
+## アイコン
+
+元は `src/PingWatcher.App/Resources/AppIcon.svg`（見張るふくろう、瞳が ping の波紋）。
+`tools/icon/build_icon.sh` を**手で実行**して 16〜256px の 9 サイズを焼き、`.ico` にまとめる
+（CI に入れると ImageMagick を毎回入れることになるので入れていない）。
+
+- **24px 以下は `AppIcon.Small.svg` から焼く。** 通常版を縮めると瞳の細い輪が潰れて全体がぼやける。
+  小さいところは輪を捨て、目・耳・くちばしを大きくした別の絵にしてある。1 枚で全サイズを賄わない。
+- 埋め込みは csproj の `ApplicationIcon`。**指定漏れやパスの誤りはビルドを通る**ので、
+  自己診断が `shell32` の `ExtractIconEx` で exe から数えて確かめている
+  （`System.Drawing` は `UseWPF` だけでは参照されないため使えない）。
+
+## 設定の保存先
+
+`%APPDATA%\PingWatcher\`。`AppData.PathOf()` を通すこと。
+旧名 `PastelNet` のフォルダがあれば初回に一度だけ複製して引き継ぐ（移動ではない）。
 
 ## 構成
 
