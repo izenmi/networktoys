@@ -896,7 +896,17 @@
                                 <CheckBox Content="違う行だけ" IsChecked="{Binding OnlyDifferences}"
                                           VerticalAlignment="Center" Margin="0,0,12,0" />
                                 <CheckBox Content="毎回変わる行を隠す" IsChecked="{Binding HideNoise}"
-                                          VerticalAlignment="Center" />
+                                          VerticalAlignment="Center" Margin="0,0,12,0" />
+
+                                <!-- 差分をたどる。長い設定では目で探すのが現実的でない -->
+                                <Button Content="◀ 前の差分" Command="{Binding PreviousDifferenceCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,4,0"
+                                        ToolTip="前の差分へ移ります。先頭まで来たら末尾へ回ります。" />
+                                <Button Content="次の差分 ▶" Command="{Binding NextDifferenceCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,8,0"
+                                        ToolTip="次の差分へ移ります。末尾まで来たら先頭へ回ります。" />
+                                <TextBlock Text="{Binding PositionText}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" />
                             </StackPanel>
 
                             <TextBlock Text="{Binding ModeHint}" Style="{StaticResource Caption}"
@@ -1043,8 +1053,10 @@
                                         Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
                                 <!-- 左右並置。1 つのスクロールに収めるので、左右がずれない -->
-                                <ListBox ItemsSource="{Binding Rows}"
+                                <ListBox x:Name="DiffList"
+                                         ItemsSource="{Binding Rows}"
                                          ItemContainerStyle="{StaticResource CompactRowContainer}"
+                                         SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
                                          Background="Transparent" BorderThickness="0"
                                          HorizontalContentAlignment="Stretch"
                                          ScrollViewer.HorizontalScrollBarVisibility="Auto"

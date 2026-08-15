@@ -25,6 +25,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
     private bool _isEditing = true;
     private string _note = string.Empty;
     private DeviceOutputKind _mode = DeviceOutputKind.RouteTable;
+    private int _selectedIndex = -1;
 
     public DeviceCompareViewModel()
     {
@@ -34,6 +35,9 @@ public sealed class DeviceCompareViewModel : ObservableObject
         ClearCommand = new RelayCommand(Clear);
         LoadBeforeCommand = new RelayCommand(() => LoadInto(before: true));
         LoadAfterCommand = new RelayCommand(() => LoadInto(before: false));
+
+        NextDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: true), () => DifferenceCount > 0);
+        PreviousDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: false), () => DifferenceCount > 0);
     }
 
     /// <summary>左右に並べた差分。</summary>
@@ -41,6 +45,87 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
     /// <summary>構造として比べたときの変化。対象によっては空（show run など）。</summary>
     public ObservableCollection<DeviceChange> Changes { get; } = [];
+
+    public RelayCommand NextDifferenceCommand { get; }
+    public RelayCommand PreviousDifferenceCommand { get; }
+
+    /// <summary>
+    /// いま見ている行。移動ボタンがここを動かし、一覧が追いかける。
+    /// 一覧側の選択も同じ値を書き戻すので、クリックで選んでから
+    /// 「次へ」を押すと、その位置の続きから進む。
+    /// </summary>
+    public int SelectedIndex
+    {
+        get => _selectedIndex;
+        set
+        {
+            if (SetProperty(ref _selectedIndex, value))
+                OnPropertyChanged(nameof(PositionText));
+        }
+    }
+
+    /// <summary>表示している行のうち、差のあるものの数。</summary>
+    public int DifferenceCount => Rows.Count(r => r.IsDifferent);
+
+    /// <summary>「3 / 12 か所目」のような現在位置。どこまで見たかが分かる。</summary>
+    public string PositionText
+    {
+        get
+        {
+            int total = DifferenceCount;
+            if (total == 0) return string.Empty;
+
+            // 選んでいる行が差分なら何番目かを出す。そうでなければ総数だけ
+            if (SelectedIndex < 0 || SelectedIndex >= Rows.Count || !Rows[SelectedIndex].IsDifferent)
+                return $"差分 {total} か所";
+
+            int ordinal = 0;
+            for (int i = 0; i <= SelectedIndex; i++)
+            {
+                if (Rows[i].IsDifferent) ordinal++;
+            }
+
+            return $"{ordinal} / {total} か所目";
+        }
+    }
+
+    private void RefreshDifferenceState()
+    {
+        OnPropertyChanged(nameof(DifferenceCount));
+        OnPropertyChanged(nameof(PositionText));
+        NextDifferenceCommand.RaiseCanExecuteChanged();
+        PreviousDifferenceCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// 次（前）の差分へ移る。端まで来たら反対の端へ回り込む。
+    /// 長い設定を見ているときに、端で止まって押し直すのは煩わしい。
+    /// </summary>
+    private void MoveToDifference(bool forward)
+    {
+        if (Rows.Count == 0) return;
+
+        int step = forward ? 1 : -1;
+        int start = SelectedIndex < 0 ? (forward ? -1 : Rows.Count) : SelectedIndex;
+
+        for (int offset = 1; offset <= Rows.Count; offset++)
+        {
+            int index = ((start + (step * offset)) % Rows.Count + Rows.Count) % Rows.Count;
+
+            if (Rows[index].IsDifferent)
+            {
+                SelectedIndex = index;
+                RequestScrollIntoView?.Invoke(this, index);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 移った先を見えるところへ持ってきてほしい、という合図。
+    /// スクロールは画面側の仕事なので、ここでは頼むだけにする。
+    /// </summary>
+    public event EventHandler<int>? RequestScrollIntoView;
 
     public RelayCommand CompareCommand { get; }
     public RelayCommand EditCommand { get; }
@@ -224,6 +309,10 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
         HasResult = true;
         IsEditing = false;
+
+        // 比較し直したら先頭から見る
+        SelectedIndex = -1;
+        RefreshDifferenceState();
     }
 
     private void Swap()
@@ -244,6 +333,9 @@ public sealed class DeviceCompareViewModel : ObservableObject
         HasResult = false;
         IsEditing = true;
         Status = "作業前と作業後の出力を貼り付けて「比較」を押してください。";
+
+        SelectedIndex = -1;
+        RefreshDifferenceState();
     }
 
     /// <summary>ログをファイルで持っている場合のために、読み込みも用意する。</summary>

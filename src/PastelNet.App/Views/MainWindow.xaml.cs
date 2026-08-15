@@ -15,6 +15,21 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _shell;
         UpdateThemeToggle();
+
+        _shell.DeviceCompare.RequestScrollIntoView += OnScrollDiffIntoView;
+    }
+
+    /// <summary>
+    /// 差分をたどるとき、移った先を見えるところへ持ってくる。
+    ///
+    /// 一覧は仮想化しているので、まだ実体のない行は <see cref="ListBox.ScrollIntoView"/> に
+    /// 任せる（内部でスクロールしてから実体を作ってくれる）。
+    /// </summary>
+    private void OnScrollDiffIntoView(object? sender, int index)
+    {
+        if (index < 0 || index >= DiffList.Items.Count) return;
+
+        DiffList.ScrollIntoView(DiffList.Items[index]);
     }
 
     /// <summary>
