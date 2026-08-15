@@ -899,11 +899,12 @@
 
                             <TextBlock Text="{Binding ModeHint}" Style="{StaticResource Caption}"
                                        TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding Note}" Style="{StaticResource Caption}"
-                                       TextWrapping="Wrap" Margin="0,2,0,0"
-                                       Foreground="{DynamicResource Brush.Warn.Fg}">
+                            <!-- 読むときの注意。Style は属性と要素の両方には書けないので、
+                                 見た目もまとめてここで指定する -->
+                            <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,2,0,0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HasNote}" Value="True">
