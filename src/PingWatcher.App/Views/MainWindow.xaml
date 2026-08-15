@@ -468,7 +468,6 @@
                                 CornerRadius="{DynamicResource Radius.Control}" Padding="7,5" Margin="0,0,0,5">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
-                                    1 行に 1 宛先。アドレスの後ろに<Run FontWeight="Medium">半角スペース</Run>を空けると、そこから行末までが備考になります。
                                     行頭が <Run FontWeight="Medium">#</Run> <Run FontWeight="Medium">;</Run> <Run FontWeight="Medium">'</Run> 全角スペース の行は注釈として読み飛ばします。
                                 </TextBlock>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0">
@@ -477,15 +476,12 @@
                                     <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.1-192.168.1.50</Run> ／
                                     <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.0/24</Run>
                                 </TextBlock>
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0">
-                                    ここは ICMP で測る宛先です。TCP 接続で測りたい相手は「TCP」タブで別に管理します（ping が塞がれている相手の確認に使えます）。
-                                </TextBlock>
                             </StackPanel>
                         </Border>
 
                         <StackPanel DockPanel.Dock="Bottom" Margin="0,5,0,0">
                             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                       Text="書き換えると自動で反映されます（測定は止まりません。増えた宛先だけ測り始め、消えた宛先だけ止めます）。解釈できない行がある間は反映を保留します。" />
+                                       Text="書き換えると自動で反映されます。" />
                             <TextBlock Text="{Binding ListSummary}" Style="{StaticResource Caption}"
                                        TextWrapping="Wrap" Margin="0,6,0,0" />
                         </StackPanel>
