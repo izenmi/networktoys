@@ -57,6 +57,11 @@
     <!-- IEEE の MA-L 登録簿から作った OUI テーブル。初回の MAC 解決時にだけ展開する。
          更新は tools/oui/build_oui.py を手で実行する。 -->
     <EmbeddedResource Include="Resources/oui.tsv.gz" />
+
+    <!-- 埋め込みフォント。Noto Sans JP(サブセット OTF, family="Noto Sans JP")。
+         端末に入っていなくても同じ字面になるよう exe に同梱する。
+         Resource ビルドアクションが必須(Content だと FontFamily から引けない)。 -->
+    <Resource Include="Resources/Fonts/NotoSansJP-Regular.otf" />
   </ItemGroup>
 
   <ItemGroup>

@@ -523,6 +523,23 @@ internal static class SelfTest
             log.AppendLine($"        テキスト記録: {text.Split('\n').Length} 行");
         });
 
+        Check("埋め込みフォント(Noto Sans JP)が読める", () =>
+        {
+            // exe に同梱した OTF が FontFamily から引けること。ビルドアクションが
+            // Resource でないと 0 件になり、静かに游ゴシックへ落ちる
+            var family = new System.Windows.Media.FontFamily(
+                new Uri("pack://application:,,,/"), "./Resources/Fonts/#Noto Sans JP");
+
+            bool loaded = family.GetTypefaces().Count > 0;
+            Assert(loaded, "Noto Sans JP を埋め込みから引けない（ビルドアクションが Resource か確認）");
+
+            // 実際に日本語グリフで整形できるところまで見る
+            var typeface = new Typeface(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+            var probe = new FormattedText("応答 12.4 ms", System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight, typeface, 13, Brushes.Black, 1.0);
+            Assert(probe.Width > 0, "埋め込みフォントで整形できない");
+        });
+
         Check("日本語テキストを整形できる(フォント初期化の確認)", () =>
         {
             var text = new FormattedText(

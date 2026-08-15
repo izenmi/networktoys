@@ -12,9 +12,9 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
     <!-- 書体 -->
-    <!-- Noto Sans を優先。入っていない環境では游ゴシック系へフォールバックする
-         （TTF は同梱していないので、Noto Sans / Noto Sans JP が導入済みの端末で効く） -->
-    <FontFamily x:Key="Font.Ui">Noto Sans JP, Noto Sans, Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
+    <!-- 埋め込みの Noto Sans JP を最優先。exe に同梱してあるので端末に無くても効く。
+         #以降は OTF 内部の family 名(Noto Sans JP)。念のため未解決時は游ゴシック系へ -->
+    <FontFamily x:Key="Font.Ui">./Resources/Fonts/#Noto Sans JP, Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
     <!-- 等幅。日本語の受け皿に MS ゴシックを置くとビットマップ調で古臭くなるので、
          BIZ UD が無い環境では UI と同じ游ゴシック系に落とす(全角は幅が揃うので実害がない) -->
     <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, Yu Gothic UI, Meiryo UI</FontFamily>
