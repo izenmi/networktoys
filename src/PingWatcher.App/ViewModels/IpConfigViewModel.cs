@@ -57,6 +57,9 @@ public sealed class IpConfigViewModel : ObservableObject
 
     public ObservableCollection<IpPreset> Presets { get; } = [];
 
+    /// <summary>同じタブに置くプロキシ設定のセクション。</summary>
+    public ProxyViewModel Proxy { get; } = new();
+
     public RelayCommand SavePresetCommand { get; }
     public RelayCommand DeletePresetCommand { get; }
     public RelayCommand RefreshCommand { get; }
@@ -175,7 +178,11 @@ public sealed class IpConfigViewModel : ObservableObject
     }
 
     /// <summary>タブが表示されたときに呼ばれる。列挙は選択時だけで、タイマーは持たない。</summary>
-    public void OnActivated() => RefreshAdapters();
+    public void OnActivated()
+    {
+        RefreshAdapters();
+        Proxy.Refresh();
+    }
 
     public void RefreshAdapters()
     {
@@ -266,6 +273,7 @@ public sealed class IpConfigViewModel : ObservableObject
         ResultText = "";
         _hasError = false;
         OnPropertyChanged(nameof(CanApply));
+        Proxy.Reset();
     }
 
     private void SavePreset()

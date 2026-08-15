@@ -309,6 +309,31 @@ internal static class NativeMethods
     private static string FormatIpv6(byte[] address, uint scopeId)
         => (scopeId == 0 ? new IPAddress(address) : new IPAddress(address, scopeId)).ToString();
 
+    private const int InternetOptionRefresh = 37;          // INTERNET_OPTION_REFRESH
+    private const int InternetOptionSettingsChanged = 39;  // INTERNET_OPTION_SETTINGS_CHANGED
+
+    [DllImport("wininet.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool InternetSetOption(IntPtr handle, int option, IntPtr buffer, int bufferLength);
+
+    /// <summary>
+    /// プロキシ設定(レジストリ)を書き換えたことを WinINET に伝える。
+    /// 伝えないと、動作中のブラウザなどが再起動まで古い設定を使い続ける。
+    /// 失敗しても書き込み自体は済んでいるので、戻り値は見ない。
+    /// </summary>
+    public static void RefreshProxySettings()
+    {
+        try
+        {
+            InternetSetOption(IntPtr.Zero, InternetOptionSettingsChanged, IntPtr.Zero, 0);
+            InternetSetOption(IntPtr.Zero, InternetOptionRefresh, IntPtr.Zero, 0);
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+        {
+            // wininet が無い環境でも設定の書き込みは有効。反映が遅れるだけ
+        }
+    }
+
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern int ExtractIconExW(string file, int index, IntPtr[]? large, IntPtr[]? small, int count);
 

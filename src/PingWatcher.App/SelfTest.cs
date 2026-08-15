@@ -373,6 +373,13 @@ internal static class SelfTest
             log.AppendLine($"        TCP {tcp} / UDP {udp} / {processes} プロセス");
         });
 
+        Check("IP設定: プロキシ設定を読める", () =>
+        {
+            // 読むだけ。書き込み(ProxySettings.Apply)はランナーの設定を汚すので呼ばない
+            Services.ProxyState state = Services.ProxySettings.Read();
+            log.AppendLine($"        {state.Summary}");
+        });
+
         Check("IP設定: アダプタを列挙できる(件数は問わない)", () =>
         {
             // ElevatedNetsh はここから絶対に呼ばない。CI ランナーは管理者なので

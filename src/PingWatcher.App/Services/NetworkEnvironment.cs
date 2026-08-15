@@ -39,8 +39,9 @@ internal sealed record NetworkSnapshot(
 /// <summary>
 /// IP 設定タブに出すアダプタ 1 枚ぶん。<see cref="Name"/> は netsh の
 /// <c>name=</c> にそのまま使う接続名。
+/// (public なのは IpConfigViewModel の公開プロパティに載るため)
 /// </summary>
-internal sealed record NetworkAdapterInfo(
+public sealed record NetworkAdapterInfo(
     string Name,
     string Description,
     bool IsUp,
