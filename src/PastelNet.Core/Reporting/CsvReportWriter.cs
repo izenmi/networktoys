@@ -20,8 +20,7 @@ public static class CsvReportWriter
         AppendRow(csv,
             "宛先", "IP", "種別", "備考",
             "試行", "成功", "ロス率(%)",
-            "最小(ms)", "平均(ms)", "最大(ms)", "p95(ms)", "ジッタ(ms)",
-            "MOS", "品質");
+            "最小(ms)", "平均(ms)", "最大(ms)", "ジッタ(ms)");
 
         foreach (ReportRow row in data.Rows)
         {
@@ -36,10 +35,7 @@ public static class CsvReportWriter
                 Number(row.Statistics.MinMs),
                 Number(row.Statistics.AverageMs),
                 Number(row.Statistics.MaxMs),
-                Number(row.Statistics.P95Ms),
-                Number(row.Statistics.JitterMs),
-                row.Mos.ToString("0.0", CultureInfo.InvariantCulture),
-                row.MosGrade);
+                Number(row.Statistics.JitterMs));
         }
 
         return csv.ToString();

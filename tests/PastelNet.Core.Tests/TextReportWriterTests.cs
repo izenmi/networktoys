@@ -24,8 +24,6 @@ public class TextReportWriterTests
             "ICMP",
             new RttStatistics(attempts, successes, attempts == 0 ? 0 : 100.0 * (attempts - successes) / attempts,
                               1.0, 1.4, 8.0, 2.0, 0.3),
-            4.4,
-            "非常に良い",
             [1, 2, 1],
             state,
             isDown);

@@ -7,7 +7,6 @@ using PastelNet.App.Mvvm;
 using PastelNet.App.Services;
 using PastelNet.Core.Metrics;
 using PastelNet.Core.Models;
-using PastelNet.Core.Quality;
 using PastelNet.Core.Storage;
 using PastelNet.Core.Work;
 
@@ -212,7 +211,7 @@ public sealed class MonitorViewModel : ObservableObject
 
     /// <summary>
     /// 選択した行の詳しい統計。一覧に列を増やすと見通しが悪くなるので、
-    /// ジッタや MOS のような「必要なときだけ見たい値」はここに出す。
+    /// ジッタのような「必要なときだけ見たい値」はここに出す。
     /// </summary>
     public string DetailText
     {
@@ -390,18 +389,14 @@ public sealed class MonitorViewModel : ObservableObject
             return;
         }
 
-        VoiceQuality quality = MosCalculator.Estimate(stats.AverageMs, stats.JitterMs, stats.LossPercent);
-
         DetailText = string.Join("　　", (string[])
         [
             row.Host,
             $"最小 {TargetRowViewModel.FormatMilliseconds(stats.MinMs)}",
             $"平均 {TargetRowViewModel.FormatMilliseconds(stats.AverageMs)}",
             $"最大 {TargetRowViewModel.FormatMilliseconds(stats.MaxMs)}",
-            $"p95 {TargetRowViewModel.FormatMilliseconds(stats.P95Ms)}",
             $"ジッタ {TargetRowViewModel.FormatMilliseconds(stats.JitterMs)}",
             $"ロス {TargetRowViewModel.FormatLoss(stats.LossPercent)}（{stats.Attempts - stats.Successes} / {stats.Attempts} 回）",
-            $"通話品質の目安 MOS {quality.Mos:0.0}（{quality.Grade}）",
         ]);
     }
 

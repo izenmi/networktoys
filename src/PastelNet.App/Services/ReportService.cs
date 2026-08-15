@@ -3,7 +3,6 @@ using System.Text;
 using PastelNet.App.ViewModels;
 using PastelNet.Core.Metrics;
 using PastelNet.Core.Models;
-using PastelNet.Core.Quality;
 using PastelNet.Core.Reporting;
 using PastelNet.Core.Work;
 
@@ -44,7 +43,6 @@ internal static class ReportService
             }
 
             RttStatistics stats = row.Statistics;
-            VoiceQuality quality = MosCalculator.Estimate(stats.AverageMs, stats.JitterMs, stats.LossPercent);
 
             reportRows.Add(new ReportRow(
                 row.Host,
@@ -52,8 +50,6 @@ internal static class ReportService
                 row.Comment,
                 DescribeKind(row.Target, describeKind),
                 stats,
-                quality.Mos,
-                quality.Grade,
                 samples,
                 DescribeState(row.State),
                 row.IsDown));

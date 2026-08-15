@@ -21,8 +21,6 @@ public class ReportWriterTests
                 comment,
                 "ICMP",
                 new RttStatistics(100, 98, 2, 1.0, 1.4, 8.0, 2.0, 0.3),
-                4.4,
-                "非常に良い",
                 [1, 2, 1, 3, 1]),
         ],
         IpConfig: ipConfig);

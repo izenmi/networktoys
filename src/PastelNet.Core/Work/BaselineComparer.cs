@@ -255,7 +255,7 @@ public static class BaselineComparer
         if (IsSlower(before.AverageMs, after.AverageMs, options) || IsSlower(before.P95Ms, after.P95Ms, options))
         {
             return Make(WorkVerdict.Slower,
-                $"応答が遅くなりました（平均 {before.AverageMs:0.#} → {after.AverageMs:0.#} ms、p95 {before.P95Ms:0.#} → {after.P95Ms:0.#} ms）。");
+                $"応答が遅くなりました（平均 {before.AverageMs:0.#} → {after.AverageMs:0.#} ms）。");
         }
 
         if (IsSlower(after.AverageMs, before.AverageMs, options))

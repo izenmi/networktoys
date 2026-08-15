@@ -70,8 +70,8 @@ public static class HtmlReportWriter
                 .Append("<th>宛先</th><th>IP</th><th>種別</th>")
                 .Append("<th class=\"num\">試行</th><th class=\"num\">ロス</th>")
                 .Append("<th class=\"num\">最小</th><th class=\"num\">平均</th><th class=\"num\">最大</th>")
-                .Append("<th class=\"num\">p95</th><th class=\"num\">ジッタ</th>")
-                .Append("<th class=\"num\">MOS</th><th>推移</th><th>備考</th>")
+                .Append("<th class=\"num\">ジッタ</th>")
+                .Append("<th>推移</th><th>備考</th>")
                 .Append("</tr></thead>\n<tbody>\n");
 
             foreach (ReportRow row in data.Rows)
@@ -94,10 +94,7 @@ public static class HtmlReportWriter
                     .Append("<td class=\"num\">").Append(FormatMs(stats.MinMs)).Append("</td>")
                     .Append("<td class=\"num\">").Append(FormatMs(stats.AverageMs)).Append("</td>")
                     .Append("<td class=\"num\">").Append(FormatMs(stats.MaxMs)).Append("</td>")
-                    .Append("<td class=\"num\">").Append(FormatMs(stats.P95Ms)).Append("</td>")
                     .Append("<td class=\"num\">").Append(FormatMs(stats.JitterMs)).Append("</td>")
-                    .Append("<td class=\"num\">").Append(row.Mos.ToString("0.0", CultureInfo.InvariantCulture))
-                    .Append("<span class=\"grade\">").Append(Escape(row.MosGrade)).Append("</span></td>")
                     .Append("<td class=\"spark-cell\">").Append(SvgSparkline.Render(row.Samples)).Append("</td>")
                     .Append("<td>").Append(Escape(row.Comment)).Append("</td>")
                     .Append("</tr>\n");
@@ -116,9 +113,6 @@ public static class HtmlReportWriter
                 .Append(Escape(data.IpConfig))
                 .Append("</pre>\n");
         }
-
-        html.Append("<p class=\"footnote\">MOS 値は遅延・ジッタ・損失から算出した<strong>推定値</strong>です")
-            .Append("（ITU-T G.107 の E-model の簡易版）。実際の音声品質はコーデックや機器にも左右されます。</p>\n");
 
         html.Append("<p class=\"footnote\">PastelNet で出力しました。</p>\n");
         html.Append("</body>\n</html>\n");

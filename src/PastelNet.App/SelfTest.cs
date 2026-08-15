@@ -342,7 +342,7 @@ internal static class SelfTest
                 [new Core.Reporting.ReportRow(
                     "127.0.0.1", "127.0.0.1", "1階 EPS", "ICMP",
                     new Core.Metrics.RttStatistics(10, 0, 100, 0, 0, 0, 0, 0),
-                    1.0, "悪い", [], "不達", true)],
+                    [], "不達", true)],
                 IpConfig: "Windows IP 構成",
                 Wireless: [("SSID", "office")]);
 

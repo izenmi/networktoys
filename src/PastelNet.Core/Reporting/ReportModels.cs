@@ -8,8 +8,6 @@ namespace PastelNet.Core.Reporting;
 /// <param name="Comment">備考。</param>
 /// <param name="Kind">ICMP / TCP:ポート の別。</param>
 /// <param name="Statistics">RTT の統計。</param>
-/// <param name="Mos">推定 MOS 値。</param>
-/// <param name="MosGrade">MOS の言い換え。</param>
 /// <param name="Samples">スパークラインに描く RTT の列。</param>
 /// <param name="State">
 /// 出力した時点の状態（応答／不達 など）。統計だけでは「いま落ちているのか、
@@ -22,8 +20,6 @@ public sealed record ReportRow(
     string Comment,
     string Kind,
     RttStatistics Statistics,
-    double Mos,
-    string MosGrade,
     IReadOnlyList<double> Samples,
     string State = "",
     bool IsDown = false)
