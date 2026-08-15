@@ -25,11 +25,14 @@
         -->
         <GridLength x:Key="ColW.Ping.State">66</GridLength>
         <GridLength x:Key="ColW.Ping.Host">158</GridLength>
-        <GridLength x:Key="ColW.Ping.Address">112</GridLength>
+        <!-- IPv4 の最長 255.255.255.255 (15桁) が Consolas 12px で約 99px。それに合わせて詰める -->
+        <GridLength x:Key="ColW.Ping.Address">102</GridLength>
         <GridLength x:Key="ColW.Ping.Rtt">62</GridLength>
         <GridLength x:Key="ColW.Ping.Average">62</GridLength>
         <GridLength x:Key="ColW.Ping.Loss">48</GridLength>
-        <GridLength x:Key="ColW.Ping.Comment">180</GridLength>
+        <!-- 推移は傾向が読めれば足りるので固定幅。余った幅は備考に回す
+             (以前は逆で、窓を広げてもグラフだけが伸びて備考は 180px のままだった) -->
+        <GridLength x:Key="ColW.Ping.Spark">110</GridLength>
 
         <!-- 一覧 1 行。列幅は上の定義を見出しと共有している -->
         <DataTemplate x:Key="TargetRowTemplate">
@@ -41,8 +44,8 @@
                     <ColumnDefinition Width="{StaticResource ColW.Ping.Rtt}" />
                     <ColumnDefinition Width="{StaticResource ColW.Ping.Average}" />
                     <ColumnDefinition Width="{StaticResource ColW.Ping.Loss}" />
-                    <ColumnDefinition Width="*" MinWidth="100" />
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.Comment}" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.Spark}" />
+                    <ColumnDefinition Width="*" MinWidth="180" />
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="Badge"
@@ -81,7 +84,8 @@
 
                 <TextBlock Grid.Column="7" Text="{Binding Comment}"
                            Style="{StaticResource Caption}"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Comment}" />
             </Grid>
 
             <DataTemplate.Triggers>
@@ -137,11 +141,12 @@
                     Background="{DynamicResource Brush.Surface}">
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <!-- 備考を優先して広く取る。宛先(IP)は残り幅、推移は傾向が読める最小限 -->
                         <ColumnDefinition Width="12" />
                         <ColumnDefinition Width="*" MinWidth="56" />
-                        <ColumnDefinition Width="84" />
+                        <ColumnDefinition Width="104" />
                         <ColumnDefinition Width="46" />
-                        <ColumnDefinition Width="52" />
+                        <ColumnDefinition Width="44" />
                     </Grid.ColumnDefinitions>
 
                     <TextBlock x:Name="Mark" Grid.Column="0"
@@ -631,8 +636,8 @@
                                     <ColumnDefinition Width="{StaticResource ColW.Ping.Rtt}" />
                                     <ColumnDefinition Width="{StaticResource ColW.Ping.Average}" />
                                     <ColumnDefinition Width="{StaticResource ColW.Ping.Loss}" />
-                                    <ColumnDefinition Width="*" MinWidth="100" />
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Comment}" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Spark}" />
+                                    <ColumnDefinition Width="*" MinWidth="180" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
                                 <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
