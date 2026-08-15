@@ -116,7 +116,7 @@
 
         <!--
             右クリックメニューを持たない行コンテナ。
-            スキャン結果・周辺 AP・作業比較・機器比較の一覧はこちらを使う。
+            スキャン結果・周辺 AP・作業比較・差分比較の一覧はこちらを使う。
             メニュー付きのコンテナを流用すると、DataContext の型が違うため
             「経路を調べる」などを押しても無反応のメニューが出てしまう。
         -->
@@ -146,7 +146,7 @@
             </Setter>
         </Style>
 
-        <!-- 上の枠付き版。機器比較の差分一覧が使う（選択を枠で示す） -->
+        <!-- 上の枠付き版。差分比較の一覧が使う（選択を枠で示す） -->
         <Style x:Key="PlainCompactContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
             <Setter Property="Template">
                 <Setter.Value>
@@ -965,8 +965,8 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== 機器比較（show ip route / show run を作業前後で見比べる） ===== -->
-            <TabItem Header="機器比較" DataContext="{Binding DeviceCompare}">
+            <!-- ===== 差分比較（show ip route / show run を作業前後で見比べる） ===== -->
+            <TabItem Header="差分比較" DataContext="{Binding DeviceCompare}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
