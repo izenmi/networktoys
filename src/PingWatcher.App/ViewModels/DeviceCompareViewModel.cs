@@ -24,7 +24,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
     private bool _hasResult;
     private bool _isEditing = true;
     private string _note = string.Empty;
-    private DeviceOutputKind _mode = DeviceOutputKind.RouteTable;
+    private DeviceOutputKind _mode = DeviceOutputKind.Configuration;   // 既定は show run（ユーザー指示）
     private int _selectedIndex = -1;
 
     private DeviceEntryViewModel _selectedDevice;
@@ -218,8 +218,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
     /// </summary>
     public DeviceModeViewModel[] Modes { get; } =
     [
-        new(DeviceOutputKind.RouteTable, "show ip route"),
         new(DeviceOutputKind.Configuration, "show run"),
+        new(DeviceOutputKind.RouteTable, "show ip route"),
         new(DeviceOutputKind.PlainText, "そのまま比較"),
     ];
 
