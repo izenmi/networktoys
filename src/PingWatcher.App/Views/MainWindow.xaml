@@ -681,24 +681,25 @@
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
+                        <!-- 起動幅では 1 行ぎりぎりなので折り返せるようにしておく -->
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,5">
                             <TextBlock Text="宛先" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,6,0" />
+                                       VerticalAlignment="Center" Margin="0,0,6,2" />
                             <TextBox Width="240"
                                      Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,6,0" />
-                            <Button Content="経路を調べる" Command="{Binding TraceCommand}" Margin="0,0,6,0" />
+                                     Margin="0,0,6,2" />
+                            <Button Content="経路を調べる" Command="{Binding TraceCommand}" Margin="0,0,6,2" />
                             <Button Content="MTU を調べる" Command="{Binding MtuCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                     ToolTip="経路上で分割せずに通る最大パケットサイズを二分探索で求めます。" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,0" />
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,2" />
                             <CheckBox Content="60秒ごとに見張る" IsChecked="{Binding IsWatching}"
-                                      VerticalAlignment="Center" Margin="0,0,10,0"
+                                      VerticalAlignment="Center" Margin="0,0,10,2"
                                       ToolTip="定期的に経路を調べ直し、変わったら下に記録します。" />
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        </WrapPanel>
 
                         <!-- 経路が変わった記録 -->
                         <Border DockPanel.Dock="Bottom" Margin="0,6,0,0" MaxHeight="96"
@@ -811,8 +812,11 @@
 
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
                             <StackPanel Orientation="Horizontal">
+                                <!-- SSID が長い環境でボタンが押し出されないよう幅を抑える -->
                                 <TextBlock Text="{Binding ConnectionSummary}"
-                                           VerticalAlignment="Center" Margin="0,0,12,0" />
+                                           VerticalAlignment="Center" Margin="0,0,12,0"
+                                           MaxWidth="280" TextTrimming="CharacterEllipsis"
+                                           ToolTip="{Binding ConnectionSummary}" />
                                 <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,6,0" />
                                 <Button Content="保存" Command="{Binding SaveCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,10,0"
@@ -1393,26 +1397,27 @@
 
                         <!-- 操作 -->
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
-                            <StackPanel Orientation="Horizontal">
+                            <!-- 起動幅では 1 行に収まらないので折り返す -->
+                            <WrapPanel>
                                 <TextBlock Text="範囲" Style="{StaticResource Caption}"
-                                           VerticalAlignment="Center" Margin="0,0,6,0" />
+                                           VerticalAlignment="Center" Margin="0,0,6,2" />
                                 <TextBox Width="260"
                                          Text="{Binding RangeText, UpdateSourceTrigger=PropertyChanged}"
                                          FontFamily="{DynamicResource Font.Mono}"
-                                         Margin="0,0,8,0" />
+                                         Margin="0,0,8,2" />
                                 <TextBlock Text="{Binding Preview}" Style="{StaticResource Caption}"
-                                           VerticalAlignment="Center" Margin="0,0,12,0" />
+                                           VerticalAlignment="Center" Margin="0,0,12,2" />
                                 <CheckBox Content="ホスト名を引く" IsChecked="{Binding ResolveNames}"
-                                          VerticalAlignment="Center" Margin="0,0,12,0" />
+                                          VerticalAlignment="Center" Margin="0,0,12,2" />
                                 <CheckBox Content="ポートも調べる" IsChecked="{Binding ScanPorts}"
-                                          VerticalAlignment="Center" Margin="0,0,12,0"
+                                          VerticalAlignment="Center" Margin="0,0,12,2"
                                           ToolTip="よく使う22ポートだけを調べます。ウイルス対策ソフトが反応する場合があります。" />
-                                <Button Content="スキャン" Command="{Binding ScanCommand}" Margin="0,0,6,0" />
+                                <Button Content="スキャン" Command="{Binding ScanCommand}" Margin="0,0,6,2" />
                                 <Button Content="中断" Command="{Binding CancelCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
                                 <Button Content="宛先に追加" Command="{Binding AddToTargetsCommand}"
-                                        Style="{StaticResource Button.Subtle}" />
-                            </StackPanel>
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                            </WrapPanel>
 
                             <!-- RangeBase.Value は既定が TwoWay。読み取り専用プロパティに繋ぐので OneWay を明示する -->
                             <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Margin="0,5,0,0" />
