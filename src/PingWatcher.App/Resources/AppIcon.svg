@@ -14,21 +14,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
   <g transform="translate(12,13.65) scale(1.19) translate(-12,-13.65)">
     <!-- 耳 -->
-    <path d="M4.7 4.2l5.1 2.9-5.4 2.3z" fill="#9BE84F"/>
-    <path d="M19.3 4.2l-5.1 2.9 5.4 2.3z" fill="#9BE84F"/>
+    <path d="M4.7 4.2l5.1 2.9-5.4 2.3z" fill="#A9E6A3"/>
+    <path d="M19.3 4.2l-5.1 2.9 5.4 2.3z" fill="#A9E6A3"/>
 
     <!-- 体 -->
-    <rect x="3.4" y="6.5" width="17.2" height="14.3" rx="8.6" fill="#9BE84F"/>
+    <rect x="3.4" y="6.5" width="17.2" height="14.3" rx="8.6" fill="#A9E6A3"/>
 
     <!-- 目。外側の暗い円は、地が明るくても暗くても目として読めるように置いている -->
-    <circle cx="8.5" cy="12.2" r="3.35" fill="#1B2A16"/>
-    <circle cx="15.5" cy="12.2" r="3.35" fill="#1B2A16"/>
+    <circle cx="8.5" cy="12.2" r="3.35" fill="#1E2320"/>
+    <circle cx="15.5" cy="12.2" r="3.35" fill="#1E2320"/>
 
     <!-- 瞳＝波紋 -->
-    <circle cx="8.5" cy="12.2" r="2.25" fill="none" stroke="#74C9FF" stroke-width="0.9"/>
-    <circle cx="15.5" cy="12.2" r="2.25" fill="none" stroke="#74C9FF" stroke-width="0.9"/>
-    <circle cx="8.5" cy="12.2" r="0.95" fill="#74C9FF"/>
-    <circle cx="15.5" cy="12.2" r="0.95" fill="#74C9FF"/>
+    <circle cx="8.5" cy="12.2" r="2.25" fill="none" stroke="#7FDCC2" stroke-width="0.9"/>
+    <circle cx="15.5" cy="12.2" r="2.25" fill="none" stroke="#7FDCC2" stroke-width="0.9"/>
+    <circle cx="8.5" cy="12.2" r="0.95" fill="#7FDCC2"/>
+    <circle cx="15.5" cy="12.2" r="0.95" fill="#7FDCC2"/>
 
     <!-- くちばし。緑と青に偏らないよう 1 点だけ黄を置く -->
     <path d="M12 14.9l1.5 2.3h-3z" fill="#FFC65C"/>

@@ -1,8 +1,9 @@
 <!--
-    PingWatcher ライトテーマ。若草。
+    PingWatcher ライトテーマ。
 
-    主役は黄緑。タブ・ボタン・選択・グラデーションといった画面の骨格をこの色が担う。
-    そこへミント・ソーダ・レモン・いちごを添える。
+    地と文字は無彩色。**色を使うのはアクセントと状態バッジだけ**にして、
+    緑はアクセント（タブ・ボタン・選択・グラデーション）に絞る。
+    全面を緑にすると、肝心の状態の色が地に埋もれて読み取りづらくなる。
 
     使い方の約束: 地色(*.Bg)と文字色(*.Fg)は必ずペアで使う。
     パステルの地に淡い文字を置くと読めなくなるため、組み合わせを崩さないこと。
@@ -18,9 +19,8 @@
     ・Palette.Dark.xaml と**同じキーを過不足なく**定義する。ずれは自己診断が検出する。
     ・凍結ブラシは Color をアニメーションできない。演出は Opacity 側で行う。
 
-    **緑が 2 つあることに注意。** アクセントの黄緑と、応答ありのミントは役割が違う。
-    黄緑は黄色寄り、ミントは青緑寄りに離してあるので、この差を詰めないこと。
-    詰めると「選択中」と「応答あり」が見分けられなくなる。
+    **緑が 2 つあることに注意。** アクセントの葉緑（115°）と、応答ありのミント（165°）。
+    この 50° の差を詰めると「選択中」と「応答あり」が見分けられなくなる。
     文字色と地色の組み合わせはすべてコントラスト比 4.5 以上（自己診断が検算する）。
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -29,19 +29,19 @@
                     xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
                     mc:Ignorable="po">
 
-    <!-- ベース。地はほんのり緑を含んだ白 -->
-    <SolidColorBrush x:Key="Brush.Background"   Color="#F8FCF2" po:Freeze="True" />
+    <!-- ベース。色を持たせない -->
+    <SolidColorBrush x:Key="Brush.Background"   Color="#F7F7F8" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Surface"      Color="#FFFFFF" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#EFF7E2" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Border"       Color="#DCEBC6" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Text"         Color="#2C3520" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#5D6B4C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#F0F1F2" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Border"       Color="#E2E3E6" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Text"         Color="#232529" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#61646B" po:Freeze="True" />
 
-    <!-- 状態: 応答あり(ミント。アクセントの黄緑とは青緑側へ離す) -->
-    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#C3F0DC" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#0F6B4C" po:Freeze="True" />
+    <!-- 状態: 応答あり(ミント。アクセントの葉緑とは青緑側へ離す) -->
+    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#BEEFDD" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#0B6851" po:Freeze="True" />
 
-    <!-- 状態: 遅延・警告(アプリコット。黄緑と紛れないよう橙側へ寄せる) -->
+    <!-- 状態: 遅延・警告(アプリコット) -->
     <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#FFE0BE" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#8F4E0C" po:Freeze="True" />
 
@@ -53,17 +53,17 @@
     <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#CDE9FB" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#0E5C84" po:Freeze="True" />
 
-    <!-- 選択・アクセント(若草)。この配色の主役 -->
-    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#DDF3AE" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#43700C" po:Freeze="True" />
+    <!-- 選択・アクセント(パステルの葉緑)。色を使うのはここだけ -->
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#D2EFC7" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#2F6B2A" po:Freeze="True" />
 
     <!-- グラフ描画用 -->
-    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#6BA82A" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#E9F6CF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#5FA455" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#E4F4DE" po:Freeze="True" />
 
-    <!-- 細部 -->
-    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#E4F0D2" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#C2DE95" po:Freeze="True" />
+    <!-- 細部。ここも無彩色に寄せる -->
+    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#E8E9EB" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#C7C9CE" po:Freeze="True" />
 
     <!--
         面と枠のグラデーション。影(DropShadowEffect)は使わない。
@@ -71,24 +71,24 @@
         上辺を明るくした枠で、影の代わりの立体感を出す。
     -->
     <LinearGradientBrush x:Key="Brush.Window.Backdrop" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#FAFDF6" />
-        <GradientStop Offset="1" Color="#F2F9E8" />
+        <GradientStop Offset="0" Color="#FAFAFB" />
+        <GradientStop Offset="1" Color="#F3F4F5" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Face" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
         <GradientStop Offset="0" Color="#FFFFFF" />
-        <GradientStop Offset="1" Color="#FCFEF8" />
+        <GradientStop Offset="1" Color="#FBFBFC" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Edge" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#E7F3D3" />
-        <GradientStop Offset="1" Color="#D6E8BE" />
+        <GradientStop Offset="0" Color="#EAEBED" />
+        <GradientStop Offset="1" Color="#DEDFE3" />
     </LinearGradientBrush>
 
-    <!-- 若草からソーダへ。緑を主役に置いたうえで、青を差して爽やかさを残す -->
+    <!-- パステルの葉緑からミントへ。淡いまま繋ぐ -->
     <LinearGradientBrush x:Key="Brush.Accent.Gradient" StartPoint="0,0" EndPoint="1,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#8ECF3C" />
-        <GradientStop Offset="1" Color="#5FC6E8" />
+        <GradientStop Offset="0" Color="#8ECB7E" />
+        <GradientStop Offset="1" Color="#6FC9AE" />
     </LinearGradientBrush>
 
 </ResourceDictionary>
