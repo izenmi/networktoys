@@ -9,6 +9,10 @@ public sealed class ShellViewModel
     {
         Monitor = new MonitorViewModel();
 
+        // TCP は独立した画面にする。ICMP で見る相手とポートまで見る相手は別物なので、
+        // 宛先リストも保存先も分けている
+        Tcp = new MonitorViewModel("tcp-targets.json", alwaysTcp: true);
+
         // 現在の DNS サーバを比較対象の既定値として渡す
         Dns = new DnsViewModel(Monitor.SystemDnsServers);
         Trace = new TraceViewModel();
@@ -26,6 +30,9 @@ public sealed class ShellViewModel
     }
 
     public MonitorViewModel Monitor { get; }
+
+    /// <summary>TCP 接続で測る画面。宛先も結果も Ping とは別に持つ。</summary>
+    public MonitorViewModel Tcp { get; }
 
     public DnsViewModel Dns { get; }
 
@@ -55,6 +62,7 @@ public sealed class ShellViewModel
     public void ClearAll()
     {
         Monitor.Reset();
+        Tcp.Reset();
         Work.Reset();
         DeviceCompare.Reset();
         Scan.Reset();

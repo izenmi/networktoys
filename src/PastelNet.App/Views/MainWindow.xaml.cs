@@ -229,6 +229,7 @@ public partial class MainWindow : Window
         try
         {
             _shell.Monitor.BeginStop();
+            _shell.Tcp.BeginStop();
             _shell.Wifi.OnDeactivated();
         }
         catch (Exception ex)

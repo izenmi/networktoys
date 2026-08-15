@@ -44,12 +44,25 @@ public sealed class MonitorViewModel : ObservableObject
     private bool _isTcpMode;
     private bool _isCompact = true;
 
-    public MonitorViewModel()
+    /// <summary>
+    /// この画面が TCP 専用か。
+    ///
+    /// ICMP と TCP を 1 つの画面で切り替える作りだと、宛先リストを共有してしまい
+    /// 「ICMP で見る相手」と「ポートまで見る相手」を分けて持てない。
+    /// 画面ごとに宛先を持たせるため、測り方は生成時に決め打ちにしている。
+    /// </summary>
+    private readonly bool _alwaysTcp;
+
+    /// <param name="fileName">宛先の保存先。画面ごとに分ける。</param>
+    /// <param name="alwaysTcp">TCP 接続で測る画面にするか。</param>
+    public MonitorViewModel(string fileName = "targets.json", bool alwaysTcp = false)
     {
+        _alwaysTcp = alwaysTcp;
+
         _storePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PastelNet",
-            "targets.json");
+            fileName);
 
         TargetDocument document = TargetStore.Load(_storePath, out string? error);
         _settings = document.Settings;
@@ -58,7 +71,7 @@ public sealed class MonitorViewModel : ObservableObject
             StatusMessage = error;
 
         if (document.Targets.Count == 0)
-            document.Targets.AddRange(CreateStarterTargets());
+            document.Targets.AddRange(CreateStarterTargets(alwaysTcp));
 
         foreach (Target target in document.Targets)
             AddRow(target);
@@ -66,8 +79,7 @@ public sealed class MonitorViewModel : ObservableObject
         _targetListText = TargetListParser.Format(document.Targets);
         NetworkInfo = NetworkEnvironment.Current();
 
-        StartCommand = new RelayCommand(() => Start(tcp: false), () => !IsRunning && Rows.Count > 0);
-        StartTcpCommand = new RelayCommand(() => Start(tcp: true), () => !IsRunning && Rows.Count > 0);
+        StartCommand = new RelayCommand(() => Start(_alwaysTcp), () => !IsRunning && Rows.Count > 0);
         StopCommand = new RelayCommand(() => _ = StopAsync(), () => IsRunning);
         ClearHistoryCommand = new RelayCommand(ClearHistory);
 
@@ -138,7 +150,6 @@ public sealed class MonitorViewModel : ObservableObject
     }
 
     public RelayCommand StartCommand { get; }
-    public RelayCommand StartTcpCommand { get; }
     public RelayCommand StopCommand { get; }
     public RelayCommand ClearHistoryCommand { get; }
 
@@ -167,16 +178,21 @@ public sealed class MonitorViewModel : ObservableObject
             if (!SetProperty(ref _isRunning, value)) return;
 
             OnPropertyChanged(nameof(RunButtonLabel));
-            OnPropertyChanged(nameof(TcpButtonLabel));
             StartCommand.RaiseCanExecuteChanged();
-            StartTcpCommand.RaiseCanExecuteChanged();
             StopCommand.RaiseCanExecuteChanged();
         }
     }
 
-    public string RunButtonLabel => IsRunning && !_isTcpMode ? "Ping 実行中" : "Ping";
+    public string RunButtonLabel => (_alwaysTcp, IsRunning) switch
+    {
+        (true, true) => "TCP Ping 実行中",
+        (true, false) => "TCP Ping",
+        (false, true) => "Ping 実行中",
+        _ => "Ping",
+    };
 
-    public string TcpButtonLabel => IsRunning && _isTcpMode ? "TCP 実行中" : "TCP Ping";
+    /// <summary>TCP 専用の画面か。ポート欄などをこれで出し分ける。</summary>
+    public bool IsTcpScreen => _alwaysTcp;
 
     /// <summary>宛先タブで編集するテキスト。書式は EXPing に合わせている。</summary>
     public string TargetListText
@@ -462,7 +478,6 @@ public sealed class MonitorViewModel : ObservableObject
         StatusMessage = $"宛先を {Rows.Count} 件に更新しました。";
         OnPropertyChanged(nameof(CountText));
         StartCommand.RaiseCanExecuteChanged();
-        StartTcpCommand.RaiseCanExecuteChanged();
     }
 
     private int ParsePortOrDefault() => int.TryParse(TcpPort, out int port) && port is >= 1 and <= 65535 ? port : 443;
@@ -639,8 +654,17 @@ public sealed class MonitorViewModel : ObservableObject
     }
 
     /// <summary>初回起動時の宛先。何も無い画面より、すぐ測れる方が親切。</summary>
-    private static IEnumerable<Target> CreateStarterTargets()
+    private static IEnumerable<Target> CreateStarterTargets(bool tcp)
     {
+        if (tcp)
+        {
+            // TCP は「どのポートが開いているか」を見る道具なので、
+            // ポートまで書いた例を置いておく方が使い方が伝わる
+            yield return new Target { Host = "www.google.com:443", Comment = "HTTPS の疎通" };
+            yield return new Target { Host = "8.8.8.8:53", Comment = "DNS（TCP）" };
+            yield break;
+        }
+
         NetworkSnapshot snapshot = NetworkEnvironment.Current();
 
         if (snapshot.Gateway is not null)

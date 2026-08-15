@@ -418,13 +418,6 @@
             -->
             <StackPanel Orientation="Horizontal" DataContext="{Binding Monitor}">
                 <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
-                <Button Content="{Binding TcpButtonLabel}" Command="{Binding StartTcpCommand}" Margin="0,0,4,0"
-                        ToolTip="ICMP ではなく TCP 接続で測ります。ping が塞がれている相手の確認に。" />
-                <TextBox Width="56" Text="{Binding TcpPort, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,5,0" VerticalAlignment="Center"
-                         HorizontalContentAlignment="Center"
-                         FontFamily="{DynamicResource Font.Mono}"
-                         ToolTip="TCP Ping で使うポート。宛先に :ポート が書いてあればそちらが優先されます。" />
                 <Button Content="停止" Command="{Binding StopCommand}"
                         Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
 
@@ -498,8 +491,7 @@
                                     <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.0/24</Run>
                                 </TextBlock>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0">
-                                    末尾に <Run FontFamily="{DynamicResource Font.Mono}">:ポート</Run> を付けると、ICMP ではなく TCP 接続で測ります（例
-                                    <Run FontFamily="{DynamicResource Font.Mono}">example.jp:443</Run>）。ping が塞がれている相手の確認に使えます。
+                                    ここは ICMP で測る宛先です。TCP 接続で測りたい相手は「TCP」タブで別に管理します（ping が塞がれている相手の確認に使えます）。
                                 </TextBlock>
                             </StackPanel>
                         </Border>
@@ -659,6 +651,117 @@
                     </DockPanel>
                 </Border>
             </TabItem>
+
+            <!-- ===== TCP（接続できるかで測る。ICMP が塞がれている相手向け） ===== -->
+            <TabItem Header="TCP" DataContext="{Binding Tcp}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+
+                        <!-- 操作 -->
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
+                            <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,0" />
+
+                            <TextBlock Text="既定ポート" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding TcpPort, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,12,0" VerticalAlignment="Center"
+                                     HorizontalContentAlignment="Center"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     ToolTip="宛先に :ポート が書いていないときに使うポート。" />
+
+                            <Button Content="履歴を消去" Command="{Binding ClearHistoryCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <CheckBox Content="一覧表示" IsChecked="{Binding IsCompact}"
+                                      VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <!-- 宛先。Ping とは別に持つ -->
+                        <Border DockPanel.Dock="Top" Margin="0,0,0,5"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="7,5">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Text="1 行に 1 宛先。末尾の :ポート が測る先です（例 srv-01:445）。省略すると上の既定ポートを使います。書き換えると自動で反映されます。" />
+                                <TextBlock DockPanel.Dock="Bottom" Text="{Binding ListSummary}"
+                                           Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                <TextBox Text="{Binding TargetListText, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="86" Margin="0,4,0,0"
+                                         FontFamily="{DynamicResource Font.Mono}"
+                                         AcceptsReturn="True" AcceptsTab="False" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalContentAlignment="Top" />
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 選んだ行の詳しい統計 -->
+                        <Border DockPanel.Dock="Bottom" Margin="0,5,0,0"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="8,5">
+                            <TextBlock Text="{Binding DetailText}" Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+
+                        <!-- 結果。Ping と同じく、つながらない方を上に置く -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" MinHeight="80" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Margin="0,0,0,5"
+                                    Background="{DynamicResource Brush.Error.Bg}"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource Brush.Error.Fg}"
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasDownRows}" Value="False">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <DockPanel MaxHeight="188">
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="1,0,0,4">
+                                        <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                                Background="{DynamicResource Brush.Error.Fg}" />
+                                        <TextBlock Text="{Binding DownHeader}"
+                                                   Foreground="{DynamicResource Brush.Error.Fg}"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <ListBox ItemsSource="{Binding DownRows}"
+                                             SelectedItem="{Binding SelectedRow}"
+                                             Style="{StaticResource TargetListBox}" />
+                                </DockPanel>
+                            </Border>
+
+                            <DockPanel Grid.Row="1">
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="1,0,0,4">
+                                    <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                            Background="{DynamicResource Brush.Ok.Fg}" />
+                                    <TextBlock Text="{Binding AliveHeader}"
+                                               Foreground="{DynamicResource Brush.Ok.Fg}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <ListBox ItemsSource="{Binding AliveRows}"
+                                         SelectedItem="{Binding SelectedRow}"
+                                         Style="{StaticResource TargetListBox}" />
+                            </DockPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
 
             <!-- ===== 作業（変更作業の前後確認。このツールの主な使い道） ===== -->
             <TabItem x:Name="WorkTab" Header="作業" DataContext="{Binding Work}">
