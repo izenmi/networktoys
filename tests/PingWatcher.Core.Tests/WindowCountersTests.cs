@@ -136,4 +136,20 @@ public class WindowCountersTests
 
         Assert.Equal(12345, counters.StartedAtTicks);
     }
+
+    [Fact]
+    public void A_refusal_is_a_response_not_loss()
+    {
+        // ポートが閉じているだけの相手が「連続失敗 0 なのにロス率 100%」に
+        // ならないこと。拒否は応答が返っている
+        var counters = new WindowCounters();
+        counters.Start(0);
+
+        counters.Add(new ProbeSample(0, 3f, ProbeStatus.Refused));
+        counters.Add(new ProbeSample(0, 3f, ProbeStatus.Refused));
+
+        Assert.Equal(2, counters.Attempts);
+        Assert.Equal(0, counters.LossPercent);
+        Assert.Equal(0, counters.MaxConsecutiveFailures);
+    }
 }

@@ -1,5 +1,7 @@
 using PingWatcher.Core.Metrics;
+using PingWatcher.Core.Models;
 using PingWatcher.Core.Reporting;
+using PingWatcher.Core.Work;
 using Xunit;
 
 namespace PingWatcher.Core.Tests;
@@ -170,5 +172,74 @@ public class ReportWriterTests
 
         Assert.Contains("<polyline", svg, StringComparison.Ordinal);
         Assert.DoesNotContain(",0 ", svg, StringComparison.Ordinal);   // 上端に張り付いていない
+    }
+
+    [Theory]
+    [InlineData("=1+2")]
+    [InlineData("+1+2")]
+    [InlineData("-2+3")]
+    [InlineData("@cmd")]
+    public void Csv_neutralizes_formula_prefixes(string value)
+        // Excel で開く前提の出力に、数式として評価される値をそのまま出さない
+        => Assert.StartsWith("'", CsvReportWriter.Quote(value), StringComparison.Ordinal);
+
+    [Fact]
+    public void Csv_neutralizes_formulas_even_when_quoting()
+    {
+        // カンマ入りの数式は引用符で囲まれるが、その中身も無害化されていること
+        string quoted = CsvReportWriter.Quote("=HYPERLINK(\"http://x/\",\"a\")");
+
+        Assert.StartsWith("\"'=", quoted, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Html_includes_outages_and_wireless_sections()
+    {
+        // テキスト版にはあって HTML 版だけ欠けていた節。両方の書式に出ること
+        ReportData data = Sample() with
+        {
+            Outages =
+            [
+                new OutageRecord(
+                    "k", "192.168.1.9",
+                    new DateTime(2026, 8, 15, 9, 10, 0, DateTimeKind.Local).Ticks,
+                    new DateTime(2026, 8, 15, 9, 12, 0, DateTimeKind.Local).Ticks,
+                    12, 1000, OutageCloseReason.Recovered, ProbeStatus.TimedOut, false),
+            ],
+            Wireless = [("SSID", "office-wifi")],
+        };
+
+        string html = HtmlReportWriter.Render(data);
+
+        Assert.Contains("不通の記録", html, StringComparison.Ordinal);
+        Assert.Contains("192.168.1.9", html, StringComparison.Ordinal);
+        Assert.Contains("無応答", html, StringComparison.Ordinal);
+        Assert.Contains("無線 LAN", html, StringComparison.Ordinal);
+        Assert.Contains("office-wifi", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Html_renders_the_work_verdict_and_comparison()
+    {
+        // 作業レポートの経路はこれまで 1 行もテストが通っていなかった
+        var comparison = new WorkComparison(
+            "k", "192.168.1.1", "備考", null, null,
+            WorkVerdict.Unchanged, "作業前と同じ状態です。");
+
+        var work = new WorkSection(
+            "配線替え",
+            new WorkSummary(Total: 1, Failures: 0, Warnings: 0, Unknowns: 0, Outages: 0),
+            [comparison],
+            Timeline: [],
+            IpConfigDiff: null,
+            RouteDiff: null,
+            NeighborChanges: []);
+
+        string html = HtmlReportWriter.Render(Sample() with { Work = work });
+
+        Assert.Contains("問題なし", html, StringComparison.Ordinal);
+        Assert.Contains("配線替え", html, StringComparison.Ordinal);
+        Assert.Contains("作業前後の比較", html, StringComparison.Ordinal);
+        Assert.Contains("作業前と同じ状態です。", html, StringComparison.Ordinal);
     }
 }

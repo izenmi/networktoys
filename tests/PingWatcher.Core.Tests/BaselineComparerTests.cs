@@ -263,4 +263,26 @@ public class BaselineComparerTests
             Assert.NotEqual(verdict.ToString(), label);
         }
     }
+
+    [Fact]
+    public void Duplicate_keys_do_not_throw()
+    {
+        // セッション JSON は手で編集されることもある。重複キーで落ちない
+        IReadOnlyList<WorkComparison> results = BaselineComparer.Compare(
+            Snapshot(Entry(), Entry()),
+            Snapshot(Entry()));
+
+        Assert.Single(results);
+    }
+
+    [Fact]
+    public void A_thin_baseline_cannot_declare_slower()
+    {
+        // 2 回しか測っていない作業前を基準に「遅くなった」と断定しない
+        WorkComparison result = Single(
+            Snapshot(Entry(attempts: 2, average: 1)),
+            Snapshot(Entry(average: 30)));
+
+        Assert.Equal(WorkVerdict.NotMeasured, result.Verdict);
+    }
 }

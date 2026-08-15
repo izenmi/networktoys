@@ -143,4 +143,16 @@ public class RttStatisticsTests
         Assert.Equal(20, stats.AverageMs);
         Assert.Equal(30, stats.MaxMs);
     }
+
+    [Fact]
+    public void A_refusal_is_a_response_not_loss()
+    {
+        ProbeSample[] samples = [new(0, 3f, ProbeStatus.Refused), new(0, 3f, ProbeStatus.Refused)];
+
+        RttStatistics stats = RttStatistics.Compute(samples);
+
+        Assert.Equal(2, stats.Attempts);
+        Assert.Equal(0, stats.Successes);
+        Assert.Equal(0, stats.LossPercent);
+    }
 }

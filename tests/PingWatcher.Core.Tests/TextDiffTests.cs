@@ -181,4 +181,17 @@ public class TextDiffTests
 
         Assert.False(TextDiff.Compare(text, text, DiffNoiseFilter.RouteTable).HasChanges);
     }
+
+    [Fact]
+    public void Large_completely_different_inputs_are_given_up_on()
+    {
+        // 行数の上限内でも、中身がまるごと違えば DP 表が巨大になる。
+        // 面積で諦めることを確かめる（以前は約 100MB 確保して UI が固まった）
+        string before = string.Join('\n', Enumerable.Range(0, 2000).Select(i => $"before {i}"));
+        string after = string.Join('\n', Enumerable.Range(0, 2000).Select(i => $"after {i}"));
+
+        TextDiffResult result = TextDiff.Compare(before, after);
+
+        Assert.True(result.TooLarge);
+    }
 }

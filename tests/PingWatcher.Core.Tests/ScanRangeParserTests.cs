@@ -85,4 +85,14 @@ public class ScanRangeParserTests
         Assert.Equal(5, result.Count);
         Assert.True(result.HasErrors);
     }
+
+    [Fact]
+    public void An_indented_comment_line_is_still_a_comment()
+    {
+        // 表計算やメモ帳からの貼り付けで行頭に空白が付くのは日常的
+        ScanRangeResult result = ScanRangeParser.Parse("  # 事務所\n\t; 予備\n192.168.1.1");
+
+        Assert.False(result.HasErrors);
+        Assert.Equal(1, result.Count);
+    }
 }

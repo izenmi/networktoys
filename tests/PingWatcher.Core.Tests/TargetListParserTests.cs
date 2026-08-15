@@ -252,4 +252,26 @@ public class TargetListParserTests
         Assert.Equal("プリンタ", result.Targets[3].Comment);
         Assert.Equal("192.168.1.22", result.Targets[4].Host);
     }
+
+    [Fact]
+    public void An_indented_comment_line_does_not_become_a_target()
+    {
+        // 以前は「  # 予備機」が Host="#"・備考「予備機」の偽の宛先になっていた
+        TargetListParseResult result = TargetListParser.Parse("  # 予備機\n192.168.1.1");
+
+        Assert.Equal("192.168.1.1", Assert.Single(result.Targets).Host);
+        Assert.Equal(1, result.CommentLines);
+        Assert.False(result.HasErrors);
+    }
+
+    [Fact]
+    public void A_broken_cidr_is_an_error_not_a_hostname()
+    {
+        // ホスト名に「/」は使えない。丸ごとホスト名として登録すると
+        // 実行時に DNS 失敗の行として一覧に混ざり、原因に辿り着けない
+        TargetListParseResult result = TargetListParser.Parse("999.999.999.999/24");
+
+        Assert.Empty(result.Targets);
+        Assert.True(result.HasErrors);
+    }
 }

@@ -240,4 +240,37 @@ public class OutageTrackerTests
 
         Assert.Contains(Key, tracker.KeysWithOutageBetween(At(12), At(30)));
     }
+
+    [Fact]
+    public void A_single_drop_does_not_inflate_the_next_outage()
+    {
+        // 不通に至らなかった失敗は、次の不通の MissedProbes に混ぜない。
+        // 「作業で壊していない証拠」の数字が水増しされてしまう
+        var tracker = new OutageTracker(1000);
+
+        tracker.Observe(Key, Host, Lost(0));
+        tracker.Observe(Key, Host, Ok(1));
+        tracker.Observe(Key, Host, Ok(2));
+        tracker.Observe(Key, Host, Lost(3));
+        OutageRecord? opened = tracker.Observe(Key, Host, Lost(4));
+
+        Assert.NotNull(opened);
+        Assert.Equal(2, opened.MissedProbes);
+    }
+
+    [Fact]
+    public void Unrelated_failures_do_not_choose_the_dominant_status()
+    {
+        // 冒頭の DNS 失敗（不通ではない）が、後の本物の疎通断の主因として残らないこと
+        var tracker = new OutageTracker(1000);
+
+        tracker.Observe(Key, Host, ProbeSample.Failure(At(0), ProbeStatus.DnsFailure));
+        tracker.Observe(Key, Host, Ok(1));
+        tracker.Observe(Key, Host, ProbeSample.Failure(At(2), ProbeStatus.DnsFailure));
+        tracker.Observe(Key, Host, Ok(3));
+        tracker.Observe(Key, Host, Lost(4));
+        OutageRecord? opened = tracker.Observe(Key, Host, Lost(5));
+
+        Assert.Equal(ProbeStatus.TimedOut, opened!.DominantStatus);
+    }
 }

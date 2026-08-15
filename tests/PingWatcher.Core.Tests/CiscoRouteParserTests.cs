@@ -129,4 +129,40 @@ public class CiscoRouteParserTests
             Assert.DoesNotContain("2d10h", r.NextHopText, StringComparison.Ordinal);
         });
     }
+
+    [Fact]
+    public void Huge_metric_digits_do_not_throw()
+    {
+        // 貼り付けは壊れたログのこともある。桁あふれで例外を投げない
+        const string text = "O    10.0.0.0/8 [110/99999999999] via 10.0.0.1, 00:00:05, Gi0/1";
+
+        CiscoRoute route = Assert.Single(CiscoRouteParser.Parse(text));
+
+        Assert.Equal(110, route.AdminDistance);
+        Assert.Null(route.Metric);
+    }
+
+    [Fact]
+    public void A_static_ecmp_continuation_without_distance_is_kept()
+    {
+        // スタティックの等コスト経路は 2 本目以降を距離なしで印字する
+        const string text = "S    10.0.0.0/8 [1/0] via 192.168.1.1\n          via 192.168.1.2";
+
+        CiscoRoute route = Assert.Single(CiscoRouteParser.Parse(text));
+
+        Assert.Equal(2, route.NextHops.Count);
+        Assert.Equal("192.168.1.2", route.NextHops[1]);
+    }
+
+    [Fact]
+    public void A_subnetted_header_lends_its_mask_to_children()
+    {
+        // 配下の行はマスクを省いて印字される。補わないと、前後で classful 表記と
+        // /24 付き表記が混ざったとき同じ経路が「消えた」+「増えた」に化ける
+        const string text = "     172.16.0.0/24 is subnetted, 2 subnets\nO       172.16.1.0 [110/2] via 10.0.0.1, 00:00:05, Gi0/1";
+
+        CiscoRoute route = Assert.Single(CiscoRouteParser.Parse(text));
+
+        Assert.Equal("172.16.1.0/24", route.Prefix);
+    }
 }

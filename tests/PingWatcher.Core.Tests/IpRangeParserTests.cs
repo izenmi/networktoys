@@ -120,4 +120,11 @@ public class IpRangeParserTests
     [InlineData("192.168..1", false)]
     public void TryParseIPv4_only_accepts_dotted_quads(string text, bool expected)
         => Assert.Equal(expected, IpRangeParser.TryParseIPv4(text, out _));
+
+    [Theory]
+    [InlineData("999.999.999.999/24")]
+    [InlineData("10.0.0/24")]
+    [InlineData("192.168.1.0/24/8")]
+    public void Broken_cidr_notation_is_invalid_not_a_hostname(string token)
+        => Assert.Equal(IpRangeKind.Invalid, Expand(token, out _));
 }
