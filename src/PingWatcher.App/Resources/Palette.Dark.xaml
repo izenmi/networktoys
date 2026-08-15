@@ -52,6 +52,15 @@
     <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#7FC1EE" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#1D3019" po:Freeze="True" />
 
+    <!-- サーベイのヒートマップ 6 段(弱→強)。暗い地では一段明るい viridis に寄せる。
+         **塗り専用**で、文字の地色には使わないこと(コントラスト検算の対象外) -->
+    <SolidColorBrush x:Key="Brush.Heatmap.1" Color="#5C2A80" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Heatmap.2" Color="#5561A8" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Heatmap.3" Color="#3E8FA6" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Heatmap.4" Color="#35C09A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Heatmap.5" Color="#8EDB62" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Heatmap.6" Color="#FFEF4D" po:Freeze="True" />
+
     <!-- 細部。ここも無彩色に寄せる -->
     <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#2A2D33" po:Freeze="True" />
     <!-- つまみは一段明るく(以前の #4A4E56 は面に溶けて見つけにくかった) -->

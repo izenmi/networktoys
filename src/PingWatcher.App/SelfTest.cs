@@ -90,6 +90,8 @@ internal static class SelfTest
                 "Brush.Error.Bg", "Brush.Error.Fg", "Brush.Info.Bg", "Brush.Info.Fg",
                 "Brush.Accent.Bg", "Brush.Accent.Fg", "Brush.Chart.Line", "Brush.Chart.Fill",
                 "Brush.Chip.Edge", "Brush.Scroll.Thumb", "Brush.Scroll.Thumb.Hover", "Brush.Scroll.Track", "Brush.Row.Line",
+                "Brush.Heatmap.1", "Brush.Heatmap.2", "Brush.Heatmap.3",
+                "Brush.Heatmap.4", "Brush.Heatmap.5", "Brush.Heatmap.6",
             ];
             foreach (string key in keys)
                 Assert(Application.Current.TryFindResource(key) is SolidColorBrush, $"{key} が SolidColorBrush として引けない");
@@ -278,6 +280,37 @@ internal static class SelfTest
 
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
+        });
+
+        Check("無線タブの画面を実体化できる(WLAN API には触れない)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 無線タブは選んだ時点で WLAN API に触れるため全タブ検査からは外している。
+            // ここでは抑止フラグを立て、XAML の実体化(サーベイ画面含む)だけを確かめる
+            object? original = window!.MainTabs.SelectedItem;
+            window.SuppressWifiActivation = true;
+
+            try
+            {
+                window.WifiTab.IsSelected = true;
+                window.UpdateLayout();
+
+                foreach (object? item in window.WifiSubTabs.Items)
+                {
+                    if (item is System.Windows.Controls.TabItem tab)
+                    {
+                        tab.IsSelected = true;
+                        window.UpdateLayout();
+                    }
+                }
+            }
+            finally
+            {
+                window.MainTabs.SelectedItem = original;
+                window.UpdateLayout();
+                window.SuppressWifiActivation = false;
+            }
         });
 
         Check("配色を切り替えても表示し直せる", () =>
