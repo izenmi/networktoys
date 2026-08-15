@@ -1,0 +1,126 @@
+using PastelNet.Core.Metrics;
+using PastelNet.Core.Reporting;
+using Xunit;
+
+namespace PastelNet.Core.Tests;
+
+public class ReportWriterTests
+{
+    private static ReportData Sample(string comment = "1階 EPS") => new(
+        Title: "疎通確認",
+        GeneratedAt: new DateTime(2026, 8, 15, 9, 30, 0, DateTimeKind.Local),
+        Note: "定期点検",
+        StartedAt: new DateTime(2026, 8, 15, 9, 0, 0, DateTimeKind.Local),
+        IntervalMs: 1000,
+        Environment: [("IP", "192.168.1.20/24"), ("ゲートウェイ", "192.168.1.1")],
+        Rows:
+        [
+            new ReportRow(
+                "192.168.1.1",
+                "192.168.1.1",
+                comment,
+                "ICMP",
+                new RttStatistics(100, 98, 2, 1.0, 1.4, 8.0, 2.0, 0.3),
+                4.4,
+                "非常に良い",
+                [1, 2, 1, 3, 1]),
+        ]);
+
+    [Fact]
+    public void Html_is_a_complete_document()
+    {
+        string html = HtmlReportWriter.Render(Sample());
+
+        Assert.StartsWith("<!doctype html>", html, StringComparison.Ordinal);
+        Assert.EndsWith("</html>\n", html, StringComparison.Ordinal);
+        Assert.Contains("<title>疎通確認</title>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Html_carries_no_external_references()
+    {
+        // 客先のオフライン環境で開ける必要がある
+        string html = HtmlReportWriter.Render(Sample());
+
+        Assert.DoesNotContain("<script", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("http://", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<link", html, StringComparison.OrdinalIgnoreCase);
+
+        // SVG の名前空間だけは URL の形をしている（参照ではない）
+        Assert.Contains("www.w3.org/2000/svg", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Html_includes_the_measured_values()
+    {
+        string html = HtmlReportWriter.Render(Sample());
+
+        Assert.Contains("192.168.1.1", html, StringComparison.Ordinal);
+        Assert.Contains("非常に良い", html, StringComparison.Ordinal);
+        Assert.Contains("4.4", html, StringComparison.Ordinal);
+        Assert.Contains("<svg", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Html_escapes_whatever_the_user_typed()
+    {
+        string html = HtmlReportWriter.Render(Sample(comment: "<script>alert('x')</script>"));
+
+        Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
+        Assert.Contains("&lt;script&gt;", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("普通", "普通")]
+    [InlineData("a<b", "a&lt;b")]
+    [InlineData("a&b", "a&amp;b")]
+    [InlineData("\"quoted\"", "&quot;quoted&quot;")]
+    public void Escape_handles_the_dangerous_characters(string input, string expected)
+        => Assert.Equal(expected, HtmlReportWriter.Escape(input));
+
+    [Fact]
+    public void Csv_uses_crlf_and_has_a_header()
+    {
+        string csv = CsvReportWriter.Render(Sample());
+
+        Assert.Contains("\r\n", csv, StringComparison.Ordinal);
+        Assert.StartsWith("宛先,IP,種別,備考", csv, StringComparison.Ordinal);
+        Assert.Equal(2, csv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length);
+    }
+
+    [Theory]
+    [InlineData("普通", "普通")]
+    [InlineData("a,b", "\"a,b\"")]
+    [InlineData("say \"hi\"", "\"say \"\"hi\"\"\"")]
+    [InlineData("line\nbreak", "\"line\nbreak\"")]
+    public void Csv_quotes_only_when_needed(string input, string expected)
+        => Assert.Equal(expected, CsvReportWriter.Quote(input));
+
+    [Fact]
+    public void Sparkline_is_empty_without_data()
+        => Assert.Equal(string.Empty, SvgSparkline.Render([]));
+
+    [Fact]
+    public void Sparkline_plots_every_point()
+    {
+        string svg = SvgSparkline.Render([1, 2, 3, 4]);
+
+        Assert.Contains("<polyline", svg, StringComparison.Ordinal);
+        Assert.Equal(4, svg[svg.IndexOf("<polyline", StringComparison.Ordinal)..]
+            .Split("points=\"")[1]
+            .Split('"')[0]
+            .Split(' ')
+            .Length);
+    }
+
+    [Fact]
+    public void Sparkline_does_not_magnify_tiny_variations()
+    {
+        // 1〜2ms しか出ない相手を山脈のように描かないこと。
+        // 下限スケール 10ms を使うので、最大値でも底までは落ちない
+        string svg = SvgSparkline.Render([1, 2, 1]);
+
+        Assert.Contains("<polyline", svg, StringComparison.Ordinal);
+        Assert.DoesNotContain(",0 ", svg, StringComparison.Ordinal);   // 上端に張り付いていない
+    }
+}

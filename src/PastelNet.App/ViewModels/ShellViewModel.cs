@@ -18,6 +18,8 @@ public sealed class ShellViewModel
 
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
+
+        Report = new ReportViewModel(Monitor);
     }
 
     public MonitorViewModel Monitor { get; }
@@ -29,4 +31,6 @@ public sealed class ShellViewModel
     public ScanViewModel Scan { get; }
 
     public WifiViewModel Wifi { get; }
+
+    public ReportViewModel Report { get; }
 }

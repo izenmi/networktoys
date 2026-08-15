@@ -170,12 +170,19 @@ public sealed class MonitorViewModel : ObservableObject
 
     public string CountText => $"{Rows.Count} 件";
 
+    /// <summary>測定間隔。レポートに載せる。</summary>
+    public int IntervalMs => _settings.IntervalMs;
+
+    /// <summary>最初に測定を始めた時刻。レポートに載せる。</summary>
+    public DateTime? StartedAt { get; private set; }
+
     private void Start()
     {
         if (IsRunning) return;
 
         _engine.Start([.. Rows.Select(r => r.Target)], _settings);
         _pump.Start();
+        StartedAt ??= DateTime.Now;
         IsRunning = true;
         StatusMessage = $"{_engine.ActiveCount} 件を {_settings.IntervalMs} ms 間隔で測定しています。";
     }
@@ -296,6 +303,7 @@ public sealed class MonitorViewModel : ObservableObject
         foreach (TargetRowViewModel row in Rows)
             row.Reset();
 
+        StartedAt = IsRunning ? DateTime.Now : null;
         StatusMessage = "履歴を消去しました。";
     }
 

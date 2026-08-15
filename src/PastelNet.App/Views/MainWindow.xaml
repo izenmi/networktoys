@@ -842,12 +842,47 @@
             </TabItem>
 
             <!-- ===== 記録 ===== -->
-            <TabItem Header="記録">
+            <TabItem x:Name="ReportTab" Header="記録" DataContext="{Binding Report}">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource Heading}" Text="記録とレポート" />
-                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="測定結果はセッション単位で保存し、グラフ入りの HTML と CSV に書き出せます。HTML は 1 ファイル完結なのでそのままメールに添付できます。Phase 6 で実装します。" />
+                        <TextBlock Style="{StaticResource Heading}" Text="レポートの書き出し" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,12"
+                                   Text="いま監視画面に出ている結果を書き出します。HTML は 1 ファイル完結で、外部の CSS や JavaScript を参照しないため、客先のオフライン環境でもそのまま開けます。CSV は Excel 用に BOM 付き UTF-8 で保存します。" />
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60" />
+                                <ColumnDefinition Width="*" MaxWidth="520" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="表題"
+                                       Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="0" Grid.Column="1"
+                                     Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="メモ"
+                                       Style="{StaticResource Caption}" VerticalAlignment="Top" Margin="0,5,0,0" />
+                            <TextBox Grid.Row="1" Grid.Column="1"
+                                     Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
+                                     AcceptsReturn="True" Height="70"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     VerticalContentAlignment="Top" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="HTML で保存" Command="{Binding SaveHtmlCommand}" Margin="0,0,6,0" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCsvCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" Margin="0,10,0,0" />
                     </StackPanel>
                 </Border>
             </TabItem>

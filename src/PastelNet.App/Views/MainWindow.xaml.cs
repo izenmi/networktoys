@@ -30,6 +30,9 @@ public partial class MainWindow : Window
             _shell.Wifi.OnActivated();
         else
             _shell.Wifi.OnDeactivated();
+
+        if (ReportTab.IsSelected)
+            _shell.Report.OnActivated();
     }
 
     /// <summary>
