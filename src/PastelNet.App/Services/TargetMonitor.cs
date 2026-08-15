@@ -16,6 +16,9 @@ namespace PastelNet.App.Services;
 /// </summary>
 internal sealed class TargetMonitor : IDisposable
 {
+    /// <summary>名前解決に見切りをつけるまでの時間。</summary>
+    private static readonly TimeSpan DnsTimeout = TimeSpan.FromSeconds(3);
+
     private readonly Target _target;
     private readonly MonitorSettings _settings;
     private readonly ChannelWriter<ProbeResult> _writer;
@@ -52,6 +55,22 @@ internal sealed class TargetMonitor : IDisposable
 
         _cts = new CancellationTokenSource();
         _loop = Task.Run(() => RunAsync(_cts.Token));
+    }
+
+    /// <summary>
+    /// キャンセルを投げるだけで、完了は待たずに戻る。
+    /// アプリを閉じるときはこれで足りる（ソケットはプロセス終了で OS が片付ける）。
+    /// </summary>
+    public void BeginStop()
+    {
+        try
+        {
+            _cts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // すでに止まっている
+        }
     }
 
     public async Task StopAsync()
@@ -230,12 +249,17 @@ internal sealed class TargetMonitor : IDisposable
 
         try
         {
-            IPAddress[] addresses = await Dns.GetHostAddressesAsync(_target.Host, token);
+            // GetHostAddressesAsync はトークンを渡しても内部のブロッキング解決を
+            // 中断できない。待つ側で見切りをつけないと、引けないホスト名が 1 つあるだけで
+            // 測定周期が乱れ、終了時にも数秒待たされる。
+            IPAddress[] addresses = await Dns.GetHostAddressesAsync(_target.Host, token)
+                .WaitAsync(DnsTimeout, token);
+
             _address = Array.Find(addresses, a => a.AddressFamily == AddressFamily.InterNetwork)
                        ?? (addresses.Length > 0 ? addresses[0] : null);
             return _address;
         }
-        catch (Exception ex) when (ex is SocketException or ArgumentException)
+        catch (Exception ex) when (ex is SocketException or ArgumentException or TimeoutException)
         {
             return null;
         }

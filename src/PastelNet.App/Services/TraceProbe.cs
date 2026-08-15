@@ -98,10 +98,13 @@ internal static class TraceProbe
         {
             // IPAddress + CancellationToken のオーバーロードは無いので文字列版を使う。
             // IP アドレスの形をした文字列を渡すと逆引きになる。
-            IPHostEntry entry = await Dns.GetHostEntryAsync(address.ToString(), token);
+            // 引けない中継ルータは珍しくないので、待つ側で見切りをつける。
+            IPHostEntry entry = await Dns.GetHostEntryAsync(address.ToString(), token)
+                .WaitAsync(TimeSpan.FromSeconds(3), token);
+
             return string.IsNullOrEmpty(entry.HostName) ? null : entry.HostName;
         }
-        catch (Exception ex) when (ex is SocketException or ArgumentException or OperationCanceledException)
+        catch (Exception ex) when (ex is SocketException or ArgumentException or TimeoutException or OperationCanceledException)
         {
             return null;
         }

@@ -362,6 +362,20 @@ public sealed class MonitorViewModel : ObservableObject
     }
 
     /// <summary>
+    /// アプリを閉じるときの停止。<b>完了を待たない。</b>
+    ///
+    /// 待つと、名前解決中やタイムアウト待ちの宛先があるだけで終了が数秒固まる。
+    /// 宛先リストと設定は編集のたびに保存済みなので、ここで待って守るものは無い。
+    /// ソケットはプロセス終了時に OS が片付ける。
+    /// </summary>
+    public void BeginStop()
+    {
+        _pump.Stop();
+        _listDebounce?.Stop();
+        _engine.BeginStop();
+    }
+
+    /// <summary>
     /// 溜まった結果をまとめて取り込む。行の追加・削除は起きないので
     /// コレクション変更通知は発生せず、既存行のプロパティ更新だけが流れる。
     /// </summary>

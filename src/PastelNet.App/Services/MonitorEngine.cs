@@ -11,6 +11,9 @@ namespace PastelNet.App.Services;
 /// </summary>
 internal sealed class MonitorEngine : IAsyncDisposable
 {
+    /// <summary>停止の後片付けを待つ上限。</summary>
+    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(2);
+
     private readonly Channel<ProbeResult> _channel = Channel.CreateUnbounded<ProbeResult>(
         new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
 
@@ -71,12 +74,36 @@ internal sealed class MonitorEngine : IAsyncDisposable
         monitor.Dispose();
     }
 
+    /// <summary>
+    /// キャンセルを投げるだけで完了は待たない。アプリを閉じるときに使う。
+    /// 待つと、名前解決中の宛先があるだけで数秒固まる。
+    /// </summary>
+    public void BeginStop()
+    {
+        foreach (TargetMonitor monitor in _monitors)
+            monitor.BeginStop();
+
+        IsRunning = false;
+    }
+
     public async Task StopAsync()
     {
         if (!IsRunning) return;
 
-        // 全宛先へ同時に停止を伝える。1 件ずつ待つと宛先数 × タイムアウトだけかかる。
-        await Task.WhenAll(_monitors.Select(m => m.StopAsync()));
+        // まず全員へ同時に停止を伝えてから、まとめて待つ
+        foreach (TargetMonitor monitor in _monitors)
+            monitor.BeginStop();
+
+        try
+        {
+            // 後片付けは待つが、長くは待たない。進行中のプローブが
+            // タイムアウトするまで付き合う必要はない。
+            await Task.WhenAll(_monitors.Select(m => m.StopAsync())).WaitAsync(StopTimeout);
+        }
+        catch (TimeoutException)
+        {
+            // 残りは Dispose とプロセス終了に任せる
+        }
 
         foreach (TargetMonitor monitor in _monitors)
             monitor.Dispose();

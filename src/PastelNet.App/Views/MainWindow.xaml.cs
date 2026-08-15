@@ -8,7 +8,6 @@ namespace PastelNet.App.Views;
 public partial class MainWindow : Window
 {
     private readonly ShellViewModel _shell = new();
-    private bool _stopped;
 
     public MainWindow()
     {
@@ -36,29 +35,24 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 閉じる前に測定を止める。停止は非同期なので、いったん閉じるのを取り消し、
-    /// 完了してから閉じ直す（UI スレッドで同期的に待つとデッドロックする）。
+    /// 閉じるときは測定に停止を伝えるだけで、<b>完了は待たない</b>。
+    ///
+    /// 以前は完了を待ってから閉じていたが、名前解決中やタイムアウト待ちの宛先が
+    /// あると終了が数秒固まっていた。設定と宛先リストは編集のたびに保存しているので、
+    /// ここで待って守るものは無い。ソケットはプロセス終了時に OS が片付ける。
     /// </summary>
-    protected override async void OnClosing(CancelEventArgs e)
+    protected override void OnClosing(CancelEventArgs e)
     {
-        if (_stopped)
-        {
-            base.OnClosing(e);
-            return;
-        }
-
-        e.Cancel = true;
+        base.OnClosing(e);
 
         try
         {
-            await _shell.Monitor.StopAsync();
+            _shell.Monitor.BeginStop();
+            _shell.Wifi.OnDeactivated();
         }
         catch (Exception ex)
         {
             CrashLog.Write(ex, "MainWindow.OnClosing");
         }
-
-        _stopped = true;
-        Close();
     }
 }

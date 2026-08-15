@@ -149,12 +149,16 @@ internal sealed class ScanService
     {
         try
         {
-            IPHostEntry entry = await Dns.GetHostEntryAsync(address.ToString(), token);
+            // 逆引きは引けない相手の方が多い。1 台ずつ DNS のタイムアウトを待つと
+            // スキャン全体が終わらないので、待つ側で見切りをつける。
+            IPHostEntry entry = await Dns.GetHostEntryAsync(address.ToString(), token)
+                .WaitAsync(TimeSpan.FromSeconds(3), token);
+
             return string.IsNullOrEmpty(entry.HostName) || entry.HostName == address.ToString()
                 ? null
                 : entry.HostName;
         }
-        catch (Exception ex) when (ex is SocketException or ArgumentException or OperationCanceledException)
+        catch (Exception ex) when (ex is SocketException or ArgumentException or TimeoutException or OperationCanceledException)
         {
             return null;
         }
