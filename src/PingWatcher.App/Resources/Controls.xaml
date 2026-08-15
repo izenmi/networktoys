@@ -68,45 +68,40 @@
     </Style>
 
     <!--
-        タブは「押せるもの」と一目で分かる必要がある。
-        文字だけを置くと、選択中以外がただのラベルに見えてしまうので、
-        非選択時にも面と枠を持たせてボタンの見た目にする。
+        タブはブラウザ風: 下辺を開けた枠にして、選択中のタブだけを 1px 下へ
+        食い込ませる(Margin 下 -1 + ZIndex)。TabControl 側のコンテンツ枠
+        (BorderThickness=1)の上辺をタブの背景が覆い、タブと画面が
+        地続きに見える。選択タブの背景はコンテンツ領域と同じ Brush.Surface に
+        すること(色がずれると継ぎ目の線が出る)。
+        非選択は一段沈んだ色+2px 低くして「奥にある」ことを示す。
     -->
     <Style TargetType="TabItem">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-        <!-- タブは 14 枚あるので、文字と余白を詰めて起動幅(740px)でも一列に収める -->
+        <!-- タブが多いので、文字と余白を詰めて起動幅(740px)でも一列に収める -->
         <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Panel.ZIndex" Value="0" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
                     <Border x:Name="Bd"
-                            Background="{DynamicResource Brush.Surface}"
+                            Background="{DynamicResource Brush.SurfaceAlt}"
                             BorderBrush="{DynamicResource Brush.Border}"
-                            BorderThickness="1"
-                            CornerRadius="{DynamicResource Radius.Control}"
+                            BorderThickness="1,1,1,0"
                             Padding="6,2"
-                            Margin="0,0,2,0">
-                        <DockPanel>
-                            <!-- 選択中の下線。面の色だけより、どこを見ているかが掴みやすい -->
-                            <Rectangle x:Name="Underline" DockPanel.Dock="Bottom"
-                                       Height="2" Margin="1,3,1,-2"
-                                       RadiusX="1" RadiusY="1"
-                                       Visibility="Collapsed"
-                                       Fill="{DynamicResource Brush.Accent.Gradient}" />
-                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
-                        </DockPanel>
+                            Margin="0,2,2,0">
+                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <!-- ホバーを先に、選択を後に書く。順序を入れ替えると選択中もホバー色になる -->
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Surface}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                            <Setter TargetName="Underline" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Surface}" />
+                            <Setter TargetName="Bd" Property="Margin" Value="0,0,2,-1" />
+                            <Setter TargetName="Bd" Property="Padding" Value="6,3" />
+                            <Setter Property="Panel.ZIndex" Value="1" />
                             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
                             <Setter Property="FontWeight" Value="Normal" />
                         </Trigger>
