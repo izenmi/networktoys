@@ -907,6 +907,10 @@
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Top" Text="受信強度の推移（dBm・直近2分）"
                                                Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                    <!-- 読み方の目安。-67 dBm が通話・会議の実用下限としてよく使われる -->
+                                    <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Caption}"
+                                               TextWrapping="Wrap" Margin="0,4,0,0"
+                                               Text="目安: -50 以上 非常に良い ／ -60 良い ／ -67 実用圏（通話・会議はここまで） ／ -75 弱い ／ それ未満 不安定" />
                                     <controls:RssiChart Source="{Binding}" MinHeight="86" />
                                 </DockPanel>
                             </Border>

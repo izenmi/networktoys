@@ -246,8 +246,9 @@ public sealed class WifiViewModel : ObservableObject
             Ssid = connection.Ssid.Length > 0 ? connection.Ssid : "—";
             Bssid = connection.Bssid.Length > 0 ? connection.Bssid : "—";
             Vendor = connection.Vendor ?? "—";
+            // 数字だけでは強弱の感覚が掴みにくいので、目安の言葉を添える
             Signal = connection.Rssi is { } rssi
-                ? $"{connection.SignalQuality}%（{rssi} dBm）"
+                ? $"{connection.SignalQuality}%（{rssi} dBm・{WifiSignalGuide.Describe(rssi)}）"
                 : $"{connection.SignalQuality}%";
             Channel = connection.Channel > 0
                 ? (connection.Band > 0 ? $"{connection.Channel}（{connection.Band:0.#} GHz）" : connection.Channel.ToString())
