@@ -304,6 +304,18 @@ public sealed class MonitorViewModel : ObservableObject
     /// <summary>測定間隔。レポートに載せる。</summary>
     public int IntervalMs => _settings.IntervalMs;
 
+    /// <summary>
+    /// 作業中に起きた不通の記録。作業タブとレポートで使う。
+    /// 測定を開始し直しても消さない（作業をまたいで見返したいため）。
+    /// </summary>
+    internal OutageTracker Tracker { get; private set; } = new(1000);
+
+    /// <summary>いま TCP で測っているか。ベースラインに実効の測り方を残すのに要る。</summary>
+    internal bool IsTcpMode => _isTcpMode;
+
+    /// <summary>TCP Ping のポート。同上。</summary>
+    internal int EffectiveTcpPort => ParsePortOrDefault();
+
     /// <summary>最初に測定を始めた時刻。レポートに載せる。</summary>
     public DateTime? StartedAt { get; private set; }
 
@@ -326,8 +338,17 @@ public sealed class MonitorViewModel : ObservableObject
         List<Target> targets = [.. Rows.Select(r => tcp ? AsTcp(r.Target, port) : r.Target)];
 
         _isTcpMode = tcp;
+
+        // 記録に残す測定間隔は開始時のもの。誤差の幅を示すのに使う
+        Tracker = new OutageTracker(_settings.IntervalMs);
+
         _engine.Start(targets, _settings);
         _pump.Start();
+
+        long now = DateTime.Now.Ticks;
+        foreach (TargetRowViewModel row in Rows)
+            row.StartWindow(now);
+
         StartedAt ??= DateTime.Now;
         IsRunning = true;
 
@@ -357,6 +378,10 @@ public sealed class MonitorViewModel : ObservableObject
         _pump.Stop();
         await _engine.StopAsync();
         OnPump(this, EventArgs.Empty);   // 残っている結果を取りこぼさない
+
+        // 続いている不通は「復旧した」ではなく「測定を止めた」として閉じる
+        Tracker.CloseAll(DateTime.Now.Ticks, OutageCloseReason.Stopped);
+
         IsRunning = false;
         StatusMessage = "測定を停止しました。";
     }
@@ -385,9 +410,26 @@ public sealed class MonitorViewModel : ObservableObject
 
         while (_engine.Results.TryRead(out ProbeResult result))
         {
-            if (_rowsById.TryGetValue(result.TargetId, out TargetRowViewModel? row))
+            if (!_rowsById.TryGetValue(result.TargetId, out TargetRowViewModel? row))
+                continue;
+
+            row.Append(result.Sample, result.ResolvedAddress);
+
+            // 不通の記録は行の表示とは別に、全サンプルを見て判定する
+            Tracker.Observe(KeyOf(row.Target), row.Host, result.Sample);
+
+            _touched.Add(row);
+        }
+
+        // 結果が届かなくなった宛先は _touched に入らないので、別途確かめる。
+        // 「応答が無い」と「測っていない」を取り違えると、確認ツールとして嘘をつく
+        if (IsRunning)
+        {
+            long now = DateTime.Now.Ticks;
+
+            foreach (TargetRowViewModel row in Rows)
             {
-                row.Append(result.Sample, result.ResolvedAddress);
+                row.CheckStalled(now);
                 _touched.Add(row);
             }
         }
@@ -518,6 +560,9 @@ public sealed class MonitorViewModel : ObservableObject
 
         if (IsRunning)
             _ = _engine.RemoveTargetAsync(row.Id);
+
+        // 宛先が消えたことを「復旧」と記録しないよう、理由を残して閉じる
+        Tracker.Remove(KeyOf(row.Target), DateTime.Now.Ticks);
 
         OnPropertyChanged(nameof(AliveHeader));
         OnPropertyChanged(nameof(DownHeader));

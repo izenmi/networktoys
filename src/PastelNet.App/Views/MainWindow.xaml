@@ -92,6 +92,12 @@
                     <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="BadgeText" Property="Text" Value="? 名前" />
                 </DataTrigger>
+                <!-- 測定が止まっている状態。不達と取り違えると確認ツールとして嘘になる -->
+                <DataTrigger Binding="{Binding State}" Value="Stalled">
+                    <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                    <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                    <Setter TargetName="BadgeText" Property="Text" Value="… 停止" />
+                </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
@@ -172,6 +178,11 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Pending">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Stalled">
+                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                    <Setter TargetName="Mark" Property="Text" Value="…" />
+                    <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>

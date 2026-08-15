@@ -124,14 +124,20 @@ public sealed class ComparisonOptions
     /// <summary>ロス率がこのポイント数以上悪化したら拾う。</summary>
     public double LossIncreasePoints { get; init; } = 5;
 
-    /// <summary>RTT がこの倍率以上になったら拾う（あわせて下の絶対差も満たすこと）。</summary>
+    /// <summary>大きく伸びたと見なす倍率。</summary>
     public double SlowerRatio { get; init; } = 2.0;
 
     /// <summary>上の倍率と併せて課す絶対差（ms）。1ms が 2ms になっただけで騒がないため。</summary>
     public double SlowerMinimumDeltaMs { get; init; } = 10;
 
-    /// <summary>倍率に届かなくても、これだけ増えたら拾う（30ms→55ms のような経路変化）。</summary>
-    public double SlowerAbsoluteDeltaMs { get; init; } = 30;
+    /// <summary>
+    /// 倍率は控えめでも実害のある伸び方を拾うための、ゆるい方の倍率。
+    /// 30ms→55ms のような経路が伸びた変化は 2 倍に届かないが、見逃してはいけない。
+    /// </summary>
+    public double ModerateRatio { get; init; } = 1.5;
+
+    /// <summary>ゆるい方の倍率と併せて課す絶対差（ms）。WAN の 200ms→220ms を拾わないため。</summary>
+    public double ModerateDeltaMs { get; init; } = 20;
 }
 
 /// <summary>
@@ -259,9 +265,13 @@ public static class BaselineComparer
     }
 
     /// <summary>
-    /// 「倍率と絶対差の両方」か「大きな絶対差」で判定する。
-    /// 倍率だけだと 0.3ms→0.9ms を騒ぎ、絶対差だけだと LAN 内の変化を見逃す。
-    /// 倍率に届かない 30ms→55ms のような経路変化も拾えるようにしている。
+    /// 倍率と絶対差の両方を課す。それを二段構えにする。
+    ///
+    /// ・倍率だけで判定すると 0.3ms→0.9ms（3倍）を騒ぎ立てる
+    /// ・絶対差だけで判定すると WAN の 200ms→220ms を拾ってしまう
+    /// ・厳しい方だけだと 30ms→55ms（1.8倍・差25ms）という経路が伸びた変化を見逃す
+    ///
+    /// なので「大きく伸びた」と「そこそこ伸びて差も大きい」の二本立てにしている。
     /// </summary>
     private static bool IsSlower(double before, double after, ComparisonOptions options)
     {
@@ -270,10 +280,12 @@ public static class BaselineComparer
         double delta = after - before;
         if (delta <= 0) return false;
 
-        bool byRatio = after >= before * options.SlowerRatio && delta >= options.SlowerMinimumDeltaMs;
-        bool byDelta = delta >= options.SlowerAbsoluteDeltaMs;
+        double ratio = after / before;
 
-        return byRatio || byDelta;
+        bool clearlySlower = ratio >= options.SlowerRatio && delta >= options.SlowerMinimumDeltaMs;
+        bool moderatelySlower = ratio >= options.ModerateRatio && delta >= options.ModerateDeltaMs;
+
+        return clearlySlower || moderatelySlower;
     }
 
     public static WorkSummary Summarize(IReadOnlyList<WorkComparison> comparisons, int outageCount = 0)

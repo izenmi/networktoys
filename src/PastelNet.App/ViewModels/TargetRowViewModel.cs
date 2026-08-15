@@ -1,6 +1,7 @@
 using PastelNet.App.Mvvm;
 using PastelNet.Core.Metrics;
 using PastelNet.Core.Models;
+using PastelNet.Core.Work;
 
 namespace PastelNet.App.ViewModels;
 
@@ -27,6 +28,13 @@ public enum RowState
 
     /// <summary>名前を解決できない。</summary>
     Unresolved,
+
+    /// <summary>
+    /// 測定結果そのものが届かなくなった。
+    /// <b>「応答が無い」とは別物。</b>測定が止まっているのに応答ありと出し続けたら、
+    /// 変更作業の確認ツールとしては嘘をつくことになる。
+    /// </summary>
+    Stalled,
 }
 
 /// <summary>
@@ -43,14 +51,16 @@ public sealed class TargetRowViewModel : ObservableObject
     private readonly ProbeSample[] _scratch;
 
     /// <summary>
-    /// 何回続けて応答が無ければ「落ちている」とみなすか。
-    /// 1 回のタイムアウトはよくあることなので、2 回連続を条件にする。
+    /// 状態の判定はここが持つ。<b>サンプル 1 件ごとに</b>進めるので、
+    /// 1 回の画面更新に複数件届いても数え落とさない。
     /// </summary>
-    private const int FailuresToDeclareDown = 2;
+    private readonly ProbeStateMachine _machine = new();
+
+    /// <summary>作業開始以降だけを数える集計。前後比較の統計はこちらを使う。</summary>
+    private WindowCounters _window;
 
     private RttStatistics _statistics = RttStatistics.Empty;
     private RowState _state = RowState.Pending;
-    private int _consecutiveFailures;
     private bool _isDown;
     private string _address = "—";
     private string _latestRtt = "—";
@@ -127,10 +137,25 @@ public sealed class TargetRowViewModel : ObservableObject
     public void Append(in ProbeSample sample, string? resolvedAddress)
     {
         _history.Add(sample);
+
+        // 状態の判定はここで行う。表示のまとめ更新（Refresh）まで待つと、
+        // 1 回の画面更新に 2 件以上届いたときに失敗を数え落とす
+        _machine.Observe(sample);
+        _window.Add(sample);
         _isDirty = true;
 
         if (!string.IsNullOrEmpty(resolvedAddress))
             Address = resolvedAddress;
+    }
+
+    /// <summary>
+    /// 測定が止まっていないかを確かめる。止まっていれば表示を変える。
+    /// 結果が届かなくなった宛先は Refresh が呼ばれないので、外から定期的に叩く。
+    /// </summary>
+    public void CheckStalled(long nowTicks)
+    {
+        if (_machine.CheckStalled(nowTicks, _settings.IntervalMs))
+            _isDirty = true;
     }
 
     /// <summary>取り込んだ結果を表示へ反映する。変化が無ければ何もしない。</summary>
@@ -141,29 +166,27 @@ public sealed class TargetRowViewModel : ObservableObject
 
         int count = _history.CopyTo(_scratch);
         RttStatistics stats = RttStatistics.Compute(_scratch.AsSpan(0, count));
-        ProbeSample latest = _history.Latest;
+        ProbeSample latest = _machine.Latest;
 
         // 一覧には出さない詳しい統計。選択された行だけ画面下に出す
         // （列を増やすと一覧性が落ちるため）
         _statistics = stats;
 
-        State = latest.Status switch
+        State = _machine.State switch
         {
-            ProbeStatus.Success when latest.RttMs >= _settings.SlowThresholdMs => RowState.Slow,
-            ProbeStatus.Success => RowState.Ok,
-            ProbeStatus.Refused => RowState.Refused,
-            ProbeStatus.DnsFailure => RowState.Unresolved,
-            ProbeStatus.Pending => RowState.Pending,
-            _ => RowState.Down,
+            LinkState.Stalled => RowState.Stalled,
+            LinkState.Pending => RowState.Pending,
+            LinkState.Down when latest.Status == ProbeStatus.DnsFailure => RowState.Unresolved,
+            LinkState.Down => RowState.Down,
+            _ => latest.Status switch
+            {
+                ProbeStatus.Refused => RowState.Refused,
+                ProbeStatus.Success when latest.RttMs >= _settings.SlowThresholdMs => RowState.Slow,
+                _ => RowState.Ok,
+            },
         };
 
-        // TCP の「拒否」は応答が返っている＝ホストは生きているので、失敗に数えない
-        if (latest.Status is ProbeStatus.Success or ProbeStatus.Refused)
-            _consecutiveFailures = 0;
-        else if (latest.Status != ProbeStatus.Pending)
-            _consecutiveFailures++;
-
-        IsDown = _consecutiveFailures >= FailuresToDeclareDown;
+        IsDown = _machine.State == LinkState.Down;
 
         // 拒否のときも RTT は意味を持つ（そこまで届いている証拠なので）
         LatestRtt = latest.Status is ProbeStatus.Success or ProbeStatus.Refused
@@ -174,6 +197,18 @@ public sealed class TargetRowViewModel : ObservableObject
 
         HistoryChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>
+    /// ここから先だけを数え直す。作業の区切りで呼ぶ。
+    /// 履歴全体の統計は作業前のサンプルに薄められるので、前後比較には使えない。
+    /// </summary>
+    public void StartWindow(long nowTicks) => _window.Start(nowTicks);
+
+    /// <summary>作業開始以降の集計。前後比較はこちらの値で行う。</summary>
+    internal WindowCounters Window => _window;
+
+    /// <summary>状態機械。不通の判定や連続失敗の回数を見るのに使う。</summary>
+    internal ProbeStateMachine Machine => _machine;
 
     /// <summary>直近の統計。詳細表示に使う。</summary>
     internal RttStatistics Statistics => _statistics;
@@ -198,8 +233,9 @@ public sealed class TargetRowViewModel : ObservableObject
     public void Reset()
     {
         _history.Clear();
+        _machine.Reset();
+        _window.Start(DateTime.Now.Ticks);
         _isDirty = false;
-        _consecutiveFailures = 0;
         IsDown = false;
         State = RowState.Pending;
         LatestRtt = "—";

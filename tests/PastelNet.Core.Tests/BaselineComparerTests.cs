@@ -14,7 +14,9 @@ public class BaselineComparerTests
         double loss = 0,
         double average = 2,
         double p95 = 3) =>
-        new($"{host}|{kind}|0", host, kind, address, "備考", responded, attempts, loss, average, p95, 0);
+        // 鍵は宛先の登録内容から作られるので、測り方（kind）を変えても同じ鍵になる。
+        // だから「同じ宛先を ICMP と TCP で測った」を突き合わせられる
+        new($"{host}|Icmp|0", host, kind, address, "備考", responded, attempts, loss, average, p95, 0);
 
     private static WorkSnapshot Snapshot(params WorkEntry[] entries)
         => new(DateTimeOffset.Now, string.Empty, 1000, entries);
