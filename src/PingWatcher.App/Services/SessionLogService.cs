@@ -31,6 +31,10 @@ internal sealed class SessionLogService : IDisposable
 
     public static string LogsDirectory => AppData.PathOf("logs");
 
+    /// <summary>スクリーンショットの保存先。ログと同じフォルダに置く。</summary>
+    public static string NewScreenshotPath()
+        => Path.Combine(LogsDirectory, $"screen-{Stamp()}.png");
+
     /// <summary>新しいログファイルを開き、ヘッダ行を積む。</summary>
     public void Start(string prefix, IEnumerable<string> headerLines)
     {
@@ -104,7 +108,10 @@ internal sealed class SessionLogService : IDisposable
         }
     }
 
-    /// <summary>30 日より古いログを片付ける。起動時に ThreadPool で一度呼ぶ。</summary>
+    /// <summary>
+    /// 30 日より古いログを片付ける。起動時に ThreadPool で一度呼ぶ。
+    /// スクリーンショット(.png)は消さない — 明示的に撮った証跡なので勝手に処分しない。
+    /// </summary>
     public static void CleanupOldLogs()
     {
         try
