@@ -321,6 +321,47 @@ internal static class SelfTest
             log.AppendLine($"        TCP {tcp} / UDP {udp} / {processes} プロセス");
         });
 
+        Check("ETW 通信量セッションを開始して停止できる(管理者のときのみ)", () =>
+        {
+            // 非管理者では ETW のカーネルネットワークイベントを購読できない。
+            // その経路(案内表示への縮退)は CI では踏めないので、実機で確認する
+            if (!Services.NetTraceSession.IsAdministrator)
+            {
+                log.AppendLine("        管理者ではないため省略");
+                return;
+            }
+
+            var aggregator = new Core.Net.TrafficAggregator();
+            using var session = new Services.NetTraceSession(aggregator);
+            Assert(session.Start(), $"ETW セッションを開始できない: {session.FailureMessage}");
+
+            // ループバックで自前のトラフィックを流す。ここが通れば EVENT_RECORD の
+            // レイアウト誤り(catch できない AccessViolation)は起きていない。
+            // カーネルバッファのフラッシュは 1 秒周期なので、件数は合否に含めない
+            Task.Run(async () =>
+            {
+                using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+                listener.Start();
+                int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+                using var client = new System.Net.Sockets.TcpClient();
+                await client.ConnectAsync(IPAddress.Loopback, port);
+                using System.Net.Sockets.TcpClient server = await listener.AcceptTcpClientAsync();
+
+                byte[] payload = new byte[64 * 1024];
+                await client.GetStream().WriteAsync(payload);
+                await client.GetStream().FlushAsync();
+                await Task.Delay(2000);
+            }).GetAwaiter().GetResult();
+
+            Dictionary<Core.Net.FlowKey, Core.Net.FlowTotals> drained = aggregator.Drain();
+            long bytes = drained.Values.Sum(t => t.Sent + t.Received);
+            log.AppendLine($"        {drained.Count} フロー / {bytes:N0} バイト");
+
+            session.Stop();
+            Assert(!session.IsRunning, "ETW セッションが停止していない");
+        });
+
         Check("FTP サーバを起動して停止できる", () =>
         {
             // 実際の転送は CI では確かめられない。ここで見たいのは
