@@ -32,7 +32,7 @@ public class NeighborDiffTests
 
         Assert.Equal(NeighborChangeKind.MacChanged, change.Kind);
         Assert.True(change.IsGateway);
-        Assert.Contains("冗長化", change.Describe(), StringComparison.Ordinal);
+        Assert.Contains("冗長化", change.Description, StringComparison.Ordinal);
     }
 
     [Fact]
