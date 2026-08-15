@@ -35,6 +35,9 @@ public partial class App : Application
 
         base.OnStartup(e);
 
+        // 30 日より古い測定ログの整理。起動を待たせないよう背景で
+        _ = Task.Run(Services.SessionLogService.CleanupOldLogs);
+
         try
         {
             new Views.MainWindow().Show();

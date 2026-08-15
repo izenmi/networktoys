@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows.Threading;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
+using PingWatcher.Core.Logging;
 using PingWatcher.Core.Metrics;
 using PingWatcher.Core.Models;
 using PingWatcher.Core.Storage;
@@ -27,6 +28,7 @@ public sealed class MonitorViewModel : ObservableObject
     private static readonly TimeSpan ListDebounce = TimeSpan.FromMilliseconds(600);
 
     private readonly MonitorEngine _engine = new();
+    private readonly SessionLogService _log = new();
     private readonly Dictionary<string, TargetRowViewModel> _rowsById = [];
     private readonly HashSet<TargetRowViewModel> _touched = [];
     private readonly DispatcherTimer _pump;
@@ -281,6 +283,12 @@ public sealed class MonitorViewModel : ObservableObject
         StartedAt ??= DateTime.Now;
         IsRunning = true;
 
+        // 測定ログを開始。証跡なので、画面の履歴(リングバッファ)と違って
+        // アプリを閉じても残る。書けない場所でも測定自体は止めない
+        _log.Start(
+            _alwaysTcp ? "tcp" : "ping",
+            SessionLogFormatter.Header(DateTime.Now, _settings.IntervalMs, targets.Count, tcp ? $"TCP(既定 {port})" : "ICMP"));
+
         // 実行中であることはボタンの文字で分かり、件数は一覧の見出しに出ている。
         // ここに定型文を出しても場所を取るだけなので、前の用件だけ消しておく。
         StatusMessage = string.Empty;
@@ -321,7 +329,10 @@ public sealed class MonitorViewModel : ObservableObject
             OnPump(this, EventArgs.Empty);   // 残っている結果を取りこぼさない
 
             // 続いている不通は「復旧した」ではなく「測定を止めた」として閉じる
-            Tracker.CloseAll(DateTime.Now.Ticks, OutageCloseReason.Stopped);
+            foreach (OutageRecord closed in Tracker.CloseAll(DateTime.Now.Ticks, OutageCloseReason.Stopped))
+                _log.Append(SessionLogFormatter.OutageClosed(DateTime.Now, closed));
+
+            _log.Stop(SessionLogFormatter.Footer(DateTime.Now));
 
             IsRunning = false;
             StatusMessage = "測定を停止しました。";
@@ -344,6 +355,13 @@ public sealed class MonitorViewModel : ObservableObject
         _pump.Stop();
         _listDebounce?.Stop();
         _engine.BeginStop();
+
+        // 終了間際でもログは書き切る。ここだけは UI スレッドで同期書き込みになるが、
+        // 量は残りバッファぶんだけで、アプリを閉じる場面なので許容する
+        if (IsRunning)
+            _log.Stop(SessionLogFormatter.Footer(DateTime.Now));
+
+        _log.Dispose();
     }
 
     /// <summary>
@@ -362,7 +380,16 @@ public sealed class MonitorViewModel : ObservableObject
             row.Append(result.Sample, result.ResolvedAddress);
 
             // 不通の記録は行の表示とは別に、全サンプルを見て判定する
-            Tracker.Observe(KeyOf(row.Target), row.Host, result.Sample);
+            OutageRecord? change = Tracker.Observe(KeyOf(row.Target), row.Host, result.Sample);
+
+            _log.Append(SessionLogFormatter.Sample(result.Sample.Timestamp, row.Host, result.ResolvedAddress, result.Sample));
+
+            if (change is not null)
+            {
+                _log.Append(change.IsOngoing
+                    ? SessionLogFormatter.OutageOpened(DateTime.Now, change)
+                    : SessionLogFormatter.OutageClosed(DateTime.Now, change));
+            }
 
             _touched.Add(row);
         }
@@ -531,7 +558,8 @@ public sealed class MonitorViewModel : ObservableObject
             _ = _engine.RemoveTargetAsync(row.Id);
 
         // 宛先が消えたことを「復旧」と記録しないよう、理由を残して閉じる
-        Tracker.Remove(KeyOf(row.Target), DateTime.Now.Ticks);
+        if (Tracker.Remove(KeyOf(row.Target), DateTime.Now.Ticks) is { } closed)
+            _log.Append(SessionLogFormatter.OutageClosed(DateTime.Now, closed));
 
         OnPropertyChanged(nameof(AliveHeader));
         OnPropertyChanged(nameof(DownHeader));
