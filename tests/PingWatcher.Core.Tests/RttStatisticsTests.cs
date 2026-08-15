@@ -87,7 +87,10 @@ public class RttStatisticsTests
 
         Assert.Equal(2, stats.Attempts);
         Assert.Equal(1, stats.Successes);
-        Assert.Equal(50, stats.LossPercent);
+
+        // 拒否は RST という応答が返っている＝ロスではない
+        // （欠測扱いだと「連続失敗 0 なのにロス率 50%」という矛盾した表示になる）
+        Assert.Equal(0, stats.LossPercent);
     }
 
     [Fact]
