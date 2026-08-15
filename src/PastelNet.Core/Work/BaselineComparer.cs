@@ -82,6 +82,9 @@ public sealed record WorkComparison(
     string Detail)
 {
     public VerdictLevel Level => BaselineComparer.LevelOf(Verdict);
+
+    /// <summary>画面とレポートで同じ言い方をするための短い日本語。</summary>
+    public string Label => BaselineComparer.Label(Verdict);
 }
 
 /// <param name="Total">宛先の総数。</param>

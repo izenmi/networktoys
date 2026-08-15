@@ -535,6 +535,269 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== 作業（変更作業の前後確認。このツールの主な使い道） ===== -->
+            <TabItem x:Name="WorkTab" Header="作業" DataContext="{Binding Work}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+
+                        <!-- 操作と判定 -->
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="作業名" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBox Width="200"
+                                         Text="{Binding SessionName, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,10,0"
+                                         ToolTip="例: A社 3階 スイッチ交換" />
+                                <Button Content="作業前として記録" Command="{Binding CaptureBeforeCommand}" Margin="0,0,6,0" />
+                                <Button Content="作業後として比較" Command="{Binding CaptureAfterCommand}" Margin="0,0,6,0" />
+                                <Button Content="新しい作業" Command="{Binding NewSessionCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                                <TextBlock Text="{Binding BeforeText}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <TextBlock Text="{Binding AfterText}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- 判定。開いた瞬間に結論が分かること -->
+                            <Border CornerRadius="8" Padding="12,8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding VerdictLevelName}" Value="Ok">
+                                                <Setter Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding VerdictLevelName}" Value="Warning">
+                                                <Setter Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding VerdictLevelName}" Value="Failure">
+                                                <Setter Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding VerdictLevelName}" Value="Unknown">
+                                                <Setter Property="Background" Value="{DynamicResource Brush.Info.Bg}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding VerdictText}" FontSize="17" FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding VerdictLevelName}" Value="Ok">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding VerdictLevelName}" Value="Warning">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding VerdictLevelName}" Value="Failure">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding VerdictLevelName}" Value="Unknown">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding HeadlineText}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" Margin="0,6,0,0" />
+                        </StackPanel>
+
+                        <!-- 出力とメモ -->
+                        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="メモ" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBox Width="280"
+                                         Text="{Binding MarkerText, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,6,0"
+                                         ToolTip="作業の区切りで打っておくと、あとで不通と突き合わせられます">
+                                    <TextBox.InputBindings>
+                                        <KeyBinding Key="Enter" Command="{Binding AddMarkerCommand}" />
+                                    </TextBox.InputBindings>
+                                </TextBox>
+                                <Button Content="記録" Command="{Binding AddMarkerCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,20,0" />
+                                <Button Content="HTML で保存" Command="{Binding SaveHtmlCommand}" Margin="0,0,6,0" />
+                                <Button Content="CSV で保存" Command="{Binding SaveCsvCommand}"
+                                        Style="{StaticResource Button.Subtle}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 本体: 左に前後比較、右に時系列と環境差分 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="380" />
+                                <ColumnDefinition Width="360" />
+                            </Grid.ColumnDefinitions>
+
+                            <DockPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Heading}" Text="作業前後の比較" />
+
+                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="104" />
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" MinWidth="120" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="判定" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="宛先" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1"
+                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                                <ListBox ItemsSource="{Binding Comparisons}"
+                                         ItemContainerStyle="{StaticResource TargetRowContainer}"
+                                         Background="Transparent" BorderThickness="0"
+                                         HorizontalContentAlignment="Stretch"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid MinHeight="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="104" />
+                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="*" MinWidth="120" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border x:Name="VerdictBadge" Grid.Column="0"
+                                                        Style="{StaticResource Badge}"
+                                                        Background="{DynamicResource Brush.SurfaceAlt}"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock x:Name="VerdictLabel"
+                                                               Style="{StaticResource Badge.Text}"
+                                                               Foreground="{DynamicResource Brush.TextMuted}"
+                                                               Text="{Binding Label}" />
+                                                </Border>
+
+                                                <TextBlock Grid.Column="1" Text="{Binding Host}"
+                                                           Style="{StaticResource Mono}"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Detail}"
+                                                           Style="{StaticResource Caption}"
+                                                           VerticalAlignment="Center"
+                                                           TextWrapping="Wrap" Margin="0,2,0,2" />
+                                            </Grid>
+
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding Level}" Value="Failure">
+                                                    <Setter TargetName="VerdictBadge" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                                                    <Setter TargetName="VerdictLabel" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Level}" Value="Warning">
+                                                    <Setter TargetName="VerdictBadge" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                                                    <Setter TargetName="VerdictLabel" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Level}" Value="Unknown">
+                                                    <Setter TargetName="VerdictBadge" Property="Background" Value="{DynamicResource Brush.Info.Bg}" />
+                                                    <Setter TargetName="VerdictLabel" Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+
+                            <!-- 右: 時系列と環境の変化 -->
+                            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Heading}" Text="作業中の記録" />
+                                    <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                               Text="メモと不通を時刻順に並べています。操作とその影響を突き合わせられます。" />
+
+                                    <ItemsControl ItemsSource="{Binding Timeline}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border x:Name="Row" CornerRadius="5" Padding="6,3" Margin="0,0,0,3"
+                                                        Background="{DynamicResource Brush.SurfaceAlt}">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}" />
+                                                            <TextBlock x:Name="LabelText" Text="{Binding Label}"
+                                                                       Style="{StaticResource Caption}"
+                                                                       FontWeight="SemiBold" Margin="8,0,0,0" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Margin="0,1,0,0" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding IsOutage}" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                                                        <Setter TargetName="LabelText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Style="{StaticResource Heading}" Text="近隣キャッシュの変化" Margin="0,14,0,0" />
+                                    <ItemsControl ItemsSource="{Binding NeighborChanges}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap"
+                                                           Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Style="{StaticResource Heading}" Text="ipconfig の差分" Margin="0,14,0,0" />
+                                    <ItemsControl ItemsSource="{Binding IpConfigDiff}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock x:Name="Line" Text="{Binding Text}"
+                                                           Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           TextWrapping="Wrap" />
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding Kind}" Value="Added">
+                                                        <Setter TargetName="Line" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Kind}" Value="Removed">
+                                                        <Setter TargetName="Line" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Style="{StaticResource Heading}" Text="経路表の差分" Margin="0,14,0,0" />
+                                    <ItemsControl ItemsSource="{Binding RouteDiff}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock x:Name="RouteLine" Text="{Binding Text}"
+                                                           Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           TextWrapping="Wrap" />
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding Kind}" Value="Added">
+                                                        <Setter TargetName="RouteLine" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Kind}" Value="Removed">
+                                                        <Setter TargetName="RouteLine" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== スキャン ===== -->
             <TabItem Header="スキャン" DataContext="{Binding Scan}">
                 <Border Style="{StaticResource Card}">

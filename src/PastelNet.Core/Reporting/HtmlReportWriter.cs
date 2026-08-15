@@ -214,7 +214,7 @@ public static class HtmlReportWriter
                 html.Append("<li")
                     .Append(change.IsGateway ? " class=\"warn\"" : string.Empty)
                     .Append('>')
-                    .Append(Escape(change.Describe()))
+                    .Append(Escape(change.Description))
                     .Append("</li>\n");
             }
 

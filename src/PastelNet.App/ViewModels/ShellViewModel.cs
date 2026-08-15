@@ -20,6 +20,7 @@ public sealed class ShellViewModel
         Wifi = new WifiViewModel();
 
         Report = new ReportViewModel(Monitor);
+        Work = new WorkViewModel(Monitor);
     }
 
     public MonitorViewModel Monitor { get; }
@@ -33,4 +34,7 @@ public sealed class ShellViewModel
     public WifiViewModel Wifi { get; }
 
     public ReportViewModel Report { get; }
+
+    /// <summary>変更作業の前後確認。このツールの主な使い道。</summary>
+    public WorkViewModel Work { get; }
 }

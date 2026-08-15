@@ -26,7 +26,8 @@ public sealed record NeighborChange(
     NeighborChangeKind Kind,
     bool IsGateway)
 {
-    public string Describe() => Kind switch
+    /// <summary>そのまま画面にもレポートにも出せる一文。</summary>
+    public string Description => Kind switch
     {
         NeighborChangeKind.MacChanged when IsGateway =>
             $"既定ゲートウェイ {Address} の MAC が {BeforeMac} から {AfterMac} に変わりました（冗長化の切り替わりの可能性）。",
