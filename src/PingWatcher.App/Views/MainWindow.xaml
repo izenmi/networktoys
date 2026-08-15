@@ -2162,7 +2162,10 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding ConnectionSummary}"
                                            VerticalAlignment="Center" Margin="0,0,12,0" />
-                                <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,10,0" />
+                                <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,6,0" />
+                                <Button Content="保存" Command="{Binding SaveCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,10,0"
+                                        ToolTip="いまの接続情報と周辺 AP の一覧をテキストで保存します。" />
                                 <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             </StackPanel>

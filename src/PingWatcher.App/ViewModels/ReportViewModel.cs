@@ -105,7 +105,8 @@ public sealed class ReportViewModel : ObservableObject
                 describeKind: _monitor.DescribeEffectiveKind,
                 wireless: _wifi.DescribeForReport(),
                 outages: _monitor.Tracker.Records,
-                wirelessNote: _wifi.ReportNote);
+                wirelessNote: _wifi.ReportNote,
+                wirelessAccessPoints: _wifi.DescribeAccessPointsForReport());
 
             switch (format)
             {

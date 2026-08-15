@@ -1,8 +1,12 @@
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Text;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
 using PingWatcher.Core.Metrics;
+using PingWatcher.Core.Reporting;
 
 namespace PingWatcher.App.ViewModels;
 
@@ -97,6 +101,7 @@ public sealed class WifiViewModel : ObservableObject
     public WifiViewModel()
     {
         RefreshCommand = new RelayCommand(() => _ = RefreshAsync(force: true), () => !IsBusy);
+        SaveCommand = new RelayCommand(SaveSnapshot);
         OpenLocationSettingsCommand = new RelayCommand(OpenLocationSettings);
 
         _rssiTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = RssiInterval };
@@ -110,6 +115,7 @@ public sealed class WifiViewModel : ObservableObject
     public ObservableCollection<ChannelBarViewModel> Channels5 { get; } = [];
 
     public RelayCommand RefreshCommand { get; }
+    public RelayCommand SaveCommand { get; }
     public RelayCommand OpenLocationSettingsCommand { get; }
 
     public string Status
@@ -395,4 +401,47 @@ public sealed class WifiViewModel : ObservableObject
         ? "無線 LAN の情報は取得していません（「無線」タブを開くと取得します）。"
         : null;
 
+    /// <summary>周辺 AP の一覧を記録用の形にする。画面表示と同じ整形済み文字列を渡す。</summary>
+    public IReadOnlyList<WirelessAccessPoint> DescribeAccessPointsForReport()
+        => [.. AccessPoints.Select(ap => new WirelessAccessPoint(
+            ap.Ssid, ap.Bssid, ap.Vendor, ap.Rssi, ap.Quality, ap.Channel, ap.Band, ap.IsConnected))];
+
+    /// <summary>
+    /// いま見えている無線の状況（接続情報+周辺 AP）をテキストで保存する。
+    /// 現場の電波環境を単体で控えたい場面用。レポート全体は「記録」タブから。
+    /// </summary>
+    private void SaveSnapshot()
+    {
+        IReadOnlyList<(string Label, string Value)>? connection = DescribeForReport();
+        IReadOnlyList<WirelessAccessPoint> accessPoints = DescribeAccessPointsForReport();
+
+        if (connection is null && accessPoints.Count == 0)
+        {
+            Status = "保存する情報がまだありません。「更新」で周辺を調べてから保存してください。";
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            FileName = $"wifi-{DateTime.Now:yyyyMMdd-HHmm}.txt",
+            DefaultExt = "txt",
+            Filter = "テキスト (*.txt)|*.txt|すべてのファイル (*.*)|*.*",
+            AddExtension = true,
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            File.WriteAllText(dialog.FileName,
+                WifiSnapshotWriter.Render(DateTime.Now, connection, accessPoints),
+                Encoding.UTF8);
+            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"保存できませんでした: {ex.Message}";
+        }
+    }
 }

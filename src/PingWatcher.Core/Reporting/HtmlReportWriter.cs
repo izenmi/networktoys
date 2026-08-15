@@ -172,6 +172,28 @@ public static class HtmlReportWriter
             }
 
             html.Append("</table>\n");
+
+            if (data.WirelessAccessPoints is { Count: > 0 } accessPoints)
+            {
+                html.Append("<h2>周辺のアクセスポイント</h2>\n<table class=\"result\">\n<thead><tr>")
+                    .Append("<th></th><th>SSID</th><th>BSSID</th>")
+                    .Append("<th class=\"num\">信号</th><th class=\"num\">品質</th><th class=\"num\">ch</th>")
+                    .Append("<th>帯域</th><th>メーカー</th></tr></thead>\n<tbody>\n");
+
+                foreach (WirelessAccessPoint ap in accessPoints)
+                {
+                    html.Append("<tr><td>").Append(ap.IsConnected ? "接続中" : "").Append("</td><td>")
+                        .Append(Escape(ap.Ssid)).Append("</td><td>")
+                        .Append(Escape(ap.Bssid)).Append("</td><td class=\"num\">")
+                        .Append(Escape(ap.Rssi)).Append("</td><td class=\"num\">")
+                        .Append(Escape(ap.Quality)).Append("</td><td class=\"num\">")
+                        .Append(Escape(ap.Channel)).Append("</td><td>")
+                        .Append(Escape(ap.Band)).Append("</td><td>")
+                        .Append(Escape(ap.Vendor)).Append("</td></tr>\n");
+                }
+
+                html.Append("</tbody></table>\n");
+            }
         }
         else if (data.WirelessNote is { Length: > 0 } note)
         {

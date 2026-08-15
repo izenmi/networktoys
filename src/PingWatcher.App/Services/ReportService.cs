@@ -26,7 +26,8 @@ internal static class ReportService
         Func<Target, string>? describeKind = null,
         IReadOnlyList<(string Label, string Value)>? wireless = null,
         IReadOnlyList<OutageRecord>? outages = null,
-        string? wirelessNote = null)
+        string? wirelessNote = null,
+        IReadOnlyList<WirelessAccessPoint>? wirelessAccessPoints = null)
     {
         var reportRows = new List<ReportRow>();
         var buffer = new ProbeSample[SparklinePoints];
@@ -86,7 +87,8 @@ internal static class ReportService
             work,
             wireless,
             outages,
-            wirelessNote);
+            wirelessNote,
+            wirelessAccessPoints);
     }
 
     /// <summary>

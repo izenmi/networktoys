@@ -218,7 +218,43 @@ public static class TextReportWriter
         foreach ((string label, string value) in wireless)
             text.AppendLine($"  {TextWidth.Cell(label, 20)} {value}");
 
+        if (data.WirelessAccessPoints is { Count: > 0 } accessPoints)
+        {
+            text.AppendLine();
+            text.AppendLine("  周辺のアクセスポイント (* = 接続中):");
+            WriteAccessPointTable(text, accessPoints, "  ");
+        }
+
         text.AppendLine();
+    }
+
+    /// <summary>
+    /// 周辺 AP の表。無線タブの「保存」(WifiSnapshotWriter)と共用する。
+    /// </summary>
+    internal static void WriteAccessPointTable(StringBuilder text, IReadOnlyList<WirelessAccessPoint> accessPoints, string indent)
+    {
+        text.AppendLine(
+            indent + "  " +
+            TextWidth.Cell("SSID", 24) + " " +
+            TextWidth.Cell("BSSID", 18) + " " +
+            TextWidth.PadLeft("信号", 8) + " " +
+            TextWidth.PadLeft("品質", 6) + " " +
+            TextWidth.PadLeft("ch", 4) + " " +
+            TextWidth.Cell("帯域", 8) + " " +
+            "メーカー");
+
+        foreach (WirelessAccessPoint ap in accessPoints)
+        {
+            text.Append(indent)
+                .Append(ap.IsConnected ? "* " : "  ")
+                .Append(TextWidth.Cell(ap.Ssid, 24)).Append(' ')
+                .Append(TextWidth.Cell(ap.Bssid, 18)).Append(' ')
+                .Append(TextWidth.PadLeft(ap.Rssi, 8)).Append(' ')
+                .Append(TextWidth.PadLeft(ap.Quality, 6)).Append(' ')
+                .Append(TextWidth.PadLeft(ap.Channel, 4)).Append(' ')
+                .Append(TextWidth.Cell(ap.Band, 8)).Append(' ')
+                .AppendLine(ap.Vendor);
+        }
     }
 
     private static void WriteWork(StringBuilder text, ReportData data)

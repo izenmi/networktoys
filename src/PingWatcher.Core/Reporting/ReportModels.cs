@@ -48,6 +48,10 @@ public sealed record ReportRow(
 /// 不通の記録。いつ・どこが落ちていたかは、統計の平均値からは読み取れない。
 /// </param>
 /// <param name="WirelessNote">無線の情報が無いときの理由。</param>
+/// <param name="WirelessAccessPoints">
+/// スキャンで見えていた周辺のアクセスポイント。現場の電波環境の証跡になる。
+/// スキャンしていなければ null。
+/// </param>
 public sealed record ReportData(
     string Title,
     DateTime GeneratedAt,
@@ -60,7 +64,8 @@ public sealed record ReportData(
     WorkSection? Work = null,
     IReadOnlyList<(string Label, string Value)>? Wireless = null,
     IReadOnlyList<OutageRecord>? Outages = null,
-    string? WirelessNote = null)
+    string? WirelessNote = null,
+    IReadOnlyList<WirelessAccessPoint>? WirelessAccessPoints = null)
 {
     /// <summary>応答が無いままの宛先。記録の先頭に出す。</summary>
     public IReadOnlyList<ReportRow> DownRows => [.. Rows.Where(r => r.IsDown)];
@@ -96,3 +101,17 @@ public sealed record WorkSection(
 /// <param name="Label">種別（作業／不通）。</param>
 /// <param name="Text">内容。</param>
 public sealed record WorkTimelineItem(DateTimeOffset At, string Label, string Text);
+
+/// <summary>
+/// 周辺で見えていたアクセスポイント 1 台。値は画面表示と同じ整形済み文字列で持つ
+/// （記録は「見たままを残す」のが役目で、数値の再解釈はしない）。
+/// </summary>
+public sealed record WirelessAccessPoint(
+    string Ssid,
+    string Bssid,
+    string Vendor,
+    string Rssi,
+    string Quality,
+    string Channel,
+    string Band,
+    bool IsConnected);
