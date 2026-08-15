@@ -169,6 +169,35 @@ public partial class MainWindow : Window
         return encoder;
     }
 
+    /// <summary>
+    /// IP 設定の適用。自分の足場(この PC の通信)を壊せる操作なので、
+    /// UAC の前に内容の確認を挟む(UAC は「昇格の同意」、こちらは「内容の確認」)。
+    /// </summary>
+    private async void OnApplyIpConfig(object sender, RoutedEventArgs e)
+    {
+        string summary = _shell.IpConfig.ConfirmationSummary();
+        if (summary.Length == 0)
+            return;
+
+        bool confirmed = ConfirmDialog.Confirm(
+            this,
+            "IP 設定の適用",
+            summary + "\n\nこの PC の通信が一時的に切れることがあります。続けますか？",
+            okLabel: "適用する");
+
+        if (!confirmed)
+            return;
+
+        try
+        {
+            await _shell.IpConfig.ApplyAsync();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnApplyIpConfig");
+        }
+    }
+
     /// <summary>結果はボタンの文字で 2 秒だけ知らせる。トーストや別窓は出さない。</summary>
     private void ShowScreenshotResult(string text)
     {
@@ -357,6 +386,10 @@ public partial class MainWindow : Window
             _shell.Connections.OnActivated();
         else
             _shell.Connections.OnDeactivated();
+
+        // IP設定はタブを開いたときにアダプタを列挙し直す
+        if (IpConfigTab.IsSelected)
+            _shell.IpConfig.OnActivated();
 
         if (ReportTab.IsSelected)
             _shell.Report.OnActivated();

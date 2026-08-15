@@ -373,6 +373,14 @@ internal static class SelfTest
             log.AppendLine($"        TCP {tcp} / UDP {udp} / {processes} プロセス");
         });
 
+        Check("IP設定: アダプタを列挙できる(件数は問わない)", () =>
+        {
+            // ElevatedNetsh はここから絶対に呼ばない。CI ランナーは管理者なので
+            // UAC なしで本当に適用され、ランナーのネットワークが壊れる
+            IReadOnlyList<Services.NetworkAdapterInfo> adapters = Services.NetworkEnvironment.ListAdapters();
+            log.AppendLine($"        アダプタ: {adapters.Count} 枚");
+        });
+
         Check("ETW 通信量セッションを開始して停止できる(管理者のときのみ)", () =>
         {
             // 非管理者では ETW のカーネルネットワークイベントを購読できない。

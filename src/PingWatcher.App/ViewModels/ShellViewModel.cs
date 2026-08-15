@@ -34,6 +34,9 @@ public sealed class ShellViewModel
         // 接続一覧もタブが開かれている間だけ OS を叩く
         Connections = new ConnectionsViewModel();
 
+        // IP 設定。列挙はタブを開いたときだけ
+        IpConfig = new IpConfigViewModel();
+
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
 
@@ -79,6 +82,9 @@ public sealed class ShellViewModel
     /// <summary>PC 上の TCP/UDP 接続一覧。</summary>
     public ConnectionsViewModel Connections { get; }
 
+    /// <summary>PC の IPv4 設定(DHCP/固定の切替と適用)。</summary>
+    public IpConfigViewModel IpConfig { get; }
+
     public WifiViewModel Wifi { get; }
 
     public ReportViewModel Report { get; }
@@ -118,6 +124,7 @@ public sealed class ShellViewModel
         Dns.Reset();
         Trace.Reset();
         Connections.Reset();
+        IpConfig.Reset();
         Wifi.Reset();
         Converter.Reset();
         Report.Reset();

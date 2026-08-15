@@ -2352,6 +2352,120 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== IP設定（この PC の IPv4 設定を切り替える。適用時だけ UAC 昇格） ===== -->
+            <TabItem x:Name="IpConfigTab" Header="IP設定" DataContext="{Binding IpConfig}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                            <TextBlock Text="アダプタ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <ComboBox Width="300"
+                                      ItemsSource="{Binding Adapters}"
+                                      SelectedItem="{Binding SelectedAdapter}"
+                                      Margin="0,0,6,2"
+                                      ToolTip="設定するアダプタ。抜けている(未接続の)アダプタも選べます。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock TextTrimming="CharacterEllipsis">
+                                            <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Summary, Mode=OneWay}" Foreground="{DynamicResource Brush.TextMuted}" />
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Content="再読み込み" Command="{Binding RefreshCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource Brush.TextMuted}"
+                                   Text="{Binding SelectedAdapter.Description}" />
+
+                        <CheckBox DockPanel.Dock="Top" Content="DHCP で自動取得する" IsChecked="{Binding UseDhcp}"
+                                  Margin="0,0,0,6"
+                                  ToolTip="チェックを外すと下の固定 IP 設定を使います。" />
+
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4" IsEnabled="{Binding UseStatic}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="IP アドレス" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="マスク" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Mask, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                     ToolTip="255.255.255.0 でも 24 でも /24 でも書けます。" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="ゲートウェイ" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Gateway, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                     ToolTip="空欄ならゲートウェイなしで設定します。" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="優先 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Dns1, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="代替 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Dns2, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                     ToolTip="DNS を両方空欄にすると、DNS の設定はクリアされます。" />
+                        </Grid>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding ValidationText}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource Brush.Warn.Fg}" />
+
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock Text="プリセット" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <ComboBox Width="160"
+                                      ItemsSource="{Binding Presets}"
+                                      SelectedItem="{Binding SelectedPreset}"
+                                      Margin="0,0,8,2"
+                                      ToolTip="選ぶと内容が入力欄に入ります(適用はされません)。">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="名前" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <TextBox Width="120" Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,6,2" ToolTip="現場名など(例: 現場A)。同じ名前は上書きされます。" />
+                            <Button Content="保存" Command="{Binding SavePresetCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,5,2"
+                                    ToolTip="いまの入力内容をこの名前で保存します。" />
+                            <Button Content="削除" Command="{Binding DeletePresetCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="適用" Click="OnApplyIpConfig" IsEnabled="{Binding CanApply}"
+                                    Margin="0,0,12,0"
+                                    ToolTip="確認の後、UAC の昇格を経て netsh で設定します。" />
+                            <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Brush.TextMuted}"
+                                   Text="適用には管理者権限が必要です(UAC の確認が 1 回出ます)。アプリ自体は非管理者のまま動きます。この PC の通信が一時的に切れることがあります。" />
+
+                        <Border />
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== 電卓（サブネット計算と早見表） ===== -->
             <TabItem Header="計算" DataContext="{Binding Subnet}">
                 <Border Style="{StaticResource Card}">
