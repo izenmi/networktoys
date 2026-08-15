@@ -21,13 +21,17 @@ public static class ConnectionTableView
     /// <param name="sortColumn">見出しクリックのソート列
     /// （Protocol / Local / Remote / State / Sent / Received）。null は既定の並び。</param>
     /// <param name="sortDescending">ソートの向き。</param>
+    /// <param name="stateFilter">状態での絞り込み。null は全状態。
+    /// <see cref="TcpConnectionState.None"/> を渡すと UDP だけになる
+    /// (UDP 行の State は None で、TCP 行が None になることはない)。</param>
     public static IReadOnlyList<ConnectionListRow> BuildRows(
         IReadOnlyList<ConnectionRow> rows,
         IReadOnlyDictionary<int, string> processNames,
         string? filter,
         ConnectionRates? rates,
         string? sortColumn = null,
-        bool sortDescending = false)
+        bool sortDescending = false,
+        TcpConnectionState? stateFilter = null)
     {
         string trimmed = filter?.Trim() ?? "";
 
@@ -56,6 +60,9 @@ public static class ConnectionTableView
             var prepared = new List<PreparedRow>(groupRows.Count);
             foreach (ConnectionRow row in groupRows)
             {
+                if (stateFilter is { } state && row.State != state)
+                    continue;
+
                 string protocol = ProtocolText(row.Protocol);
                 string local = FormatEndpoint(row.LocalAddress, row.LocalPort);
                 string remote = HasRemote(row) ? FormatEndpoint(row.RemoteAddress, row.RemotePort) : "—";

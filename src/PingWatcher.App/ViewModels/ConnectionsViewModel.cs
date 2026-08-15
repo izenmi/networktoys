@@ -6,6 +6,9 @@ using PingWatcher.Core.Net;
 
 namespace PingWatcher.App.ViewModels;
 
+/// <summary>状態フィルタの選択肢。State が null なら全状態、None なら UDP のみ。</summary>
+public sealed record ConnectionStateFilter(string Label, TcpConnectionState? State);
+
 /// <summary>
 /// 接続タブ。PC 上の TCP/UDP 接続をプロセスごとにまとめ、タブ表示中だけ
 /// 2 秒間隔で更新する。一覧の反映は <see cref="OrderedListSync"/> の差分適用で、
@@ -41,13 +44,39 @@ public sealed class ConnectionsViewModel : ObservableObject
     private string _sortColumn = "";
     private bool _sortDescending;
 
+    private ConnectionStateFilter _selectedStateFilter;
+
     public ConnectionsViewModel()
     {
+        StateFilters =
+        [
+            new ConnectionStateFilter("すべての状態", null),
+            new ConnectionStateFilter("ESTABLISHED のみ", TcpConnectionState.Established),
+            new ConnectionStateFilter("LISTEN のみ", TcpConnectionState.Listen),
+            new ConnectionStateFilter("TIME_WAIT のみ", TcpConnectionState.TimeWait),
+            new ConnectionStateFilter("CLOSE_WAIT のみ", TcpConnectionState.CloseWait),
+            new ConnectionStateFilter("UDP のみ", TcpConnectionState.None),
+        ];
+        _selectedStateFilter = StateFilters[0];
+
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = RefreshInterval };
         _timer.Tick += async (_, _) => await RefreshAsync();
     }
 
     public ObservableCollection<ConnectionListRow> Rows { get; } = [];
+
+    public ConnectionStateFilter[] StateFilters { get; }
+
+    /// <summary>状態での絞り込み(例: ESTABLISHED のみ)。テキスト絞り込みと併用できる。</summary>
+    public ConnectionStateFilter SelectedStateFilter
+    {
+        get => _selectedStateFilter;
+        set
+        {
+            if (value is not null && SetProperty(ref _selectedStateFilter, value))
+                RebuildRows();
+        }
+    }
 
     public string Filter
     {
@@ -116,27 +145,32 @@ public sealed class ConnectionsViewModel : ObservableObject
     public string HeaderReceived => HeaderLabel("Received", "受信");
 
     /// <summary>
-    /// 見出しクリックの並べ替え。昇順 → 降順 → 既定の並びと巡る。
-    /// 送信/受信の列はグループ自体も合計で並べ直す。
+    /// 見出しクリックの並べ替え。文字列の列は昇順 → 降順 → 既定の並び。
+    /// <b>送信/受信の列は初回クリックが降順</b>(いちばん太いプロセスを
+    /// 一番上に出すのが目的なので)で、降順 → 昇順 → 既定と巡る。
+    /// グループ自体も合計で並べ直す。
     /// </summary>
     public void SortBy(string column)
     {
+        bool rateColumn = column is "Sent" or "Received";
+
         if (_sortColumn == column)
         {
-            if (!_sortDescending)
-            {
-                _sortDescending = true;
-            }
-            else
+            bool secondPhase = rateColumn ? !_sortDescending : _sortDescending;
+            if (secondPhase)
             {
                 _sortColumn = "";
                 _sortDescending = false;
+            }
+            else
+            {
+                _sortDescending = !_sortDescending;
             }
         }
         else
         {
             _sortColumn = column;
-            _sortDescending = false;
+            _sortDescending = rateColumn;
         }
 
         RebuildRows();
@@ -177,6 +211,7 @@ public sealed class ConnectionsViewModel : ObservableObject
     public void Reset()
     {
         Filter = "";
+        SelectedStateFilter = StateFilters[0];
         IsPaused = true;   // 既定へ戻す
     }
 
@@ -222,7 +257,8 @@ public sealed class ConnectionsViewModel : ObservableObject
     {
         IReadOnlyList<ConnectionListRow> desired = ConnectionTableView.BuildRows(
             _last.Rows, _last.ProcessNames, Filter, _rates,
-            _sortColumn.Length > 0 ? _sortColumn : null, _sortDescending);
+            _sortColumn.Length > 0 ? _sortColumn : null, _sortDescending,
+            _selectedStateFilter.State);
         OrderedListSync.Apply(Rows, desired, row => row.SortKey);
     }
 

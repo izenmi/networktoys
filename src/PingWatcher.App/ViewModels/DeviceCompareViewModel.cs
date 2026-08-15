@@ -521,7 +521,19 @@ public sealed class DeviceCompareViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedDevice));
         RemoveDeviceCommand.RaiseCanExecuteChanged();
 
-        Clear();
+        // 旧「消去」相当(2026-08-16 にボタンは廃止。全消去のときだけ使う)
+        _selectedDevice.Remember(_mode, string.Empty, string.Empty);
+        BeforeText = string.Empty;
+        AfterText = string.Empty;
+        Rows.Clear();
+        Changes.Clear();
+        Headline = string.Empty;
+        HasResult = false;
+        IsEditing = true;
+        Status = "作業前と作業後の出力を貼り付けて「比較」を押してください。";
+        SelectedIndex = -1;
+        RefreshDifferenceState();
+
         SelectedMode = Modes[0];
         RefreshModeMarks();
         Note = string.Empty;

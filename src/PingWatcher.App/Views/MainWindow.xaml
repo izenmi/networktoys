@@ -2197,9 +2197,20 @@
                                       VerticalAlignment="Center" Margin="0,0,12,0"
                                       ToolTip="更新を止めて、じっくり読んだり選択したりできます。" />
                             <TextBlock Text="絞り込み" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="220" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
+                            <TextBox Width="200" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0"
                                      ToolTip="プロセス名・アドレス・ポート・状態の部分一致で絞り込みます。" />
+                            <ComboBox Width="160"
+                                      ItemsSource="{Binding StateFilters}"
+                                      SelectedItem="{Binding SelectedStateFilter}"
+                                      ToolTip="状態で絞り込みます(テキスト絞り込みと併用できます)。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                         </StackPanel>
 
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"
