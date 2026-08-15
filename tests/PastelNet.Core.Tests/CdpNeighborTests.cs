@@ -50,14 +50,14 @@ public class CdpNeighborTests
     [Fact]
     public void Only_the_holdtime_differing_is_not_a_change()
     {
-        const string after = """
-            Device ID        Local Intrfce     Holdtme    Capability  Platform  Port ID
-            SW02             Gig 0/1           save         S I       WS-C2960  Gig 0/24
-            """.Replace("save", "9", StringComparison.Ordinal);
-
+        // 何も変えていなくても Holdtime は減り続ける。ここを無視できないと使えない
         const string before = """
             Device ID        Local Intrfce     Holdtme    Capability  Platform  Port ID
             SW02             Gig 0/1           142          S I       WS-C2960  Gig 0/24
+            """;
+        const string after = """
+            Device ID        Local Intrfce     Holdtme    Capability  Platform  Port ID
+            SW02             Gig 0/1           9            S I       WS-C2960  Gig 0/24
             """;
 
         Assert.False(CdpNeighborDiff.Compare(before, after).HasChanges);

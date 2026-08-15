@@ -243,6 +243,7 @@ public sealed class MonitorViewModel : ObservableObject
 
             OnPropertyChanged(nameof(RunButtonLabel));
             OnPropertyChanged(nameof(TcpButtonLabel));
+            OnPropertyChanged(nameof(WatchSummary));
             StartCommand.RaiseCanExecuteChanged();
             StartTcpCommand.RaiseCanExecuteChanged();
             StopCommand.RaiseCanExecuteChanged();
@@ -310,6 +311,39 @@ public sealed class MonitorViewModel : ObservableObject
     /// 測定を開始し直しても消さない（作業をまたいで見返したいため）。
     /// </summary>
     internal OutageTracker Tracker { get; private set; } = new(1000);
+
+    /// <summary>落ちた・戻ったときに音で知らせるか。</summary>
+    public bool SoundEnabled
+    {
+        get => AlertSound.Enabled;
+        set
+        {
+            if (AlertSound.Enabled == value) return;
+
+            AlertSound.Enabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>環境の音設定に左右されず、はっきり鳴らすか。</summary>
+    public bool LoudSound
+    {
+        get => AlertSound.UseBeep;
+        set
+        {
+            if (AlertSound.UseBeep == value) return;
+
+            AlertSound.UseBeep = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>見張りモードに出す一行。</summary>
+    public string WatchSummary => DownRows.Count > 0
+        ? $"{DownRows.Count} 件 応答なし"
+        : IsRunning ? "すべて応答" : "測定していません";
+
+    public string WatchCount => $"{AliveRows.Count} / {Rows.Count}";
 
     /// <summary>いま TCP で測っているか。ベースラインに実効の測り方を残すのに要る。</summary>
     internal bool IsTcpMode => _isTcpMode;
@@ -435,14 +469,31 @@ public sealed class MonitorViewModel : ObservableObject
             }
         }
 
+        int downBefore = DownRows.Count;
+        bool anyWentDown = false;
+        bool anyRecovered = false;
+
         foreach (TargetRowViewModel row in _touched)
         {
             bool wasDown = row.IsDown;
             row.Refresh();
 
-            if (row.IsDown != wasDown)
-                Reclassify(row);
+            if (row.IsDown == wasDown) continue;
+
+            Reclassify(row);
+
+            if (row.IsDown)
+                anyWentDown = true;
+            else
+                anyRecovered = true;
         }
+
+        // 画面を見ていなくても気づけるように鳴らす。
+        // 落ちた知らせを優先する（同時に起きたら、まず異変を知らせたい）
+        if (anyWentDown)
+            AlertSound.Play(AlertKind.Down);
+        else if (anyRecovered)
+            AlertSound.Play(downBefore > 0 && DownRows.Count == 0 ? AlertKind.AllClear : AlertKind.Recovered);
 
         if (SelectedRow is { } selected && _touched.Contains(selected))
             UpdateDetail();
@@ -687,6 +738,8 @@ public sealed class MonitorViewModel : ObservableObject
         OnPropertyChanged(nameof(AliveHeader));
         OnPropertyChanged(nameof(DownHeader));
         OnPropertyChanged(nameof(HasDownRows));
+        OnPropertyChanged(nameof(WatchSummary));
+        OnPropertyChanged(nameof(WatchCount));
     }
 
     private void ClearRows()

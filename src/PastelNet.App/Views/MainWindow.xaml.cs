@@ -9,10 +9,55 @@ public partial class MainWindow : Window
 {
     private readonly ShellViewModel _shell = new();
 
+    // 見張りモードから戻すために覚えておく
+    private double _normalWidth;
+    private double _normalHeight;
+    private bool _wasTopmost;
+
     public MainWindow()
     {
         InitializeComponent();
         DataContext = _shell;
+    }
+
+    private void OnTopmostChanged(object sender, RoutedEventArgs e)
+        => Topmost = TopmostToggle.IsChecked == true;
+
+    /// <summary>
+    /// 小さく表示して、離れた場所からでも状態が分かるようにする。
+    /// 別ウィンドウにはしない（測定の状態を持ち回らずに済む）。
+    /// </summary>
+    private void OnEnterWatchMode(object sender, RoutedEventArgs e)
+    {
+        _normalWidth = Width;
+        _normalHeight = Height;
+        _wasTopmost = Topmost;
+
+        MainPanel.Visibility = Visibility.Collapsed;
+        WatchPanel.Visibility = Visibility.Visible;
+
+        MinWidth = 260;
+        MinHeight = 170;
+        Width = 320;
+        Height = 210;
+
+        // 見張るのだから手前に出ていないと意味がない
+        Topmost = true;
+        TopmostToggle.IsChecked = true;
+    }
+
+    private void OnLeaveWatchMode(object sender, RoutedEventArgs e)
+    {
+        WatchPanel.Visibility = Visibility.Collapsed;
+        MainPanel.Visibility = Visibility.Visible;
+
+        MinWidth = 900;
+        MinHeight = 480;
+        Width = _normalWidth > 0 ? _normalWidth : 1140;
+        Height = _normalHeight > 0 ? _normalHeight : 720;
+
+        Topmost = _wasTopmost;
+        TopmostToggle.IsChecked = _wasTopmost;
     }
 
     /// <summary>

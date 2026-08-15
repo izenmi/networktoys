@@ -275,7 +275,63 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="10,8,10,6">
+    <Grid>
+    <!-- ===== 見張りモード（離れた場所からでも色だけで分かる） ===== -->
+    <Border x:Name="WatchPanel" Visibility="Collapsed" DataContext="{Binding Monitor}">
+        <Border.Style>
+            <Style TargetType="Border">
+                <!-- 数字を読まなくても、面の色で異常が分かるようにする -->
+                <Setter Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasDownRows}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+
+        <DockPanel Margin="14,10">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right">
+                <CheckBox Content="音" IsChecked="{Binding SoundEnabled}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                <Button Content="元に戻す" Click="OnLeaveWatchMode" Style="{StaticResource Button.Subtle}" />
+            </StackPanel>
+
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="WatchTitle" Text="{Binding WatchSummary}"
+                           FontSize="26" FontWeight="Bold"
+                           HorizontalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasDownRows}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <TextBlock Text="{Binding WatchCount}" FontSize="15"
+                           HorizontalAlignment="Center" Margin="0,2,0,0"
+                           Foreground="{DynamicResource Brush.Text}" />
+
+                <!-- 落ちている宛先を数件だけ。何が落ちたかは知りたい -->
+                <ItemsControl ItemsSource="{Binding DownRows}" Margin="0,8,0,0" MaxHeight="90">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Host}"
+                                       Style="{StaticResource Mono}"
+                                       Foreground="{DynamicResource Brush.Error.Fg}"
+                                       HorizontalAlignment="Center" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </DockPanel>
+    </Border>
+
+    <Grid x:Name="MainPanel" Margin="10,8,10,6">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -296,6 +352,24 @@
             <TextBlock Text="ぜんぶ同時に測る"
                        Style="{StaticResource Caption}"
                        Margin="10,0,0,0" VerticalAlignment="Center" />
+
+            <!-- 画面を見ていられないときのための操作。手前に置いておく -->
+            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" DataContext="{Binding Monitor}">
+                <CheckBox Content="音で知らせる" IsChecked="{Binding SoundEnabled}"
+                          VerticalAlignment="Center" Margin="0,0,10,0"
+                          ToolTip="落ちた瞬間と戻った瞬間に鳴らします。" />
+                <CheckBox Content="はっきり鳴らす" IsChecked="{Binding LoudSound}"
+                          VerticalAlignment="Center" Margin="0,0,10,0"
+                          ToolTip="Windows の音設定が「なし」でも鳴るよう、ビープ音を使います。" />
+            </StackPanel>
+
+            <CheckBox x:Name="TopmostToggle" Content="最前面"
+                      Checked="OnTopmostChanged" Unchecked="OnTopmostChanged"
+                      VerticalAlignment="Center" Margin="0,0,10,0"
+                      ToolTip="他のウィンドウの手前に固定します。" />
+            <Button Content="見張りモード" Click="OnEnterWatchMode"
+                    Style="{StaticResource Button.Subtle}"
+                    ToolTip="小さく表示して、離れた場所からでも状態が分かるようにします。" />
         </StackPanel>
 
         <!-- ===== 本体 ===== -->
@@ -1657,5 +1731,6 @@
                            TextTrimming="CharacterEllipsis" MaxWidth="240" />
             </StackPanel>
         </Border>
+    </Grid>
     </Grid>
 </Window>
