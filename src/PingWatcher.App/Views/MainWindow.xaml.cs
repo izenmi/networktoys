@@ -238,6 +238,7 @@ public partial class MainWindow : Window
             _shell.Tftp.Reset();
             _shell.Sftp.Reset();
             _shell.Syslog.Reset();
+            _shell.SnmpTrap.Reset();
             ColumnLayout.Instance.Save();
         }
         catch (Exception ex)

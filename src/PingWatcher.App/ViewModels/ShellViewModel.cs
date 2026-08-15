@@ -28,6 +28,8 @@ public sealed class ShellViewModel
         Tftp = new TftpViewModel(Monitor.LocalAddress);
         Sftp = new SftpViewModel(Monitor.LocalAddress);
         Syslog = new SyslogViewModel(Monitor.LocalAddress);
+        SnmpGet = new SnmpGetViewModel(Monitor.GatewayText is "—" ? null : Monitor.GatewayText);
+        SnmpTrap = new SnmpTrapViewModel(Monitor.LocalAddress);
 
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
@@ -64,6 +66,12 @@ public sealed class ShellViewModel
     /// <summary>syslog 受信サーバ。</summary>
     public SyslogViewModel Syslog { get; }
 
+    /// <summary>SNMP の GET / ウォーク。</summary>
+    public SnmpGetViewModel SnmpGet { get; }
+
+    /// <summary>SNMP Trap の受信。</summary>
+    public SnmpTrapViewModel SnmpTrap { get; }
+
     public WifiViewModel Wifi { get; }
 
     public ReportViewModel Report { get; }
@@ -95,6 +103,8 @@ public sealed class ShellViewModel
         Tftp.Reset();
         Sftp.Reset();
         Syslog.Reset();
+        SnmpGet.Reset();
+        SnmpTrap.Reset();
         Dns.Reset();
         Trace.Reset();
         Wifi.Reset();

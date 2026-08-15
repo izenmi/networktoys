@@ -358,6 +358,15 @@ internal static class SelfTest
             Assert(!server.IsRunning, "syslog サーバが停止していない");
         });
 
+        Check("SNMP Trap 受信を起動して停止できる", () =>
+        {
+            using var server = new Services.SnmpTrapReceiver();
+            server.Start(0);
+            Assert(server.IsRunning, "Trap 受信が起動していない");
+            server.Stop();
+            Assert(!server.IsRunning, "Trap 受信が停止していない");
+        });
+
         Check("traceroute を実行できる", () =>
         {
             // ループバック相手なら 1 ホップで届くはず。ここでも見たいのは

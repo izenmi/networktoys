@@ -23,6 +23,7 @@ ping のほかに TCP 接続・DNS・traceroute・IP スキャン・無線 LAN�
 | **DNS** | 同じ名前を複数の DNS サーバへ同時に問い合わせて横並び比較。A / AAAA / CNAME / MX / NS / TXT / SOA / SRV / PTR |
 | **経路** | traceroute（TTL を並列に投げるので速い）、Path MTU 探索、経路変化の見張り |
 | **syslog** | 機器からの syslog を受けて一覧表示。`logging <このPCのIP>` を機器に入れるだけ。`logs\` にも保存 |
+| **SNMP** | v1/v2c の GET・ウォークと、Trap 受信（UDP/162）。sysDescr など主要 OID のプリセットつき |
 | **無線** | 接続中 AP の詳細、受信強度の推移、チャンネルの混み具合、周辺 AP 一覧 |
 | **記録** | HTML・テキスト・CSV で書き出し |
 
