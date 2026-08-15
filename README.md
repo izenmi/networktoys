@@ -19,6 +19,7 @@ ping のほかに TCP 接続・DNS・traceroute・IP スキャン・無線 LAN�
 | **電卓** | サブネット電卓。CIDR かマスク付き IP を入れると、ネットワーク/ブロードキャスト/ホスト範囲/分割案を表示。/8〜/32 のマスク早見表つき |
 | **FTP** | 使い捨ての FTP サーバ。機器の `copy running-config ftp:` を受けて `ftp\` フォルダに保存します。**平文なので使うときだけ開始**。PASV/PORT 両対応 |
 | **TFTP** | 使い捨ての TFTP サーバ（UDP/69）。機器の `copy … tftp:` を受けて `tftp\` フォルダへ。blksize 交渉に対応。**認証なしなので使うときだけ開始** |
+| **SFTP** | 使い捨ての SFTP サーバ（SSH 越しで暗号化）。WinSCP などで `sftp\` フォルダへ読み書き。ホスト鍵は初回に生成して保存 |
 | **DNS** | 同じ名前を複数の DNS サーバへ同時に問い合わせて横並び比較。A / AAAA / CNAME / MX / NS / TXT / SOA / SRV / PTR |
 | **経路** | traceroute（TTL を並列に投げるので速い）、Path MTU 探索、経路変化の見張り |
 | **無線** | 接続中 AP の詳細、受信強度の推移、チャンネルの混み具合、周辺 AP 一覧 |
@@ -122,6 +123,8 @@ WPF はトリミングできないため、.NET を同梱すると 125MB にな�
 | `logs\` | 測定ログ |
 | `ftp\` | FTP で受け取ったファイル |
 | `tftp\` | TFTP で受け取ったファイル |
+| `sftp\` | SFTP でやり取りするファイル |
+| `sftp-hostkey.txt` | SFTP サーバのホスト鍵 |
 
 ## 測定ログ
 

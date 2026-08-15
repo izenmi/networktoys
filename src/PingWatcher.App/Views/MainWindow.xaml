@@ -1650,6 +1650,81 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== SFTP（使い捨てサーバ。SSH 越しで暗号化） ===== -->
+            <TabItem Header="SFTP" DataContext="{Binding Sftp}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="標準は 22。" />
+                            <TextBlock Text="ユーザー" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="90" Text="{Binding User, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,8,0"
+                                     ToolTip="空欄なら認証なしで接続できます。" />
+                            <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="90" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,12,0" />
+                            <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Text="やり取りしたファイルは、exe と同じ場所の sftp フォルダに入ります。SSH 越しなので通信は暗号化されます。" />
+                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
+                                         Margin="0,4,0,0" TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}"
+                                           Text="⚠ 使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールで許可が必要です。ホスト鍵は初回に作られ、以後は同じものを使います。" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="接続の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <ListBox ItemsSource="{Binding Log}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="72" />
+                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== DNS ===== -->
             <TabItem x:Name="DnsTab" Header="DNS" DataContext="{Binding Dns}">
                 <Border Style="{StaticResource Card}">

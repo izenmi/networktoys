@@ -336,6 +336,19 @@ internal static class SelfTest
             Assert(!server.IsRunning, "TFTP サーバが停止していない");
         });
 
+        Check("SFTP サーバを起動して停止できる", () =>
+        {
+            // 実際の SSH ハンドシェイクは CI では確かめられない。ここで見たいのは
+            // FxSsh が動き、ホスト鍵の生成→待受→停止が通ること
+            string root = Path.Combine(Path.GetTempPath(), $"pingwatcher-sftp-{Guid.NewGuid():N}");
+            string hostKey = Path.Combine(Path.GetTempPath(), $"pingwatcher-sftp-key-{Guid.NewGuid():N}.txt");
+            using var server = new Services.SftpServer(root, hostKey);
+            server.Start(0);
+            Assert(server.IsRunning, "SFTP サーバが起動していない");
+            server.Stop();
+            Assert(!server.IsRunning, "SFTP サーバが停止していない");
+        });
+
         Check("traceroute を実行できる", () =>
         {
             // ループバック相手なら 1 ホップで届くはず。ここでも見たいのは

@@ -63,7 +63,11 @@ public abstract class FileServerViewModel : ObservableObject
     public RelayCommand StopCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
 
-    public string Port { get => _port; set => SetProperty(ref _port, value); }
+    public string Port
+    {
+        get => _port;
+        set { if (SetProperty(ref _port, value)) RefreshCommandHint(); }
+    }
 
     public bool IsRunning
     {

@@ -69,6 +69,13 @@
          これ以外の選択肢は wlanapi の自前 P/Invoke になる。 -->
     <PackageReference Include="ManagedNativeWifi" Version="3.0.2" />
 
+    <!-- SFTP サーバのための SSH 実装。SSH を自前で書くのは非現実的（暗号の
+         正しさが命）なので、これだけは依存を許容する。MIT / net8.0 /
+         ECDH nistp256-521・aes-gcm・hmac-sha2・SFTPv3。Microsoft の
+         dev-tunnels-ssh の元コード。SFTP サブシステム実装はライブラリに
+         含まれないので Vendor/FxSsh/SftpService.cs に取り込んである。 -->
+    <PackageReference Include="FxSsh" Version="1.4.0" />
+
     <!-- ipconfig の出力(CP932)の読み取りに使う System.Text.Encoding.CodePages は
          .NET 10 ではフレームワークに同梱されており、明示参照すると NU1510 になる -->
   </ItemGroup>

@@ -26,6 +26,7 @@ public sealed class ShellViewModel
         // ファイル配布サーバ。機器側コマンド例に自分の IP を渡す
         Ftp = new FtpViewModel(Monitor.LocalAddress);
         Tftp = new TftpViewModel(Monitor.LocalAddress);
+        Sftp = new SftpViewModel(Monitor.LocalAddress);
 
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
@@ -56,6 +57,9 @@ public sealed class ShellViewModel
     /// <summary>使い捨て TFTP サーバ。</summary>
     public TftpViewModel Tftp { get; }
 
+    /// <summary>使い捨て SFTP サーバ。</summary>
+    public SftpViewModel Sftp { get; }
+
     public WifiViewModel Wifi { get; }
 
     public ReportViewModel Report { get; }
@@ -85,6 +89,7 @@ public sealed class ShellViewModel
         Subnet.Reset();
         Ftp.Reset();
         Tftp.Reset();
+        Sftp.Reset();
         Dns.Reset();
         Trace.Reset();
         Wifi.Reset();

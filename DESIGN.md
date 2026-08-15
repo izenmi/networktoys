@@ -92,6 +92,7 @@ pingwatcher/
 |---|---|---|
 | `ManagedNativeWifi` **3.0.2** | Native Wifi API のラッパ | **依存パッケージなし**。これ以外の選択肢は自前P/Invokeになる |
 | `DnsClient` **1.8.0** | 任意レコードのDNS照会 | netstandard2.0、アクティブメンテ。A/AAAA/CNAME/MX/NS/TXT/SOA/SRV/PTR 等に対応 |
+| `FxSsh` **1.4.0** | SFTPサーバのSSH層 | MIT / net8.0。SSHの自前実装は非現実的なのでこれだけ依存を許容。SFTPサブシステム実装はライブラリに含まれず`Vendor/FxSsh/SftpService.cs`に取り込み |
 | `xunit` (テストのみ) | Coreのユニットテスト | |
 
 グラフ描画・JSON・HTTP・SQLiteのライブラリは**入れない**(標準機能と自前実装で足りる)。バージョンは実装時に最新安定版を再確認する。
