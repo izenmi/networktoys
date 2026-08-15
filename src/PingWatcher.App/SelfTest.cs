@@ -326,6 +326,16 @@ internal static class SelfTest
             Assert(!server.IsRunning, "FTP サーバが停止していない");
         });
 
+        Check("TFTP サーバを起動して停止できる", () =>
+        {
+            string root = Path.Combine(Path.GetTempPath(), $"pingwatcher-tftp-{Guid.NewGuid():N}");
+            using var server = new Services.TftpServer(root);
+            server.Start(0);   // ポート 0 で衝突を避ける
+            Assert(server.IsRunning, "TFTP サーバが起動していない");
+            server.Stop();
+            Assert(!server.IsRunning, "TFTP サーバが停止していない");
+        });
+
         Check("traceroute を実行できる", () =>
         {
             // ループバック相手なら 1 ホップで届くはず。ここでも見たいのは

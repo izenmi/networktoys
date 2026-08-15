@@ -7,11 +7,6 @@ using PingWatcher.Core.Ftp;
 
 namespace PingWatcher.App.Services;
 
-/// <param name="At">発生時刻。</param>
-/// <param name="RemoteAddress">相手の IP。</param>
-/// <param name="Text">出来事（転送の結果や接続など）。</param>
-internal sealed record FtpEvent(DateTime At, string RemoteAddress, string Text);
-
 /// <summary>
 /// 使い捨ての FTP サーバ。現場で機器の config バックアップ
 /// （<c>copy running-config ftp:</c>）を受けるための最小実装。RFC959 のうち
@@ -20,7 +15,7 @@ internal sealed record FtpEvent(DateTime At, string RemoteAddress, string Text);
 /// <b>公開範囲は 1 フォルダに閉じ込める</b>（<see cref="FtpVirtualPath"/> が守る）。
 /// 平文なので、使うときだけ手動で立て、使い終わったら止める運用。
 /// </summary>
-internal sealed class FtpServer : IDisposable
+internal sealed class FtpServer : IFileServer
 {
     private readonly string _rootDirectory;
     private readonly string? _user;
@@ -41,7 +36,7 @@ internal sealed class FtpServer : IDisposable
     }
 
     /// <summary>出来事の通知。UI スレッドで受けたいので、購読側で marshaling する。</summary>
-    public event Action<FtpEvent>? Event;
+    public event Action<FileServerEvent>? Event;
 
     public bool IsRunning => _listener is not null;
 
@@ -124,7 +119,7 @@ internal sealed class FtpServer : IDisposable
     }
 
     private void Raise(string remote, string text)
-        => Event?.Invoke(new FtpEvent(DateTime.Now, remote, text));
+        => Event?.Invoke(new FileServerEvent(DateTime.Now, remote, text));
 
     internal static async Task WriteLineAsync(Stream stream, string line, CancellationToken token)
     {
