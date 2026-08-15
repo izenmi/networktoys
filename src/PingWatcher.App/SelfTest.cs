@@ -228,6 +228,17 @@ internal static class SelfTest
             Assert(window.ActualWidth > 0 && window.ActualHeight > 0, "ウィンドウの実サイズが 0 のまま");
         });
 
+        Check("画面を PNG に描き出せる(スクリーンショット機能)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // ファイルには書かない。描画とエンコードの経路が生きていることだけ確かめる
+            using var stream = new MemoryStream();
+            window!.CaptureWindow().Save(stream);
+
+            Assert(stream.Length > 1000, $"PNG が小さすぎる ({stream.Length} バイト)");
+        });
+
         Check("すべてのタブを表示できる(遅延生成される中身の検査)", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -557,7 +568,7 @@ internal static class SelfTest
                 [new Core.Reporting.ReportRow(
                     "127.0.0.1", "127.0.0.1", "1階 EPS", "ICMP",
                     new Core.Metrics.RttStatistics(10, 0, 100, 0, 0, 0, 0, 0),
-                    [], "不達", true)],
+                    [], "不通", true)],
                 IpConfig: "Windows IP 構成",
                 Wireless: [("SSID", "office")]);
 

@@ -143,7 +143,7 @@
                 <DataTrigger Binding="{Binding State}" Value="Down">
                     <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
                     <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                    <Setter TargetName="BadgeText" Property="Text" Value="✕ 不達" />
+                    <Setter TargetName="BadgeText" Property="Text" Value="✕ 不通" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Refused">
                     <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
@@ -439,6 +439,14 @@
                 </Button.ContextMenu>
             </Button>
 
+            <!-- 画面の証跡。ウィンドウの中身を PNG にして logs フォルダへ残す -->
+            <Button x:Name="ScreenshotButton" Content="📷 画面" Click="OnScreenshot"
+                    Style="{StaticResource Button.Icon}"
+                    Margin="0,0,8,0"
+                    MinWidth="86"
+                    AutomationProperties.Name="画面を撮って保存"
+                    ToolTip="いまの画面を PNG で logs フォルダに保存します。" />
+
             <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
             <Button x:Name="ThemeToggle" Click="OnThemeToggle"
                     Style="{StaticResource Button.Icon}"
@@ -490,6 +498,7 @@
 
                         <TextBox Text="{Binding TargetListText, UpdateSourceTrigger=PropertyChanged}"
                                  FontFamily="{DynamicResource Font.Mono}"
+                                 FontSize="{DynamicResource Size.Caption}"
                                  AcceptsReturn="True"
                                  AcceptsTab="False"
                                  TextWrapping="NoWrap"
@@ -684,6 +693,7 @@
                                 <TextBox Text="{Binding TargetListText, UpdateSourceTrigger=PropertyChanged}"
                                          Height="86" Margin="0,4,0,0"
                                          FontFamily="{DynamicResource Font.Mono}"
+                                         FontSize="{DynamicResource Size.Caption}"
                                          AcceptsReturn="True" AcceptsTab="False" TextWrapping="NoWrap"
                                          VerticalScrollBarVisibility="Auto"
                                          HorizontalScrollBarVisibility="Auto"
