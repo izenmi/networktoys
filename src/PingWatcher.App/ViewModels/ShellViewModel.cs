@@ -37,9 +37,6 @@ public sealed class ShellViewModel
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
 
-        // サーベイはクリック時にだけ測る。定期処理を持たない
-        WifiSurvey = new WifiSurveyViewModel();
-
         // 記録には無線の情報も載せるので、無線画面が持っている内容を参照させる
         Report = new ReportViewModel(Monitor, Wifi);
         Work = new WorkViewModel(Monitor);
@@ -83,9 +80,6 @@ public sealed class ShellViewModel
 
     public WifiViewModel Wifi { get; }
 
-    /// <summary>無線サーベイ（フロア図+ヒートマップ）。</summary>
-    public WifiSurveyViewModel WifiSurvey { get; }
-
     public ReportViewModel Report { get; }
 
     /// <summary>変更作業の前後確認。このツールの主な使い道。</summary>
@@ -121,7 +115,6 @@ public sealed class ShellViewModel
         Trace.Reset();
         Connections.Reset();
         Wifi.Reset();
-        WifiSurvey.Reset();
         Report.Reset();
     }
 }

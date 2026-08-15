@@ -24,5 +24,4 @@ public sealed class TargetDocument
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(TargetDocument))]
 [JsonSerializable(typeof(Work.WorkSessionDocument))]
-[JsonSerializable(typeof(Survey.SurveyDocument))]
 public partial class PingWatcherJsonContext : JsonSerializerContext;

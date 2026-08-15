@@ -805,12 +805,7 @@
             </TabItem>
 
             <!-- ===== 無線 ===== -->
-            <TabItem x:Name="WifiTab" Header="無線">
-                <TabControl x:Name="WifiSubTabs" ItemContainerStyle="{StaticResource SubTabItem}"
-                            BorderThickness="0" Padding="0">
-
-                    <!-- ===== 現況(接続情報・RSSI 推移・チャンネル・周辺 AP) ===== -->
-                    <TabItem Header="現況" DataContext="{Binding Wifi}">
+            <TabItem x:Name="WifiTab" Header="無線" DataContext="{Binding Wifi}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
@@ -1073,108 +1068,6 @@
                         </ListBox>
                     </DockPanel>
                 </Border>
-                    </TabItem>
-
-                    <!-- ===== サーベイ(フロア図の上を歩いて電波の地図を作る) ===== -->
-                    <TabItem Header="サーベイ" DataContext="{Binding WifiSurvey}">
-                        <Border Style="{StaticResource Card}">
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                    <Button Content="図を開く" Command="{Binding LoadImageCommand}" Margin="0,0,5,0"
-                                            ToolTip="フロア図(PNG/JPG)を背景に敷きます。図は surveys フォルダへコピーされます。" />
-                                    <Button Content="方眼" Command="{Binding UseGridCommand}"
-                                            Style="{StaticResource Button.Subtle}" Margin="0,0,12,0"
-                                            ToolTip="図を使わず白地+方眼の上に測定点を打ちます。" />
-                                    <TextBlock Text="名前" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                                    <TextBox Width="120" Text="{Binding SurveyName, UpdateSourceTrigger=PropertyChanged}"
-                                             Margin="0,0,12,0" ToolTip="保存ファイル名に使います(例: 3F事務所)。" />
-                                    <Button Content="保存" Command="{Binding SaveCommand}"
-                                            Style="{StaticResource Button.Subtle}" Margin="0,0,5,0"
-                                            ToolTip="surveys フォルダへ JSON で保存します。" />
-                                    <Button Content="読み込み" Command="{Binding LoadCommand}"
-                                            Style="{StaticResource Button.Subtle}" Margin="0,0,5,0"
-                                            ToolTip="保存済みのサーベイを開いて続きから測定します。" />
-                                    <Button Content="PNG 書き出し" Click="OnExportSurveyPng"
-                                            Style="{StaticResource Button.Subtle}" Margin="0,0,5,0"
-                                            ToolTip="いまの地図を PNG 画像に保存します。" />
-                                    <Button Content="全消去" Command="{Binding ClearPointsCommand}"
-                                            Style="{StaticResource Button.Subtle}"
-                                            ToolTip="測定点をすべて消します(フロア図は残ります)。" />
-                                </StackPanel>
-
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                    <TextBlock Text="表示" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                                    <ComboBox Width="220"
-                                              ItemsSource="{Binding HeatmapChoices}"
-                                              SelectedItem="{Binding SelectedChoice}"
-                                              Margin="0,0,12,0"
-                                              ToolTip="どの AP の電波を地図にするかを選びます。">
-                                        <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                    <TextBlock Text="濃さ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                                    <Slider Width="90" Minimum="0.2" Maximum="0.9"
-                                            Value="{Binding HeatOpacity}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                                    <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
-
-                                <!-- 位置情報が許可されていないときの案内(現況と同じ) -->
-                                <Border DockPanel.Dock="Top" Background="{DynamicResource Brush.Warn.Bg}"
-                                        CornerRadius="{DynamicResource Radius.Card}" Padding="7,5" Margin="0,0,0,6">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsDenied}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource Brush.Warn.Fg}"
-                                                   Text="⚠ 位置情報が許可されていないため、周辺 AP は取れません(接続中の AP だけで測定を続けます)。" />
-                                        <Button Content="設定を開く" Command="{Binding OpenLocationSettingsCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="8,0,0,0" />
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- 凡例。色だけに頼らず dBm の数値を併記する -->
-                                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
-                                    <TextBlock Text="凡例:" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                    <Rectangle Width="12" Height="12" Fill="{DynamicResource Brush.Heatmap.1}" VerticalAlignment="Center" />
-                                    <TextBlock Text="〜-85" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="3,0,8,0" />
-                                    <Rectangle Width="12" Height="12" Fill="{DynamicResource Brush.Heatmap.2}" VerticalAlignment="Center" />
-                                    <TextBlock Text="-85〜-75" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="3,0,8,0" />
-                                    <Rectangle Width="12" Height="12" Fill="{DynamicResource Brush.Heatmap.3}" VerticalAlignment="Center" />
-                                    <TextBlock Text="-75〜-65" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="3,0,8,0" />
-                                    <Rectangle Width="12" Height="12" Fill="{DynamicResource Brush.Heatmap.4}" VerticalAlignment="Center" />
-                                    <TextBlock Text="-65〜-55" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="3,0,8,0" />
-                                    <Rectangle Width="12" Height="12" Fill="{DynamicResource Brush.Heatmap.5}" VerticalAlignment="Center" />
-                                    <TextBlock Text="-55〜-45" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="3,0,8,0" />
-                                    <Rectangle Width="12" Height="12" Fill="{DynamicResource Brush.Heatmap.6}" VerticalAlignment="Center" />
-                                    <TextBlock Text="-45〜 dBm" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="3,0,12,0" />
-                                    <TextBlock Text="左クリック=測定(約4秒) / 右クリック=点を消す" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                                </StackPanel>
-
-                                <Border Background="{DynamicResource Brush.Surface}"
-                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                    <controls:SurveyCanvas x:Name="SurveyCanvasControl"
-                                                           Source="{Binding}"
-                                                           ClipToBounds="True"
-                                                           MinHeight="220" />
-                                </Border>
-                            </DockPanel>
-                        </Border>
-                    </TabItem>
-                </TabControl>
             </TabItem>
 
             <!-- ===== 差分比較（show ip route / show run を作業前後で見比べる） ===== -->

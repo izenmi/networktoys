@@ -169,60 +169,6 @@ public partial class MainWindow : Window
         return encoder;
     }
 
-    /// <summary>
-    /// サーベイの地図を PNG に書き出す。ウィンドウ全体のスクリーンショットと同じ手順で、
-    /// 対象を SurveyCanvas だけに絞った版。地色を敷いてから焼く(透明のままだと
-    /// 閲覧環境によって黒地になる)。
-    /// </summary>
-    private void OnExportSurveyPng(object sender, RoutedEventArgs e)
-    {
-        var dialog = new SaveFileDialog
-        {
-            FileName = $"survey-{DateTime.Now:yyyyMMdd-HHmm}.png",
-            DefaultExt = "png",
-            Filter = "PNG 画像 (*.png)|*.png|すべてのファイル (*.*)|*.*",
-            AddExtension = true,
-        };
-
-        if (dialog.ShowDialog() != true)
-            return;
-
-        try
-        {
-            System.Windows.FrameworkElement canvas = SurveyCanvasControl;
-            var area = new Rect(new Size(canvas.ActualWidth, canvas.ActualHeight));
-            if (area.Width < 1 || area.Height < 1)
-                return;
-
-            var visual = new DrawingVisual();
-            using (DrawingContext context = visual.RenderOpen())
-            {
-                if (TryFindResource("Brush.Background") is Brush backdrop)
-                    context.DrawRectangle(backdrop, null, area);
-                context.DrawRectangle(new VisualBrush(canvas), null, area);
-            }
-
-            DpiScale dpi = VisualTreeHelper.GetDpi(this);
-            var bitmap = new RenderTargetBitmap(
-                (int)Math.Ceiling(area.Width * dpi.DpiScaleX),
-                (int)Math.Ceiling(area.Height * dpi.DpiScaleY),
-                dpi.PixelsPerInchX,
-                dpi.PixelsPerInchY,
-                PixelFormats.Pbgra32);
-            bitmap.Render(visual);
-
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-
-            using FileStream stream = File.Create(dialog.FileName);
-            encoder.Save(stream);
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write(ex, "MainWindow.OnExportSurveyPng");
-        }
-    }
-
     /// <summary>結果はボタンの文字で 2 秒だけ知らせる。トーストや別窓は出さない。</summary>
     private void ShowScreenshotResult(string text)
     {
