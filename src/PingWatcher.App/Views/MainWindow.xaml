@@ -1117,7 +1117,8 @@
                                 </ListBox>
                             </DockPanel>
 
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <!-- 起動幅(740px)では 1 行に収まらないので折り返す -->
+                            <WrapPanel Margin="0,0,0,6">
                                 <TextBlock Text="対象" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" />
                                 <!--
@@ -1138,28 +1139,25 @@
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
-                                <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,6,0" />
-                                <Button Content="貼り付けに戻る" Command="{Binding EditCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                                <Button Content="左右を入れ替え" Command="{Binding SwapCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,6,2" />
+                                <Button Content="比較を停止" Command="{Binding EditCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                        ToolTip="比較をやめて貼り付け欄に戻ります。貼り付けた内容は残ります。" />
                                 <Button Content="消去" Command="{Binding ClearCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,12,2" />
                                 <CheckBox Content="違う行だけ" IsChecked="{Binding OnlyDifferences}"
-                                          VerticalAlignment="Center" Margin="0,0,12,0" />
-                                <CheckBox Content="毎回変わる行を隠す" IsChecked="{Binding HideNoise}"
-                                          VerticalAlignment="Center" Margin="0,0,12,0" />
+                                          VerticalAlignment="Center" Margin="0,0,12,2" />
 
                                 <!-- 差分をたどる。長い設定では目で探すのが現実的でない -->
                                 <Button Content="◀ 前の差分" Command="{Binding PreviousDifferenceCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,4,0"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,4,2"
                                         ToolTip="前の差分へ移ります。先頭まで来たら末尾へ回ります。" />
                                 <Button Content="次の差分 ▶" Command="{Binding NextDifferenceCommand}"
-                                        Style="{StaticResource Button.Subtle}" Margin="0,0,8,0"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,8,2"
                                         ToolTip="次の差分へ移ります。末尾まで来たら先頭へ回ります。" />
                                 <TextBlock Text="{Binding PositionText}" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" />
-                            </StackPanel>
+                            </WrapPanel>
 
                             <TextBlock Text="{Binding ModeHint}" Style="{StaticResource Caption}"
                                        TextWrapping="Wrap" />
@@ -1342,11 +1340,14 @@
                                                            Foreground="{DynamicResource Brush.TextMuted}"
                                                            HorizontalAlignment="Right" Margin="0,0,6,0" />
 
+                                                <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け)。
+                                                     消えた側は Error.Bg、増えた側は Ok.Bg — 行全体の色と同じ語彙 -->
                                                 <Border x:Name="LeftCell" Grid.Column="1" Padding="4,1" CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
-                                                    <TextBlock Text="{Binding LeftText}"
-                                                               Style="{StaticResource Mono}"
-                                                               FontSize="{DynamicResource Size.Caption}"
-                                                               TextWrapping="NoWrap" />
+                                                    <controls:DiffText Segments="{Binding LeftSegments}"
+                                                                       ChangedBrush="{DynamicResource Brush.Error.Bg}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       TextWrapping="NoWrap" />
                                                 </Border>
 
                                                 <TextBlock Grid.Column="2" Text="{Binding RightNumberText}"
@@ -1356,10 +1357,11 @@
                                                            HorizontalAlignment="Right" Margin="0,0,6,0" />
 
                                                 <Border x:Name="RightCell" Grid.Column="3" Padding="4,1" CornerRadius="{DynamicResource Radius.Chip}">
-                                                    <TextBlock Text="{Binding RightText}"
-                                                               Style="{StaticResource Mono}"
-                                                               FontSize="{DynamicResource Size.Caption}"
-                                                               TextWrapping="NoWrap" />
+                                                    <controls:DiffText Segments="{Binding RightSegments}"
+                                                                       ChangedBrush="{DynamicResource Brush.Ok.Bg}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       TextWrapping="NoWrap" />
                                                 </Border>
                                             </Grid>
 

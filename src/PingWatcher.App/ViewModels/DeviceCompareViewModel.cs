@@ -19,8 +19,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
     private string _afterText = string.Empty;
     private string _status = "作業前と作業後の出力を貼り付けて「比較」を押してください。";
     private string _headline = string.Empty;
-    private bool _onlyDifferences = true;
-    private bool _hideNoise = true;
+    // 既定は全行表示(前後の文脈ごと読みたい、というユーザー指示)
+    private bool _onlyDifferences;
     private bool _hasResult;
     private bool _isEditing = true;
     private string _note = string.Empty;
@@ -43,7 +43,6 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
         CompareCommand = new RelayCommand(Compare, () => BeforeText.Length > 0 || AfterText.Length > 0);
         EditCommand = new RelayCommand(() => IsEditing = true);
-        SwapCommand = new RelayCommand(Swap);
         ClearCommand = new RelayCommand(Clear);
         LoadBeforeCommand = new RelayCommand(() => LoadInto(before: true));
         LoadAfterCommand = new RelayCommand(() => LoadInto(before: false));
@@ -204,7 +203,6 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
     public RelayCommand CompareCommand { get; }
     public RelayCommand EditCommand { get; }
-    public RelayCommand SwapCommand { get; }
     public RelayCommand ClearCommand { get; }
     public RelayCommand LoadBeforeCommand { get; }
     public RelayCommand LoadAfterCommand { get; }
@@ -391,17 +389,6 @@ public sealed class DeviceCompareViewModel : ObservableObject
         }
     }
 
-    /// <summary>毎回変わる行を除くか。</summary>
-    public bool HideNoise
-    {
-        get => _hideNoise;
-        set
-        {
-            if (SetProperty(ref _hideNoise, value) && HasResult)
-                Compare();
-        }
-    }
-
     public bool HasResult
     {
         get => _hasResult;
@@ -417,7 +404,9 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
     private void Compare()
     {
-        DiffNoiseFilter? filter = HideNoise ? DeviceComparison.NoiseFilterFor(_mode) : null;
+        // 毎回変わる行(Building configuration など)は常に除く。切り替え UI は
+        // 2026-08-16 のユーザー指示で廃止した
+        DiffNoiseFilter? filter = DeviceComparison.NoiseFilterFor(_mode);
 
         SideBySideResult result = SideBySideDiff.Build(BeforeText, AfterText, filter);
 
@@ -467,14 +456,6 @@ public sealed class DeviceCompareViewModel : ObservableObject
         // 比較し直したら先頭から見る
         SelectedIndex = -1;
         RefreshDifferenceState();
-    }
-
-    private void Swap()
-    {
-        (BeforeText, AfterText) = (AfterText, BeforeText);
-
-        if (HasResult)
-            Compare();
     }
 
     /// <summary>いまの対象の貼り付けだけを消す。他の対象に貼ってある分は残す。</summary>

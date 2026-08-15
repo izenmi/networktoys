@@ -37,6 +37,16 @@ public sealed record SideBySideRow(
     public string RightNumberText => RightNumber?.ToString() ?? string.Empty;
 
     public bool IsDifferent => Kind != SideKind.Same;
+
+    /// <summary>
+    /// 行内の色分け。書き換わった行だけ「どこが違うか」を区切って返し、
+    /// それ以外は行全体を 1 区切りで返す(描画側はどの行も同じ手順で描ける)。
+    /// </summary>
+    public IReadOnlyList<DiffSegment> LeftSegments
+        => Kind == SideKind.Changed ? IntralineDiff.Split(LeftText, RightText).Left : [new DiffSegment(LeftText, false)];
+
+    public IReadOnlyList<DiffSegment> RightSegments
+        => Kind == SideKind.Changed ? IntralineDiff.Split(LeftText, RightText).Right : [new DiffSegment(RightText, false)];
 }
 
 public sealed record SideBySideResult(IReadOnlyList<SideBySideRow> Rows, int IgnoredLines, bool TooLarge)
