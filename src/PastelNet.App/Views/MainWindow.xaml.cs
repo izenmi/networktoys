@@ -9,11 +9,6 @@ public partial class MainWindow : Window
 {
     private readonly ShellViewModel _shell = new();
 
-    // 見張りモードから戻すために覚えておく
-    private double _normalWidth;
-    private double _normalHeight;
-    private bool _wasTopmost;
-
     public MainWindow()
     {
         InitializeComponent();
@@ -24,40 +19,75 @@ public partial class MainWindow : Window
         => Topmost = TopmostToggle.IsChecked == true;
 
     /// <summary>
-    /// 小さく表示して、離れた場所からでも状態が分かるようにする。
-    /// 別ウィンドウにはしない（測定の状態を持ち回らずに済む）。
+    /// 右クリックされた行を取り出す。
+    ///
+    /// <see cref="ContextMenu"/> は論理ツリーが本体から切れているため
+    /// 親を辿れない。XAML 側で <c>PlacementTarget</c> の DataContext を
+    /// 引き継いであるので、ここでは送り主の DataContext を見ればよい。
+    /// <b>選択行は使わない</b>（右クリックでは選択が動かないため）。
     /// </summary>
-    private void OnEnterWatchMode(object sender, RoutedEventArgs e)
+    private static TargetRowViewModel? RowOf(object sender)
+        => (sender as FrameworkElement)?.DataContext as TargetRowViewModel;
+
+    /// <summary>
+    /// 落ちている宛先を見つけたとき、そのまま経路を追えるようにする。
+    /// 打ち直しの手間と打ち間違いを無くすのが目的。
+    /// </summary>
+    private void OnTraceFromRow(object sender, RoutedEventArgs e)
     {
-        _normalWidth = Width;
-        _normalHeight = Height;
-        _wasTopmost = Topmost;
+        if (RowOf(sender) is not { } row) return;
 
-        MainPanel.Visibility = Visibility.Collapsed;
-        WatchPanel.Visibility = Visibility.Visible;
+        _shell.Trace.Host = row.Host;
+        TraceTab.IsSelected = true;
 
-        MinWidth = 260;
-        MinHeight = 170;
-        Width = 320;
-        Height = 210;
-
-        // 見張るのだから手前に出ていないと意味がない
-        Topmost = true;
-        TopmostToggle.IsChecked = true;
+        if (_shell.Trace.TraceCommand.CanExecute(null))
+            _shell.Trace.TraceCommand.Execute(null);
     }
 
-    private void OnLeaveWatchMode(object sender, RoutedEventArgs e)
+    private void OnResolveFromRow(object sender, RoutedEventArgs e)
     {
-        WatchPanel.Visibility = Visibility.Collapsed;
-        MainPanel.Visibility = Visibility.Visible;
+        if (RowOf(sender) is not { } row) return;
 
-        MinWidth = 900;
-        MinHeight = 480;
-        Width = _normalWidth > 0 ? _normalWidth : 1140;
-        Height = _normalHeight > 0 ? _normalHeight : 720;
+        _shell.Dns.Name = row.Host;
+        DnsTab.IsSelected = true;
 
-        Topmost = _wasTopmost;
-        TopmostToggle.IsChecked = _wasTopmost;
+        if (_shell.Dns.QueryCommand.CanExecute(null))
+            _shell.Dns.QueryCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 解決済みのアドレスを写す。IP で登録した宛先や、まだ引けていない宛先では
+    /// 空になるので、そのときは書いてある文字列をそのまま渡す。
+    /// </summary>
+    private void OnCopyAddressFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row) return;
+
+        CopyText(string.IsNullOrWhiteSpace(row.Address) ? row.Host : row.Address);
+    }
+
+    private void OnCopyHostFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is { } row)
+            CopyText(row.Host);
+    }
+
+    /// <summary>
+    /// クリップボードは他のプロセスが掴んでいると失敗する。
+    /// 写せなかったからといって落ちる操作ではないので、記録して黙って諦める。
+    /// </summary>
+    private static void CopyText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+
+        try
+        {
+            Clipboard.SetText(text);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "Clipboard.SetText");
+        }
     }
 
     /// <summary>

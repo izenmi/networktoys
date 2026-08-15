@@ -188,6 +188,24 @@
         </DataTemplate>
 
         <Style x:Key="CompactRowContainer" TargetType="ListBoxItem">
+            <!--
+                ContextMenu は論理ツリーが切れているため、RelativeSource で親の
+                DataContext を辿れない。PlacementTarget を経由させて、右クリックした
+                行そのものをメニューの DataContext にする。
+                こうすると選択を動かさずに済む（左クリックの挙動は今まで通り）。
+            -->
+            <Setter Property="ContextMenu">
+                <Setter.Value>
+                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
+                                               RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
+                        <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
+                        <Separator />
+                        <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
+                        <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
+                    </ContextMenu>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -215,6 +233,25 @@
         <Style x:Key="TargetRowContainer" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="4,0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <!--
+                ContextMenu は論理ツリーが切れているため、RelativeSource で親の
+                DataContext を辿れない。PlacementTarget を経由させて、右クリックした
+                行そのものをメニューの DataContext にする。
+                こうすると選択を動かさずに済む（左クリックの挙動は今まで通り）。
+            -->
+            <Setter Property="ContextMenu">
+                <Setter.Value>
+                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
+                                               RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
+                        <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
+                        <Separator />
+                        <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
+                        <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
+                    </ContextMenu>
+                </Setter.Value>
+            </Setter>
+
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -275,63 +312,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
-    <!-- ===== 見張りモード（離れた場所からでも色だけで分かる） ===== -->
-    <Border x:Name="WatchPanel" Visibility="Collapsed" DataContext="{Binding Monitor}">
-        <Border.Style>
-            <Style TargetType="Border">
-                <!-- 数字を読まなくても、面の色で異常が分かるようにする -->
-                <Setter Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding HasDownRows}" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-        </Border.Style>
-
-        <DockPanel Margin="14,10">
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right">
-                <CheckBox Content="音" IsChecked="{Binding SoundEnabled}" VerticalAlignment="Center" Margin="0,0,10,0" />
-                <Button Content="元に戻す" Click="OnLeaveWatchMode" Style="{StaticResource Button.Subtle}" />
-            </StackPanel>
-
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock x:Name="WatchTitle" Text="{Binding WatchSummary}"
-                           FontSize="26" FontWeight="Bold"
-                           HorizontalAlignment="Center">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding HasDownRows}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-
-                <TextBlock Text="{Binding WatchCount}" FontSize="15"
-                           HorizontalAlignment="Center" Margin="0,2,0,0"
-                           Foreground="{DynamicResource Brush.Text}" />
-
-                <!-- 落ちている宛先を数件だけ。何が落ちたかは知りたい -->
-                <ItemsControl ItemsSource="{Binding DownRows}" Margin="0,8,0,0" MaxHeight="90">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Host}"
-                                       Style="{StaticResource Mono}"
-                                       Foreground="{DynamicResource Brush.Error.Fg}"
-                                       HorizontalAlignment="Center" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </DockPanel>
-    </Border>
-
-    <Grid x:Name="MainPanel" Margin="10,8,10,6">
+    <Grid Margin="10,8,10,6">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -348,28 +329,34 @@
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
             <TextBlock Text="PastelNet" FontSize="15" FontWeight="SemiBold"
-                       Margin="8,0,0,0" VerticalAlignment="Center" />
-            <TextBlock Text="ぜんぶ同時に測る"
-                       Style="{StaticResource Caption}"
-                       Margin="10,0,0,0" VerticalAlignment="Center" />
+                       Margin="8,0,14,0" VerticalAlignment="Center" />
 
-            <!-- 画面を見ていられないときのための操作。手前に置いておく -->
-            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" DataContext="{Binding Monitor}">
-                <CheckBox Content="音で知らせる" IsChecked="{Binding SoundEnabled}"
-                          VerticalAlignment="Center" Margin="0,0,10,0"
-                          ToolTip="落ちた瞬間と戻った瞬間に鳴らします。" />
-                <CheckBox Content="はっきり鳴らす" IsChecked="{Binding LoudSound}"
-                          VerticalAlignment="Center" Margin="0,0,10,0"
-                          ToolTip="Windows の音設定が「なし」でも鳴るよう、ビープ音を使います。" />
+            <!--
+                測定の開始と停止はここに置く。どのタブを見ていても押せるように。
+                宛先を書き換えている最中や、機器の出力を見比べている最中に
+                止めたくなることが多い。
+            -->
+            <StackPanel Orientation="Horizontal" DataContext="{Binding Monitor}">
+                <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                <Button Content="{Binding TcpButtonLabel}" Command="{Binding StartTcpCommand}" Margin="0,0,4,0"
+                        ToolTip="ICMP ではなく TCP 接続で測ります。ping が塞がれている相手の確認に。" />
+                <TextBox Width="48" Text="{Binding TcpPort, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,5,0" VerticalAlignment="Center"
+                         ToolTip="TCP Ping で使うポート。宛先に :ポート が書いてあればそちらが優先されます。" />
+                <Button Content="停止" Command="{Binding StopCommand}"
+                        Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+
+                <TextBlock Text="{Binding CountText}" Style="{StaticResource Caption}"
+                           VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}"
+                           VerticalAlignment="Center" MaxWidth="260"
+                           TextTrimming="CharacterEllipsis" Margin="0,0,14,0" />
             </StackPanel>
 
             <CheckBox x:Name="TopmostToggle" Content="最前面"
                       Checked="OnTopmostChanged" Unchecked="OnTopmostChanged"
                       VerticalAlignment="Center" Margin="0,0,10,0"
                       ToolTip="他のウィンドウの手前に固定します。" />
-            <Button Content="見張りモード" Click="OnEnterWatchMode"
-                    Style="{StaticResource Button.Subtle}"
-                    ToolTip="小さく表示して、離れた場所からでも状態が分かるようにします。" />
         </StackPanel>
 
         <!-- ===== 本体 ===== -->
@@ -474,23 +461,9 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- 操作列 -->
+                        <!-- 操作列。開始・停止はヘッダへ移したので、ここに残すのは
+                             この画面でしか使わないものだけ -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-                            <Button Content="{Binding RunButtonLabel}"
-                                    Command="{Binding StartCommand}"
-                                    Margin="0,0,6,0" />
-                            <Button Content="{Binding TcpButtonLabel}"
-                                    Command="{Binding StartTcpCommand}"
-                                    Margin="0,0,4,0"
-                                    ToolTip="ICMP ではなく TCP 接続で測ります。ping が塞がれている相手の確認に。" />
-                            <TextBox Width="52"
-                                     Text="{Binding TcpPort, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,10,0"
-                                     ToolTip="TCP Ping で使うポート。宛先に :ポート が書いてあればそちらが優先されます。" />
-                            <Button Content="停止"
-                                    Command="{Binding StopCommand}"
-                                    Style="{StaticResource Button.Subtle}"
-                                    Margin="0,0,6,0" />
                             <Button Content="履歴を消去"
                                     Command="{Binding ClearHistoryCommand}"
                                     Style="{StaticResource Button.Subtle}"
@@ -498,10 +471,8 @@
                             <CheckBox Content="一覧表示" IsChecked="{Binding IsCompact}"
                                       VerticalAlignment="Center" Margin="0,0,12,0"
                                       ToolTip="小さな枠を敷き詰めて、たくさんの宛先を一目で見られるようにします。" />
-                            <TextBlock Text="{Binding CountText}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                       Text="行を右クリックすると、その宛先の経路や名前を調べられます。" />
                         </StackPanel>
 
                         <!-- 選択行の詳細。一覧に列を増やさずに済ませるための置き場 -->
@@ -920,181 +891,188 @@
                                        TextWrapping="Wrap" Margin="0,2,0,0" />
                         </StackPanel>
 
-                        <!-- 貼り付け欄 -->
+                        <!--
+                            貼り付け欄と結果は同じ場所に重ねる。
+                            DockPanel は最後の子だけが残りを埋めるので、この入れ物を最後に置かないと
+                            貼り付け欄が中身の高さまで縮んでしまう（show run を貼るには狭すぎた）。
+                        -->
                         <Grid>
-                            <Grid.Style>
-                                <Style TargetType="Grid">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Grid.Style>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <DockPanel Grid.Column="0" Margin="0,0,5,0">
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock Text="作業前" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                    <Button Content="ファイルから" Command="{Binding LoadBeforeCommand}"
-                                            Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
-                                </StackPanel>
-                                <TextBox Text="{Binding BeforeText, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}"
-                                         FontSize="{DynamicResource Size.Caption}"
-                                         AcceptsReturn="True" TextWrapping="NoWrap"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         VerticalContentAlignment="Top" />
-                            </DockPanel>
-
-                            <DockPanel Grid.Column="1" Margin="5,0,0,0">
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock Text="作業後" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                    <Button Content="ファイルから" Command="{Binding LoadAfterCommand}"
-                                            Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
-                                </StackPanel>
-                                <TextBox Text="{Binding AfterText, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}"
-                                         FontSize="{DynamicResource Size.Caption}"
-                                         AcceptsReturn="True" TextWrapping="NoWrap"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         VerticalContentAlignment="Top" />
-                            </DockPanel>
-                        </Grid>
-
-                        <!-- 結果 -->
-                        <DockPanel>
-                            <DockPanel.Style>
-                                <Style TargetType="DockPanel">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </DockPanel.Style>
-
-                            <!-- 経路として見た変化。行の差分より先に見てほしい -->
-                            <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="10,7"
-                                    Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="7">
-                                <Border.Style>
-                                    <Style TargetType="Border">
+                            <!-- 貼り付け欄 -->
+                            <Grid>
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasStructuredView}" Value="True">
+                                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
                                                 <Setter Property="Visibility" Value="Visible" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </Border.Style>
-
-                                <DockPanel MaxHeight="180">
-                                    <TextBlock DockPanel.Dock="Top" Text="何が変わったか"
-                                               FontWeight="SemiBold" Margin="0,0,0,4" />
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl ItemsSource="{Binding Changes}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock x:Name="ChangeText" Text="{Binding Description}"
-                                                               TextWrapping="Wrap" Margin="0,0,0,2" />
-                                                    <DataTemplate.Triggers>
-                                                        <DataTrigger Binding="{Binding Severity}" Value="Critical">
-                                                            <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                                                            <Setter TargetName="ChangeText" Property="FontWeight" Value="SemiBold" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                                                            <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                                                        </DataTrigger>
-                                                    </DataTemplate.Triggers>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
-                                </DockPanel>
-                            </Border>
-
-                            <!-- 左右の見出し -->
-                            <Grid DockPanel.Dock="Top" Margin="0,0,0,3">
+                                </Grid.Style>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="42" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="42" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="1" Text="作業前" Style="{StaticResource Caption}" FontWeight="SemiBold" />
-                                <TextBlock Grid.Column="3" Text="作業後" Style="{StaticResource Caption}" FontWeight="SemiBold" />
+
+                                <DockPanel Grid.Column="0" Margin="0,0,5,0">
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="作業前" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <Button Content="ファイルから" Command="{Binding LoadBeforeCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
+                                    </StackPanel>
+                                    <TextBox Text="{Binding BeforeText, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="{DynamicResource Font.Mono}"
+                                             FontSize="{DynamicResource Size.Caption}"
+                                             AcceptsReturn="True" TextWrapping="NoWrap"
+                                             VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             VerticalContentAlignment="Top" MinHeight="180" />
+                                </DockPanel>
+
+                                <DockPanel Grid.Column="1" Margin="5,0,0,0">
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="作業後" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <Button Content="ファイルから" Command="{Binding LoadAfterCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
+                                    </StackPanel>
+                                    <TextBox Text="{Binding AfterText, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="{DynamicResource Font.Mono}"
+                                             FontSize="{DynamicResource Size.Caption}"
+                                             AcceptsReturn="True" TextWrapping="NoWrap"
+                                             VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             VerticalContentAlignment="Top" MinHeight="180" />
+                                </DockPanel>
                             </Grid>
-                            <Border DockPanel.Dock="Top" Height="1"
-                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
-                            <!-- 左右並置。1 つのスクロールに収めるので、左右がずれない -->
-                            <ListBox ItemsSource="{Binding Rows}"
-                                     ItemContainerStyle="{StaticResource CompactRowContainer}"
-                                     Background="Transparent" BorderThickness="0"
-                                     HorizontalContentAlignment="Stretch"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                     VirtualizingStackPanel.IsVirtualizing="True"
-                                     VirtualizingStackPanel.VirtualizationMode="Recycling">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" MinWidth="200" />
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" MinWidth="200" />
-                                            </Grid.ColumnDefinitions>
+                            <!-- 結果 -->
+                            <DockPanel>
+                                <DockPanel.Style>
+                                    <Style TargetType="DockPanel">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DockPanel.Style>
 
-                                            <TextBlock Grid.Column="0" Text="{Binding LeftNumberText}"
-                                                       Style="{StaticResource Mono}"
-                                                       FontSize="{DynamicResource Size.Caption}"
-                                                       Foreground="{DynamicResource Brush.TextMuted}"
-                                                       HorizontalAlignment="Right" Margin="0,0,6,0" />
+                                <!-- 経路として見た変化。行の差分より先に見てほしい -->
+                                <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="10,7"
+                                        Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="7">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasStructuredView}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
 
-                                            <Border x:Name="LeftCell" Grid.Column="1" Padding="4,1" CornerRadius="3" Margin="0,0,6,0">
-                                                <TextBlock Text="{Binding LeftText}"
+                                    <DockPanel MaxHeight="180">
+                                        <TextBlock DockPanel.Dock="Top" Text="何が変わったか"
+                                                   FontWeight="SemiBold" Margin="0,0,0,4" />
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Changes}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock x:Name="ChangeText" Text="{Binding Description}"
+                                                                   TextWrapping="Wrap" Margin="0,0,0,2" />
+                                                        <DataTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding Severity}" Value="Critical">
+                                                                <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                                <Setter TargetName="ChangeText" Property="FontWeight" Value="SemiBold" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                                <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                            </DataTrigger>
+                                                        </DataTemplate.Triggers>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- 左右の見出し -->
+                                <Grid DockPanel.Dock="Top" Margin="0,0,0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="42" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="42" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="1" Text="作業前" Style="{StaticResource Caption}" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="3" Text="作業後" Style="{StaticResource Caption}" FontWeight="SemiBold" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1"
+                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                                <!-- 左右並置。1 つのスクロールに収めるので、左右がずれない -->
+                                <ListBox ItemsSource="{Binding Rows}"
+                                         ItemContainerStyle="{StaticResource CompactRowContainer}"
+                                         Background="Transparent" BorderThickness="0"
+                                         HorizontalContentAlignment="Stretch"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="42" />
+                                                    <ColumnDefinition Width="*" MinWidth="200" />
+                                                    <ColumnDefinition Width="42" />
+                                                    <ColumnDefinition Width="*" MinWidth="200" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Text="{Binding LeftNumberText}"
                                                            Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           TextWrapping="NoWrap" />
-                                            </Border>
+                                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                                           HorizontalAlignment="Right" Margin="0,0,6,0" />
 
-                                            <TextBlock Grid.Column="2" Text="{Binding RightNumberText}"
-                                                       Style="{StaticResource Mono}"
-                                                       FontSize="{DynamicResource Size.Caption}"
-                                                       Foreground="{DynamicResource Brush.TextMuted}"
-                                                       HorizontalAlignment="Right" Margin="0,0,6,0" />
+                                                <Border x:Name="LeftCell" Grid.Column="1" Padding="4,1" CornerRadius="3" Margin="0,0,6,0">
+                                                    <TextBlock Text="{Binding LeftText}"
+                                                               Style="{StaticResource Mono}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               TextWrapping="NoWrap" />
+                                                </Border>
 
-                                            <Border x:Name="RightCell" Grid.Column="3" Padding="4,1" CornerRadius="3">
-                                                <TextBlock Text="{Binding RightText}"
+                                                <TextBlock Grid.Column="2" Text="{Binding RightNumberText}"
                                                            Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           TextWrapping="NoWrap" />
-                                            </Border>
-                                        </Grid>
+                                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                                           HorizontalAlignment="Right" Margin="0,0,6,0" />
 
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding Kind}" Value="Changed">
-                                                <Setter TargetName="LeftCell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                                                <Setter TargetName="RightCell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Kind}" Value="LeftOnly">
-                                                <Setter TargetName="LeftCell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Kind}" Value="RightOnly">
-                                                <Setter TargetName="RightCell" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </DockPanel>
+                                                <Border x:Name="RightCell" Grid.Column="3" Padding="4,1" CornerRadius="3">
+                                                    <TextBlock Text="{Binding RightText}"
+                                                               Style="{StaticResource Mono}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               TextWrapping="NoWrap" />
+                                                </Border>
+                                            </Grid>
+
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding Kind}" Value="Changed">
+                                                    <Setter TargetName="LeftCell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                                                    <Setter TargetName="RightCell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Kind}" Value="LeftOnly">
+                                                    <Setter TargetName="LeftCell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Kind}" Value="RightOnly">
+                                                    <Setter TargetName="RightCell" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Grid>
                     </DockPanel>
                 </Border>
             </TabItem>
@@ -1198,7 +1176,7 @@
             </TabItem>
 
             <!-- ===== DNS ===== -->
-            <TabItem Header="DNS" DataContext="{Binding Dns}">
+            <TabItem x:Name="DnsTab" Header="DNS" DataContext="{Binding Dns}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
@@ -1307,7 +1285,7 @@
             </TabItem>
 
             <!-- ===== 経路 ===== -->
-            <TabItem Header="経路" DataContext="{Binding Trace}">
+            <TabItem x:Name="TraceTab" Header="経路" DataContext="{Binding Trace}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
@@ -1739,6 +1717,5 @@
                            TextTrimming="CharacterEllipsis" MaxWidth="240" />
             </StackPanel>
         </Border>
-    </Grid>
     </Grid>
 </Window>
