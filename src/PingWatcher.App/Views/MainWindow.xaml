@@ -39,14 +39,15 @@
         <!-- 一覧 1 行。列幅は上の定義を見出しと共有している -->
         <DataTemplate x:Key="TargetRowTemplate">
             <Grid Height="{DynamicResource Size.RowHeight}">
-                <!-- 幅はヘッダと共有(ColumnLayout)。ヘッダの境目をドラッグすると全行が追随する -->
+                <!-- 幅はヘッダと共有(ColumnLayout)。ヘッダの境目をドラッグすると全行が追随する。
+                     備考は宛先の隣(ユーザー指示)。残り幅もすべて備考が使う -->
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=State}" />
                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Target}" />
+                    <ColumnDefinition Width="*" MinWidth="120" />
                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Rtt}" />
                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Loss}" />
                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Spark}" />
-                    <ColumnDefinition Width="*" MinWidth="120" />
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="Badge"
@@ -64,22 +65,23 @@
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                            ToolTip="{Binding HostDisplay}" />
 
-                <TextBlock Grid.Column="2" Text="{Binding LatestRtt}"
-                           Style="{StaticResource Mono}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right" />
-
-                <TextBlock Grid.Column="3" Text="{Binding Loss}"
-                           Style="{StaticResource Mono}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right" />
-
-                <controls:Sparkline Grid.Column="4" Source="{Binding}" Margin="8,3,8,3"
-                                    LineBrush="{DynamicResource Brush.Chart.Line}"
-                                    LostBrush="{DynamicResource Brush.Error.Fg}" />
-
-                <TextBlock Grid.Column="5" Text="{Binding Comment}"
+                <TextBlock Grid.Column="2" Text="{Binding Comment}"
                            Style="{StaticResource Caption}"
+                           Margin="8,0,8,0"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                            ToolTip="{Binding Comment}" />
+
+                <TextBlock Grid.Column="3" Text="{Binding LatestRtt}"
+                           Style="{StaticResource Mono}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+
+                <TextBlock Grid.Column="4" Text="{Binding Loss}"
+                           Style="{StaticResource Mono}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+
+                <controls:Sparkline Grid.Column="5" Source="{Binding}" Margin="8,3,0,3"
+                                    LineBrush="{DynamicResource Brush.Chart.Line}"
+                                    LostBrush="{DynamicResource Brush.Error.Fg}" />
             </Grid>
 
             <DataTemplate.Triggers>
@@ -478,17 +480,17 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=State, Mode=TwoWay}" MinWidth="36" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Target, Mode=TwoWay}" MinWidth="60" />
+                                    <ColumnDefinition Width="*" MinWidth="120" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Rtt, Mode=TwoWay}" MinWidth="36" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Loss, Mode=TwoWay}" MinWidth="36" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Spark, Mode=TwoWay}" MinWidth="36" />
-                                    <ColumnDefinition Width="*" MinWidth="120" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
                                 <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
-                                <TextBlock Grid.Column="2" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="3" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="4" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
-                                <TextBlock Grid.Column="5" Text="備考"     Style="{StaticResource Caption}" />
+                                <TextBlock Grid.Column="2" Text="備考"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                <TextBlock Grid.Column="3" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="4" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="5" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
 
                                 <!--
                                     列幅の変更。ヘッダの境目を掴んで動かす。
@@ -497,8 +499,6 @@
                                 <GridSplitter Grid.Column="0" Width="5" HorizontalAlignment="Right"
                                               Background="Transparent" ShowsPreview="False" Focusable="False" />
                                 <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Right"
-                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
-                                <GridSplitter Grid.Column="2" Width="5" HorizontalAlignment="Right"
                                               Background="Transparent" ShowsPreview="False" Focusable="False" />
                                 <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Right"
                                               Background="Transparent" ShowsPreview="False" Focusable="False" />
