@@ -154,7 +154,14 @@ public sealed class TargetRowViewModel : ObservableObject
     /// </summary>
     public void CheckStalled(long nowTicks)
     {
-        if (_machine.CheckStalled(nowTicks, _settings.IntervalMs))
+        // サンプルの実効周期は「間隔」と「タイムアウト」の長い方。応答しない宛先は
+        // タイムアウトまで 1 回分の枠を使うので、間隔だけを基準にすると
+        // 正常に測れているのに「止まった」と誤判定する
+        int cadenceMs = Math.Max(
+            Target.IntervalMs ?? _settings.IntervalMs,
+            Target.TimeoutMs ?? _settings.TimeoutMs);
+
+        if (_machine.CheckStalled(nowTicks, cadenceMs))
             _isDirty = true;
     }
 
@@ -186,7 +193,10 @@ public sealed class TargetRowViewModel : ObservableObject
             },
         };
 
-        IsDown = _machine.State == LinkState.Down;
+        // 「応答なし」欄への振り分け。測定が詰まって Stalled になっても、
+        // 不達だった宛先を「応答あり」欄へ戻さない（最後に分かっていた到達性で振り分ける）
+        IsDown = _machine.State == LinkState.Down
+                 || (_machine.State == LinkState.Stalled && _machine.StateBeforeStall == LinkState.Down);
 
         // 拒否のときも RTT は意味を持つ（そこまで届いている証拠なので）
         LatestRtt = latest.Status is ProbeStatus.Success or ProbeStatus.Refused

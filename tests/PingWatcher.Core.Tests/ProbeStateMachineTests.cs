@@ -202,4 +202,34 @@ public class ProbeStateMachineTests
         Assert.Equal(0, machine.MaxConsecutiveFailures);
         Assert.Null(machine.LastSuccessTicks);
     }
+
+    [Fact]
+    public void Stalling_remembers_the_reachability_before_the_stall()
+    {
+        // 測定が詰まって「停止」になっても、不達だった宛先を
+        // 「応答あり」側へ振り分け直してはいけない（実際に起きた誤分類）
+        var machine = new ProbeStateMachine();
+
+        machine.Observe(ProbeSample.Failure(TimeSpan.FromSeconds(0).Ticks, ProbeStatus.TimedOut));
+        machine.Observe(ProbeSample.Failure(TimeSpan.FromSeconds(1).Ticks, ProbeStatus.TimedOut));
+        Assert.Equal(LinkState.Down, machine.State);
+
+        Assert.True(machine.CheckStalled(TimeSpan.FromSeconds(30).Ticks, intervalMs: 1000));
+
+        Assert.Equal(LinkState.Stalled, machine.State);
+        Assert.Equal(LinkState.Down, machine.StateBeforeStall);
+    }
+
+    [Fact]
+    public void A_pending_sample_does_not_feed_the_stall_timer()
+    {
+        // 「まだ測っていない」を観測扱いにすると、結果が途絶えた検知が空振りで延命される
+        var machine = new ProbeStateMachine();
+
+        machine.Observe(ProbeSample.Success(TimeSpan.FromSeconds(0).Ticks, 5));
+        machine.Observe(new ProbeSample(TimeSpan.FromSeconds(29).Ticks, 0, ProbeStatus.Pending));
+
+        Assert.True(machine.CheckStalled(TimeSpan.FromSeconds(30).Ticks, intervalMs: 1000));
+        Assert.Equal(LinkState.Stalled, machine.State);
+    }
 }

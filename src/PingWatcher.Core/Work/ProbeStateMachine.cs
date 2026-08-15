@@ -44,6 +44,13 @@ public sealed class ProbeStateMachine
 
     public LinkState State { get; private set; } = LinkState.Pending;
 
+    /// <summary>
+    /// <see cref="LinkState.Stalled"/> になる直前の状態。
+    /// 表示は「停止」を出すべきでも、<b>応答あり/なしの振り分けまで戻してはいけない</b>。
+    /// 不達だった宛先が、測定が詰まった瞬間に「応答あり」欄へ移るのは嘘になる。
+    /// </summary>
+    public LinkState StateBeforeStall { get; private set; } = LinkState.Pending;
+
     /// <summary>いま何回続けて応答が無いか。</summary>
     public int ConsecutiveFailures { get; private set; }
 
@@ -67,6 +74,11 @@ public sealed class ProbeStateMachine
     /// </summary>
     public bool Observe(in ProbeSample sample)
     {
+        // 「まだ測っていない」は観測ではない。ここで時刻を更新すると
+        // 停止検知（結果が途絶えた）のタイマーを空振りで延命してしまう
+        if (sample.Status == ProbeStatus.Pending)
+            return false;
+
         Latest = sample;
         LastSampleTicks = sample.TimestampTicks;
 
@@ -82,17 +94,16 @@ public sealed class ProbeStateMachine
             LastSuccessTicks = sample.TimestampTicks;
             State = LinkState.Up;
         }
-        else if (sample.Status != ProbeStatus.Pending)
+        else
         {
             ConsecutiveFailures++;
 
             if (ConsecutiveFailures > MaxConsecutiveFailures)
                 MaxConsecutiveFailures = ConsecutiveFailures;
 
+            // 規定回数までは前の状態を保つ（初回の失敗だけでは落ちたと判断しない）
             if (ConsecutiveFailures >= _failuresToDeclareDown)
                 State = LinkState.Down;
-            else if (State == LinkState.Pending)
-                State = LinkState.Pending;   // 初回の失敗だけでは判断しない
         }
 
         return State != previous;
@@ -112,7 +123,13 @@ public sealed class ProbeStateMachine
         long limit = TimeSpan.FromMilliseconds(Math.Max(intervalMs, 1) * 3.0).Ticks;
 
         LinkState previous = State;
-        State = nowTicks - last > limit ? LinkState.Stalled : State;
+
+        if (nowTicks - last > limit && State != LinkState.Stalled)
+        {
+            // 振り分けを戻さないよう、止まる直前の到達性を控えてから切り替える
+            StateBeforeStall = State;
+            State = LinkState.Stalled;
+        }
 
         // 止まっていた状態から結果が戻ってきた場合は Observe 側で更新される
         return State != previous;
@@ -121,6 +138,7 @@ public sealed class ProbeStateMachine
     public void Reset()
     {
         State = LinkState.Pending;
+        StateBeforeStall = LinkState.Pending;
         ConsecutiveFailures = 0;
         MaxConsecutiveFailures = 0;
         SingleDropCount = 0;
