@@ -15,18 +15,34 @@
         TextOptions.TextRenderingMode="ClearType">
 
     <Window.Resources>
-        <!-- 一覧 1 行。列幅はヘッダ側と合わせること -->
+        <!--
+            Ping 一覧の列幅。以前は列見出しと行テンプレートの両方に同じ数字を
+            書いていて、片方だけ直すとずれた。幅の出どころをここ 1 か所にする。
+
+            StaticResource なのは、実行中に変わらない値だから。DynamicResource に
+            すると仮想化された行を作り直すたびに解決が走る。前方参照はできないので、
+            使う側より前に置くこと。
+        -->
+        <GridLength x:Key="ColW.Ping.State">66</GridLength>
+        <GridLength x:Key="ColW.Ping.Host">158</GridLength>
+        <GridLength x:Key="ColW.Ping.Address">112</GridLength>
+        <GridLength x:Key="ColW.Ping.Rtt">62</GridLength>
+        <GridLength x:Key="ColW.Ping.Average">62</GridLength>
+        <GridLength x:Key="ColW.Ping.Loss">48</GridLength>
+        <GridLength x:Key="ColW.Ping.Comment">180</GridLength>
+
+        <!-- 一覧 1 行。列幅は上の定義を見出しと共有している -->
         <DataTemplate x:Key="TargetRowTemplate">
             <Grid Height="{DynamicResource Size.RowHeight}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="66" />
-                    <ColumnDefinition Width="158" />
-                    <ColumnDefinition Width="112" />
-                    <ColumnDefinition Width="62" />
-                    <ColumnDefinition Width="62" />
-                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.State}" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.Host}" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.Address}" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.Rtt}" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.Average}" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.Loss}" />
                     <ColumnDefinition Width="*" MinWidth="100" />
-                    <ColumnDefinition Width="180" />
+                    <ColumnDefinition Width="{StaticResource ColW.Ping.Comment}" />
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="Badge"
@@ -108,13 +124,16 @@
             これを敷き詰めて折り返す。
 
             正常な宛先には地色を敷かない。異常だけが色で浮き上がる方が、
-            数が多いときに目が拾いやすい。
+            数が多いときに目が拾いやすい。異常なタイルは枠も状態色にして点灯させる
+            （効果は使わないので、何百並べても描画のコストは変わらない）。
         -->
         <DataTemplate x:Key="CompactRowTemplate">
             <Border x:Name="Cell"
                     Width="248" Height="19"
-                    CornerRadius="4"
+                    CornerRadius="{DynamicResource Radius.Chip}"
                     Padding="5,0"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource Brush.Chip.Edge}"
                     Background="{DynamicResource Brush.Surface}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -125,7 +144,7 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock x:Name="Mark" Grid.Column="0"
-                               Text="◌" FontSize="9"
+                               Text="◌" FontSize="{DynamicResource Size.Micro}"
                                Foreground="{DynamicResource Brush.TextMuted}"
                                VerticalAlignment="Center" />
 
@@ -156,6 +175,7 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Slow">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                    <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Brush.Warn.Fg}" />
                     <Setter TargetName="Mark" Property="Text" Value="▲" />
                     <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                     <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
@@ -163,12 +183,14 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Refused">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                    <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Brush.Warn.Fg}" />
                     <Setter TargetName="Mark" Property="Text" Value="⊘" />
                     <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                     <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Down">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                    <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="Mark" Property="Text" Value="✕" />
                     <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
@@ -176,6 +198,7 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Unresolved">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                    <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="Mark" Property="Text" Value="?" />
                     <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
@@ -198,7 +221,7 @@
                         <Border x:Name="Sel"
                                 BorderBrush="Transparent"
                                 BorderThickness="1.5"
-                                CornerRadius="6"
+                                CornerRadius="{DynamicResource Radius.Control}"
                                 Margin="0,0,3,3">
                             <!--
                                 右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
@@ -243,7 +266,7 @@
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Bd"
                                 Background="Transparent"
-                                CornerRadius="5"
+                                CornerRadius="{DynamicResource Radius.Badge}"
                                 Padding="{TemplateBinding Padding}">
                             <!--
                                 右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
@@ -326,14 +349,15 @@
 
         <!-- ===== ヘッダ ===== -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,8">
-            <Border Background="{DynamicResource Brush.Accent.Bg}"
-                    CornerRadius="6" Width="22" Height="22"
+            <Border Background="{DynamicResource Brush.Accent.Gradient}"
+                    CornerRadius="{DynamicResource Radius.Control}" Width="22" Height="22"
                     VerticalAlignment="Center">
                 <TextBlock Text="◔" FontSize="13"
-                           Foreground="{DynamicResource Brush.Accent.Fg}"
+                           Foreground="{DynamicResource Brush.Surface}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
-            <TextBlock Text="PastelNet" FontSize="15" FontWeight="SemiBold"
+            <TextBlock Text="PastelNet" FontWeight="SemiBold"
+                       FontSize="{DynamicResource Size.Title}"
                        Margin="8,0,14,0" VerticalAlignment="Center" />
 
             <!--
@@ -381,7 +405,7 @@
 
                         <Border DockPanel.Dock="Top"
                                 Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="6" Padding="10,7" Margin="0,0,0,8">
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="10,7" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
                                     1 行に 1 宛先。アドレスの後ろに<Run FontWeight="SemiBold">半角スペース</Run>を空けると、そこから行末までが備考になります。
@@ -441,7 +465,7 @@
                         <!-- 選択行の詳細。一覧に列を増やさずに済ませるための置き場 -->
                         <Border DockPanel.Dock="Bottom"
                                 Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="6" Padding="8,5" Margin="0,6,0,0">
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="8,5" Margin="0,6,0,0">
                             <TextBlock Text="{Binding DetailText}"
                                        Style="{StaticResource Caption}"
                                        TextWrapping="Wrap" />
@@ -464,14 +488,14 @@
 
                             <Grid Margin="4,0,4,3">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="66" />
-                                    <ColumnDefinition Width="158" />
-                                    <ColumnDefinition Width="112" />
-                                    <ColumnDefinition Width="62" />
-                                    <ColumnDefinition Width="62" />
-                                    <ColumnDefinition Width="48" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.State}" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Host}" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Address}" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Rtt}" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Average}" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Loss}" />
                                     <ColumnDefinition Width="*" MinWidth="100" />
-                                    <ColumnDefinition Width="180" />
+                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Comment}" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
                                 <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
@@ -498,7 +522,9 @@
                             <!-- ===== 応答なし（2 回連続で失敗） ===== -->
                             <Border Grid.Row="0" Margin="0,0,0,8"
                                     Background="{DynamicResource Brush.Error.Bg}"
-                                    CornerRadius="7" Padding="6">
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource Brush.Error.Fg}"
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Visible" />
@@ -527,7 +553,7 @@
                             <DockPanel Grid.Row="1">
                                 <Border DockPanel.Dock="Top"
                                         Background="{DynamicResource Brush.Ok.Bg}"
-                                        CornerRadius="6" Padding="8,3" Margin="0,0,0,4">
+                                        CornerRadius="{DynamicResource Radius.Control}" Padding="8,3" Margin="0,0,0,4">
                                     <TextBlock Text="{Binding AliveHeader}"
                                                Foreground="{DynamicResource Brush.Ok.Fg}"
                                                FontWeight="SemiBold" />
@@ -568,7 +594,7 @@
                             </StackPanel>
 
                             <!-- 判定。開いた瞬間に結論が分かること -->
-                            <Border CornerRadius="8" Padding="12,8">
+                            <Border CornerRadius="{DynamicResource Radius.Card}" Padding="12,8">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
@@ -727,7 +753,7 @@
                                     <ItemsControl ItemsSource="{Binding Timeline}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border x:Name="Row" CornerRadius="5" Padding="6,3" Margin="0,0,0,3"
+                                                <Border x:Name="Row" CornerRadius="{DynamicResource Radius.Badge}" Padding="6,3" Margin="0,0,0,3"
                                                         Background="{DynamicResource Brush.SurfaceAlt}">
                                                     <StackPanel>
                                                         <StackPanel Orientation="Horizontal">
@@ -923,7 +949,7 @@
 
                                 <!-- 経路として見た変化。行の差分より先に見てほしい -->
                                 <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="10,7"
-                                        Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="7">
+                                        Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="{DynamicResource Radius.Card}">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Visibility" Value="Collapsed" />
@@ -1186,7 +1212,7 @@
                                                 Background="{DynamicResource Brush.SurfaceAlt}"
                                                 BorderBrush="{DynamicResource Brush.Border}"
                                                 BorderThickness="1"
-                                                CornerRadius="7"
+                                                CornerRadius="{DynamicResource Radius.Card}"
                                                 Padding="10,8"
                                                 Margin="0,0,8,8"
                                                 Width="278">
@@ -1274,7 +1300,7 @@
                         <!-- 経路が変わった記録 -->
                         <Border DockPanel.Dock="Bottom" Margin="0,6,0,0" MaxHeight="96"
                                 Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="6" Padding="8,5">
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="8,5">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <!-- 変化が 1 件も無いうちは場所を取らない -->
@@ -1328,7 +1354,7 @@
                             <ItemsControl ItemsSource="{Binding Hops}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border x:Name="Row" CornerRadius="5" Padding="4,0">
+                                        <Border x:Name="Row" CornerRadius="{DynamicResource Radius.Badge}" Padding="4,0">
                                             <Grid Height="{DynamicResource Size.RowHeight}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="34" />
@@ -1391,7 +1417,7 @@
 
                             <!-- 位置情報が許可されていないときの案内 -->
                             <Border Background="{DynamicResource Brush.Warn.Bg}"
-                                    CornerRadius="7" Padding="10,7" Margin="0,8,0,0">
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="10,7" Margin="0,8,0,0">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -1420,7 +1446,7 @@
                             </Grid.ColumnDefinitions>
 
                             <Border Grid.Column="0" Background="{DynamicResource Brush.SurfaceAlt}"
-                                    CornerRadius="7" Padding="10,8" Margin="0,0,5,0">
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="10,8" Margin="0,0,5,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="72" />
@@ -1464,7 +1490,7 @@
                             </Border>
 
                             <Border Grid.Column="1" Background="{DynamicResource Brush.SurfaceAlt}"
-                                    CornerRadius="7" Padding="10,8" Margin="5,0,0,0">
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="10,8" Margin="5,0,0,0">
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Top" Text="受信強度の推移（dBm・直近2分）"
                                                Style="{StaticResource Caption}" Margin="0,0,0,4" />
@@ -1475,7 +1501,7 @@
 
                         <!-- チャンネル混雑 -->
                         <Border DockPanel.Dock="Top" Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="7" Padding="10,8" Margin="0,0,0,10">
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="10,8" Margin="0,0,0,10">
                             <StackPanel>
                                 <TextBlock Text="チャンネルの混み具合（そのチャンネルを使っている AP の数）"
                                            Style="{StaticResource Caption}" Margin="0,0,0,6" />
@@ -1664,7 +1690,7 @@
                 Background="{DynamicResource Brush.Surface}"
                 BorderBrush="{DynamicResource Brush.Border}"
                 BorderThickness="1"
-                CornerRadius="7">
+                CornerRadius="{DynamicResource Radius.Card}">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="接続: " Style="{StaticResource Caption}" />
                 <TextBlock Text="{Binding InterfaceText}" TextTrimming="CharacterEllipsis" MaxWidth="200" />

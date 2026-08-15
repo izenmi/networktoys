@@ -131,20 +131,24 @@
                             CornerRadius="{DynamicResource Radius.Control}"
                             Padding="{TemplateBinding Padding}"
                             RenderTransformOrigin="0.5,0.5">
-                        <Border.RenderTransform>
-                            <ScaleTransform x:Name="Press" />
-                        </Border.RenderTransform>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.82" />
                         </Trigger>
-                        <!-- わずかに縮めると押した手応えが出る。アニメーションは要らない -->
+                        <!--
+                            わずかに縮めると押した手応えが出る。アニメーションは要らない。
+                            変形そのものを差し替えているのは、ScaleTransform に名前を付けても
+                            TargetName で狙えないため（Freezable は名前解決の対象外）。
+                        -->
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.65" />
-                            <Setter TargetName="Press" Property="ScaleX" Value="0.97" />
-                            <Setter TargetName="Press" Property="ScaleY" Value="0.97" />
+                            <Setter TargetName="Bd" Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.97" ScaleY="0.97" />
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
@@ -191,7 +195,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                             <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -350,7 +354,7 @@
                             <Rectangle x:Name="PART_Track" />
                             <Rectangle x:Name="PART_Indicator"
                                        HorizontalAlignment="Left"
-                                       Fill="{DynamicResource Brush.Accent.Bg}"
+                                       Fill="{DynamicResource Brush.Accent.Gradient}"
                                        RadiusX="2" RadiusY="2" />
                         </Grid>
                     </Border>
@@ -365,8 +369,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border Background="{DynamicResource Brush.Accent.Bg}"
-                            CornerRadius="4"
+                    <Border Background="{DynamicResource Brush.Scroll.Thumb}"
+                            CornerRadius="{DynamicResource Radius.Chip}"
                             Margin="2" />
                 </ControlTemplate>
             </Setter.Value>
