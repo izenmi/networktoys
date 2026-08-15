@@ -24,4 +24,5 @@ public sealed class TargetDocument
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(TargetDocument))]
 [JsonSerializable(typeof(ProfileDocument))]
+[JsonSerializable(typeof(Work.WorkSessionDocument))]
 public partial class PastelNetJsonContext : JsonSerializerContext;

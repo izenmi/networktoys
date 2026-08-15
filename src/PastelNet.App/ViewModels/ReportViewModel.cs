@@ -75,9 +75,12 @@ public sealed class ReportViewModel : ObservableObject
             Status = "レポートを作成しています…";
 
             // ipconfig /all は HTML にだけ載せる（CSV は表なので馴染まない）
-            string? ipConfig = html
-                ? await SystemInfoProbe.GetIpConfigAsync(CancellationToken.None)
-                : null;
+            string? ipConfig = null;
+            if (html)
+            {
+                CommandCapture capture = await SystemInfoProbe.GetIpConfigAsync(CancellationToken.None);
+                ipConfig = capture.Text;
+            }
 
             ReportData data = ReportService.Build(
                 Title,

@@ -5,6 +5,7 @@ using PastelNet.Core.Metrics;
 using PastelNet.Core.Models;
 using PastelNet.Core.Quality;
 using PastelNet.Core.Reporting;
+using PastelNet.Core.Work;
 
 namespace PastelNet.App.Services;
 
@@ -21,7 +22,9 @@ internal static class ReportService
         NetworkSnapshot network,
         DateTime? startedAt,
         int intervalMs,
-        string? ipConfig = null)
+        string? ipConfig = null,
+        WorkSection? work = null,
+        Func<Target, string>? describeKind = null)
     {
         var reportRows = new List<ReportRow>();
         var buffer = new ProbeSample[SparklinePoints];
@@ -44,7 +47,7 @@ internal static class ReportService
                 row.Host,
                 row.Address,
                 row.Comment,
-                DescribeKind(row.Target),
+                DescribeKind(row.Target, describeKind),
                 stats,
                 quality.Mos,
                 quality.Grade,
@@ -78,11 +81,16 @@ internal static class ReportService
             intervalMs,
             environment,
             reportRows,
-            ipConfig);
+            ipConfig,
+            work);
     }
 
-    private static string DescribeKind(Target target)
-        => target.Kind == ProbeKind.Tcp ? $"TCP:{target.Port}" : "ICMP";
+    /// <summary>
+    /// 実際に測っている方法。呼び出し側から渡してもらう。
+    /// <c>Target.Kind</c> を直接見ると、TCP Ping で測っている最中も「ICMP」と出てしまう。
+    /// </summary>
+    private static string DescribeKind(Target target, Func<Target, string>? describe)
+        => describe?.Invoke(target) ?? (target.Kind == ProbeKind.Tcp ? $"TCP:{target.Port}" : "ICMP");
 
     /// <summary>HTML は meta charset を持つので BOM は付けない。</summary>
     public static void SaveHtml(string path, ReportData data)

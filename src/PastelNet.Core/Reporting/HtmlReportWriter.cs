@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using PastelNet.Core.Metrics;
+using PastelNet.Core.Work;
 
 namespace PastelNet.Core.Reporting;
 
@@ -39,6 +40,10 @@ public static class HtmlReportWriter
 
         if (!string.IsNullOrWhiteSpace(data.Note))
             html.Append("<p class=\"note\">").Append(Escape(data.Note)).Append("</p>\n");
+
+        // 判定は最初に出す。開いた瞬間に「合格だったのか、何が引っかかったのか」が分かること
+        if (data.Work?.Summary is { } summary)
+            AppendVerdict(html, data.Work, summary);
 
         // 接続環境
         if (data.Environment.Count > 0)
@@ -101,6 +106,9 @@ public static class HtmlReportWriter
             html.Append("</tbody>\n</table>\n");
         }
 
+        if (data.Work is { } work)
+            AppendWorkSections(html, work);
+
         // ipconfig /all の出力をそのまま載せる
         if (!string.IsNullOrWhiteSpace(data.IpConfig))
         {
@@ -117,6 +125,159 @@ public static class HtmlReportWriter
 
         return html.ToString();
     }
+
+    /// <summary>合否を最初に、大きく出す。</summary>
+    private static void AppendVerdict(StringBuilder html, WorkSection work, WorkSummary summary)
+    {
+        string cssClass = summary.Failures > 0 ? "bad"
+            : summary.Unknowns > 0 ? "unknown"
+            : summary.Warnings > 0 ? "warn"
+            : "ok";
+
+        html.Append("<div class=\"verdict ").Append(cssClass).Append("\">")
+            .Append("<div class=\"verdict-title\">").Append(Escape(summary.Verdict)).Append("</div>")
+            .Append("<div class=\"verdict-body\">").Append(Escape(summary.Headline)).Append("</div>");
+
+        html.Append("<div class=\"verdict-counts\">")
+            .Append($"対象 {summary.Total} 件")
+            .Append($" ／ 問題 {summary.Failures} 件")
+            .Append($" ／ 要確認 {summary.Warnings} 件")
+            .Append($" ／ 未判定 {summary.Unknowns} 件")
+            .Append($" ／ 作業中の不通 {summary.Outages} 件")
+            .Append("</div>");
+
+        if (!string.IsNullOrWhiteSpace(work.SessionName))
+            html.Append("<div class=\"verdict-counts\">作業: ").Append(Escape(work.SessionName)).Append("</div>");
+
+        html.Append("</div>\n");
+    }
+
+    private static void AppendWorkSections(StringBuilder html, WorkSection work)
+    {
+        if (work.Comparisons.Count > 0)
+        {
+            html.Append("<h2>作業前後の比較</h2>\n<table class=\"result\">\n<thead><tr>")
+                .Append("<th>判定</th><th>宛先</th><th>内容</th>")
+                .Append("<th class=\"num\">前 ロス</th><th class=\"num\">後 ロス</th>")
+                .Append("<th class=\"num\">前 平均</th><th class=\"num\">後 平均</th><th>備考</th>")
+                .Append("</tr></thead>\n<tbody>\n");
+
+            foreach (WorkComparison row in work.Comparisons)
+            {
+                string level = row.Level switch
+                {
+                    VerdictLevel.Failure => "bad",
+                    VerdictLevel.Warning => "warn",
+                    VerdictLevel.Unknown => "unknown",
+                    _ => string.Empty,
+                };
+
+                html.Append("<tr>")
+                    .Append("<td class=\"").Append(level).Append("\">")
+                    .Append(Escape(BaselineComparer.Label(row.Verdict))).Append("</td>")
+                    .Append("<td class=\"mono\">").Append(Escape(row.Host)).Append("</td>")
+                    .Append("<td>").Append(Escape(row.Detail)).Append("</td>")
+                    .Append("<td class=\"num\">").Append(FormatPercentOrDash(row.Before?.LossPercent)).Append("</td>")
+                    .Append("<td class=\"num\">").Append(FormatPercentOrDash(row.After?.LossPercent)).Append("</td>")
+                    .Append("<td class=\"num\">").Append(FormatMsOrDash(row.Before?.AverageMs)).Append("</td>")
+                    .Append("<td class=\"num\">").Append(FormatMsOrDash(row.After?.AverageMs)).Append("</td>")
+                    .Append("<td>").Append(Escape(row.Comment)).Append("</td>")
+                    .Append("</tr>\n");
+            }
+
+            html.Append("</tbody>\n</table>\n");
+        }
+
+        if (work.Timeline.Count > 0)
+        {
+            html.Append("<h2>作業中の記録</h2>\n<table class=\"result\">\n<thead><tr>")
+                .Append("<th>時刻</th><th>種別</th><th>内容</th></tr></thead>\n<tbody>\n");
+
+            foreach (WorkTimelineItem item in work.Timeline)
+            {
+                html.Append("<tr>")
+                    .Append("<td class=\"mono\">").Append(item.At.ToString("MM/dd HH:mm:ss", CultureInfo.InvariantCulture)).Append("</td>")
+                    .Append("<td>").Append(Escape(item.Label)).Append("</td>")
+                    .Append("<td>").Append(Escape(item.Text)).Append("</td>")
+                    .Append("</tr>\n");
+            }
+
+            html.Append("</tbody>\n</table>\n");
+        }
+
+        if (work.NeighborChanges.Count > 0)
+        {
+            html.Append("<h2>近隣キャッシュの変化</h2>\n<ul class=\"plain\">\n");
+
+            foreach (NeighborChange change in work.NeighborChanges)
+            {
+                html.Append("<li")
+                    .Append(change.IsGateway ? " class=\"warn\"" : string.Empty)
+                    .Append('>')
+                    .Append(Escape(change.Describe()))
+                    .Append("</li>\n");
+            }
+
+            html.Append("</ul>\n");
+        }
+
+        AppendDiff(html, "ipconfig /all の差分", work.IpConfigDiff);
+        AppendDiff(html, "経路表の差分", work.RouteDiff);
+    }
+
+    private static void AppendDiff(StringBuilder html, string title, TextDiffResult? diff)
+    {
+        if (diff is null) return;
+
+        html.Append("<h2>").Append(Escape(title)).Append("</h2>\n");
+
+        if (diff.TooLarge)
+        {
+            html.Append("<p class=\"note\">出力が大きすぎるため差分を取れませんでした。</p>\n");
+            return;
+        }
+
+        if (!diff.HasChanges)
+        {
+            html.Append("<p class=\"note\">変化はありません")
+                .Append(diff.IgnoredLines > 0 ? $"（変動しやすい {diff.IgnoredLines} 行は除いています）" : string.Empty)
+                .Append("。</p>\n");
+            return;
+        }
+
+        html.Append("<pre class=\"console diff\">");
+
+        foreach (DiffLine line in diff.Lines)
+        {
+            string prefix = line.Kind switch
+            {
+                DiffKind.Added => "+ ",
+                DiffKind.Removed => "- ",
+                _ => "  ",
+            };
+
+            string cssClass = line.Kind switch
+            {
+                DiffKind.Added => "added",
+                DiffKind.Removed => "removed",
+                _ => string.Empty,
+            };
+
+            if (cssClass.Length > 0)
+                html.Append("<span class=\"").Append(cssClass).Append("\">");
+
+            html.Append(Escape(prefix + line.Text)).Append('\n');
+
+            if (cssClass.Length > 0)
+                html.Append("</span>");
+        }
+
+        html.Append("</pre>\n");
+    }
+
+    private static string FormatMsOrDash(double? value) => value is { } v ? FormatMs(v) : "—";
+
+    private static string FormatPercentOrDash(double? value) => value is { } v ? FormatPercent(v) : "—";
 
     private static string FormatMs(double value) => value <= 0
         ? "—"
@@ -196,6 +357,23 @@ public static class HtmlReportWriter
           padding: 12px 14px; overflow-x: auto; white-space: pre;
           font-family: Consolas, "BIZ UDGothic", monospace; font-size: 12px; line-height: 1.45;
         }
+        pre.diff .added { background: #E7F6EE; color: var(--ok-fg); display: block; }
+        pre.diff .removed { background: #FBE9E7; color: var(--bad-fg); display: block; }
+        .verdict {
+          border-radius: 10px; padding: 14px 16px; margin: 14px 0 6px;
+          border: 1px solid var(--border);
+        }
+        .verdict-title { font-size: 20px; font-weight: 700; }
+        .verdict-body { font-size: 14px; margin-top: 2px; }
+        .verdict-counts { font-size: 12px; margin-top: 6px; opacity: 0.85; }
+        .verdict.ok { background: var(--ok-bg); color: var(--ok-fg); }
+        .verdict.warn { background: var(--warn-bg); color: var(--warn-fg); }
+        .verdict.bad { background: var(--bad-bg); color: var(--bad-fg); }
+        .verdict.unknown { background: var(--alt); color: var(--text); }
+        td.unknown, li.warn { color: var(--warn-fg); }
+        td.unknown { font-weight: 600; }
+        ul.plain { margin: 6px 0; padding-left: 20px; }
+        ul.plain li { margin-bottom: 3px; }
         @media print {
           body { background: #fff; padding: 0; }
           table.result { border-color: #ddd; }

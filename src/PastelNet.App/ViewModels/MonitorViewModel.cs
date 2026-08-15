@@ -9,6 +9,7 @@ using PastelNet.Core.Metrics;
 using PastelNet.Core.Models;
 using PastelNet.Core.Quality;
 using PastelNet.Core.Storage;
+using PastelNet.Core.Work;
 
 namespace PastelNet.App.ViewModels;
 
@@ -545,8 +546,30 @@ public sealed class MonitorViewModel : ObservableObject
 
     private int ParsePortOrDefault() => int.TryParse(TcpPort, out int port) && port is >= 1 and <= 65535 ? port : 443;
 
-    /// <summary>同じ宛先とみなす条件。ホストと測り方が同じなら、備考が変わっても同一とする。</summary>
-    private static string KeyOf(Target target) => $"{target.Host}|{target.Kind}|{target.Port}";
+    /// <summary>
+    /// 同じ宛先とみなす条件。ホストと測り方が同じなら、備考が変わっても同一とする。
+    /// <b>Target.Id は宛先テキストを読み直すたびに新しくなるので、鍵にはできない。</b>
+    /// </summary>
+    internal static string KeyOf(Target target) => $"{target.Host}|{target.Kind}|{target.Port}";
+
+    /// <summary>
+    /// いま<b>実際に</b>どう測っているかを返す。
+    ///
+    /// TCP Ping は宛先の登録内容を書き換えずに測り方だけを差し替えるため、
+    /// <c>Target.Kind</c> を見ると TCP で測っている最中も「ICMP」と答えてしまう。
+    /// 作業前後の比較でこれを取り違えると、ICMP で採った基準と TCP の実測を
+    /// 突き合わせて「合格」と出しかねない。
+    /// </summary>
+    internal string DescribeEffectiveKind(Target target)
+    {
+        if (_isTcpMode)
+        {
+            int port = target.Kind == ProbeKind.Tcp && target.Port > 0 ? target.Port : ParsePortOrDefault();
+            return $"TCP:{port}";
+        }
+
+        return target.Kind == ProbeKind.Tcp ? $"TCP:{target.Port}" : "ICMP";
+    }
 
     private void RemoveRow(TargetRowViewModel row)
     {
