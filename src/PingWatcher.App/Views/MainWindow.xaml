@@ -2396,7 +2396,9 @@
                                   Margin="0,0,0,6"
                                   ToolTip="チェックを外すと下の固定 IP 設定を使います。" />
 
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4" IsEnabled="{Binding UseStatic}">
+                        <!-- グレーアウトは分かりづらい(ユーザー指摘)ので、DHCP のときは丸ごと畳む -->
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4"
+                              Visibility="{Binding UseStatic, Converter={StaticResource BoolToVisibility}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110" />
                                 <ColumnDefinition Width="200" />
@@ -2495,21 +2497,24 @@
                                            ToolTip="{Binding CurrentSummary}" Margin="0,0,0,2" />
                             </WrapPanel>
 
-                            <WrapPanel Margin="0,0,0,4">
+                            <!-- 選んだ方式の行だけ出す(グレーアウトは分かりづらい、というユーザー指摘) -->
+                            <WrapPanel Margin="0,0,0,4"
+                                       Visibility="{Binding IsPac, Converter={StaticResource BoolToVisibility}}">
                                 <TextBlock Text="PAC の URL" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
                                 <TextBox Width="320" Text="{Binding PacUrl, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" IsEnabled="{Binding IsPac}" Margin="0,0,0,2"
+                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
                                          ToolTip="例: http://proxy.example.co.jp/proxy.pac" />
                             </WrapPanel>
 
-                            <WrapPanel Margin="0,0,0,4">
+                            <WrapPanel Margin="0,0,0,4"
+                                       Visibility="{Binding IsFixed, Converter={StaticResource BoolToVisibility}}">
                                 <TextBlock Text="サーバ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
                                 <TextBox Width="200" Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" IsEnabled="{Binding IsFixed}" Margin="0,0,10,2"
+                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,2"
                                          ToolTip="例: proxy.example.co.jp:8080(プロトコル別は http=…;https=… の書式)" />
                                 <TextBlock Text="除外" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
                                 <TextBox Width="220" Text="{Binding Bypass, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" IsEnabled="{Binding IsFixed}" Margin="0,0,0,2"
+                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
                                          ToolTip="プロキシを通さない宛先。; 区切り。&lt;local&gt; はローカルアドレスの意味。" />
                             </WrapPanel>
 
