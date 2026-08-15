@@ -108,7 +108,7 @@ internal static class SelfTest
             string[] keys =
             [
                 "Card", "Badge", "Badge.Text", "Heading", "Caption", "Mono",
-                "Button.Subtle", "Button.Icon", "ScrollBar.Thumb",
+                "Button.Subtle", "Button.Icon", "ScrollBar.Thumb", "MenuBarItem",
             ];
             foreach (string key in keys)
                 Assert(Application.Current.TryFindResource(key) is Style, $"{key} が Style として引けない");
@@ -125,6 +125,7 @@ internal static class SelfTest
                 typeof(System.Windows.Controls.ListBoxItem),
                 typeof(System.Windows.Controls.ListView),
                 typeof(System.Windows.Controls.ContextMenu),
+                typeof(System.Windows.Controls.Menu),
                 typeof(System.Windows.Controls.MenuItem),
                 typeof(System.Windows.Controls.ToolTip),
                 typeof(System.Windows.Controls.CheckBox),
@@ -277,6 +278,23 @@ internal static class SelfTest
             }
 
             window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
+        Check("メニューを開ける(ポップアップの実体化検査)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // ドロップダウンの中身(PART_Popup)は開くまで実体化されないので、
+            // テンプレートやリソースキーの誤りはこの検査でしか捕まえられない
+            foreach (object? item in window!.MainMenu.Items)
+            {
+                if (item is not System.Windows.Controls.MenuItem top) continue;
+
+                top.IsSubmenuOpen = true;
+                window.UpdateLayout();
+                top.IsSubmenuOpen = false;
+            }
             window.UpdateLayout();
         });
 

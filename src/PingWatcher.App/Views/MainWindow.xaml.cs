@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.IO;
+using System.Reflection;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -22,7 +24,26 @@ public partial class MainWindow : Window
         DataContext = _shell;
         UpdateThemeToggle();
 
+        // メニューに表記したショートカットの実体。表記(InputGestureText)は飾りなので、
+        // ここに足したらメニューの表記も揃えること
+        InputBindings.Add(new KeyBinding(
+            new Mvvm.RelayCommand(StartFromShortcut), new KeyGesture(Key.F5)));
+        InputBindings.Add(new KeyBinding(
+            _shell.Monitor.StopCommand, new KeyGesture(Key.F5, ModifierKeys.Shift)));
+        InputBindings.Add(new KeyBinding(
+            new Mvvm.RelayCommand(() => OnScreenshot(this, new RoutedEventArgs())),
+            new KeyGesture(Key.F12)));
+
         _shell.DeviceCompare.RequestScrollIntoView += OnScrollDiffIntoView;
+    }
+
+    /// <summary>F5 での開始。ボタンと同じく、開始できたら Ping タブへ移る。</summary>
+    private void StartFromShortcut()
+    {
+        if (!_shell.Monitor.StartCommand.CanExecute(null)) return;
+
+        _shell.Monitor.StartCommand.Execute(null);
+        PingTab.IsSelected = true;
     }
 
     /// <summary>
@@ -234,16 +255,16 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>結果はボタンの文字で 2 秒だけ知らせる。トーストや別窓は出さない。</summary>
+    /// <summary>結果はヘッダの文字で 2 秒だけ知らせる。トーストや別窓は出さない。</summary>
     private void ShowScreenshotResult(string text)
     {
-        ScreenshotButton.Content = text;
+        HeaderNotice.Text = text;
 
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
-            ScreenshotButton.Content = "📷 画面";
+            HeaderNotice.Text = "";
         };
         timer.Start();
     }
@@ -262,8 +283,58 @@ public partial class MainWindow : Window
     private void UpdateThemeToggle()
         => ThemeToggle.Content = ThemeManager.Current == AppTheme.Dark ? "☀ 明るく" : "☾ 暗く";
 
-    private void OnTopmostChanged(object sender, RoutedEventArgs e)
-        => Topmost = TopmostToggle.IsChecked == true;
+    private void OnTopmostMenu(object sender, RoutedEventArgs e)
+        => Topmost = TopmostMenuItem.IsChecked;
+
+    private void OnExit(object sender, RoutedEventArgs e) => Close();
+
+    private void OnOpenDataFolder(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = AppData.Directory(),
+                UseShellExecute = true,   // フォルダはシェル(エクスプローラー)に開かせる
+            });
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnOpenDataFolder");
+        }
+    }
+
+    private void OnOpenUsage(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://github.com/izenmi/pastelnet/blob/main/docs/USAGE.md",
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnOpenUsage");
+        }
+    }
+
+    private void OnAbout(object sender, RoutedEventArgs e)
+    {
+        // 単一ファイル発行でも AssemblyInformationalVersion は埋め込まれて読める。
+        // ビルド環境によっては "+コミットID" が付くので表示用に落とす
+        string version = (typeof(MainWindow).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? "不明").Split('+')[0];
+
+        ConfirmDialog.Show(
+            this,
+            "バージョン情報",
+            $"PingWatcher {version}\n\n" +
+            "持ち出せるネットワーク診断ツール\n" +
+            "https://github.com/izenmi/pastelnet");
+    }
 
     /// <summary>消す範囲を選ばせる。ボタンの下にメニューを出す。</summary>
     private void OnClearMenu(object sender, RoutedEventArgs e)

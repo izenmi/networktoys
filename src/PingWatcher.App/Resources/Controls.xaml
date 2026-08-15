@@ -463,7 +463,16 @@
                             Background="{TemplateBinding Background}"
                             CornerRadius="{DynamicResource Radius.Chip}"
                             Padding="{TemplateBinding Padding}">
-                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
+                        <DockPanel>
+                            <!-- ショートカット表記。無ければ空文字で場所も取らない -->
+                            <TextBlock DockPanel.Dock="Right"
+                                       Text="{TemplateBinding InputGestureText}"
+                                       Foreground="{DynamicResource Brush.TextMuted}"
+                                       FontSize="{DynamicResource Size.Caption}"
+                                       VerticalAlignment="Center" Margin="18,0,0,0" />
+                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True" />
+                        </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
@@ -472,6 +481,61 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        メニューバー。既定の Menu/トップレベル MenuItem はシステム色で描かれ、
+        暗い配色で白い帯になる(ContextMenu と同じ罠)ので、両方とも自前で持つ。
+        ドロップダウンの中の項目は上の暗黙 MenuItem スタイルがそのまま当たる。
+        中の項目はすべてフラットにすること(この暗黙テンプレートは子ポップアップ
+        =PART_Popup を持たないので、入れ子のサブメニューは開かない)。
+    -->
+    <Style TargetType="Menu">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+    </Style>
+
+    <Style x:Key="MenuBarItem" TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd" Background="Transparent"
+                            CornerRadius="{DynamicResource Radius.Control}"
+                            Padding="9,3" Margin="0,0,2,0">
+                        <Grid>
+                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True" />
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="None">
+                                <Border Background="{DynamicResource Brush.Surface}"
+                                        BorderBrush="{DynamicResource Brush.Border}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource Radius.Control}"
+                                        Padding="3"
+                                        MinWidth="230">
+                                    <ItemsPresenter />
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                        </Trigger>
+                        <Trigger Property="IsSubmenuOpen" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

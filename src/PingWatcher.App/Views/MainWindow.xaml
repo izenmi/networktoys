@@ -389,12 +389,53 @@
     <Grid Margin="6,5,6,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!--
+            ===== メニューバー =====
+            トップレベルは MenuBarItem スタイル(自前の PART_Popup 持ち)。
+            中の項目は暗黙 MenuItem スタイル(葉項目専用・サブメニュー不可)なので
+            すべてフラットに並べる。Style の Setter ではなく要素へ直接置いているので
+            Click の結線はずれない(CLAUDE.md 参照)。
+        -->
+        <Menu x:Name="MainMenu" Grid.Row="0" Margin="0,0,0,3" Background="Transparent">
+            <MenuItem Header="ファイル(_F)" Style="{StaticResource MenuBarItem}">
+                <MenuItem Header="レポートを HTML で保存..." Command="{Binding Report.SaveHtmlCommand}" />
+                <MenuItem Header="レポートをテキストで保存..." Command="{Binding Report.SaveTextCommand}" />
+                <MenuItem Header="レポートを CSV で保存..." Command="{Binding Report.SaveCsvCommand}" />
+                <Separator />
+                <MenuItem Header="画面を撮って保存" InputGestureText="F12" Click="OnScreenshot" />
+                <MenuItem Header="データフォルダを開く" Click="OnOpenDataFolder" />
+                <Separator />
+                <MenuItem Header="管理者として再起動..." Click="OnRelaunchAsAdmin" />
+                <Separator />
+                <MenuItem Header="終了" Click="OnExit" />
+            </MenuItem>
+            <MenuItem Header="測定(_M)" Style="{StaticResource MenuBarItem}">
+                <MenuItem Header="開始" InputGestureText="F5"
+                          Command="{Binding Monitor.StartCommand}" Click="OnStartClicked" />
+                <MenuItem Header="停止" InputGestureText="Shift+F5"
+                          Command="{Binding Monitor.StopCommand}" />
+                <Separator />
+                <MenuItem Header="Ping の測定結果だけ消す" Click="OnClearPingResults" />
+                <MenuItem Header="すべて消す（起動直後に戻す）" Click="OnClearAll" />
+            </MenuItem>
+            <MenuItem Header="表示(_V)" Style="{StaticResource MenuBarItem}">
+                <MenuItem Header="配色を切り替え" Click="OnThemeToggle" />
+                <MenuItem x:Name="TopmostMenuItem" Header="最前面に固定" IsCheckable="True"
+                          Click="OnTopmostMenu" />
+            </MenuItem>
+            <MenuItem Header="ヘルプ(_H)" Style="{StaticResource MenuBarItem}">
+                <MenuItem Header="使い方を開く" Click="OnOpenUsage" />
+                <MenuItem Header="バージョン情報" Click="OnAbout" />
+            </MenuItem>
+        </Menu>
+
         <!-- ===== ヘッダ ===== -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,5">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="2,0,0,5">
             <TextBlock Text="PingWatcher"
                        FontSize="{DynamicResource Size.Title}"
                        Margin="0,0,14,0" VerticalAlignment="Center" />
@@ -440,14 +481,6 @@
                 </Button.ContextMenu>
             </Button>
 
-            <!-- 画面の証跡。ウィンドウの中身を PNG にして logs フォルダへ残す -->
-            <Button x:Name="ScreenshotButton" Content="📷 画面" Click="OnScreenshot"
-                    Style="{StaticResource Button.Icon}"
-                    Margin="0,0,8,0"
-                    MinWidth="86"
-                    AutomationProperties.Name="画面を撮って保存"
-                    ToolTip="いまの画面を PNG で logs フォルダに保存します。" />
-
             <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
             <Button x:Name="ThemeToggle" Click="OnThemeToggle"
                     Style="{StaticResource Button.Icon}"
@@ -455,18 +488,17 @@
                     AutomationProperties.Name="配色の切り替え"
                     ToolTip="明るい配色と暗い配色を切り替えます。" />
 
-            <CheckBox x:Name="TopmostToggle" Content="最前面"
-                      Checked="OnTopmostChanged" Unchecked="OnTopmostChanged"
-                      VerticalAlignment="Center" Margin="0,0,10,0"
-                      ToolTip="他のウィンドウの手前に固定します。" />
+            <!-- 操作の結果を短く知らせる場所(画面保存の成否など)。数秒で消える -->
+            <TextBlock x:Name="HeaderNotice" Style="{StaticResource Caption}"
+                       VerticalAlignment="Center" Margin="0,0,10,0" />
         </StackPanel>
 
         <!-- 操作の帯と本体を分ける罫線。1 本引くだけで画面が締まる -->
-        <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1"
+        <Border Grid.Row="1" VerticalAlignment="Bottom" Height="1"
                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,-1" />
 
         <!-- ===== 本体 ===== -->
-        <TabControl x:Name="MainTabs" Grid.Row="1" SelectionChanged="OnTabSelectionChanged">
+        <TabControl x:Name="MainTabs" Grid.Row="2" SelectionChanged="OnTabSelectionChanged">
 
             <!-- ===== 宛先(EXPing と同じ書き方でまとめて編集する) ===== -->
             <TabItem Header="宛先" DataContext="{Binding Monitor}">
@@ -2781,7 +2813,7 @@
         </TabControl>
 
         <!-- ===== ステータスバー ===== -->
-        <Border Grid.Row="2" Margin="0,5,0,0" Padding="10,4"
+        <Border Grid.Row="3" Margin="0,5,0,0" Padding="10,4"
                 DataContext="{Binding Monitor}"
                 Background="{DynamicResource Brush.Surface}"
                 BorderBrush="{DynamicResource Brush.Border}"

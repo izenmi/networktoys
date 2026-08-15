@@ -13,7 +13,7 @@ namespace PingWatcher.App.Views;
 /// </summary>
 internal sealed class ConfirmDialog : Window
 {
-    internal ConfirmDialog(string title, string message, string okLabel)
+    internal ConfirmDialog(string title, string message, string okLabel, bool showCancel = true)
     {
         Title = title;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -38,17 +38,26 @@ internal sealed class ConfirmDialog : Window
         var ok = new Button { Content = okLabel, MinWidth = 96, Margin = new Thickness(0, 0, 8, 0) };
         ok.Click += (_, _) => DialogResult = true;
 
-        // 既定はキャンセル側。Enter の空押しで消えてしまわないように
-        var cancel = new Button { Content = "やめる", MinWidth = 96, IsDefault = true, IsCancel = true };
-        cancel.SetResourceReference(StyleProperty, "Button.Subtle");
-
         var buttons = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
         };
         buttons.Children.Add(ok);
-        buttons.Children.Add(cancel);
+
+        if (showCancel)
+        {
+            // 既定はキャンセル側。Enter の空押しで消えてしまわないように
+            var cancel = new Button { Content = "やめる", MinWidth = 96, IsDefault = true, IsCancel = true };
+            cancel.SetResourceReference(StyleProperty, "Button.Subtle");
+            buttons.Children.Add(cancel);
+        }
+        else
+        {
+            // 知らせるだけのときは選択肢がないので、Enter でも Esc でも閉じられるように
+            ok.IsDefault = true;
+            ok.IsCancel = true;
+        }
 
         var body = new StackPanel { Margin = new Thickness(16, 14, 16, 14) };
         body.Children.Add(text);
@@ -71,5 +80,12 @@ internal sealed class ConfirmDialog : Window
     {
         var dialog = new ConfirmDialog(title, message, okLabel) { Owner = owner };
         return dialog.ShowDialog() == true;
+    }
+
+    /// <summary>知らせるだけの版(バージョン情報など)。閉じるだけで選択肢はない。</summary>
+    public static void Show(Window owner, string title, string message)
+    {
+        var dialog = new ConfirmDialog(title, message, okLabel: "閉じる", showCancel: false) { Owner = owner };
+        dialog.ShowDialog();
     }
 }
