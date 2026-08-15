@@ -50,6 +50,10 @@
          「社内 DNS では引けるが外部 DNS では引けない」の切り分けに必要なので使う。
          ネイティブ依存がないので単一ファイル発行でも安全。 -->
     <PackageReference Include="DnsClient" Version="1.8.0" />
+
+    <!-- Native Wifi API のマネージドラッパ。依存パッケージなし。
+         これ以外の選択肢は wlanapi の自前 P/Invoke になる。 -->
+    <PackageReference Include="ManagedNativeWifi" Version="3.0.2" />
   </ItemGroup>
 
   <ItemGroup>

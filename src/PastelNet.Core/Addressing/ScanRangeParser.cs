@@ -38,9 +38,10 @@ public static class ScanRangeParser
 
         foreach (string rawLine in text.Split('\n'))
         {
-            string line = rawLine.Trim();
+            // 行頭文字の判定は空白を落とす前に行う。
+            // Trim() は全角スペースも削るので、先に判定しないと注釈行を取り逃がす。
+            string line = rawLine.TrimEnd();
 
-            // 注釈行はまるごと飛ばす（宛先リストと同じ感覚で書けるように）
             if (line.Length == 0 || line[0] is '#' or ';' or '\'' or '　')
                 continue;
 
