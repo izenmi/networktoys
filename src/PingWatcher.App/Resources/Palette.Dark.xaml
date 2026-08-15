@@ -1,8 +1,8 @@
 <!--
-    PingWatcher ダークテーマ。ナイトキャンディ。
+    PingWatcher ダークテーマ。ナイトリーフ。
 
-    ライトのキャンディ配色を夜に持っていったもの。地は黒でも紺でもなく、
-    ぶどう色に寄せた濃い紫。そこへ同じ顔ぶれ（ピンク・ミント・水色・レモン）を
+    ライトの若草配色を夜へ持っていったもの。地は黒でも紺でもなく、
+    緑を含んだ濃い深緑。そこへ同じ顔ぶれ（黄緑・ミント・ソーダ・レモン・いちご）を
     発光させる。明暗を切り替えても印象が地続きになるようにしている。
 
     Palette.xaml と同じキーを同じ意味で定義する。片方にだけキーを足すと
@@ -11,6 +11,8 @@
     使い方の約束は Palette.xaml の冒頭コメントを参照（色は DynamicResource で引く、
     コードで TryFindResource の結果をキャッシュしない）。
 
+    **緑が 2 つあることに注意。** アクセントの黄緑と、応答ありのミントは役割が違う。
+    黄緑は黄色寄り、ミントは青緑寄りに離してある。この差を詰めないこと。
     文字色と地色の組み合わせはすべてコントラスト比 4.5 以上（自己診断が検算する）。
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -19,41 +21,41 @@
                     xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
                     mc:Ignorable="po">
 
-    <!-- ベース(ぶどう) -->
-    <SolidColorBrush x:Key="Brush.Background"   Color="#1B1226" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Surface"      Color="#251A33" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#2F2140" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Border"       Color="#4A3663" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Text"         Color="#F6EAF6" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#B49EC2" po:Freeze="True" />
+    <!-- ベース(深緑) -->
+    <SolidColorBrush x:Key="Brush.Background"   Color="#101A12" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Surface"      Color="#18251A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#213022" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Border"       Color="#3A5039" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Text"         Color="#EDF6E6" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#A3B79B" po:Freeze="True" />
 
     <!-- 状態: 応答あり(ミント) -->
-    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#154736" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#6FF0BE" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#0F4636" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#5FEFB8" po:Freeze="True" />
 
-    <!-- 状態: 遅延・警告(レモン) -->
-    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#4A3512" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#FFD060" po:Freeze="True" />
+    <!-- 状態: 遅延・警告(アプリコット) -->
+    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#4A3312" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#FFC65C" po:Freeze="True" />
 
     <!-- 状態: 不達・エラー(いちご) -->
-    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#571F32" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#FF8AA8" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#54202C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#FF8B9E" po:Freeze="True" />
 
     <!-- 状態: 実行中・情報(ソーダ) -->
-    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#173B57" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#7ACCFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#153A54" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#74C9FF" po:Freeze="True" />
 
-    <!-- 選択・アクセント(さくら) -->
-    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#4A2352" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#FFA3DC" po:Freeze="True" />
+    <!-- 選択・アクセント(若草)。この配色の主役 -->
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#2C4A14" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#A8F063" po:Freeze="True" />
 
     <!-- グラフ描画用 -->
-    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#FF9AD5" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#3A2145" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#9BE84F" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#23381C" po:Freeze="True" />
 
     <!-- 細部 -->
-    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#3D2B52" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#66497F" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#2E4230" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#4E6B4A" po:Freeze="True" />
 
     <!--
         面と枠のグラデーション。影(DropShadowEffect)は使わない。
@@ -61,24 +63,24 @@
         上辺を明るくした枠で、影の代わりの立体感を出す。
     -->
     <LinearGradientBrush x:Key="Brush.Window.Backdrop" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#1B1226" />
-        <GradientStop Offset="1" Color="#221730" />
+        <GradientStop Offset="0" Color="#101A12" />
+        <GradientStop Offset="1" Color="#152018" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Face" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#2A1D3A" />
-        <GradientStop Offset="1" Color="#22182F" />
+        <GradientStop Offset="0" Color="#1C2B1E" />
+        <GradientStop Offset="1" Color="#152117" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Edge" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#63487F" />
-        <GradientStop Offset="1" Color="#3A2A4F" />
+        <GradientStop Offset="0" Color="#4E6A4B" />
+        <GradientStop Offset="1" Color="#2C3F2B" />
     </LinearGradientBrush>
 
-    <!-- ピンクから水色へ。ライトと同じ並びにして印象を地続きにする -->
+    <!-- 若草からソーダへ。ライトと同じ並びにして印象を地続きにする -->
     <LinearGradientBrush x:Key="Brush.Accent.Gradient" StartPoint="0,0" EndPoint="1,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#FFA3DC" />
-        <GradientStop Offset="1" Color="#7ACCFF" />
+        <GradientStop Offset="0" Color="#A8F063" />
+        <GradientStop Offset="1" Color="#74C9FF" />
     </LinearGradientBrush>
 
 </ResourceDictionary>

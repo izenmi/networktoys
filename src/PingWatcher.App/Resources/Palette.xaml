@@ -1,8 +1,8 @@
 <!--
-    PingWatcher ライトテーマ。キャンディパステル。
+    PingWatcher ライトテーマ。若草。
 
-    白に近い地へ、さくらピンク・ミント・水色・レモンを載せる。
-    彩度は高めだが明度も高いので、地色として敷いても文字が沈まない。
+    主役は黄緑。タブ・ボタン・選択・グラデーションといった画面の骨格をこの色が担う。
+    そこへミント・ソーダ・レモン・いちごを添える。
 
     使い方の約束: 地色(*.Bg)と文字色(*.Fg)は必ずペアで使う。
     パステルの地に淡い文字を置くと読めなくなるため、組み合わせを崩さないこと。
@@ -18,8 +18,9 @@
     ・Palette.Dark.xaml と**同じキーを過不足なく**定義する。ずれは自己診断が検出する。
     ・凍結ブラシは Color をアニメーションできない。演出は Opacity 側で行う。
 
-    エラーの赤とアクセントのピンクは色相を離してある。どちらもピンク系にすると
-    「異常」と「選択中」が見分けられなくなる。
+    **緑が 2 つあることに注意。** アクセントの黄緑と、応答ありのミントは役割が違う。
+    黄緑は黄色寄り、ミントは青緑寄りに離してあるので、この差を詰めないこと。
+    詰めると「選択中」と「応答あり」が見分けられなくなる。
     文字色と地色の組み合わせはすべてコントラスト比 4.5 以上（自己診断が検算する）。
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -28,41 +29,41 @@
                     xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
                     mc:Ignorable="po">
 
-    <!-- ベース。地はほんのりピンクを含んだ白 -->
-    <SolidColorBrush x:Key="Brush.Background"   Color="#FFF7FB" po:Freeze="True" />
+    <!-- ベース。地はほんのり緑を含んだ白 -->
+    <SolidColorBrush x:Key="Brush.Background"   Color="#F8FCF2" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Surface"      Color="#FFFFFF" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#FDEDF6" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Border"       Color="#F6DCEA" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Text"         Color="#3F2A3A" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#75596C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#EFF7E2" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Border"       Color="#DCEBC6" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Text"         Color="#2C3520" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#5D6B4C" po:Freeze="True" />
 
-    <!-- 状態: 応答あり(ミント) -->
-    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#C6F2E0" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#136B4E" po:Freeze="True" />
+    <!-- 状態: 応答あり(ミント。アクセントの黄緑とは青緑側へ離す) -->
+    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#C3F0DC" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#0F6B4C" po:Freeze="True" />
 
-    <!-- 状態: 遅延・警告(レモン) -->
-    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#FFE7B8" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#87510C" po:Freeze="True" />
+    <!-- 状態: 遅延・警告(アプリコット。黄緑と紛れないよう橙側へ寄せる) -->
+    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#FFE0BE" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#8F4E0C" po:Freeze="True" />
 
     <!-- 状態: 不達・エラー(いちご) -->
-    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#FFDFE3" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#B92038" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#FFDCE1" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#B81F39" po:Freeze="True" />
 
     <!-- 状態: 実行中・情報(ソーダ) -->
-    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#CDEBFC" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#0F5E85" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#CDE9FB" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#0E5C84" po:Freeze="True" />
 
-    <!-- 選択・アクセント(さくら) -->
-    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#FBD9EC" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#B32877" po:Freeze="True" />
+    <!-- 選択・アクセント(若草)。この配色の主役 -->
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#DDF3AE" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#43700C" po:Freeze="True" />
 
     <!-- グラフ描画用 -->
-    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#E86BA8" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#FCE3F0" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#6BA82A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#E9F6CF" po:Freeze="True" />
 
     <!-- 細部 -->
-    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#F7E2EE" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#EEC3DC" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#E4F0D2" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#C2DE95" po:Freeze="True" />
 
     <!--
         面と枠のグラデーション。影(DropShadowEffect)は使わない。
@@ -70,24 +71,24 @@
         上辺を明るくした枠で、影の代わりの立体感を出す。
     -->
     <LinearGradientBrush x:Key="Brush.Window.Backdrop" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#FFF9FC" />
-        <GradientStop Offset="1" Color="#FDF0F7" />
+        <GradientStop Offset="0" Color="#FAFDF6" />
+        <GradientStop Offset="1" Color="#F2F9E8" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Face" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
         <GradientStop Offset="0" Color="#FFFFFF" />
-        <GradientStop Offset="1" Color="#FFFAFD" />
+        <GradientStop Offset="1" Color="#FCFEF8" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Edge" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#FBE4F0" />
-        <GradientStop Offset="1" Color="#F3D5E6" />
+        <GradientStop Offset="0" Color="#E7F3D3" />
+        <GradientStop Offset="1" Color="#D6E8BE" />
     </LinearGradientBrush>
 
-    <!-- ピンクから水色へ。この 2 色の並びがこの配色の要 -->
+    <!-- 若草からソーダへ。緑を主役に置いたうえで、青を差して爽やかさを残す -->
     <LinearGradientBrush x:Key="Brush.Accent.Gradient" StartPoint="0,0" EndPoint="1,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#F27BB8" />
-        <GradientStop Offset="1" Color="#6FC8EC" />
+        <GradientStop Offset="0" Color="#8ECF3C" />
+        <GradientStop Offset="1" Color="#5FC6E8" />
     </LinearGradientBrush>
 
 </ResourceDictionary>
