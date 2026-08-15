@@ -28,7 +28,8 @@
     <sys:Double x:Key="Size.Caption">11</sys:Double>
     <sys:Double x:Key="Size.Micro">9</sys:Double>
 
-    <!-- 一覧の行の高さ。詰めるほど一覧性が上がるが、日本語が窮屈になるので 22 を下限にしている -->
-    <sys:Double x:Key="Size.RowHeight">22</sys:Double>
+    <!-- 一覧の行の高さ。一覧で見える数を優先して 20 まで詰めた(2026-08-15 ユーザー指示)。
+         行の枠(1px×上下)も同時に廃止してあり、行ピッチは 20px ちょうど -->
+    <sys:Double x:Key="Size.RowHeight">20</sys:Double>
 
 </ResourceDictionary>

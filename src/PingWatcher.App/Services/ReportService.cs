@@ -97,7 +97,6 @@ internal static class ReportService
     private static string DescribeState(RowState state) => state switch
     {
         RowState.Ok => "応答",
-        RowState.Slow => "遅延",
         RowState.Down => "不達",
         RowState.Refused => "拒否",
         RowState.Unresolved => "名前を引けない",

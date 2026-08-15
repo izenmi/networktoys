@@ -14,9 +14,6 @@ public enum RowState
     /// <summary>応答あり。</summary>
     Ok,
 
-    /// <summary>応答はあるが遅い。</summary>
-    Slow,
-
     /// <summary>応答なし。</summary>
     Down,
 
@@ -220,12 +217,9 @@ public sealed class TargetRowViewModel : ObservableObject
             LinkState.Pending => RowState.Pending,
             LinkState.Down when latest.Status == ProbeStatus.DnsFailure => RowState.Unresolved,
             LinkState.Down => RowState.Down,
-            _ => latest.Status switch
-            {
-                ProbeStatus.Refused => RowState.Refused,
-                ProbeStatus.Success when latest.RttMs >= _settings.SlowThresholdMs => RowState.Slow,
-                _ => RowState.Ok,
-            },
+            // 遅延(RTT 閾値超え)の状態は出さない。応答の有無だけを示す(ユーザー指示)。
+            // 遅さは RTT の数字とスパークラインで読み取れる
+            _ => latest.Status == ProbeStatus.Refused ? RowState.Refused : RowState.Ok,
         };
 
         // 「応答なし」欄への振り分け。測定が詰まって Stalled になっても、

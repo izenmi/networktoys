@@ -36,28 +36,17 @@
             すると仮想化された行を作り直すたびに解決が走る。前方参照はできないので、
             使う側より前に置くこと。
         -->
-        <GridLength x:Key="ColW.Ping.State">66</GridLength>
-        <!-- 宛先と IP は 1 列に統合。宛先はほとんど IP アドレスそのもので、
-             2 列に分けると同じ文字列が並ぶだけだった。ホスト名で登録された
-             宛先だけ「web-01 (192.168.1.20)」の形で解決先を添える -->
-        <GridLength x:Key="ColW.Ping.Target">170</GridLength>
-        <!-- 出すのは最新の RTT。平均は選択行の詳細欄で見られる -->
-        <GridLength x:Key="ColW.Ping.Rtt">62</GridLength>
-        <GridLength x:Key="ColW.Ping.Loss">48</GridLength>
-        <!-- 推移は傾向が読めれば足りるので固定幅。余った幅は備考に回す
-             (以前は逆で、窓を広げてもグラフだけが伸びて備考は 180px のままだった) -->
-        <GridLength x:Key="ColW.Ping.Spark">80</GridLength>
-
         <!-- 一覧 1 行。列幅は上の定義を見出しと共有している -->
         <DataTemplate x:Key="TargetRowTemplate">
             <Grid Height="{DynamicResource Size.RowHeight}">
+                <!-- 幅はヘッダと共有(ColumnLayout)。ヘッダの境目をドラッグすると全行が追随する -->
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.State}" />
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.Target}" />
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.Rtt}" />
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.Loss}" />
-                    <ColumnDefinition Width="{StaticResource ColW.Ping.Spark}" />
-                    <ColumnDefinition Width="*" MinWidth="180" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=State}" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Target}" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Rtt}" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Loss}" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Spark}" />
+                    <ColumnDefinition Width="*" MinWidth="120" />
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="Badge"
@@ -99,11 +88,6 @@
                     <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
                     <Setter TargetName="BadgeText" Property="Text" Value="● 応答" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding State}" Value="Slow">
-                    <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                    <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                    <Setter TargetName="BadgeText" Property="Text" Value="▲ 遅延" />
-                </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Down">
                     <Setter TargetName="Badge" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
                     <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
@@ -140,11 +124,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
+                        <!-- 枠は持たない。1px の枠でも全行に付くと行間が 2px 太る -->
                         <Border x:Name="Bd"
                                 Background="Transparent"
-                                BorderThickness="1"
-                                BorderBrush="Transparent"
-                                CornerRadius="{DynamicResource Radius.Badge}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter />
                         </Border>
@@ -194,11 +176,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
+                        <!-- 枠は持たない。1px の枠でも全行に付くと行間が 2px 太る -->
                         <Border x:Name="Bd"
                                 Background="Transparent"
-                                BorderThickness="1"
-                                BorderBrush="Transparent"
-                                CornerRadius="{DynamicResource Radius.Badge}"
                                 Padding="{TemplateBinding Padding}">
                             <!--
                                 右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
@@ -225,10 +205,8 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
                             </Trigger>
-                            <!-- 選択は地色だけだと沈む。発光色の枠を添えてはっきりさせる -->
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -246,11 +224,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
+                        <!-- 枠は持たない。1px の枠でも全行に付くと行間が 2px 太る -->
                         <Border x:Name="Bd"
                                 Background="Transparent"
-                                BorderThickness="1"
-                                BorderBrush="Transparent"
-                                CornerRadius="{DynamicResource Radius.Badge}"
                                 Padding="{TemplateBinding Padding}">
                             <!--
                                 右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
@@ -277,10 +253,9 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
                             </Trigger>
-                            <!-- 面を一段持ち上げ、状態色の枠で示す(緑のアクセントは使わない) -->
+                            <!-- 面を一段持ち上げて示す(緑のアクセントは使わない) -->
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Surface}" />
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Error.Fg}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -501,12 +476,12 @@
                         <StackPanel DockPanel.Dock="Top">
                             <Grid Margin="4,0,4,3">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.State}" />
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Target}" />
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Rtt}" />
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Loss}" />
-                                    <ColumnDefinition Width="{StaticResource ColW.Ping.Spark}" />
-                                    <ColumnDefinition Width="*" MinWidth="180" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=State, Mode=TwoWay}" MinWidth="36" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Target, Mode=TwoWay}" MinWidth="60" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Rtt, Mode=TwoWay}" MinWidth="36" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Loss, Mode=TwoWay}" MinWidth="36" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Spark, Mode=TwoWay}" MinWidth="36" />
+                                    <ColumnDefinition Width="*" MinWidth="120" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="状態"     Style="{StaticResource Caption}" />
                                 <TextBlock Grid.Column="1" Text="宛先"     Style="{StaticResource Caption}" />
@@ -514,6 +489,21 @@
                                 <TextBlock Grid.Column="3" Text="ロス"     Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                                 <TextBlock Grid.Column="4" Text="推移"     Style="{StaticResource Caption}" Margin="8,0,0,0" />
                                 <TextBlock Grid.Column="5" Text="備考"     Style="{StaticResource Caption}" />
+
+                                <!--
+                                    列幅の変更。ヘッダの境目を掴んで動かす。
+                                    ヘッダ側の列定義だけが双方向で、行はそれを読むだけ。
+                                -->
+                                <GridSplitter Grid.Column="0" Width="5" HorizontalAlignment="Right"
+                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
+                                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Right"
+                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
+                                <GridSplitter Grid.Column="2" Width="5" HorizontalAlignment="Right"
+                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
+                                <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Right"
+                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
+                                <GridSplitter Grid.Column="4" Width="5" HorizontalAlignment="Right"
+                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
                             </Grid>
                             <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,4" />
                         </StackPanel>
