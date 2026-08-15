@@ -49,6 +49,8 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 ### UI
 
 - **`Style` の `Setter` の中に、イベントハンドラを持つ要素を置かない。** `<Setter Property="ContextMenu">` の下に `Click="..."` 付きの `MenuItem` を書くと、**ビルドは通り、起動した瞬間に `XamlParseException: Set connectionId threw an exception` で落ちる**（`MenuItem` を `Grid` にキャストできない、のように無関係な型が出る）。リソースは後から展開されるのに、結線の番号は文書順で振られるためずれる。`ControlTemplate` / `DataTemplate` の中は独自の結線を持つので安全。**メニューはテンプレートの中の要素に付ける**こと。
+- **既定スタイルを持つコントロールは、色を継承してくれない。** `ListBox` / `ListView` の既定スタイルは `Foreground` にシステム色（＝黒）を入れるため、暗い配色にしても行の中の `TextBlock` だけ黒く残る（`ItemsControl` は既定スタイルを持たないので継承される）。暗黙スタイルで上書きすること。**キー付きスタイルは暗黙スタイルを継承しない**ので、`BasedOn="{StaticResource {x:Type ListBox}}"` を明示する。`ContextMenu` / `MenuItem` / `ToolTip` も同様にシステム色で描かれる。
+- **`ComboBox` の閉じているときの表示に `DisplayMemberPath` は効かない。** 選択中の項目は `SelectionBoxItemTemplate` 経由で描かれるため、**型名がそのまま出る**。ドロップダウンを開いたときだけ正しく見えるので気づきにくい。`ItemTemplate` を明示すること。
 - **測定結果ごとに `Dispatcher.Invoke` しない。** 500 宛先 × 1Hz = 500 通知/秒で UI が溶ける。`Channel<T>` に積んで 10Hz の単一ポンプでまとめて適用する。
 - `ObservableCollection` の**構造変化は宛先の追加/削除時のみ**。測定結果は既存の行 VM のプロパティ更新として流す。
 - 一覧は仮想化必須（`VirtualizationMode=Recycling`、行高固定）。ソート・フィルタはティックごとに `Refresh()` しない。
