@@ -72,6 +72,6 @@ public static class AppSettingsStore
         document.IpPresets.RemoveAll(p => string.IsNullOrWhiteSpace(p.Name));
 
         if (document.Theme is not ("dark" or "light"))
-            document.Theme = "dark";
+            document.Theme = "light";
     }
 }

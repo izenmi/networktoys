@@ -26,23 +26,23 @@ internal static class ThemeManager
     private const string LightSource = "Resources/Palette.xaml";
 
     /// <summary>いま適用している配色。</summary>
-    public static AppTheme Current { get; private set; } = AppTheme.Dark;
+    public static AppTheme Current { get; private set; } = AppTheme.Light;
 
     /// <summary>切り替わった後に発火する。描画をやり直したい要素が拾う。</summary>
     public static event EventHandler? ThemeChanged;
 
     /// <summary>
     /// 保存された配色を読んで適用する。起動直後、ウィンドウを作る前に呼ぶこと。
-    /// 保存が無ければダークにする（既定の見た目）。
+    /// 保存が無ければライトにする（2026-08-16 から既定はライト）。
     /// </summary>
     public static void Initialize()
     {
-        AppTheme theme = Load() ?? AppTheme.Dark;
+        AppTheme theme = Load() ?? AppTheme.Light;
 
-        // App.xaml が読み込んでいるのはダーク。既定のままなら差し替えは要らない
-        if (theme == AppTheme.Dark)
+        // App.xaml が読み込んでいるのはライト。既定のままなら差し替えは要らない
+        if (theme == AppTheme.Light)
         {
-            Current = AppTheme.Dark;
+            Current = AppTheme.Light;
             return;
         }
 

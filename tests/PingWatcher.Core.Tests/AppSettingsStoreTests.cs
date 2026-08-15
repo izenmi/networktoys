@@ -44,7 +44,7 @@ public class AppSettingsStoreTests
         AppSettingsDocument loaded = AppSettingsStore.Load(TempPath(), out string? error);
 
         Assert.Null(error);
-        Assert.Equal("dark", loaded.Theme);
+        Assert.Equal("light", loaded.Theme);
         Assert.Empty(loaded.Columns);
         Assert.Empty(loaded.Ping.Targets);
     }
@@ -59,7 +59,7 @@ public class AppSettingsStoreTests
             AppSettingsDocument loaded = AppSettingsStore.Load(path, out string? error);
 
             Assert.NotNull(error);
-            Assert.Equal("dark", loaded.Theme);
+            Assert.Equal("light", loaded.Theme);
         }
         finally
         {
@@ -68,7 +68,7 @@ public class AppSettingsStoreTests
     }
 
     [Fact]
-    public void Unknown_theme_values_fall_back_to_dark()
+    public void Unknown_theme_values_fall_back_to_light()
     {
         string path = TempPath();
         try
@@ -76,7 +76,7 @@ public class AppSettingsStoreTests
             AppSettingsStore.Save(path, new AppSettingsDocument { Theme = "hotpink" });
             AppSettingsDocument loaded = AppSettingsStore.Load(path, out _);
 
-            Assert.Equal("dark", loaded.Theme);
+            Assert.Equal("light", loaded.Theme);
         }
         finally
         {

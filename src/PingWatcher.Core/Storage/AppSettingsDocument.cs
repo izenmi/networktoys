@@ -11,7 +11,7 @@ public sealed class AppSettingsDocument
     public int Version { get; set; } = 1;
 
     /// <summary>配色。"dark" / "light"。</summary>
-    public string Theme { get; set; } = "dark";
+    public string Theme { get; set; } = "light";
 
     /// <summary>
     /// Ping/TCP 一覧の列幅（状態・宛先・RTT・ロス・推移の順）。
