@@ -35,6 +35,7 @@ internal static class AppData
         "tcp-targets.json",
         "theme.txt",
         "sessions",
+        "surveys",
     ];
 
     /// <summary>
