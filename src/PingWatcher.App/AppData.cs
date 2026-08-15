@@ -31,6 +31,9 @@ internal static class AppData
     /// </summary>
     private static readonly string[] DataEntries =
     [
+        "settings.json",
+        // 以下は旧構成(2026-08-16 に settings.json へ統合)。旧フォルダからの
+        // 引き継ぎ判定に必要なので残す
         "targets.json",
         "tcp-targets.json",
         "theme.txt",

@@ -91,41 +91,23 @@ internal static class ThemeManager
     }
 
     /// <summary>
-    /// 保存先。設定 JSON に混ぜていないのは、あちらを読むのが
-    /// ウィンドウを作った後だから。配色はその前に決まっていないと、
-    /// 一瞬明るい画面が出てから暗くなる。
+    /// 保存先は settings.json(全設定の統合ファイル)。配色はウィンドウを作る前に
+    /// 決まっていないと一瞬明るい画面が出るため、App 起動時に
+    /// <see cref="Settings.Initialize"/> → <see cref="Initialize"/> の順で呼ぶこと。
     /// </summary>
-    private static string PathOfSetting() => AppData.PathOf("theme.txt");
-
-    private static AppTheme? Load()
+    private static AppTheme? Load() => Settings.Current.Theme switch
     {
-        try
-        {
-            string path = PathOfSetting();
-            if (!File.Exists(path)) return null;
-
-            return File.ReadAllText(path).Trim().ToLowerInvariant() switch
-            {
-                "light" => AppTheme.Light,
-                "dark" => AppTheme.Dark,
-                _ => null,
-            };
-        }
-        catch (Exception ex)
-        {
-            // 読めなくても既定の配色で動かせる。起動を止める理由にはしない
-            CrashLog.Write(ex, "ThemeManager.Load");
-            return null;
-        }
-    }
+        "light" => AppTheme.Light,
+        "dark" => AppTheme.Dark,
+        _ => null,
+    };
 
     private static void Save(AppTheme theme)
     {
         try
         {
-            string path = PathOfSetting();
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, theme == AppTheme.Dark ? "dark" : "light");
+            Settings.Current.Theme = theme == AppTheme.Dark ? "dark" : "light";
+            Settings.Save();
         }
         catch (Exception ex)
         {

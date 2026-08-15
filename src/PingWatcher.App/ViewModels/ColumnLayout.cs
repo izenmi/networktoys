@@ -14,14 +14,11 @@ namespace PingWatcher.App.ViewModels;
 /// </summary>
 public sealed class ColumnLayout : ObservableObject
 {
-    private const string FileName = "columns.txt";
-
     public static ColumnLayout Instance { get; } = Load();
 
     // 備考は宛先の右隣(ユーザー指示)で、可変幅の星列。余った幅は備考が吸収し、
-    // 推移は固定幅で持つ(スクリーンショットで指定された配分)。
-    // 保存形式は列構成が変わるたびに番号を上げる(旧形式は既定幅で開き直す)
-    private const string FormatMarker = "v3";
+    // 推移は固定幅で持つ。保存先は settings.json の columns
+    // (状態・宛先・RTT・ロス・推移の順で 5 つ)
 
     private GridLength _state = new(84);
     private GridLength _target = new(156);
@@ -40,11 +37,9 @@ public sealed class ColumnLayout : ObservableObject
     {
         try
         {
-            string line = FormatMarker + '\t' + string.Join('\t',
-                new[] { State, Target, Rtt, Loss, Spark }
-                    .Select(w => w.Value.ToString("0", CultureInfo.InvariantCulture)));
-
-            File.WriteAllText(AppData.PathOf(FileName), line);
+            Settings.Current.Columns =
+                [State.Value, Target.Value, Rtt.Value, Loss.Value, Spark.Value];
+            Settings.Save();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -56,30 +51,18 @@ public sealed class ColumnLayout : ObservableObject
     {
         var layout = new ColumnLayout();
 
-        try
-        {
-            string path = AppData.PathOf(FileName);
-            if (!File.Exists(path)) return layout;
+        List<double> widths = Settings.Current.Columns;
+        if (widths.Count != 5)
+            return layout;
 
-            string[] parts = File.ReadAllText(path).Trim().Split('\t');
-            if (parts.Length != 6 || parts[0] != FormatMarker) return layout;
+        GridLength Read(double value, GridLength fallback)
+            => value is >= 36 and <= 600 ? new GridLength(value) : fallback;
 
-            GridLength Read(string text, GridLength fallback)
-                => double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
-                   && value is >= 36 and <= 600
-                    ? new GridLength(value)
-                    : fallback;
-
-            layout._state = Read(parts[1], layout._state);
-            layout._target = Read(parts[2], layout._target);
-            layout._rtt = Read(parts[3], layout._rtt);
-            layout._loss = Read(parts[4], layout._loss);
-            layout._spark = Read(parts[5], layout._spark);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // 読めなければ既定の幅で開く
-        }
+        layout._state = Read(widths[0], layout._state);
+        layout._target = Read(widths[1], layout._target);
+        layout._rtt = Read(widths[2], layout._rtt);
+        layout._loss = Read(widths[3], layout._loss);
+        layout._spark = Read(widths[4], layout._spark);
 
         return layout;
     }

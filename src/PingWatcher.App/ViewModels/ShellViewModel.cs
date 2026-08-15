@@ -10,8 +10,8 @@ public sealed class ShellViewModel
         Monitor = new MonitorViewModel();
 
         // TCP は独立した画面にする。ICMP で見る相手とポートまで見る相手は別物なので、
-        // 宛先リストも保存先も分けている
-        Tcp = new MonitorViewModel("tcp-targets.json", alwaysTcp: true);
+        // 宛先リストも(settings.json の中で)分けて持つ
+        Tcp = new MonitorViewModel(alwaysTcp: true);
 
         // 現在の DNS サーバを比較対象の既定値として渡す
         Dns = new DnsViewModel(Monitor.SystemDnsServers);

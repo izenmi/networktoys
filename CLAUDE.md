@@ -83,6 +83,8 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 場所は**実際に 1 ファイル書いて消して**決めている。属性だけでは判定できないため。
 旧名 `PastelNet` のフォルダがあれば初回に一度だけ複製して引き継ぐ（移動ではない）。
 
+**設定は `settings.json` の 1 ファイルに統合**（2026-08-16、ユーザー指示）。配色・列幅・Ping/TCP の宛先リストと測定既定値がすべて入る。入り口は `App/Settings.cs`（起動時に `Settings.Initialize()` — **`ThemeManager.Initialize()` より前**でないと配色が読めない）。旧 4 ファイル（targets.json / tcp-targets.json / theme.txt / columns.txt）は初回起動時に取り込み、統合ファイルを書けたときだけ削除する。新しい設定を足すときは `AppSettingsDocument` にプロパティを足し、`Settings.Current` を書き換えて `Settings.Save()` を呼ぶ（ファイルを増やさない）。
+
 ## 構成
 
 ```

@@ -23,5 +23,6 @@ public sealed class TargetDocument
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(TargetDocument))]
+[JsonSerializable(typeof(AppSettingsDocument))]
 [JsonSerializable(typeof(Work.WorkSessionDocument))]
 public partial class PingWatcherJsonContext : JsonSerializerContext;

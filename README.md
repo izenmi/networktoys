@@ -121,10 +121,7 @@ WPF はトリミングできないため、.NET を同梱すると 125MB にな�
 
 | ファイル | 中身 |
 |---|---|
-| `targets.json` | Ping の宛先リストと測定の既定値 |
-| `tcp-targets.json` | TCP の宛先リスト |
-| `theme.txt` | 選んだ配色 |
-| `columns.txt` | 一覧の列幅 |
+| `settings.json` | すべての設定（Ping/TCP の宛先リスト・測定の既定値・配色・列幅） |
 | `sessions\` | 作業セッションの記録 |
 | `logs\` | 測定ログとスクリーンショット |
 | `ftp\` | FTP で受け取ったファイル |

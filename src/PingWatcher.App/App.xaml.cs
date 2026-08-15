@@ -22,6 +22,10 @@ public partial class App : Application
             args.SetObserved();
         };
 
+        // 設定(settings.json)を最初に読む。配色もここに入っているので、
+        // ThemeManager より前でないといけない
+        Settings.Initialize();
+
         // 配色はウィンドウを作る前に決めておく。後から差し替えると、
         // 明るい画面が一瞬出てから暗くなる。自己診断でも実際の配色で検査したい。
         ThemeManager.Initialize();

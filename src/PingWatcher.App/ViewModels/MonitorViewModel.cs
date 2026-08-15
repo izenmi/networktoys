@@ -32,7 +32,6 @@ public sealed class MonitorViewModel : ObservableObject
     private readonly Dictionary<string, TargetRowViewModel> _rowsById = [];
     private readonly HashSet<TargetRowViewModel> _touched = [];
     private readonly DispatcherTimer _pump;
-    private readonly string _storePath;
 
     private readonly MonitorSettings _settings;
     private bool _isRunning;
@@ -66,19 +65,16 @@ public sealed class MonitorViewModel : ObservableObject
     private string _sortColumn = "";
     private bool _sortDescending;
 
-    /// <param name="fileName">宛先の保存先。画面ごとに分ける。</param>
-    /// <param name="alwaysTcp">TCP 接続で測る画面にするか。</param>
-    public MonitorViewModel(string fileName = "targets.json", bool alwaysTcp = false)
+    /// <param name="alwaysTcp">TCP 接続で測る画面にするか。宛先は settings.json 内で画面ごとに分かれている。</param>
+    public MonitorViewModel(bool alwaysTcp = false)
     {
         _alwaysTcp = alwaysTcp;
 
-        _storePath = AppData.PathOf(fileName);
-
-        TargetDocument document = TargetStore.Load(_storePath, out string? error);
+        TargetDocument document = alwaysTcp ? Settings.Current.Tcp : Settings.Current.Ping;
         _settings = document.Settings;
 
-        if (error is not null)
-            StatusMessage = error;
+        if (Settings.LoadError is not null)
+            StatusMessage = Settings.LoadError;
 
         // インターフェースの列挙は安くないので 1 回で済ませ、初期宛先にも使い回す
         NetworkInfo = NetworkEnvironment.Current();
@@ -835,11 +831,18 @@ public sealed class MonitorViewModel : ObservableObject
     {
         try
         {
-            TargetStore.Save(_storePath, new TargetDocument
+            var document = new TargetDocument
             {
                 Targets = [.. Rows.Select(r => r.Target)],
                 Settings = _settings,
-            });
+            };
+
+            if (_alwaysTcp)
+                Settings.Current.Tcp = document;
+            else
+                Settings.Current.Ping = document;
+
+            Settings.Save();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

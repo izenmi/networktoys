@@ -108,8 +108,7 @@ Cisco コマンドの出力を貼り付けると **CSV に変換**します。Ex
 
 | 場所 | 中身 |
 |---|---|
-| `targets.json` / `tcp-targets.json` | 宛先リスト |
-| `theme.txt` / `columns.txt` | 配色と列幅 |
+| `settings.json` | すべての設定（Ping/TCP の宛先リスト・測定の既定値・配色・列幅） |
 | `logs\` | 測定ログ(1 結果 1 行のタブ区切り)とスクリーンショット |
 | `sessions\` | 作業セッションの記録 |
 | `ftp\` `tftp\` `sftp\` | ファイルサーバの受け渡しフォルダ |
