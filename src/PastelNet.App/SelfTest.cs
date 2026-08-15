@@ -330,6 +330,19 @@ internal static class SelfTest
             }
         });
 
+        Check("アイコンが exe に埋め込まれている", () =>
+        {
+            // ApplicationIcon の指定漏れやパスの打ち間違いはビルドを通ってしまう。
+            // 実行ファイルから引けるかどうかで確かめる。
+            string? path = Environment.ProcessPath;
+            Assert(path is not null, "自分の実行ファイルの場所が分からない");
+
+            int count = Interop.NativeMethods.CountIcons(path!);
+            Assert(count > 0, "exe にアイコンが入っていない（ApplicationIcon の指定を確認）");
+
+            log.AppendLine($"        exe に入っているアイコン: {count} 個");
+        });
+
         Check("記録をテキストで書き出せる", () =>
         {
             var data = new Core.Reporting.ReportData(

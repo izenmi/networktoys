@@ -121,6 +121,32 @@ internal static class NativeMethods
         return string.Join('-', bytes.Take(length).Select(b => b.ToString("X2")));
     }
 
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern int ExtractIconExW(string file, int index, IntPtr[]? large, IntPtr[]? small, int count);
+
+    /// <summary>
+    /// 実行ファイルに入っているアイコンの数。
+    ///
+    /// <c>ApplicationIcon</c> の指定漏れやパスの打ち間違いはビルドを通ってしまうので、
+    /// 実際に埋め込まれたかを実行ファイル側から確かめるために使う。
+    /// index に -1 を渡すと、取り出さずに個数だけ返る。
+    /// </summary>
+    public static int CountIcons(string executablePath)
+    {
+        try
+        {
+            return ExtractIconExW(executablePath, -1, null, null, 0);
+        }
+        catch (DllNotFoundException)
+        {
+            return 0;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return 0;
+        }
+    }
+
     // タイトルバーを暗くする属性。Windows 10 1809〜1903 では 19、それ以降は 20。
     private const int DwmwaUseImmersiveDarkMode = 20;
     private const int DwmwaUseImmersiveDarkModeOld = 19;

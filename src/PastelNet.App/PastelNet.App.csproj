@@ -14,6 +14,10 @@
     <!-- 管理者権限を要求しない / 高DPI対応を宣言する -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
+    <!-- exe に埋め込むアイコン。エクスプローラ・タスクバー・タイトルバーが使う。
+         元の SVG から tools/icon/build_icon.sh で焼いたもの。手で差し替えないこと。 -->
+    <ApplicationIcon>Resources/AppIcon.ico</ApplicationIcon>
+
     <!-- PDB を exe に埋め込む。配布物が 1 ファイルで済み、例外の行番号も残る -->
     <DebugType>embedded</DebugType>
 
