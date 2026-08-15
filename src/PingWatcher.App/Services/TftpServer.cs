@@ -182,8 +182,9 @@ internal sealed class TftpServer : IFileServer
 
             if (block.Value == expected)
             {
-                ReadOnlySpan<byte> payload = TftpPacket.ReadDataPayload(packet);
-                await file.WriteAsync(payload.ToArray(), token).ConfigureAwait(false);
+                // Span は await を跨げないので、先にバイト配列にしておく
+                byte[] payload = TftpPacket.ReadDataPayload(packet).ToArray();
+                await file.WriteAsync(payload, token).ConfigureAwait(false);
                 total += payload.Length;
 
                 await SendAsync(socket, TftpPacket.Ack(block.Value)).ConfigureAwait(false);
