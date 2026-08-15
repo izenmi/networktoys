@@ -30,6 +30,7 @@ public readonly record struct RttStatistics(
     {
         int attempts = 0;
         int successes = 0;
+        int responses = 0;
         double min = double.MaxValue;
         double max = 0;
         double sum = 0;
@@ -43,6 +44,12 @@ public readonly record struct RttStatistics(
         {
             if (sample.Status.CountsAsAttempt())
                 attempts++;
+
+            // TCP の「拒否」は応答が返っている＝ロスではない。欠測扱いにすると
+            // ポートが閉じているだけの相手がロス率 100% と表示され、
+            // 「連続失敗 0」と矛盾する
+            if (sample.Status is ProbeStatus.Success or ProbeStatus.Refused)
+                responses++;
 
             if (!sample.Status.IsReachable())
             {
@@ -65,11 +72,11 @@ public readonly record struct RttStatistics(
 
         if (successes == 0)
         {
-            double lossOnly = attempts == 0 ? 0 : 100.0;
+            double lossOnly = attempts == 0 ? 0 : (attempts - responses) * 100.0 / attempts;
             return new RttStatistics(attempts, 0, lossOnly, 0, 0, 0, 0, 0);
         }
 
-        double loss = attempts == 0 ? 0 : (attempts - successes) * 100.0 / attempts;
+        double loss = attempts == 0 ? 0 : (attempts - responses) * 100.0 / attempts;
 
         return new RttStatistics(
             attempts,

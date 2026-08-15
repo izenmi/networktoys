@@ -49,7 +49,13 @@ public static class IpRangeParser
     {
         string[] parts = token.Split('/');
         if (parts.Length != 2 || !TryParseIPv4(parts[0], out IPAddress? network))
-            return IpRangeKind.NotARange;
+        {
+            // ホスト名に「/」は使えないので、この形は CIDR を書こうとして壊れている。
+            // NotARange にすると呼び出し側が「999.999.999.999/24」を丸ごと
+            // ホスト名として登録し、実行時に DNS 失敗の行として一覧に混ざる
+            error = $"CIDR 表記として読み取れません: {token}";
+            return IpRangeKind.Invalid;
+        }
 
         if (!int.TryParse(parts[1], out int prefix) || prefix is < 0 or > 32)
         {

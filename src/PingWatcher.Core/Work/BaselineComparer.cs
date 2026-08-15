@@ -174,18 +174,28 @@ public static class BaselineComparer
         ArgumentNullException.ThrowIfNull(after);
 
         options ??= new ComparisonOptions();
-        keysWithOutage ??= [];
 
-        var beforeByKey = before.Entries.ToDictionary(e => e.Key, StringComparer.OrdinalIgnoreCase);
-        var afterByKey = after.Entries.ToDictionary(e => e.Key, StringComparer.OrdinalIgnoreCase);
+        // 比較規則を呼び出し元のコレクション実装に依存させない。List で渡されると
+        // Ordinal 比較になり、鍵の大文字小文字が揺れただけで「途中の不通」を取り逃がす
+        var outageKeys = new HashSet<string>(keysWithOutage ?? [], StringComparer.OrdinalIgnoreCase);
+
+        // ToDictionary は重複キーで例外を投げる。セッション JSON は手で編集される
+        // こともあるので、他のパーサと同じく TryAdd（最初の 1 件を採用）で読む
+        var beforeByKey = new Dictionary<string, WorkEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (WorkEntry entry in before.Entries)
+            beforeByKey.TryAdd(entry.Key, entry);
+
+        var afterByKey = new Dictionary<string, WorkEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (WorkEntry entry in after.Entries)
+            afterByKey.TryAdd(entry.Key, entry);
 
         var results = new List<WorkComparison>();
 
-        foreach (WorkEntry entry in before.Entries)
+        foreach (WorkEntry entry in beforeByKey.Values)
         {
             if (afterByKey.TryGetValue(entry.Key, out WorkEntry? current))
             {
-                results.Add(CompareOne(entry, current, keysWithOutage.Contains(entry.Key), options));
+                results.Add(CompareOne(entry, current, outageKeys.Contains(entry.Key), options));
             }
             else
             {
@@ -196,7 +206,7 @@ public static class BaselineComparer
             }
         }
 
-        foreach (WorkEntry entry in after.Entries)
+        foreach (WorkEntry entry in afterByKey.Values)
         {
             if (!beforeByKey.ContainsKey(entry.Key))
             {
@@ -232,13 +242,18 @@ public static class BaselineComparer
         if (!before.Responded && after.Responded)
             return Make(WorkVerdict.Recovered, "作業前は応答がありませんでしたが、応答するようになりました。");
 
-        // ここから先は前後とも応答している
+        // ここから先は前後とも応答している。
+        // 数字の比較はベースライン側にも同じ回数を要求する。2 回しか測っていない
+        // 作業前を基準に「遅くなった」と断定すると、判定そのものが疑わしくなる。
+        // 応答の有無（上の Lost など）は少ない回数でも意味があるので、ここで見る
+        if (before.Attempts < options.MinimumAttempts)
+            return Make(WorkVerdict.NotMeasured, $"作業前の測定が {before.Attempts} 回しかありません。数字の比較の基準として使うには足りません。");
 
         double lossDelta = after.LossPercent - before.LossPercent;
         if (lossDelta >= options.LossIncreasePoints)
         {
             return Make(WorkVerdict.LossIncreased,
-                $"応答はしますが、ロス率が {before.LossPercent:0.#}% から {after.LossPercent:0.#}% に増えています。");
+                string.Create(CultureInfo.InvariantCulture, $"応答はしますが、ロス率が {before.LossPercent:0.#}% から {after.LossPercent:0.#}% に増えています。"));
         }
 
         if (!string.Equals(before.Address, after.Address, StringComparison.OrdinalIgnoreCase)
@@ -255,13 +270,13 @@ public static class BaselineComparer
         if (IsSlower(before.AverageMs, after.AverageMs, options) || IsSlower(before.P95Ms, after.P95Ms, options))
         {
             return Make(WorkVerdict.Slower,
-                $"応答が遅くなりました（平均 {before.AverageMs:0.#} → {after.AverageMs:0.#} ms）。");
+                string.Create(CultureInfo.InvariantCulture, $"応答が遅くなりました（平均 {before.AverageMs:0.#} → {after.AverageMs:0.#} ms）。"));
         }
 
         if (IsSlower(after.AverageMs, before.AverageMs, options))
         {
             return Make(WorkVerdict.Faster,
-                $"応答が速くなりました（平均 {before.AverageMs:0.#} → {after.AverageMs:0.#} ms）。");
+                string.Create(CultureInfo.InvariantCulture, $"応答が速くなりました（平均 {before.AverageMs:0.#} → {after.AverageMs:0.#} ms）。"));
         }
 
         return Make(WorkVerdict.Unchanged, "作業前と同じ状態です。");

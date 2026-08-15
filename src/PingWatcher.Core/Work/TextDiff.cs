@@ -31,16 +31,22 @@ public static class TextDiff
     /// <summary>これを超える行数は差分を諦める。</summary>
     private const int MaxLines = 5000;
 
+    /// <summary>
+    /// LCS の表に許す面積（セル数）。行数だけで判定すると、上限ぎりぎりの
+    /// 中身がまるごと違う 2 本（5,000×5,000 = 約 100MB の表）で
+    /// UI が数十秒固まる。2,000,000 セルなら表は約 8MB で収まる。
+    /// </summary>
+    private const long MaxCells = 2_000_000;
+
     public static TextDiffResult Compare(string? before, string? after, DiffNoiseFilter? filter = null)
     {
         string[] beforeLines = Split(before);
         string[] afterLines = Split(after);
 
-        if (beforeLines.Length > MaxLines || afterLines.Length > MaxLines)
-            return new TextDiffResult([], 0, TooLarge: true);
-
         int ignored = 0;
 
+        // ノイズ除去を先に掛ける。行数の判定を先にすると、
+        // 除去すれば上限に収まる入力まで諦めてしまう
         if (filter is not null)
         {
             int beforeCount = beforeLines.Length;
@@ -52,7 +58,8 @@ public static class TextDiff
             ignored = (beforeCount - beforeLines.Length) + (afterCount - afterLines.Length);
         }
 
-        var lines = new List<DiffLine>();
+        if (beforeLines.Length > MaxLines || afterLines.Length > MaxLines)
+            return new TextDiffResult([], ignored, TooLarge: true);
 
         // 前後の共通部分を先に削る。実際の差分はたいてい数行なので、
         // これだけで LCS に渡す量が一気に減る
@@ -73,11 +80,17 @@ public static class TextDiff
             tail++;
         }
 
-        for (int i = 0; i < head; i++)
-            lines.Add(new DiffLine(DiffKind.Unchanged, beforeLines[i]));
-
         ReadOnlySpan<string> beforeMiddle = beforeLines.AsSpan(head, beforeLines.Length - head - tail);
         ReadOnlySpan<string> afterMiddle = afterLines.AsSpan(head, afterLines.Length - head - tail);
+
+        // 共通部分を削っても中身が大きく違うものは面積で諦める
+        if ((long)beforeMiddle.Length * afterMiddle.Length > MaxCells)
+            return new TextDiffResult([], ignored, TooLarge: true);
+
+        var lines = new List<DiffLine>();
+
+        for (int i = 0; i < head; i++)
+            lines.Add(new DiffLine(DiffKind.Unchanged, beforeLines[i]));
 
         lines.AddRange(DiffMiddle(beforeMiddle, afterMiddle));
 

@@ -58,7 +58,18 @@ public static class TargetStore
         string json = JsonSerializer.Serialize(document, PingWatcherJsonContext.Default.TargetDocument);
 
         string temporary = path + ".tmp";
-        File.WriteAllText(temporary, json);
+
+        // rename の前にディスクへ届いたことを確かめる。NTFS は rename と
+        // データ書き込みの順序を保証しないため、Flush 無しだと電源断の直後に
+        // 「置き換えは済んだのに中身が 0 バイト」のファイルが残りうる
+        using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        using (var writer = new StreamWriter(stream))
+        {
+            writer.Write(json);
+            writer.Flush();
+            stream.Flush(flushToDisk: true);
+        }
+
         File.Move(temporary, path, overwrite: true);
     }
 }

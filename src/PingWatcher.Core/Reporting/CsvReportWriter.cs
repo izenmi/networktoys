@@ -55,10 +55,20 @@ public static class CsvReportWriter
         csv.Append("\r\n");
     }
 
-    /// <summary>カンマ・引用符・改行を含む値だけ囲む。</summary>
+    /// <summary>
+    /// カンマ・引用符・改行を含む値だけ囲む。
+    ///
+    /// あわせて、数式として解釈される先頭文字を <c>'</c> で無害化する。
+    /// 宛先名と備考はユーザー入力（配布されたリストのこともある）で、
+    /// <c>=HYPERLINK(...)</c> や <c>=cmd|...</c> をそのまま出すと、
+    /// この CSV を開いた側の Excel で評価されてしまう。
+    /// </summary>
     internal static string Quote(string? field)
     {
         if (string.IsNullOrEmpty(field)) return string.Empty;
+
+        if (field[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
+            field = "'" + field;
 
         bool needsQuotes = field.Contains(',', StringComparison.Ordinal)
                            || field.Contains('"', StringComparison.Ordinal)

@@ -26,7 +26,8 @@ public sealed class OuiLookup
 
         var map = new Dictionary<string, string>(40_000, StringComparer.Ordinal);
 
-        using var decompressed = new GZipStream(gzipped, CompressionMode.Decompress);
+        // 引数で受け取ったストリームまで閉じない（所有権は呼び出し元にある）
+        using var decompressed = new GZipStream(gzipped, CompressionMode.Decompress, leaveOpen: true);
         using var reader = new StreamReader(decompressed);
 
         while (reader.ReadLine() is { } line)

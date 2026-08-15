@@ -41,4 +41,14 @@ public static class ProbeStatusExtensions
     /// </summary>
     public static bool CountsAsAttempt(this ProbeStatus status)
         => status is ProbeStatus.Success or ProbeStatus.TimedOut or ProbeStatus.Unreachable or ProbeStatus.Refused;
+
+    /// <summary>レポートに載せる日本語名。テキストと HTML で表記を揃える。</summary>
+    public static string Describe(this ProbeStatus status) => status switch
+    {
+        ProbeStatus.TimedOut => "無応答",
+        ProbeStatus.DnsFailure => "名前を引けない",
+        ProbeStatus.Refused => "接続拒否",
+        ProbeStatus.Unreachable => "到達不能",
+        _ => status.ToString(),
+    };
 }

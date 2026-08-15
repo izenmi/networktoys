@@ -46,10 +46,12 @@ public static class TextReportWriter
         text.AppendLine(Rule);
         text.AppendLine($" {data.Title}");
         text.AppendLine(Rule);
-        text.AppendLine($" 出力日時 : {data.GeneratedAt:yyyy/MM/dd HH:mm:ss}");
+        // 書式は必ず Culture を通す。既定カルチャ任せにすると、和暦や仏暦を
+        // 既定にしている環境で年が「0008」「2569」になる
+        text.AppendLine($" 出力日時 : {data.GeneratedAt.ToString("yyyy/MM/dd HH:mm:ss", Culture)}");
 
         if (data.StartedAt is { } started)
-            text.AppendLine($" 測定開始 : {started:yyyy/MM/dd HH:mm:ss}（{data.IntervalMs} ms 間隔）");
+            text.AppendLine($" 測定開始 : {started.ToString("yyyy/MM/dd HH:mm:ss", Culture)}（{data.IntervalMs} ms 間隔）");
 
         if (data.Note.Length > 0)
         {
@@ -139,7 +141,7 @@ public static class TextReportWriter
 
             text.Append("  ")
                 .Append(TextWidth.Cell(outage.Host, 24)).Append(' ')
-                .Append(TextWidth.Pad($"{start} → {end}", 24)).Append(' ')
+                .Append(TextWidth.Pad($"{start} -> {end}", 24)).Append(' ')
                 .Append(TextWidth.Pad(outage.DurationText, 22)).Append(' ')
                 .AppendLine(DescribeStatus(outage.DominantStatus));
         }
@@ -296,14 +298,7 @@ public static class TextReportWriter
         return "[OK]";
     }
 
-    private static string DescribeStatus(ProbeStatus status) => status switch
-    {
-        ProbeStatus.TimedOut => "無応答",
-        ProbeStatus.DnsFailure => "名前を引けない",
-        ProbeStatus.Refused => "接続拒否",
-        ProbeStatus.Unreachable => "到達不能",
-        _ => status.ToString(),
-    };
+    private static string DescribeStatus(ProbeStatus status) => status.Describe();
 
     private static RttStatisticsView Describe(ReportRow row)
     {
@@ -312,11 +307,11 @@ public static class TextReportWriter
         return new RttStatisticsView(
             s.Attempts,
             s.Successes,
-            s.Attempts == 0 ? "—" : s.LossPercent.ToString("0.0", Culture) + "%",
-            s.Successes == 0 ? "—" : s.AverageMs.ToString("0.00", Culture),
-            s.Successes == 0 ? "—" : s.MinMs.ToString("0.00", Culture),
-            s.Successes == 0 ? "—" : s.MaxMs.ToString("0.00", Culture),
-            s.Successes == 0 ? "—" : s.JitterMs.ToString("0.00", Culture));
+            s.Attempts == 0 ? "-" : s.LossPercent.ToString("0.0", Culture) + "%",
+            s.Successes == 0 ? "-" : s.AverageMs.ToString("0.00", Culture),
+            s.Successes == 0 ? "-" : s.MinMs.ToString("0.00", Culture),
+            s.Successes == 0 ? "-" : s.MaxMs.ToString("0.00", Culture),
+            s.Successes == 0 ? "-" : s.JitterMs.ToString("0.00", Culture));
     }
 
     private static IEnumerable<string> SplitLines(string text)

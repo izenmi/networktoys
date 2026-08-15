@@ -17,8 +17,8 @@ public static class TextWidth
         if (string.IsNullOrEmpty(text)) return 0;
 
         int width = 0;
-        foreach (char c in text)
-            width += WidthOf(c);
+        foreach (Rune rune in text.EnumerateRunes())
+            width += WidthOf(rune);
 
         return width;
     }
@@ -45,29 +45,37 @@ public static class TextWidth
     }
 
     /// <summary>
-    /// 幅に収まるところまで切り詰める。切ったことが分かるよう末尾に … を置く。
+    /// 幅に収まるところまで切り詰める。切ったことが分かるよう末尾に .. を置く。
     /// 全角の途中で切れないよう、幅で数えながら詰める。
+    ///
+    /// 省略記号を「…」にしないのは、あの文字が East Asian Ambiguous で、
+    /// 日本語等幅フォントでは 2 桁に描かれるため。1 桁と数えて置くと
+    /// 切り詰めが起きた行だけ表が 1 桁ずれる（このクラスの存在理由が崩れる）。
+    /// 文字単位ではなく Rune 単位で詰めるのは、絵文字などのサロゲートペアを
+    /// 途中で割ると壊れた文字で終わる不正な文字列になるため。
     /// </summary>
     public static string Truncate(string? text, int width)
     {
         if (string.IsNullOrEmpty(text) || width <= 0) return string.Empty;
         if (Of(text) <= width) return text;
 
+        const string ellipsis = "..";
+
         // 省略記号ぶんの幅を空けておく
-        int budget = width - 1;
+        int budget = width - ellipsis.Length;
         var builder = new StringBuilder();
         int used = 0;
 
-        foreach (char c in text)
+        foreach (Rune rune in text.EnumerateRunes())
         {
-            int w = WidthOf(c);
+            int w = WidthOf(rune);
             if (used + w > budget) break;
 
-            builder.Append(c);
+            builder.Append(rune);
             used += w;
         }
 
-        return builder.Append('…').ToString();
+        return builder.Append(ellipsis).ToString();
     }
 
     /// <summary>幅に収めてから右を埋める。表の 1 マスを作るのに使う。</summary>
@@ -81,6 +89,10 @@ public static class TextWidth
     /// Ambiguous（●▲✕ など）は環境によって幅が変わるため<b>含めない</b>。
     /// 表に使う記号は ASCII に寄せてあるので、ここで悩まなくて済むようにしている。
     /// </summary>
+    private static int WidthOf(Rune rune)
+        // BMP の外（絵文字・CJK 拡張 B 以降）はほぼすべて全角相当
+        => rune.Value > 0xFFFF ? 2 : WidthOf((char)rune.Value);
+
     private static int WidthOf(char c) => c switch
     {
         >= 'ᄀ' and <= 'ᅟ' => 2,   // ハングル字母

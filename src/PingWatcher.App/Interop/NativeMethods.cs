@@ -93,7 +93,8 @@ internal static class NativeMethods
                     result[address.ToString()] = mac;
             }
         }
-        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or AccessViolationException)
+        // AccessViolationException は .NET Core 以降 catch できない（プロセスごと落ちる）ので並べない
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {
             // 取れない環境でもスキャン自体は続けられるようにする
         }

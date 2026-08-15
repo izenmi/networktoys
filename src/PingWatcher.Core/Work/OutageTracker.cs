@@ -67,7 +67,20 @@ public sealed class OutageTracker
         entry.Machine.Observe(sample);
         bool isDown = entry.Machine.State == LinkState.Down;
 
-        if (sample.Status is not (ProbeStatus.Success or ProbeStatus.Refused or ProbeStatus.Pending))
+        if (sample.Status is ProbeStatus.Success or ProbeStatus.Refused)
+        {
+            // 応答が返った時点で、それまでの失敗は「いま続いている連続失敗」ではない。
+            // ここで数え直さないと、不通に至らなかった単発の失敗が次の不通の
+            // MissedProbes と DominantStatus に混入し、証跡の数字が水増しされる
+            // （例: 冒頭の DnsFailure 3 回が、後の本物の疎通断の主因として残る）。
+            // 不通の最中は Close が数字を確定させてから消すので、ここでは触らない
+            if (entry.Current is null)
+            {
+                entry.MissedProbes = 0;
+                entry.StatusCounts.Clear();
+            }
+        }
+        else if (sample.Status is not ProbeStatus.Pending)
         {
             entry.MissedProbes++;
             entry.StatusCounts[sample.Status] = entry.StatusCounts.GetValueOrDefault(sample.Status) + 1;
@@ -86,6 +99,11 @@ public sealed class OutageTracker
 
     private OutageRecord Open(string targetKey, Entry entry, in ProbeSample sample)
     {
+        // 開いている記録を取り残さない。StateOf が状態機械を外へ渡しているため、
+        // 外から Reset などを呼ばれると「開いたまま再度 Open」の経路がありうる
+        if (entry.Current is not null)
+            return entry.Current;
+
         // 最後に応答があった時刻まで遡る。一度も応答が無ければ、その失敗の時刻で代用する
         bool startUnknown = entry.Machine.LastSuccessTicks is null;
         long startedAt = entry.Machine.LastSuccessTicks ?? sample.TimestampTicks;

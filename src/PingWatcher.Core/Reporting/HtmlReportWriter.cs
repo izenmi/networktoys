@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using PingWatcher.Core.Metrics;
+using PingWatcher.Core.Models;
 using PingWatcher.Core.Work;
 
 namespace PingWatcher.Core.Reporting;
@@ -103,6 +104,12 @@ public static class HtmlReportWriter
             html.Append("</tbody>\n</table>\n");
         }
 
+        // いつ落ちていたかは統計の平均値からは読み取れないので、時刻順に別で出す。
+        // テキスト版には前からあった節で、HTML だけ欠けていた
+        AppendOutages(html, data);
+
+        AppendWireless(html, data);
+
         if (data.Work is { } work)
             AppendWorkSections(html, work);
 
@@ -118,6 +125,58 @@ public static class HtmlReportWriter
         html.Append("</body>\n</html>\n");
 
         return html.ToString();
+    }
+
+    /// <summary>不通の記録。機器の再起動やケーブルの抜き差しと突き合わせるため時刻順。</summary>
+    private static void AppendOutages(StringBuilder html, ReportData data)
+    {
+        if (data.Outages is not { Count: > 0 } outages) return;
+
+        html.Append("<h2>不通の記録</h2>\n<table class=\"result\">\n<thead><tr>")
+            .Append("<th>宛先</th><th>開始</th><th>終了</th><th>継続</th><th>主な状態</th>")
+            .Append("</tr></thead>\n<tbody>\n");
+
+        foreach (OutageRecord outage in outages.OrderBy(o => o.StartedAtTicks))
+        {
+            string start = outage.StartUnknown
+                ? "（開始時刻不明）"
+                : outage.StartedAt.ToString("MM/dd HH:mm:ss", CultureInfo.InvariantCulture);
+
+            string end = outage.EndedAt is { } ended
+                ? ended.ToString("MM/dd HH:mm:ss", CultureInfo.InvariantCulture)
+                : "継続中";
+
+            html.Append("<tr>")
+                .Append("<td>").Append(Escape(outage.Host)).Append("</td>")
+                .Append("<td class=\"mono\">").Append(Escape(start)).Append("</td>")
+                .Append("<td class=\"mono\">").Append(Escape(end)).Append("</td>")
+                .Append("<td>").Append(Escape(outage.DurationText)).Append("</td>")
+                .Append("<td>").Append(Escape(outage.DominantStatus.Describe())).Append("</td>")
+                .Append("</tr>\n");
+        }
+
+        html.Append("</tbody>\n</table>\n");
+    }
+
+    /// <summary>無線 LAN の情報。テキスト版と同じく、無い理由も書き残す。</summary>
+    private static void AppendWireless(StringBuilder html, ReportData data)
+    {
+        if (data.Wireless is { Count: > 0 } wireless)
+        {
+            html.Append("<h2>無線 LAN</h2>\n<table class=\"env\">\n");
+
+            foreach ((string label, string value) in wireless)
+            {
+                html.Append("<tr><th>").Append(Escape(label)).Append("</th><td>")
+                    .Append(Escape(value)).Append("</td></tr>\n");
+            }
+
+            html.Append("</table>\n");
+        }
+        else if (data.WirelessNote is { Length: > 0 } note)
+        {
+            html.Append("<h2>無線 LAN</h2>\n<p class=\"note\">").Append(Escape(note)).Append("</p>\n");
+        }
     }
 
     /// <summary>合否を最初に、大きく出す。</summary>

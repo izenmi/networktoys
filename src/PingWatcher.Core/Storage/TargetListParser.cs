@@ -41,8 +41,8 @@ public sealed class TargetListParseResult
 /// </summary>
 public static class TargetListParser
 {
-    /// <summary>EXPing と同じ注釈行の行頭文字。全角スペース(U+3000)を含む。</summary>
-    private static readonly char[] CommentHeads = ['#', ';', '\'', '　'];
+    /// <summary>EXPing と同じ注釈行の行頭文字（このほか全角スペース U+3000 も注釈）。</summary>
+    private static readonly char[] CommentHeads = ['#', ';', '\''];
 
     public static TargetListParseResult Parse(string? text, int limit = IpRangeParser.DefaultLimit)
     {
@@ -60,8 +60,8 @@ public static class TargetListParser
             if (line.Length == 0)
                 continue;
 
-            // 行頭文字の判定は空白を落とす前に行う（全角スペース始まりが注釈のため）
-            if (Array.IndexOf(CommentHeads, line[0]) >= 0)
+            // 全角スペース始まりの判定は空白を落とす前に行う（EXPing の仕様）
+            if (line[0] == '　')
             {
                 result.CommentLines++;
                 continue;
@@ -70,6 +70,15 @@ public static class TargetListParser
             string trimmed = line.Trim();
             if (trimmed.Length == 0)
                 continue;
+
+            // 注釈記号は半角インデントを外してから判定する。ここで拾わないと
+            // 「  # 予備機」が Host="#"・備考「予備機」の偽の宛先として登録され、
+            // 実行時に「名前を引けない」行として一覧に混ざる
+            if (Array.IndexOf(CommentHeads, trimmed[0]) >= 0)
+            {
+                result.CommentLines++;
+                continue;
+            }
 
             // 最初の半角スペース（またはタブ）以降が備考
             int separator = trimmed.IndexOfAny([' ', '\t']);

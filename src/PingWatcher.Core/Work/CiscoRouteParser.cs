@@ -46,6 +46,11 @@ public static partial class CiscoRouteParser
         var nextHops = new List<string>();
         var interfaces = new List<string>();
 
+        // 「10.0.0.0/24 is subnetted」の配下の行はマスクを省いて印字される。
+        // 覚えておいてマスク無しの子行へ付け直さないと、前後で classful 表記と
+        // /24 付き表記が混ざったとき、同じ経路が「消えた」+「増えた」に化ける
+        int? impliedPrefixLength = null;
+
         void Flush()
         {
             if (previous is null) return;
@@ -65,7 +70,20 @@ public static partial class CiscoRouteParser
         {
             string line = rawLine.TrimEnd();
 
-            if (line.Length == 0 || IsNoise(line))
+            if (line.Length == 0)
+                continue;
+
+            Match subnetted = SubnettedHeader().Match(line);
+            if (subnetted.Success)
+            {
+                // variably subnetted の配下は子行が自分のマスクを持つので引き継がない
+                impliedPrefixLength = subnetted.Groups["variably"].Success
+                    ? null
+                    : int.Parse(subnetted.Groups["len"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                continue;
+            }
+
+            if (IsNoise(line))
                 continue;
 
             Match header = RouteHeader().Match(line);
@@ -77,7 +95,7 @@ public static partial class CiscoRouteParser
                 (int? ad, int? metric, string? hop, string? iface) = ParseBody(header.Groups["body"].Value);
 
                 previous = new CiscoRoute(
-                    NormalizePrefix(header.Groups["prefix"].Value),
+                    NormalizePrefix(header.Groups["prefix"].Value, impliedPrefixLength),
                     NormalizeProtocol(header.Groups["code"].Value),
                     ad,
                     metric,
@@ -132,8 +150,12 @@ public static partial class CiscoRouteParser
         Match distance = Distance().Match(body);
         if (distance.Success)
         {
-            ad = int.Parse(distance.Groups["ad"].Value);
-            metric = int.Parse(distance.Groups["metric"].Value);
+            // 貼り付けは壊れたターミナルログのこともあり、\d+ は桁数無制限に
+            // マッチする。Parse だと桁あふれの OverflowException が画面まで抜ける
+            if (int.TryParse(distance.Groups["ad"].Value, out int adValue))
+                ad = adValue;
+            if (int.TryParse(distance.Groups["metric"].Value, out int metricValue))
+                metric = metricValue;
         }
 
         string? nextHop = null;
@@ -158,8 +180,15 @@ public static partial class CiscoRouteParser
         return (ad, metric, nextHop, iface);
     }
 
-    /// <summary>マスクの無い表記でも比べられるよう、書き方を揃える。</summary>
-    private static string NormalizePrefix(string prefix) => prefix.Trim();
+    /// <summary>マスクの無い表記でも比べられるよう、subnetted ヘッダのマスクを付け直す。</summary>
+    private static string NormalizePrefix(string prefix, int? impliedLength)
+    {
+        prefix = prefix.Trim();
+
+        return !prefix.Contains('/', StringComparison.Ordinal) && impliedLength is { } length
+            ? $"{prefix}/{length}"
+            : prefix;
+    }
 
     /// <summary>"O IA" のような複数語のコードから余分な空白を落とす。</summary>
     private static string NormalizeProtocol(string code)
@@ -169,9 +198,14 @@ public static partial class CiscoRouteParser
     [GeneratedRegex(@"^\s*(?<code>[A-Za-z](?:\*|\s+[A-Za-z0-9*]{1,2})*)\s+(?<prefix>\d{1,3}(?:\.\d{1,3}){3}(?:/\d{1,2})?)\s+(?<body>.*)$")]
     private static partial Regex RouteHeader();
 
-    // インデントだけの継続行（[110/2] via ... で始まる）
-    [GeneratedRegex(@"^\s{6,}\[\d+/\d+\]\s+via\s")]
+    // インデントだけの継続行。[110/2] via ... のほか、スタティックの
+    // 等コスト経路は 2 本目以降を距離なしの「via 10.0.0.2」だけで印字する
+    [GeneratedRegex(@"^\s{6,}(?:\[\d+/\d+\]\s+)?via\s")]
     private static partial Regex ContinuationLine();
+
+    // 「10.1.1.0/24 is subnetted, 3 subnets」のようなヘッダ。配下の行のマスクを補う
+    [GeneratedRegex(@"^\s*\d{1,3}(?:\.\d{1,3}){3}/(?<len>\d{1,2})\s+is\s+(?<variably>variably\s+)?subnetted", RegexOptions.IgnoreCase)]
+    private static partial Regex SubnettedHeader();
 
     [GeneratedRegex(@"\[(?<ad>\d+)/(?<metric>\d+)\]")]
     private static partial Regex Distance();

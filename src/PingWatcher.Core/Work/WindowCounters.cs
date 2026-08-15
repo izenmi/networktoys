@@ -22,8 +22,15 @@ public struct WindowCounters
     /// <summary>ロス率の分母になる試行回数。</summary>
     public int Attempts { get; private set; }
 
-    /// <summary>応答があった回数。</summary>
+    /// <summary>接続まで至った回数。RTT の統計の分母。</summary>
     public int Successes { get; private set; }
+
+    /// <summary>
+    /// 何らかの応答が返った回数（成功 + 拒否）。ロス率の分子はこちらから出す。
+    /// TCP の「拒否」を欠測扱いにすると、ポートが閉じているだけの相手が
+    /// 「連続失敗 0 なのにロス率 100%」という自己矛盾した表示になる。
+    /// </summary>
+    public int Responses { get; private set; }
 
     /// <summary>応答があったサンプルの RTT 合計。</summary>
     public double SumMs { get; private set; }
@@ -37,7 +44,7 @@ public struct WindowCounters
 
     public readonly bool HasData => Attempts > 0;
 
-    public readonly double LossPercent => Attempts == 0 ? 0 : (Attempts - Successes) * 100.0 / Attempts;
+    public readonly double LossPercent => Attempts == 0 ? 0 : (Attempts - Responses) * 100.0 / Attempts;
 
     public readonly double AverageMs => Successes == 0 ? 0 : SumMs / Successes;
 
@@ -47,6 +54,7 @@ public struct WindowCounters
         StartedAtTicks = startedAtTicks;
         Attempts = 0;
         Successes = 0;
+        Responses = 0;
         SumMs = 0;
         MinMs = 0;
         MaxMs = 0;
@@ -62,10 +70,11 @@ public struct WindowCounters
         if (sample.Status.CountsAsAttempt())
             Attempts++;
 
-        // TCP の「拒否」は相手が生きている証拠なので、失敗の連続には数えない。
+        // TCP の「拒否」は相手が生きている証拠なので、失敗の連続にもロスにも数えない。
         // ただし RTT の統計には入れない（接続できたわけではないため）
         if (sample.Status is ProbeStatus.Success or ProbeStatus.Refused)
         {
+            Responses++;
             _consecutiveFailures = 0;
         }
         else

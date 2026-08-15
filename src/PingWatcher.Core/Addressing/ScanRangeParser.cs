@@ -38,14 +38,21 @@ public static class ScanRangeParser
 
         foreach (string rawLine in text.Split('\n'))
         {
-            // 行頭文字の判定は空白を落とす前に行う。
-            // Trim() は全角スペースも削るので、先に判定しないと注釈行を取り逃がす。
+            // 全角スペース頭の判定は空白を落とす前に行う（EXPing 流の注釈）。
+            // Trim() は全角スペースも削るので、先に判定しないと取り逃がす。
             string line = rawLine.TrimEnd();
 
-            if (line.Length == 0 || line[0] is '#' or ';' or '\'' or '　')
+            if (line.Length == 0 || line[0] == '　')
                 continue;
 
-            foreach (string token in line.Split(Separators, StringSplitOptions.RemoveEmptyEntries))
+            // 半角のインデントは注釈記号の判定前に外す。表計算やメモ帳から
+            // 貼り付けた「  # 事務所」を注釈と見なせず、エラーの山にしない
+            string trimmed = line.TrimStart(' ', '\t');
+
+            if (trimmed.Length == 0 || trimmed[0] is '#' or ';' or '\'')
+                continue;
+
+            foreach (string token in trimmed.Split(Separators, StringSplitOptions.RemoveEmptyEntries))
             {
                 if (result.Count >= limit)
                 {

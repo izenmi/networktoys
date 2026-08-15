@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using PingWatcher.Core.Storage;
 
@@ -54,7 +55,18 @@ public static class WorkSessionStore
             PingWatcherJsonContext.Default.WorkSessionDocument);
 
         string temporary = path + ".tmp";
-        File.WriteAllText(temporary, json);
+
+        // rename の前にディスクへ届いたことを確かめる。NTFS は rename と
+        // データ書き込みの順序を保証しないため、Flush 無しだと電源断の直後に
+        // 「置き換えは済んだのに中身が 0 バイト」のファイルが残りうる
+        using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        using (var writer = new StreamWriter(stream))
+        {
+            writer.Write(json);
+            writer.Flush();
+            stream.Flush(flushToDisk: true);
+        }
+
         File.Move(temporary, path, overwrite: true);
     }
 
@@ -67,9 +79,11 @@ public static class WorkSessionStore
         if (safe.Length > 40)
             safe = safe[..40];
 
-        return safe.Length > 0
-            ? $"{startedAt:yyyyMMdd-HHmm}-{safe}.json"
-            : $"{startedAt:yyyyMMdd-HHmm}.json";
+        // ファイル名の日時は必ず InvariantCulture で組む。既定カルチャの暦（和暦など）で
+        // 組むと、Ordinal の並べ替えで「新しい順」が成り立たなくなる
+        string stamp = startedAt.ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture);
+
+        return safe.Length > 0 ? $"{stamp}-{safe}.json" : $"{stamp}.json";
     }
 
     /// <summary>保存済みのセッションを新しい順に並べる。</summary>

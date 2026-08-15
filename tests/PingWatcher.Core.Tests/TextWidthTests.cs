@@ -45,8 +45,33 @@ public class TextWidthTests
     {
         string text = TextWidth.Truncate("1階 EPS ラック上段", 10);
 
-        Assert.EndsWith("…", text, StringComparison.Ordinal);
+        // 省略記号は ASCII の「..」。「…」は East Asian Ambiguous で
+        // 日本語等幅フォントでは 2 桁に描かれ、切り詰めた行だけ表がずれる
+        Assert.EndsWith("..", text, StringComparison.Ordinal);
         Assert.True(TextWidth.Of(text) <= 10, $"幅が超えている: {TextWidth.Of(text)}");
+    }
+
+    [Fact]
+    public void Truncating_never_splits_a_surrogate_pair()
+    {
+        // 絵文字はサロゲートペア。char 単位で切ると孤立サロゲートで終わる
+        // 不正な文字列になり、ファイル出力やコピペで化ける
+        string text = TextWidth.Truncate("至急対応🔧🔧🔧🔧🔧", 12);
+
+        Assert.True(TextWidth.Of(text) <= 12);
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (char.IsHighSurrogate(text[i]))
+            {
+                Assert.True(i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]), "上位サロゲートが孤立している");
+                i++;
+            }
+            else
+            {
+                Assert.False(char.IsLowSurrogate(text[i]), "下位サロゲートが孤立している");
+            }
+        }
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Globalization;
 using PingWatcher.Core.Models;
 
 namespace PingWatcher.Core.Work;
@@ -70,11 +71,13 @@ public sealed record OutageRecord(
             double seconds = duration.TotalSeconds;
             double margin = IntervalMs / 1000.0;
 
+            // 小数点は必ず「.」で出す。この文字列は UI だけでなく CSV にも流れるので、
+            // カンマ小数点のカルチャに引きずられると列がずれる
             string body = seconds < 10
-                ? $"約 {seconds:0.0} 秒"
-                : $"約 {seconds:0} 秒";
+                ? string.Create(CultureInfo.InvariantCulture, $"約 {seconds:0.0} 秒")
+                : string.Create(CultureInfo.InvariantCulture, $"約 {seconds:0} 秒");
 
-            return $"{body}（±{margin:0.#} 秒）";
+            return string.Create(CultureInfo.InvariantCulture, $"{body}（±{margin:0.#} 秒）");
         }
     }
 }
