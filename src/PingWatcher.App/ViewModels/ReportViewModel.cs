@@ -17,9 +17,8 @@ public sealed class ReportViewModel : ObservableObject
     private readonly MonitorViewModel _monitor;
     private readonly WifiViewModel _wifi;
 
-    private string _title = "ネットワーク疎通確認";
-    private string _note = string.Empty;
     private string _status = string.Empty;
+    private string _preview = string.Empty;
 
     public ReportViewModel(MonitorViewModel monitor, WifiViewModel wifi)
     {
@@ -40,24 +39,17 @@ public sealed class ReportViewModel : ObservableObject
     /// </summary>
     public RelayCommand SaveTextCommand { get; }
 
-    /// <summary>レポートの見出し。現場名などを入れる。</summary>
-    public string Title
-    {
-        get => _title;
-        set => SetProperty(ref _title, value);
-    }
-
-    /// <summary>実施者のメモ。作業内容や気づいたことを書いて残す。</summary>
-    public string Note
-    {
-        get => _note;
-        set => SetProperty(ref _note, value);
-    }
-
     public string Status
     {
         get => _status;
         private set => SetProperty(ref _status, value);
+    }
+
+    /// <summary>書き出される内容のプレビュー（テキスト形式）。タブを開くたびに作り直す。</summary>
+    public string Preview
+    {
+        get => _preview;
+        private set => SetProperty(ref _preview, value);
     }
 
     private bool CanSave() => _monitor.Rows.Count > 0;
@@ -94,19 +86,7 @@ public sealed class ReportViewModel : ObservableObject
                 ipConfig = capture.Text;
             }
 
-            ReportData data = ReportService.Build(
-                Title,
-                Note,
-                _monitor.Rows,
-                _monitor.NetworkInfo,
-                _monitor.StartedAt,
-                _monitor.IntervalMs,
-                ipConfig,
-                describeKind: _monitor.DescribeEffectiveKind,
-                wireless: _wifi.DescribeForReport(),
-                outages: _monitor.Tracker.Records,
-                wirelessNote: _wifi.ReportNote,
-                wirelessAccessPoints: _wifi.DescribeAccessPointsForReport());
+            ReportData data = BuildData(ipConfig);
 
             switch (format)
             {
@@ -134,22 +114,57 @@ public sealed class ReportViewModel : ObservableObject
         }
     }
 
-    /// <summary>記録タブを開いたときに、保存できるかを見直す。</summary>
+    /// <summary>記録タブを開いたときに、保存できるかとプレビューを見直す。</summary>
     public void OnActivated()
     {
         SaveHtmlCommand.RaiseCanExecuteChanged();
         SaveCsvCommand.RaiseCanExecuteChanged();
         SaveTextCommand.RaiseCanExecuteChanged();
+        RefreshPreview();
     }
 
-    /// <summary>入力を起動時の状態へ戻す。</summary>
+    /// <summary>起動時の状態へ戻す。</summary>
     public void Reset()
     {
-        Title = "ネットワーク疎通確認";
-        Note = string.Empty;
         Status = string.Empty;
+        Preview = string.Empty;
     }
 
+    /// <summary>
+    /// 出力内容のプレビューを作り直す。ipconfig /all は取得に時間がかかるので
+    /// プレビューには入れず、保存時にだけ取得して差し込む。
+    /// </summary>
+    private void RefreshPreview()
+    {
+        try
+        {
+            Preview = _monitor.Rows.Count == 0
+                ? "測定結果がまだありません。Ping タブで測定すると、ここに書き出される内容が表示されます。"
+                : TextReportWriter.Render(BuildData(ipConfig: null))
+                  + Environment.NewLine
+                  + "※ HTML/テキストでの保存時は、ここに [ipconfig /all] の節も加わります。";
+        }
+        catch (Exception ex)
+        {
+            Preview = "プレビューを作れませんでした。";
+            CrashLog.Write(ex, "ReportViewModel.RefreshPreview");
+        }
+    }
+
+    /// <summary>保存とプレビューで同じ内容を組む(表題とメモは 2026-08-16 に廃止)。</summary>
+    private ReportData BuildData(string? ipConfig) => ReportService.Build(
+        "",   // 空なら既定の表題になる
+        "",
+        _monitor.Rows,
+        _monitor.NetworkInfo,
+        _monitor.StartedAt,
+        _monitor.IntervalMs,
+        ipConfig,
+        describeKind: _monitor.DescribeEffectiveKind,
+        wireless: _wifi.DescribeForReport(),
+        outages: _monitor.Tracker.Records,
+        wirelessNote: _wifi.ReportNote,
+        wirelessAccessPoints: _wifi.DescribeAccessPointsForReport());
 }
 
 /// <summary>書き出す形。</summary>

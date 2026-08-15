@@ -5,3 +5,4 @@ obj/
 publish/
 artifacts/
 selftest.log
+screen-*.png
