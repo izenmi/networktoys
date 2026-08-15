@@ -196,6 +196,15 @@
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
+                        <!-- 選択行の詳細。一覧に列を増やさずに済ませるための置き場 -->
+                        <Border DockPanel.Dock="Bottom"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="6" Padding="8,5" Margin="0,6,0,0">
+                            <TextBlock Text="{Binding DetailText}"
+                                       Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+
                         <!-- 一覧本体。仮想化を効かせるため行高は固定にしている -->
                         <ListBox ItemsSource="{Binding Rows}"
                                  SelectedItem="{Binding SelectedRow}"
@@ -289,7 +298,8 @@
                                         Style="{StaticResource Button.Subtle}" />
                             </StackPanel>
 
-                            <ProgressBar Value="{Binding Progress}" Maximum="100" Margin="0,8,0,0" />
+                            <!-- RangeBase.Value は既定が TwoWay。読み取り専用プロパティに繋ぐので OneWay を明示する -->
+                            <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Margin="0,8,0,0" />
 
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        Margin="0,6,0,0" TextWrapping="Wrap" />
@@ -479,11 +489,53 @@
                                      Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
                                      Margin="0,0,6,0" />
                             <Button Content="経路を調べる" Command="{Binding TraceCommand}" Margin="0,0,6,0" />
+                            <Button Content="MTU を調べる" Command="{Binding MtuCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="経路上で分割せずに通る最大パケットサイズを二分探索で求めます。" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,10,0" />
+                            <CheckBox Content="60秒ごとに見張る" IsChecked="{Binding IsWatching}"
+                                      VerticalAlignment="Center" Margin="0,0,10,0"
+                                      ToolTip="定期的に経路を調べ直し、変わったら下に記録します。" />
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
+
+                        <!-- 経路が変わった記録 -->
+                        <Border DockPanel.Dock="Bottom" Margin="0,6,0,0" MaxHeight="96"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="6" Padding="8,5">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <!-- 変化が 1 件も無いうちは場所を取らない -->
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Changes.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="経路の変化" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding Changes}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                                    <TextBlock Text="{Binding Time}" Style="{StaticResource Mono}" Margin="0,0,8,0" />
+                                                    <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding MtuText}"
+                                   Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" Margin="4,6,0,0" />
 
                         <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                             <Grid.ColumnDefinitions>

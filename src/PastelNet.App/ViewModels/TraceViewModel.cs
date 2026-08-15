@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Windows.Threading;
 using PastelNet.App.Mvvm;
 using PastelNet.App.Services;
 
@@ -53,6 +54,29 @@ public sealed class TraceHopViewModel : ObservableObject
     }
 }
 
+/// <summary>経路が変わったときの記録。</summary>
+public sealed class RouteChangeViewModel
+{
+    public RouteChangeViewModel(DateTime detectedAt, IReadOnlyList<string> before, IReadOnlyList<string> after)
+    {
+        Time = detectedAt.ToString("MM/dd HH:mm:ss");
+
+        string[] removed = [.. before.Where(h => h != "*" && !after.Contains(h))];
+        string[] added = [.. after.Where(h => h != "*" && !before.Contains(h))];
+
+        var parts = new List<string> { $"{before.Count} → {after.Count} ホップ" };
+
+        if (removed.Length > 0) parts.Add($"消えた: {string.Join(", ", removed)}");
+        if (added.Length > 0) parts.Add($"現れた: {string.Join(", ", added)}");
+
+        Summary = string.Join(" ／ ", parts);
+    }
+
+    public string Time { get; }
+
+    public string Summary { get; }
+}
+
 /// <summary>
 /// 経路（traceroute）画面。
 /// TTL を並列に投げるので、逐次実行のツールのように 1 ホップずつ待たされない。
@@ -68,21 +92,69 @@ public sealed class TraceViewModel : ObservableObject
     /// </summary>
     private const int StaggerMs = 25;
 
+    /// <summary>経路の見張り間隔。頻繁に打つと経路上のルータに負担をかける。</summary>
+    private static readonly TimeSpan WatchInterval = TimeSpan.FromSeconds(60);
+
     private string _host = "8.8.8.8";
     private string _status = string.Empty;
+    private string _mtuText = string.Empty;
     private bool _isBusy;
+    private bool _isWatching;
     private CancellationTokenSource? _cts;
+    private DispatcherTimer? _watchTimer;
+
+    // ECMP で経路が揺れるだけのことがあるので、1 回違っただけでは変化とみなさない
+    private string[]? _lastPath;
+    private string[]? _pendingPath;
 
     public TraceViewModel()
     {
         TraceCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && !string.IsNullOrWhiteSpace(Host));
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
+        MtuCommand = new RelayCommand(() => _ = RunMtuAsync(), () => !IsBusy && !string.IsNullOrWhiteSpace(Host));
     }
 
     public ObservableCollection<TraceHopViewModel> Hops { get; } = [];
 
+    /// <summary>経路が変わった記録。新しいものが上に来る。</summary>
+    public ObservableCollection<RouteChangeViewModel> Changes { get; } = [];
+
+    /// <summary>
+    /// 定期的に経路を調べ直して、変化を記録する。
+    /// 障害の切り分けで「いつ経路が変わったか」が分かると当たりが付けやすい。
+    /// </summary>
+    public bool IsWatching
+    {
+        get => _isWatching;
+        set
+        {
+            if (!SetProperty(ref _isWatching, value)) return;
+
+            if (value)
+            {
+                _watchTimer ??= new DispatcherTimer(DispatcherPriority.Background) { Interval = WatchInterval };
+                _watchTimer.Tick -= OnWatchTick;
+                _watchTimer.Tick += OnWatchTick;
+                _watchTimer.Start();
+                Status = $"{WatchInterval.TotalSeconds:0} 秒ごとに経路を調べ直します。";
+            }
+            else
+            {
+                _watchTimer?.Stop();
+            }
+        }
+    }
+
     public RelayCommand TraceCommand { get; }
     public RelayCommand CancelCommand { get; }
+    public RelayCommand MtuCommand { get; }
+
+    /// <summary>Path MTU の探索結果。</summary>
+    public string MtuText
+    {
+        get => _mtuText;
+        private set => SetProperty(ref _mtuText, value);
+    }
 
     public string Host
     {
@@ -109,6 +181,7 @@ public sealed class TraceViewModel : ObservableObject
 
             TraceCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
+            MtuCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -142,6 +215,8 @@ public sealed class TraceViewModel : ObservableObject
                 viewModels.Add(vm);
             }
 
+            CheckRouteChange(hops);
+
             bool arrived = hops.Count > 0 && hops[^1].IsDestination;
             Status = arrived
                 ? $"{destination} まで {hops.Count} ホップで到達しました。"
@@ -158,6 +233,97 @@ public sealed class TraceViewModel : ObservableObject
         {
             Status = $"経路の取得に失敗しました: {ex.Message}";
             CrashLog.Write(ex, "TraceViewModel.RunAsync");
+        }
+        finally
+        {
+            _cts?.Dispose();
+            _cts = null;
+            IsBusy = false;
+        }
+    }
+
+    private void OnWatchTick(object? sender, EventArgs e)
+    {
+        if (IsBusy) return;   // 前回がまだ終わっていなければ見送る
+        _ = RunAsync();
+    }
+
+    /// <summary>
+    /// 経路が変わったかを判定する。
+    ///
+    /// ECMP（等コストの複数経路）があると、同じ宛先でもパケットごとに経路が
+    /// ばらつく。1 回違っただけで「変化」と鳴らすと誤検知だらけになるので、
+    /// <b>2 回続けて同じ新しい経路</b>が観測されたときだけ記録する。
+    /// </summary>
+    private void CheckRouteChange(IReadOnlyList<TraceHop> hops)
+    {
+        string[] path = [.. hops.Select(h => h.Address?.ToString() ?? "*")];
+
+        if (_lastPath is null)
+        {
+            _lastPath = path;
+            return;
+        }
+
+        if (path.SequenceEqual(_lastPath))
+        {
+            _pendingPath = null;
+            return;
+        }
+
+        if (_pendingPath is not null && path.SequenceEqual(_pendingPath))
+        {
+            Changes.Insert(0, new RouteChangeViewModel(DateTime.Now, _lastPath, path));
+            _lastPath = path;
+            _pendingPath = null;
+
+            // 古い記録は落とす
+            while (Changes.Count > 50)
+                Changes.RemoveAt(Changes.Count - 1);
+        }
+        else
+        {
+            _pendingPath = path;
+        }
+    }
+
+    /// <summary>
+    /// 経路上で通る最大パケットサイズを調べる。
+    /// VPN やトンネルの内側で通信が詰まるときの切り分けに使う。
+    /// </summary>
+    private async Task RunMtuAsync()
+    {
+        string host = Host.Trim();
+
+        IsBusy = true;
+        MtuText = "調べています…";
+
+        _cts = new CancellationTokenSource();
+        CancellationToken token = _cts.Token;
+
+        try
+        {
+            IPAddress? destination = await ResolveAsync(host, token);
+            if (destination is null)
+            {
+                MtuText = $"{host} の名前を解決できませんでした。";
+                return;
+            }
+
+            PathMtuResult result = await PathMtuProbe.DiscoverAsync(destination, 2000, token);
+
+            MtuText = result.Mtu > 0
+                ? $"MTU {result.Mtu} バイト（{(result.Confirmed ? "確定" : "推定")}）— {result.Note}"
+                : result.Note;
+        }
+        catch (OperationCanceledException)
+        {
+            MtuText = "中断しました。";
+        }
+        catch (Exception ex)
+        {
+            MtuText = $"調べられませんでした: {ex.Message}";
+            CrashLog.Write(ex, "TraceViewModel.RunMtuAsync");
         }
         finally
         {

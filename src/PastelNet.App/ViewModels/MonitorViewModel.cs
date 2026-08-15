@@ -5,7 +5,9 @@ using System.Text;
 using System.Windows.Threading;
 using PastelNet.App.Mvvm;
 using PastelNet.App.Services;
+using PastelNet.Core.Metrics;
 using PastelNet.Core.Models;
+using PastelNet.Core.Quality;
 using PastelNet.Core.Storage;
 
 namespace PastelNet.App.ViewModels;
@@ -29,6 +31,7 @@ public sealed class MonitorViewModel : ObservableObject
     private string _listSummary = string.Empty;
     private TargetRowViewModel? _selectedRow;
     private string _statusMessage = string.Empty;
+    private string _detailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
 
     public MonitorViewModel()
     {
@@ -142,7 +145,21 @@ public sealed class MonitorViewModel : ObservableObject
     public TargetRowViewModel? SelectedRow
     {
         get => _selectedRow;
-        set => SetProperty(ref _selectedRow, value);
+        set
+        {
+            if (SetProperty(ref _selectedRow, value))
+                UpdateDetail();
+        }
+    }
+
+    /// <summary>
+    /// 選択した行の詳しい統計。一覧に列を増やすと見通しが悪くなるので、
+    /// ジッタや MOS のような「必要なときだけ見たい値」はここに出す。
+    /// </summary>
+    public string DetailText
+    {
+        get => _detailText;
+        private set => SetProperty(ref _detailText, value);
     }
 
     public string StatusMessage
@@ -193,6 +210,40 @@ public sealed class MonitorViewModel : ObservableObject
 
         foreach (TargetRowViewModel row in _touched)
             row.Refresh();
+
+        if (SelectedRow is { } selected && _touched.Contains(selected))
+            UpdateDetail();
+    }
+
+    private void UpdateDetail()
+    {
+        if (SelectedRow is not { } row)
+        {
+            DetailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
+            return;
+        }
+
+        RttStatistics stats = row.Statistics;
+
+        if (stats.Attempts == 0)
+        {
+            DetailText = $"{row.Host} — まだ測定していません。";
+            return;
+        }
+
+        VoiceQuality quality = MosCalculator.Estimate(stats.AverageMs, stats.JitterMs, stats.LossPercent);
+
+        DetailText = string.Join("　　", (string[])
+        [
+            row.Host,
+            $"最小 {TargetRowViewModel.FormatMilliseconds(stats.MinMs)}",
+            $"平均 {TargetRowViewModel.FormatMilliseconds(stats.AverageMs)}",
+            $"最大 {TargetRowViewModel.FormatMilliseconds(stats.MaxMs)}",
+            $"p95 {TargetRowViewModel.FormatMilliseconds(stats.P95Ms)}",
+            $"ジッタ {TargetRowViewModel.FormatMilliseconds(stats.JitterMs)}",
+            $"ロス {TargetRowViewModel.FormatLoss(stats.LossPercent)}（{stats.Attempts - stats.Successes} / {stats.Attempts} 回）",
+            $"通話品質の目安 MOS {quality.Mos:0.0}（{quality.Grade}）",
+        ]);
     }
 
     /// <summary>

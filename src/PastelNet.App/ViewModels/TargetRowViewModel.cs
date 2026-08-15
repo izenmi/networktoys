@@ -42,6 +42,7 @@ public sealed class TargetRowViewModel : ObservableObject
     private readonly MonitorSettings _settings;
     private readonly ProbeSample[] _scratch;
 
+    private RttStatistics _statistics = RttStatistics.Empty;
     private RowState _state = RowState.Pending;
     private string _address = "—";
     private string _latestRtt = "—";
@@ -121,6 +122,10 @@ public sealed class TargetRowViewModel : ObservableObject
         RttStatistics stats = RttStatistics.Compute(_scratch.AsSpan(0, count));
         ProbeSample latest = _history.Latest;
 
+        // 一覧には出さない詳しい統計。選択された行だけ画面下に出す
+        // （列を増やすと一覧性が落ちるため）
+        _statistics = stats;
+
         State = latest.Status switch
         {
             ProbeStatus.Success when latest.RttMs >= _settings.SlowThresholdMs => RowState.Slow,
@@ -140,6 +145,9 @@ public sealed class TargetRowViewModel : ObservableObject
 
         HistoryChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>直近の統計。詳細表示に使う。</summary>
+    internal RttStatistics Statistics => _statistics;
 
     /// <summary>スパークライン描画用に履歴を書き出す。</summary>
     public int CopyHistory(Span<ProbeSample> destination)
