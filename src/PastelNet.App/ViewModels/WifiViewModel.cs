@@ -319,4 +319,23 @@ public sealed class WifiViewModel : ObservableObject
             Status = $"設定を開けませんでした: {ex.Message}";
         }
     }
+
+    /// <summary>結果を起動時の状態へ戻す。走っていれば止める。</summary>
+    public void Reset()
+    {
+        _cts?.Cancel();
+
+        AccessPoints.Clear();
+        Channels24.Clear();
+        Channels5.Clear();
+
+        _rssiHistory.Clear();
+        _lastScan = DateTime.MinValue;
+        RssiHistoryChanged?.Invoke(this, EventArgs.Empty);
+
+        ConnectionSummary = "—";
+        Ssid = Bssid = Vendor = Signal = Channel = PhyType = Security = LinkRate = Adapter = "—";
+        Status = "「更新」を押すと周辺のアクセスポイントを調べます。";
+    }
+
 }

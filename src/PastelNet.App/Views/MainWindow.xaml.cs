@@ -50,6 +50,36 @@ public partial class MainWindow : Window
         => Topmost = TopmostToggle.IsChecked == true;
 
     /// <summary>
+    /// 測った結果をすべて捨てて起動直後に戻す。宛先リストだけは残す。
+    ///
+    /// 作業中に誤って押すと、作業前の記録も不通の記録も消えて取り返しがつかない。
+    /// 元に戻す手段が無い操作なので、ここだけは確認を挟む。
+    /// </summary>
+    private void OnClearAll(object sender, RoutedEventArgs e)
+    {
+        MessageBoxResult answer = MessageBox.Show(
+            this,
+            "測定結果・作業の記録・各画面の入力を、起動直後の状態に戻します。\n" +
+            "宛先リストは残ります。保存済みのレポートやセッションのファイルは消えません。\n\n" +
+            "元に戻せません。実行しますか？",
+            "クリア",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Warning,
+            MessageBoxResult.Cancel);
+
+        if (answer != MessageBoxResult.OK) return;
+
+        try
+        {
+            _shell.ClearAll();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnClearAll");
+        }
+    }
+
+    /// <summary>
     /// 右クリックされた行を取り出す。
     ///
     /// <see cref="ContextMenu"/> は論理ツリーが本体から切れているため

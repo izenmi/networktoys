@@ -46,6 +46,9 @@ public sealed class ScanViewModel : ObservableObject
     private readonly ScanService _service = new();
     private readonly Action<IEnumerable<string>> _addToTargets;
 
+    /// <summary>起動時のスキャン範囲。クリアで戻すために覚えておく。</summary>
+    private readonly string _defaultRange;
+
     private string _rangeText;
     private string _preview = string.Empty;
     private string _status = string.Empty;
@@ -58,7 +61,7 @@ public sealed class ScanViewModel : ObservableObject
     public ScanViewModel(string? defaultRange, Action<IEnumerable<string>> addToTargets)
     {
         _addToTargets = addToTargets;
-        _rangeText = defaultRange ?? "192.168.1.0/24";
+        _rangeText = _defaultRange = defaultRange ?? "192.168.1.0/24";
 
         ScanCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
@@ -209,4 +212,20 @@ public sealed class ScanViewModel : ObservableObject
         _addToTargets(Results.Select(r => r.TargetLine));
         Status = $"{Results.Count} 台を宛先リストへ書き出しました。「宛先」タブで内容を確かめて反映してください。";
     }
+
+    /// <summary>結果と入力を起動時の状態へ戻す。走っていれば止める。</summary>
+    public void Reset()
+    {
+        _cts?.Cancel();
+
+        Results.Clear();
+        AddToTargetsCommand.RaiseCanExecuteChanged();
+
+        RangeText = _defaultRange;
+        ResolveNames = true;
+        ScanPorts = false;
+        Progress = 0;
+        Status = string.Empty;
+    }
+
 }

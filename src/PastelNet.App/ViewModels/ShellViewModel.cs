@@ -41,4 +41,25 @@ public sealed class ShellViewModel
 
     /// <summary>機器の出力（show ip route / show run）を作業前後で見比べる。</summary>
     public DeviceCompareViewModel DeviceCompare { get; }
+
+    /// <summary>
+    /// 測った結果をすべて捨てて、起動直後の状態へ戻す。
+    ///
+    /// <b>宛先リストだけは残す。</b>次の現場でも同じ宛先を測ることが多く、
+    /// 打ち直す手間の方が大きい。逆に、前の現場の測定結果が残っていると
+    /// 作業前後の比較が狂うので、それ以外は入力欄も含めて戻す。
+    ///
+    /// 保存済みのレポートや作業セッションのファイルには触れない。
+    /// </summary>
+    public void ClearAll()
+    {
+        Monitor.Reset();
+        Work.Reset();
+        DeviceCompare.Reset();
+        Scan.Reset();
+        Dns.Reset();
+        Trace.Reset();
+        Wifi.Reset();
+        Report.Reset();
+    }
 }

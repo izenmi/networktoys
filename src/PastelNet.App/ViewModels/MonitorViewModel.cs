@@ -656,4 +656,28 @@ public sealed class MonitorViewModel : ObservableObject
 
         yield return new Target { Host = "8.8.8.8", Comment = "外部疎通の基準" };
     }
+    /// <summary>
+    /// 測定を止め、結果を捨てて起動直後の状態へ戻す。
+    /// <b>宛先そのものは残す。</b>消したいのは測った記録であって、
+    /// 打ち込んだ宛先リストではない。
+    /// </summary>
+    public void Reset()
+    {
+        if (IsRunning)
+            _ = StopAsync();
+
+        ClearHistory();
+
+        // 不通の記録も捨てる。作業タブの判定がここを見ているため、
+        // 残すと「クリアしたのに前の障害が出てくる」ことになる
+        Tracker = new OutageTracker(_settings.IntervalMs);
+        StartedAt = null;
+
+        SelectedRow = null;
+        DetailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
+        TcpPort = "443";
+        IsCompact = true;
+        StatusMessage = string.Empty;
+    }
+
 }

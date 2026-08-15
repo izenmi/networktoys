@@ -274,4 +274,15 @@ public sealed class DeviceCompareViewModel : ObservableObject
             Status = $"読み込めませんでした: {ex.Message}";
         }
     }
+
+    /// <summary>貼り付けた内容と結果を起動時の状態へ戻す。</summary>
+    public void Reset()
+    {
+        Clear();
+        SelectedMode = Modes[0];
+        Note = string.Empty;
+        OnPropertyChanged(nameof(HasNote));
+        CompareCommand.RaiseCanExecuteChanged();
+    }
+
 }

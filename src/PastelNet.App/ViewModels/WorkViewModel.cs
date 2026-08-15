@@ -491,4 +491,15 @@ public sealed class WorkViewModel : ObservableObject
             routeDiff,
             [.. NeighborChanges]);
     }
+    /// <summary>作業の記録と入力を起動時の状態へ戻す。保存済みのファイルには触れない。</summary>
+    public void Reset()
+    {
+        SessionName = string.Empty;
+        MarkerText = string.Empty;
+        Note = string.Empty;
+
+        StartNewSession();
+        Status = "測定を始めてしばらくしたら「作業前として記録」を押してください。";
+    }
+
 }

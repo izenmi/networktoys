@@ -363,6 +363,86 @@
         </Setter>
     </Style>
 
+    <!--
+        ===== 一覧 =====
+
+        WPF の既定の ListBox は Foreground にシステム色（＝黒）を入れる。
+        そこから各行の TextBlock へ継承されるため、暗い配色にしても
+        宛先名だけが黒いまま残っていた。明示的に上書きしておく。
+        ItemsControl と違って ListBox / ListView は既定スタイルを持つので、
+        「何も指定しなければ親から継承される」が成り立たない。
+    -->
+    <Style TargetType="ListBox">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+    </Style>
+
+    <Style TargetType="ListView">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!--
+        ===== 右クリックメニューとツールチップ =====
+
+        これらも既定ではシステム色で描かれる。暗い配色のときだけ
+        白い箱が飛び出してくると目に刺さるので、面と文字を合わせる。
+    -->
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="2" />
+    </Style>
+
+    <Style TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="8,3" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{DynamicResource Radius.Chip}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Separator">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="4,3" />
+        <Setter Property="Background" Value="{DynamicResource Brush.Border}" />
+    </Style>
+
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="7,4" />
+        <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
+    </Style>
+
     <!-- ===== スクロールバー(細くして圧迫感を減らす) ===== -->
     <Style x:Key="ScrollBar.Thumb" TargetType="Thumb">
         <Setter Property="IsTabStop" Value="False" />

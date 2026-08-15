@@ -226,7 +226,7 @@
             </DataTemplate.Triggers>
         </DataTemplate>
 
-        <Style x:Key="CompactRowContainer" TargetType="ListBoxItem">
+        <Style x:Key="CompactRowContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -270,7 +270,7 @@
         </Style>
 
         <!-- 行コンテナ。選択の見た目だけ差し替え、既定の青い選択色は使わない -->
-        <Style x:Key="TargetRowContainer" TargetType="ListBoxItem">
+        <Style x:Key="TargetRowContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
             <Setter Property="Padding" Value="4,0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Template">
@@ -326,7 +326,7 @@
             仮想化が効くのは詳細表示のときだけ。多段は折り返しの都合で全件を組み立てる。
             参照するテンプレートより後に置くこと（StaticResource は前方参照できない）。
         -->
-        <Style x:Key="TargetListBox" TargetType="ListBox">
+        <Style x:Key="TargetListBox" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -399,6 +399,15 @@
                            VerticalAlignment="Center" MaxWidth="260"
                            TextTrimming="CharacterEllipsis" Margin="0,0,14,0" />
             </StackPanel>
+
+            <!--
+                測った結果をすべて捨てて、起動直後に戻す。宛先リストだけは残す。
+                取り返しがつかないので、押したら確認を挟む。
+            -->
+            <Button Content="クリア" Click="OnClearAll"
+                    Style="{StaticResource Button.Subtle}"
+                    Margin="0,0,8,0"
+                    ToolTip="測定結果・作業の記録・各画面の入力を、起動直後の状態に戻します（宛先リストは残ります）。" />
 
             <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
             <Button x:Name="ThemeToggle" Click="OnThemeToggle"

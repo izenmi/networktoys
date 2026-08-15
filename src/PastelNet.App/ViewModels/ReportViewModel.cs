@@ -115,4 +115,13 @@ public sealed class ReportViewModel : ObservableObject
         SaveHtmlCommand.RaiseCanExecuteChanged();
         SaveCsvCommand.RaiseCanExecuteChanged();
     }
+
+    /// <summary>入力を起動時の状態へ戻す。</summary>
+    public void Reset()
+    {
+        Title = "ネットワーク疎通確認";
+        Note = string.Empty;
+        Status = string.Empty;
+    }
+
 }

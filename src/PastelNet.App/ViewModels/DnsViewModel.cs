@@ -66,6 +66,9 @@ public sealed class DnsViewModel : ObservableObject
     private string _selectedType = "A";
     private string _serversText = string.Empty;
     private string _status = string.Empty;
+
+    /// <summary>起動時に組み立てた比較先。クリアで戻すために覚えておく。</summary>
+    private readonly string _defaultServersText;
     private bool _isBusy;
 
     public DnsViewModel(IReadOnlyList<IPAddress> systemDnsServers)
@@ -79,7 +82,7 @@ public sealed class DnsViewModel : ObservableObject
         if (!servers.Contains("1.1.1.1", StringComparer.Ordinal))
             servers.Add("1.1.1.1");
 
-        _serversText = string.Join('\n', servers);
+        _serversText = _defaultServersText = string.Join('\n', servers);
 
         QueryCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && !string.IsNullOrWhiteSpace(Name));
     }
@@ -178,4 +181,15 @@ public sealed class DnsViewModel : ObservableObject
             IsBusy = false;
         }
     }
+
+    /// <summary>結果と入力を起動時の状態へ戻す。</summary>
+    public void Reset()
+    {
+        Results.Clear();
+        Name = "www.google.com";
+        SelectedType = "A";
+        ServersText = _defaultServersText;
+        Status = string.Empty;
+    }
+
 }

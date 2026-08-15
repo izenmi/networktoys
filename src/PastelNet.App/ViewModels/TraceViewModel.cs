@@ -373,4 +373,24 @@ public sealed class TraceViewModel : ObservableObject
                 vm.HostName = name;
         }
     }
+
+    /// <summary>結果と入力を起動時の状態へ戻す。走っていれば止める。</summary>
+    public void Reset()
+    {
+        _cts?.Cancel();
+        IsWatching = false;
+
+        Hops.Clear();
+        Changes.Clear();
+
+        // 経路の変化判定に使う記憶も捨てる。残すと次の 1 回目が誤って「変化」になる
+        _lastPath = null;
+        _pendingPath = null;
+
+        Host = "8.8.8.8";
+        HostName = string.Empty;
+        MtuText = string.Empty;
+        Status = string.Empty;
+    }
+
 }
