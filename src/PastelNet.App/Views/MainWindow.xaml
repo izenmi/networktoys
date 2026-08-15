@@ -1840,6 +1840,9 @@
 
                         <StackPanel Orientation="Horizontal">
                             <Button Content="HTML で保存" Command="{Binding SaveHtmlCommand}" Margin="0,0,6,0" />
+                            <Button Content="テキストで保存" Command="{Binding SaveTextCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="等幅で読む前提の記録です。報告書に貼る・チケットに残す用途に。ipconfig /all と無線の情報も入ります。" />
                             <Button Content="CSV で保存" Command="{Binding SaveCsvCommand}"
                                     Style="{StaticResource Button.Subtle}" />
                         </StackPanel>

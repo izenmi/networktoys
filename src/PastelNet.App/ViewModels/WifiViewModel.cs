@@ -338,4 +338,44 @@ public sealed class WifiViewModel : ObservableObject
         Status = "「更新」を押すと周辺のアクセスポイントを調べます。";
     }
 
+    /// <summary>
+    /// 記録に載せる無線の情報。まだ調べていなければ null。
+    ///
+    /// <b>ここから勝手にスキャンはしない。</b>Windows 11 24H2 以降はスキャンに
+    /// 位置情報の同意が要るため、記録を書き出した拍子に許可を求めることになる。
+    /// 無線画面を開いたときに取った内容を、そのまま載せる。
+    /// </summary>
+    public IReadOnlyList<(string Label, string Value)>? DescribeForReport()
+    {
+        if (_lastScan == DateTime.MinValue && Ssid == "—")
+            return null;
+
+        var items = new List<(string, string)>
+        {
+            ("状態", ConnectionSummary),
+            ("SSID", Ssid),
+            ("BSSID", Bssid),
+            ("メーカー", Vendor),
+            ("信号", Signal),
+            ("チャンネル", Channel),
+            ("規格", PhyType),
+            ("暗号化", Security),
+            ("リンク速度", LinkRate),
+            ("アダプター", Adapter),
+        };
+
+        if (_lastScan != DateTime.MinValue)
+        {
+            items.Add(("周辺の AP", $"{AccessPoints.Count} 件"));
+            items.Add(("取得時刻", _lastScan.ToString("yyyy/MM/dd HH:mm:ss")));
+        }
+
+        return items;
+    }
+
+    /// <summary>情報が無いときに記録へ書く理由。空欄のまま出すと不親切。</summary>
+    public string? ReportNote => DescribeForReport() is null
+        ? "無線 LAN の情報は取得していません（「無線」タブを開くと取得します）。"
+        : null;
+
 }

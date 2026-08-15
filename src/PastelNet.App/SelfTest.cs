@@ -330,6 +330,32 @@ internal static class SelfTest
             }
         });
 
+        Check("記録をテキストで書き出せる", () =>
+        {
+            var data = new Core.Reporting.ReportData(
+                "自己診断",
+                DateTime.Now,
+                "備考",
+                DateTime.Now,
+                1000,
+                [("IP", "127.0.0.1")],
+                [new Core.Reporting.ReportRow(
+                    "127.0.0.1", "127.0.0.1", "1階 EPS", "ICMP",
+                    new Core.Metrics.RttStatistics(10, 0, 100, 0, 0, 0, 0, 0),
+                    1.0, "悪い", [], "不達", true)],
+                IpConfig: "Windows IP 構成",
+                Wireless: [("SSID", "office")]);
+
+            string text = Core.Reporting.TextReportWriter.Render(data);
+
+            Assert(text.Contains("[NG]", StringComparison.Ordinal), "応答なしの印が出ていない");
+            Assert(text.Contains("1階 EPS", StringComparison.Ordinal), "日本語の備考が落ちている");
+            Assert(text.Contains("[ipconfig /all]", StringComparison.Ordinal), "ipconfig の節が無い");
+            Assert(text.Contains("[無線 LAN]", StringComparison.Ordinal), "無線の節が無い");
+
+            log.AppendLine($"        テキスト記録: {text.Split('\n').Length} 行");
+        });
+
         Check("日本語テキストを整形できる(フォント初期化の確認)", () =>
         {
             var text = new FormattedText(

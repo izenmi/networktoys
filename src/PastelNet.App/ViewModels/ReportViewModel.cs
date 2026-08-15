@@ -15,21 +15,30 @@ namespace PastelNet.App.ViewModels;
 public sealed class ReportViewModel : ObservableObject
 {
     private readonly MonitorViewModel _monitor;
+    private readonly WifiViewModel _wifi;
 
     private string _title = "ネットワーク疎通確認";
     private string _note = string.Empty;
     private string _status = string.Empty;
 
-    public ReportViewModel(MonitorViewModel monitor)
+    public ReportViewModel(MonitorViewModel monitor, WifiViewModel wifi)
     {
         _monitor = monitor;
+        _wifi = wifi;
 
-        SaveHtmlCommand = new RelayCommand(() => _ = SaveAsync(html: true), CanSave);
-        SaveCsvCommand = new RelayCommand(() => _ = SaveAsync(html: false), CanSave);
+        SaveHtmlCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Html), CanSave);
+        SaveCsvCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Csv), CanSave);
+        SaveTextCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Text), CanSave);
     }
 
     public RelayCommand SaveHtmlCommand { get; }
     public RelayCommand SaveCsvCommand { get; }
+
+    /// <summary>
+    /// テキストでの書き出し。報告書に貼る・チケットに残す用途では、
+    /// HTML より扱いやすいことが多い。
+    /// </summary>
+    public RelayCommand SaveTextCommand { get; }
 
     /// <summary>レポートの見出し。現場名などを入れる。</summary>
     public string Title
@@ -53,17 +62,20 @@ public sealed class ReportViewModel : ObservableObject
 
     private bool CanSave() => _monitor.Rows.Count > 0;
 
-    private async Task SaveAsync(bool html)
+    private async Task SaveAsync(ReportFormat format)
     {
-        string extension = html ? "html" : "csv";
+        (string extension, string filter) = format switch
+        {
+            ReportFormat.Html => ("html", "HTML レポート (*.html)|*.html|すべてのファイル (*.*)|*.*"),
+            ReportFormat.Csv => ("csv", "CSV ファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*"),
+            _ => ("txt", "テキスト (*.txt)|*.txt|すべてのファイル (*.*)|*.*"),
+        };
 
         var dialog = new SaveFileDialog
         {
             FileName = ReportService.SuggestFileName(extension),
             DefaultExt = extension,
-            Filter = html
-                ? "HTML レポート (*.html)|*.html|すべてのファイル (*.*)|*.*"
-                : "CSV ファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*",
+            Filter = filter,
             AddExtension = true,
         };
 
@@ -74,9 +86,9 @@ public sealed class ReportViewModel : ObservableObject
         {
             Status = "レポートを作成しています…";
 
-            // ipconfig /all は HTML にだけ載せる（CSV は表なので馴染まない）
+            // ipconfig /all は HTML とテキストに載せる（CSV は表なので馴染まない）
             string? ipConfig = null;
-            if (html)
+            if (format is ReportFormat.Html or ReportFormat.Text)
             {
                 CommandCapture capture = await SystemInfoProbe.GetIpConfigAsync(CancellationToken.None);
                 ipConfig = capture.Text;
@@ -89,12 +101,24 @@ public sealed class ReportViewModel : ObservableObject
                 _monitor.NetworkInfo,
                 _monitor.StartedAt,
                 _monitor.IntervalMs,
-                ipConfig);
+                ipConfig,
+                describeKind: _monitor.DescribeEffectiveKind,
+                wireless: _wifi.DescribeForReport(),
+                outages: _monitor.Tracker.Records,
+                wirelessNote: _wifi.ReportNote);
 
-            if (html)
-                ReportService.SaveHtml(dialog.FileName, data);
-            else
-                ReportService.SaveCsv(dialog.FileName, data);
+            switch (format)
+            {
+                case ReportFormat.Html:
+                    ReportService.SaveHtml(dialog.FileName, data);
+                    break;
+                case ReportFormat.Csv:
+                    ReportService.SaveCsv(dialog.FileName, data);
+                    break;
+                default:
+                    ReportService.SaveText(dialog.FileName, data);
+                    break;
+            }
 
             Status = $"{Path.GetFileName(dialog.FileName)} に書き出しました（{data.Rows.Count} 件）。";
         }
@@ -114,6 +138,7 @@ public sealed class ReportViewModel : ObservableObject
     {
         SaveHtmlCommand.RaiseCanExecuteChanged();
         SaveCsvCommand.RaiseCanExecuteChanged();
+        SaveTextCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>入力を起動時の状態へ戻す。</summary>
@@ -124,4 +149,12 @@ public sealed class ReportViewModel : ObservableObject
         Status = string.Empty;
     }
 
+}
+
+/// <summary>書き出す形。</summary>
+internal enum ReportFormat
+{
+    Html,
+    Csv,
+    Text,
 }

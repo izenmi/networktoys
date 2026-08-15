@@ -19,7 +19,8 @@ public sealed class ShellViewModel
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
 
-        Report = new ReportViewModel(Monitor);
+        // 記録には無線の情報も載せるので、無線画面が持っている内容を参照させる
+        Report = new ReportViewModel(Monitor, Wifi);
         Work = new WorkViewModel(Monitor);
         DeviceCompare = new DeviceCompareViewModel();
     }

@@ -11,6 +11,11 @@ namespace PastelNet.Core.Reporting;
 /// <param name="Mos">推定 MOS 値。</param>
 /// <param name="MosGrade">MOS の言い換え。</param>
 /// <param name="Samples">スパークラインに描く RTT の列。</param>
+/// <param name="State">
+/// 出力した時点の状態（応答／不達 など）。統計だけでは「いま落ちているのか、
+/// 途中で一度落ちただけなのか」が読み取れないため、別に持たせる。
+/// </param>
+/// <param name="IsDown">応答なしと判定されているか。記録では真っ先に見たい。</param>
 public sealed record ReportRow(
     string Host,
     string Address,
@@ -19,7 +24,13 @@ public sealed record ReportRow(
     RttStatistics Statistics,
     double Mos,
     string MosGrade,
-    IReadOnlyList<double> Samples);
+    IReadOnlyList<double> Samples,
+    string State = "",
+    bool IsDown = false)
+{
+    /// <summary>一度でも失敗しているか。応答は戻っていても、記録には残す価値がある。</summary>
+    public bool HasLoss => Statistics.Attempts > 0 && Statistics.Successes < Statistics.Attempts;
+}
 
 /// <param name="Title">レポートの見出し。</param>
 /// <param name="GeneratedAt">出力時刻。</param>
@@ -33,6 +44,14 @@ public sealed record ReportRow(
 /// 載っている方が読み手に伝わるので、整形せずに載せる。
 /// </param>
 /// <param name="Work">変更作業の記録。作業前後の比較を伴わない測定では null。</param>
+/// <param name="Wireless">
+/// 無線 LAN の情報（項目名と値の並び）。有線環境や、無線画面を一度も開いて
+/// いない場合は null。位置情報の同意が要るため、こちらから勝手には取りに行かない。
+/// </param>
+/// <param name="Outages">
+/// 不通の記録。いつ・どこが落ちていたかは、統計の平均値からは読み取れない。
+/// </param>
+/// <param name="WirelessNote">無線の情報が無いときの理由。</param>
 public sealed record ReportData(
     string Title,
     DateTime GeneratedAt,
@@ -42,7 +61,20 @@ public sealed record ReportData(
     IReadOnlyList<(string Label, string Value)> Environment,
     IReadOnlyList<ReportRow> Rows,
     string? IpConfig = null,
-    WorkSection? Work = null);
+    WorkSection? Work = null,
+    IReadOnlyList<(string Label, string Value)>? Wireless = null,
+    IReadOnlyList<OutageRecord>? Outages = null,
+    string? WirelessNote = null)
+{
+    /// <summary>応答が無いままの宛先。記録の先頭に出す。</summary>
+    public IReadOnlyList<ReportRow> DownRows => [.. Rows.Where(r => r.IsDown)];
+
+    /// <summary>応答は戻っているが、途中で落ちていた宛先。</summary>
+    public IReadOnlyList<ReportRow> LossyRows => [.. Rows.Where(r => !r.IsDown && r.HasLoss)];
+
+    /// <summary>一度も失敗していない宛先の数。</summary>
+    public int HealthyCount => Rows.Count - DownRows.Count - LossyRows.Count;
+}
 
 /// <summary>
 /// 変更作業の前後で確認した内容。
