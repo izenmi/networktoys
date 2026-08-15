@@ -18,5 +18,5 @@ public sealed class TftpViewModel : FileServerViewModel
         => $"copy running-config tftp://{HostForHint}/running-config\n" +
            "（受信して保存するには、機器側でファイル名を指定します）";
 
-    protected override IFileServer CreateServer(int port) => new TftpServer(RootDirectory);
+    private protected override IFileServer CreateServer(int port) => new TftpServer(RootDirectory);
 }

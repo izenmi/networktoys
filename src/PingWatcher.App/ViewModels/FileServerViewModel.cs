@@ -82,7 +82,7 @@ public abstract class FileServerViewModel : ObservableObject
     public string Status { get => _status; protected set => SetProperty(ref _status, value); }
 
     /// <summary>指定ポートでサーバを作る。ポート番号は検証済み。</summary>
-    protected abstract IFileServer CreateServer(int port);
+    private protected abstract IFileServer CreateServer(int port);
 
     /// <summary>ポート欄が変わったなど、コマンド例を出し直したいときに派生から呼ぶ。</summary>
     protected void RefreshCommandHint() => OnPropertyChanged(nameof(CommandHint));

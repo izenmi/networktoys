@@ -42,6 +42,6 @@ public sealed class FtpViewModel : FileServerViewModel
         }
     }
 
-    protected override IFileServer CreateServer(int port)
+    private protected override IFileServer CreateServer(int port)
         => new FtpServer(RootDirectory, User, Password);
 }
