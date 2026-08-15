@@ -32,7 +32,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **`PingReply.RoundtripTime` は `Status != Success` のとき信用できない**（0 が返る）。RTT は必ず自前の `Stopwatch.GetTimestamp()` で測る。
 - **`Task.Run` で同期版を包まない。** `Ping`/`Socket` の非同期 API は I/O 完了ポートを使うので数百同時でもスレッドを消費しないが、同期版を包むとスレッドプールが枯渇する。
 - **traceroute の TTL 完全並列は欠落ホップを生む。** ICMP TTL 超過はルータ側でレート制限されるため、TTL ごとに 20〜30ms のスタガーを入れる。確実性優先の逐次モードも設定で用意する。
-- **TCP ping はエフェメラルポートを食う。** 切断後 TIME_WAIT が約 4 分残るので、同時数だけでなくレートも制限する。
+- **TCP ping はエフェメラルポートを食う。** FIN で行儀よく閉じると TIME_WAIT が約 4 分残り、200 宛先 × 1 秒間隔なら数分で枯渇する。採用した対策は **`LingerState = new LingerOption(true, 0)` の RST クローズ**（TIME_WAIT を残さない）。測定用の接続はデータを流さないので RST で切っても相手は困らない。ソケットを触る箇所を増やすときは必ずこれを踏襲する。
 - **Path MTU にはブラックホールがある。** ICMP「要フラグメント」を返さないルータがあると、大きすぎる場合が `PacketTooBig` ではなく `TimedOut` になる。両者を区別して記録し、UI でも書き分ける。
 - **経路変化は ECMP で誤検知しやすい。** 2 回連続で異なった場合のみ「変化」と判定する。
 
@@ -54,7 +54,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **`ComboBox` の閉じているときの表示に `DisplayMemberPath` は効かない。** 選択中の項目は `SelectionBoxItemTemplate` 経由で描かれるため、**型名がそのまま出る**。ドロップダウンを開いたときだけ正しく見えるので気づきにくい。`ItemTemplate` を明示すること。
 - **測定結果ごとに `Dispatcher.Invoke` しない。** 500 宛先 × 1Hz = 500 通知/秒で UI が溶ける。`Channel<T>` に積んで 10Hz の単一ポンプでまとめて適用する。
 - `ObservableCollection` の**構造変化は宛先の追加/削除時のみ**。測定結果は既存の行 VM のプロパティ更新として流す。
-- 一覧は仮想化必須（`VirtualizationMode=Recycling`、行高固定）。ソート・フィルタはティックごとに `Refresh()` しない。
+- 一覧は仮想化必須（`VirtualizationMode=Recycling`、行高固定）。ソート・フィルタはティックごとに `Refresh()` しない。**仮想化の指定は ListBox 側の添付プロパティに書く。** `VirtualizingStackPanel` はパネル要素に書いた属性ではなく ItemsControl 側を読むため、`<VirtualizingStackPanel VirtualizationMode="Recycling" />` は無言で無視される（実際にやらかした）。折り返しの一覧は WrapPanel では仮想化できないので `VirtualizingTilePanel`（自作・タイル寸法固定が前提）を使う。
 - **配色は明暗 2 つある。色は必ず `DynamicResource` で引く。** `ThemeManager` が `Palette.xaml` / `Palette.Dark.xaml` を丸ごと差し替えるため、`StaticResource` で引いた色は切り替えても古いまま残る。**コードから `TryFindResource` した結果を static にキャッシュしない**（Sparkline で実際にやって切替に追随しない不具合になった。依存プロパティで受け取る形に直してある）。色を足すときは**両方のパレットに同じキーを**足すこと（自己診断が突き合わせている）。色に依らない寸法・書体は `Tokens.xaml`。
 - **文字と地のコントラストは自己診断が検算する。** 淡くしたい気持ちと読めることは必ず衝突するので、目視で決めない。`Core/Design/ColorMath.cs` の WCAG 比で 4.5 以上を満たすこと。
 - **`DropShadowEffect` を一覧まわりで使わない。** 中身が毎秒書き換わるので、効果を挟むと中間サーフェス経由の再描画になる。立体感は「上辺だけ明るいグラデーションの枠」で出す（`Brush.Card.Edge`）。

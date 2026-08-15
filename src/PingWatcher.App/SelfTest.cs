@@ -95,6 +95,34 @@ internal static class SelfTest
                 Assert(Application.Current.TryFindResource(key) is Style, $"{key} が Style として引けない");
         });
 
+        Check("リソース: 型キーの暗黙スタイルが失われていない", () =>
+        {
+            // ListBox / ContextMenu などの既定スタイルは Foreground にシステム色（黒）を
+            // 入れるため、暗黙スタイルでの上書きが消えると「ダークで文字だけ黒い」に退行する。
+            // 見た目の退行はウィンドウ表示の検査を素通りするので、ここで存在を確かめる。
+            Type[] types =
+            [
+                typeof(System.Windows.Controls.ListBox),
+                typeof(System.Windows.Controls.ListBoxItem),
+                typeof(System.Windows.Controls.ListView),
+                typeof(System.Windows.Controls.ContextMenu),
+                typeof(System.Windows.Controls.MenuItem),
+                typeof(System.Windows.Controls.ToolTip),
+                typeof(System.Windows.Controls.CheckBox),
+                typeof(System.Windows.Controls.ComboBox),
+                typeof(System.Windows.Controls.ComboBoxItem),
+                typeof(System.Windows.Controls.TabItem),
+                typeof(System.Windows.Controls.Button),
+                typeof(System.Windows.Controls.TextBox),
+            ];
+            foreach (Type type in types)
+                Assert(Application.Current.TryFindResource(type) is Style, $"{type.Name} の暗黙スタイルが無い");
+
+            // メニュー内の区切り線は専用キーで引かれる（Separator の暗黙スタイルは当たらない）
+            Assert(Application.Current.TryFindResource(System.Windows.Controls.MenuItem.SeparatorStyleKey) is Style,
+                   "MenuItem.SeparatorStyleKey のスタイルが無い");
+        });
+
         Check("リソース: Tokens.xaml の寸法と書体が解決できる", () =>
         {
             // DynamicResource は引けなくても例外にならず、既定値で静かに描かれてしまう。
@@ -154,20 +182,35 @@ internal static class SelfTest
                            $"{name}: {foreground} を {background} に載せると {ratio:F2}（{Core.Design.ColorMath.MinimumForText} 必要）");
                 }
 
-                Ensure("Brush.Text", "Brush.Surface");
-                Ensure("Brush.Text", "Brush.Background");
-                Ensure("Brush.TextMuted", "Brush.Surface");
-                Ensure("Brush.TextMuted", "Brush.SurfaceAlt");
-                Ensure("Brush.TextMuted", "Brush.Background");
+                int pairs = 0;
+
+                void Count(string foreground, string background)
+                {
+                    Ensure(foreground, background);
+                    pairs++;
+                }
+
+                Count("Brush.Text", "Brush.Surface");
+                Count("Brush.Text", "Brush.Background");
+                Count("Brush.TextMuted", "Brush.Surface");
+                Count("Brush.TextMuted", "Brush.SurfaceAlt");
+                Count("Brush.TextMuted", "Brush.Background");
 
                 foreach (string state in new[] { "Ok", "Warn", "Error", "Info", "Accent" })
                 {
                     // バッジ（地色つき）と、地色を敷かない場所の両方で読めること
-                    Ensure($"Brush.{state}.Fg", $"Brush.{state}.Bg");
-                    Ensure($"Brush.{state}.Fg", "Brush.Surface");
+                    Count($"Brush.{state}.Fg", $"Brush.{state}.Bg");
+                    Count($"Brush.{state}.Fg", "Brush.Surface");
+
+                    // 実際の画面は状態の地色の上に通常の文字も載せている
+                    // （差分の左右セル・経路の到達行・選択行など）。
+                    // ここを検算に入れておかないと、どちらかを一段淡くした時点で
+                    // 目視では気づけないまま基準を割る
+                    Count("Brush.Text", $"Brush.{state}.Bg");
+                    Count("Brush.TextMuted", $"Brush.{state}.Bg");
                 }
 
-                log.AppendLine($"        {name}: 15 組すべて基準を満たす");
+                log.AppendLine($"        {name}: {pairs} 組すべて基準を満たす");
             }
         });
 

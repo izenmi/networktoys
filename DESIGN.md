@@ -296,7 +296,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 <PublishSingleFile>true</PublishSingleFile>
 <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 <PublishTrimmed>false</PublishTrimmed>       <!-- WPFは非対応。有効にすると起動時に落ちる -->
-<InvariantGlobalization>true</InvariantGlobalization>
+<InvariantGlobalization>false</InvariantGlobalization>  <!-- true は WPF では使えない。下の実測結果を参照 -->
 <ServerGarbageCollection>false</ServerGarbageCollection>
 <TieredPGO>true</TieredPGO>
 ```

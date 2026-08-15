@@ -21,6 +21,7 @@ jobs:
   # 開発環境が Linux で exe を動かせないため、ここが第一の防波堤になる。
   test:
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
 
@@ -38,6 +39,7 @@ jobs:
   # メモリ 182.7MB・初回起動 5 秒になるため不採用。
   build:
     runs-on: windows-latest
+    timeout-minutes: 30
     needs: test
     strategy:
       fail-fast: false
@@ -86,11 +88,18 @@ jobs:
 
           # 単一ファイル版の初回起動はネイティブライブラリを %TEMP%\.net へ展開するため遅い
           $first  = Invoke-SelfTest
-          $second = Invoke-SelfTest
 
-          if (Test-Path 'selftest.log') { Get-Content 'selftest.log' | Write-Host }
+          # 1 回目のログは 2 回目で上書きされるので、先に出しておく。
+          # 「初回起動だけ落ちる」(dotnet/wpf#7282 の症状)はここでしか捕まえられない
+          if (Test-Path 'selftest.log') { Write-Host '--- 1回目 ---'; Get-Content 'selftest.log' | Write-Host }
           if (Test-Path 'crash.log')    { Get-Content 'crash.log'    | Write-Host }
 
+          $second = Invoke-SelfTest
+
+          if (Test-Path 'selftest.log') { Write-Host '--- 2回目 ---'; Get-Content 'selftest.log' | Write-Host }
+          if (Test-Path 'crash.log')    { Get-Content 'crash.log'    | Write-Host }
+
+          if ($first.Code -ne 0)  { throw "自己診断が初回の実行で失敗しました (exit $($first.Code))" }
           if ($second.Code -ne 0) { throw "自己診断が失敗しました (exit $($second.Code))" }
 
           "SELFTEST_FIRST=$($first.Ms)"  | Add-Content -Path $env:GITHUB_ENV
@@ -108,6 +117,11 @@ jobs:
           $ready = $proc.WaitForInputIdle(60000)
           $sw.Stop()
 
+          if (-not $ready) {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            throw "60 秒以内にメッセージループへ入りませんでした（ハングの疑い）"
+          }
+
           Start-Sleep -Seconds 3
           $proc.Refresh()
 
@@ -119,6 +133,10 @@ jobs:
 
           $mem = [math]::Round($proc.WorkingSet64 / 1MB, 1)
           Stop-Process -Id $proc.Id -Force
+
+          # プロセス終了とファイルハンドル解放は非同期。待たずに後片付けへ進むと
+          # ログの削除が空振りして selftest.log が成果物に混入することがある
+          $proc.WaitForExit(5000) | Out-Null
 
           $sizeMb = [math]::Round(((Get-ChildItem -Recurse -File $PWD | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
 
@@ -146,6 +164,7 @@ jobs:
   # v* タグを push したときだけ Release を作る
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:

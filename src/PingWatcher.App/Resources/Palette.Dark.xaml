@@ -45,7 +45,8 @@
     <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#74C9FF" po:Freeze="True" />
 
     <!-- 選択・アクセント(パステルの葉緑)。色を使うのはここだけ -->
-    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#23401F" po:Freeze="True" />
+    <!-- #23401F から一段暗く。選択行の上の淡文字(TextMuted)が 4.28 で基準割れしていた -->
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#1F3A1C" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#A9E6A3" po:Freeze="True" />
 
     <!-- グラフ描画用 -->

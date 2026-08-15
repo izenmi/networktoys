@@ -11,6 +11,16 @@
     <RootNamespace>PingWatcher.App</RootNamespace>
     <Version>0.1.0</Version>
 
+    <!-- Core と同じく警告をエラーにする。CI が唯一のコンパイラなので、
+         いちばん検証しづらい WPF 側こそ警告止まりにしない -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- exe のプロパティ画面に出る情報。未署名の exe を配る以上、空欄にしない -->
+    <Product>PingWatcher</Product>
+    <Company>izenmi</Company>
+    <Copyright>© izenmi</Copyright>
+    <Description>ネットワーク診断ツール</Description>
+
     <!-- 管理者権限を要求しない / 高DPI対応を宣言する -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
