@@ -21,6 +21,7 @@ public sealed class ShellViewModel
 
         Report = new ReportViewModel(Monitor);
         Work = new WorkViewModel(Monitor);
+        DeviceCompare = new DeviceCompareViewModel();
     }
 
     public MonitorViewModel Monitor { get; }
@@ -37,4 +38,7 @@ public sealed class ShellViewModel
 
     /// <summary>変更作業の前後確認。このツールの主な使い道。</summary>
     public WorkViewModel Work { get; }
+
+    /// <summary>機器の出力（show ip route / show run）を作業前後で見比べる。</summary>
+    public DeviceCompareViewModel DeviceCompare { get; }
 }

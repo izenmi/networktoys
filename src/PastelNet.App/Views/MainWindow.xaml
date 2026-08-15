@@ -798,6 +798,225 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== 機器比較（show ip route / show run を作業前後で見比べる） ===== -->
+            <TabItem Header="機器比較" DataContext="{Binding DeviceCompare}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+
+                        <!-- 操作 -->
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="対象" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <ComboBox Width="130" ItemsSource="{Binding Modes}"
+                                          SelectedItem="{Binding SelectedMode}" Margin="0,0,10,0" />
+                                <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,6,0" />
+                                <Button Content="貼り付けに戻る" Command="{Binding EditCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                <Button Content="左右を入れ替え" Command="{Binding SwapCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                <Button Content="消去" Command="{Binding ClearCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                                <CheckBox Content="違う行だけ" IsChecked="{Binding OnlyDifferences}"
+                                          VerticalAlignment="Center" Margin="0,0,12,0" />
+                                <CheckBox Content="毎回変わる行を隠す" IsChecked="{Binding HideNoise}"
+                                          VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding ModeHint}" Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Headline}" FontWeight="SemiBold" Margin="0,4,0,0"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" Margin="0,2,0,0" />
+                        </StackPanel>
+
+                        <!-- 貼り付け欄 -->
+                        <Grid>
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <DockPanel Grid.Column="0" Margin="0,0,5,0">
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="作業前" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <Button Content="ファイルから" Command="{Binding LoadBeforeCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
+                                </StackPanel>
+                                <TextBox Text="{Binding BeforeText, UpdateSourceTrigger=PropertyChanged}"
+                                         FontFamily="{DynamicResource Font.Mono}"
+                                         FontSize="{DynamicResource Size.Caption}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalContentAlignment="Top" />
+                            </DockPanel>
+
+                            <DockPanel Grid.Column="1" Margin="5,0,0,0">
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="作業後" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <Button Content="ファイルから" Command="{Binding LoadAfterCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
+                                </StackPanel>
+                                <TextBox Text="{Binding AfterText, UpdateSourceTrigger=PropertyChanged}"
+                                         FontFamily="{DynamicResource Font.Mono}"
+                                         FontSize="{DynamicResource Size.Caption}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalContentAlignment="Top" />
+                            </DockPanel>
+                        </Grid>
+
+                        <!-- 結果 -->
+                        <DockPanel>
+                            <DockPanel.Style>
+                                <Style TargetType="DockPanel">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DockPanel.Style>
+
+                            <!-- 経路として見た変化。行の差分より先に見てほしい -->
+                            <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="10,7"
+                                    Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="7">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRouteMode}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <DockPanel MaxHeight="180">
+                                    <TextBlock DockPanel.Dock="Top" Text="経路の変化"
+                                               FontWeight="SemiBold" Margin="0,0,0,4" />
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding RouteChanges}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock x:Name="ChangeText" Text="{Binding Description}"
+                                                               TextWrapping="Wrap" Margin="0,0,0,2" />
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="Removed">
+                                                            <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                            <Setter TargetName="ChangeText" Property="FontWeight" Value="SemiBold" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="Added">
+                                                            <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="NextHopChanged">
+                                                            <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                            <Setter TargetName="ChangeText" Property="FontWeight" Value="SemiBold" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="ProtocolChanged">
+                                                            <Setter TargetName="ChangeText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- 左右の見出し -->
+                            <Grid DockPanel.Dock="Top" Margin="0,0,0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1" Text="作業前" Style="{StaticResource Caption}" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="3" Text="作業後" Style="{StaticResource Caption}" FontWeight="SemiBold" />
+                            </Grid>
+                            <Border DockPanel.Dock="Top" Height="1"
+                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                            <!-- 左右並置。1 つのスクロールに収めるので、左右がずれない -->
+                            <ListBox ItemsSource="{Binding Rows}"
+                                     ItemContainerStyle="{StaticResource CompactRowContainer}"
+                                     Background="Transparent" BorderThickness="0"
+                                     HorizontalContentAlignment="Stretch"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                     VirtualizingStackPanel.IsVirtualizing="True"
+                                     VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="42" />
+                                                <ColumnDefinition Width="*" MinWidth="200" />
+                                                <ColumnDefinition Width="42" />
+                                                <ColumnDefinition Width="*" MinWidth="200" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding LeftNumberText}"
+                                                       Style="{StaticResource Mono}"
+                                                       FontSize="{DynamicResource Size.Caption}"
+                                                       Foreground="{DynamicResource Brush.TextMuted}"
+                                                       HorizontalAlignment="Right" Margin="0,0,6,0" />
+
+                                            <Border x:Name="LeftCell" Grid.Column="1" Padding="4,1" CornerRadius="3" Margin="0,0,6,0">
+                                                <TextBlock Text="{Binding LeftText}"
+                                                           Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           TextWrapping="NoWrap" />
+                                            </Border>
+
+                                            <TextBlock Grid.Column="2" Text="{Binding RightNumberText}"
+                                                       Style="{StaticResource Mono}"
+                                                       FontSize="{DynamicResource Size.Caption}"
+                                                       Foreground="{DynamicResource Brush.TextMuted}"
+                                                       HorizontalAlignment="Right" Margin="0,0,6,0" />
+
+                                            <Border x:Name="RightCell" Grid.Column="3" Padding="4,1" CornerRadius="3">
+                                                <TextBlock Text="{Binding RightText}"
+                                                           Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           TextWrapping="NoWrap" />
+                                            </Border>
+                                        </Grid>
+
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Kind}" Value="Changed">
+                                                <Setter TargetName="LeftCell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                                                <Setter TargetName="RightCell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Kind}" Value="LeftOnly">
+                                                <Setter TargetName="LeftCell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Kind}" Value="RightOnly">
+                                                <Setter TargetName="RightCell" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== スキャン ===== -->
             <TabItem Header="スキャン" DataContext="{Binding Scan}">
                 <Border Style="{StaticResource Card}">
