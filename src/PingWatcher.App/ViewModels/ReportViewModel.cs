@@ -28,6 +28,7 @@ public sealed class ReportViewModel : ObservableObject
         SaveHtmlCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Html), CanSave);
         SaveCsvCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Csv), CanSave);
         SaveTextCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Text), CanSave);
+        RefreshPreviewCommand = new RelayCommand(RefreshPreview);
     }
 
     public RelayCommand SaveHtmlCommand { get; }
@@ -38,6 +39,12 @@ public sealed class ReportViewModel : ObservableObject
     /// HTML より扱いやすいことが多い。
     /// </summary>
     public RelayCommand SaveTextCommand { get; }
+
+    /// <summary>
+    /// プレビューの手動更新。タブを開いたときにも作り直すが、測定を流しながら
+    /// このタブを開きっぱなしにする使い方では手で更新できたほうが早い。
+    /// </summary>
+    public RelayCommand RefreshPreviewCommand { get; }
 
     public string Status
     {

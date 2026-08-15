@@ -2525,6 +2525,9 @@
                                     ToolTip="等幅で読む前提の記録です。報告書に貼る・チケットに残す用途に。ipconfig /all と無線の情報も入ります。" />
                             <Button Content="CSV で保存" Command="{Binding SaveCsvCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <Button Content="更新" Command="{Binding RefreshPreviewCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0"
+                                    ToolTip="プレビューをいまの測定結果で作り直します(タブを開き直したときも自動で更新されます)。" />
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
