@@ -31,12 +31,13 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
+                        <!-- 寸法はメインタブ(Padding 6,2・Size.Caption)と揃える -->
                         <Border x:Name="Bd"
                                 Background="{DynamicResource Brush.SurfaceAlt}"
                                 BorderBrush="{DynamicResource Brush.Border}"
                                 BorderThickness="1"
                                 Margin="0,0,-1,0"
-                                Padding="14,3">
+                                Padding="6,2">
                             <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
                                               TextElement.FontSize="{DynamicResource Size.Caption}" />
                         </Border>
@@ -329,6 +330,8 @@
         -->
         <Style x:Key="DeviceChip" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
             <Setter Property="Cursor" Value="Hand" />
+            <!-- 寸法はメインタブ(Padding 6,2・Size.Caption・間隔 2)と揃える -->
+            <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -337,8 +340,8 @@
                                 BorderBrush="{DynamicResource Brush.Border}"
                                 BorderThickness="1"
                                 CornerRadius="{DynamicResource Radius.Control}"
-                                Padding="9,2"
-                                Margin="0,0,3,0">
+                                Padding="6,2"
+                                Margin="0,0,2,0">
                             <ContentPresenter VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
