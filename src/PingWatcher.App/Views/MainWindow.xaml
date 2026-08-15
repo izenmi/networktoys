@@ -125,157 +125,6 @@
         </DataTemplate>
 
         <!--
-            一望用の小さな枠。100 件を超える監視では 1 行 1 件では収まらないので、
-            これを敷き詰めて折り返す。
-
-            正常な宛先には地色を敷かない。異常だけが色で浮き上がる方が、
-            数が多いときに目が拾いやすい。異常なタイルは枠も状態色にして点灯させる
-            （効果は使わないので、何百並べても描画のコストは変わらない）。
-        -->
-        <DataTemplate x:Key="CompactRowTemplate">
-            <Border x:Name="Cell"
-                    Width="322" Height="19"
-                    CornerRadius="{DynamicResource Radius.Chip}"
-                    Padding="5,0"
-                    BorderThickness="1"
-                    BorderBrush="{DynamicResource Brush.Chip.Edge}"
-                    Background="{DynamicResource Brush.Surface}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <!-- 備考を優先して広く取る。宛先(IP)は残り幅、推移は傾向が読める最小限 -->
-                        <ColumnDefinition Width="12" />
-                        <ColumnDefinition Width="*" MinWidth="56" />
-                        <ColumnDefinition Width="112" />
-                        <ColumnDefinition Width="46" />
-                        <ColumnDefinition Width="36" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock x:Name="Mark" Grid.Column="0"
-                               Text="◌" FontSize="{DynamicResource Size.Micro}"
-                               Foreground="{DynamicResource Brush.TextMuted}"
-                               VerticalAlignment="Center" />
-
-                    <TextBlock x:Name="HostText" Grid.Column="1"
-                               Text="{Binding Host}"
-                               Margin="3,0,0,0"
-                               VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" />
-
-                    <TextBlock x:Name="CommentText" Grid.Column="2"
-                               Text="{Binding Comment}"
-                               Style="{StaticResource Caption}"
-                               Margin="6,0,0,0"
-                               VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding Comment}" />
-
-                    <TextBlock x:Name="RttText" Grid.Column="3"
-                               Text="{Binding LatestRtt}"
-                               Style="{StaticResource Mono}"
-                               FontSize="{DynamicResource Size.Caption}"
-                               HorizontalAlignment="Right"
-                               VerticalAlignment="Center" />
-
-                    <controls:Sparkline Grid.Column="4" Source="{Binding}" Margin="5,4,0,4"
-                                        LineBrush="{DynamicResource Brush.Chart.Line}"
-                                        LostBrush="{DynamicResource Brush.Error.Fg}" />
-                </Grid>
-            </Border>
-
-            <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding State}" Value="Ok">
-                    <Setter TargetName="Mark" Property="Text" Value="●" />
-                    <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding State}" Value="Slow">
-                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                    <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Brush.Warn.Fg}" />
-                    <Setter TargetName="Mark" Property="Text" Value="▲" />
-                    <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                    <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                    <Setter TargetName="RttText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                    <Setter TargetName="CommentText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding State}" Value="Refused">
-                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                    <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Brush.Warn.Fg}" />
-                    <Setter TargetName="Mark" Property="Text" Value="⊘" />
-                    <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                    <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                    <Setter TargetName="CommentText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding State}" Value="Down">
-                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
-                    <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Brush.Error.Fg}" />
-                    <Setter TargetName="Mark" Property="Text" Value="✕" />
-                    <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                    <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                    <Setter TargetName="HostText" Property="FontWeight" Value="SemiBold" />
-                    <Setter TargetName="CommentText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding State}" Value="Unresolved">
-                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
-                    <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Brush.Error.Fg}" />
-                    <Setter TargetName="Mark" Property="Text" Value="?" />
-                    <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                    <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                    <Setter TargetName="CommentText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding State}" Value="Pending">
-                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding State}" Value="Stalled">
-                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
-                    <Setter TargetName="Mark" Property="Text" Value="…" />
-                    <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
-                </DataTrigger>
-            </DataTemplate.Triggers>
-        </DataTemplate>
-
-        <Style x:Key="CompactRowContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Sel"
-                                BorderBrush="Transparent"
-                                BorderThickness="1.5"
-                                CornerRadius="{DynamicResource Radius.Control}"
-                                Margin="0,0,3,3">
-                            <!--
-                                右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
-                                Style の Setter へ直接 ContextMenu を置くと、リソースが後から
-                                展開される都合で結線がずれ、起動時に落ちる（自己診断で実証済み）。
-
-                                メニューは論理ツリーが切れているので、PlacementTarget 経由で
-                                右クリックした行そのものを DataContext にする。
-                                選択は動かさない（左クリックの挙動は今まで通り）。
-                            -->
-                            <Border.ContextMenu>
-                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
-                                                           RelativeSource={RelativeSource Self}}">
-                                    <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
-                                    <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
-                                    <Separator />
-                                    <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
-                                    <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
-                                </ContextMenu>
-                            </Border.ContextMenu>
-                            <ContentPresenter />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Sel" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Sel" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!--
             右クリックメニューを持たない行コンテナ。
             スキャン結果・周辺 AP・作業比較・機器比較の一覧はこちらを使う。
             メニュー付きのコンテナを流用すると、DataContext の型が違うため
@@ -384,11 +233,7 @@
         </Style>
 
         <!--
-            一覧の見せ方を 2 通り切り替える。
-            ・詳細（1 行 1 件）… 列で細かく見たいとき
-            ・一覧（多段）      … 100 件を超える宛先を一目で見たいとき
-
-            どちらも仮想化する。多段は VirtualizingTilePanel（タイル寸法固定が前提）。
+            1 行 1 件の一覧（仮想化必須）。
             参照するテンプレートより後に置くこと（StaticResource は前方参照できない）。
         -->
         <!--
@@ -448,24 +293,6 @@
                     </ItemsPanelTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsCompact}" Value="True">
-                    <Setter Property="ItemTemplate" Value="{StaticResource CompactRowTemplate}" />
-                    <Setter Property="ItemContainerStyle" Value="{StaticResource CompactRowContainer}" />
-                    <Setter Property="ItemsPanel">
-                        <Setter.Value>
-                            <ItemsPanelTemplate>
-                                <!--
-                                    一望表示も仮想化する。WrapPanel は仮想化できず、
-                                    500 宛先で起動時に全タイルを組み立てていた。
-                                    タイルの寸法は Cell(322×19) + コンテナ余白(3,3)。
-                                -->
-                                <controls:VirtualizingTilePanel ItemWidth="325" ItemHeight="22" />
-                            </ItemsPanelTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </DataTrigger>
-            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -598,9 +425,6 @@
                                     Command="{Binding ClearHistoryCommand}"
                                     Style="{StaticResource Button.Subtle}"
                                     Margin="0,0,12,0" />
-                            <CheckBox Content="一覧表示" IsChecked="{Binding IsCompact}"
-                                      VerticalAlignment="Center" Margin="0,0,12,0"
-                                      ToolTip="小さな枠を敷き詰めて、たくさんの宛先を一目で見られるようにします。" />
                             <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
                                        Text="行を右クリックすると、その宛先の経路や名前を調べられます。" />
                         </StackPanel>
@@ -615,20 +439,8 @@
                         </Border>
 
                         <!-- 一覧のヘッダ。両方の欄で共通なので、分割の外に出して常に最上部へ置く。
-                             一覧表示（多段）のときは列が無いので隠す。
                              列幅は TargetRowTemplate と合わせること -->
                         <StackPanel DockPanel.Dock="Top">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsCompact}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-
                             <Grid Margin="4,0,4,3">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{StaticResource ColW.Ping.State}" />
@@ -744,8 +556,6 @@
 
                             <Button Content="履歴を消去" Command="{Binding ClearHistoryCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                            <CheckBox Content="一覧表示" IsChecked="{Binding IsCompact}"
-                                      VerticalAlignment="Center" Margin="0,0,12,0" />
                             <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </StackPanel>

@@ -45,7 +45,6 @@ public sealed class MonitorViewModel : ObservableObject
     private DispatcherTimer? _listDebounce;
     private string _tcpPort = "443";
     private bool _isTcpMode;
-    private bool _isCompact = true;
 
     /// <summary>
     /// この画面が TCP 専用か。
@@ -158,16 +157,6 @@ public sealed class MonitorViewModel : ObservableObject
     {
         get => _tcpPort;
         set => SetProperty(ref _tcpPort, value);
-    }
-
-    /// <summary>
-    /// 1 行 1 件の詳しい表示ではなく、小さな枠を敷き詰めて一望する表示にするか。
-    /// 100 件を超える監視では、こちらが既定。
-    /// </summary>
-    public bool IsCompact
-    {
-        get => _isCompact;
-        set => SetProperty(ref _isCompact, value);
     }
 
     public bool IsRunning
@@ -711,7 +700,6 @@ public sealed class MonitorViewModel : ObservableObject
         SelectedRow = null;
         DetailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
         TcpPort = "443";
-        IsCompact = true;
         StatusMessage = string.Empty;
     }
 
