@@ -56,6 +56,30 @@ public partial class MainWindow : Window
     /// <summary>開始したら測定の画面へ移る。押した場所がどのタブでも、見たいのは結果。</summary>
     private void OnStartClicked(object sender, RoutedEventArgs e) => PingTab.IsSelected = true;
 
+    /// <summary>
+    /// Ping 一覧の列幅ドラッグ。掴んだ列だけを伸縮させ、余りは可変幅の備考列に
+    /// 吸収させる(GridSplitter の「隣の列も動く」挙動を避けるための自前実装)。
+    /// </summary>
+    private void OnColumnResize(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string column })
+            return;
+
+        ColumnLayout layout = ColumnLayout.Instance;
+
+        GridLength Adjust(GridLength current)
+            => new(Math.Clamp(current.Value + e.HorizontalChange, 36, 600));
+
+        switch (column)
+        {
+            case "State": layout.State = Adjust(layout.State); break;
+            case "Target": layout.Target = Adjust(layout.Target); break;
+            case "Rtt": layout.Rtt = Adjust(layout.Rtt); break;
+            case "Loss": layout.Loss = Adjust(layout.Loss); break;
+            case "Spark": layout.Spark = Adjust(layout.Spark); break;
+        }
+    }
+
     /// <summary>一覧の見出しクリックで並べ替える。列名は Tag、対象は DataContext で見分ける。</summary>
     private void OnListHeaderSort(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {

@@ -593,18 +593,52 @@
                                 <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
 
                                 <!--
-                                    列幅の変更。固定列の右端を掴んで動かす。可変幅の備考(列 2)が
-                                    余りを吸収する。星列にスプリッタは置かない(絶対値化して保存と
-                                    ずれる)。ヘッダ側の列定義だけが双方向で、行はそれを読むだけ。
+                                    列幅の変更。固定列の右端を掴んで動かすと、その列だけが伸縮し、
+                                    余りは可変幅の備考(列 2)が吸収する。GridSplitter は使わない —
+                                    あちらは「掴んだ列と隣の列」を同時に伸縮するため、RTT を広げると
+                                    ロスが潰れる不自然な動きになる(ユーザー指摘)。Thumb の DragDelta で
+                                    ColumnLayout の幅を直接書き、TwoWay バインドが列定義へ反映する。
                                 -->
-                                <GridSplitter Grid.Column="0" Width="5" HorizontalAlignment="Right"
-                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
-                                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Right"
-                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
-                                <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Right"
-                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
-                                <GridSplitter Grid.Column="4" Width="5" HorizontalAlignment="Right"
-                                              Background="Transparent" ShowsPreview="False" Focusable="False" />
+                                <Thumb Grid.Column="0" Width="7" HorizontalAlignment="Right" Cursor="SizeWE"
+                                       Tag="State" DragDelta="OnColumnResize" Focusable="False">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="Transparent" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                                <Thumb Grid.Column="1" Width="7" HorizontalAlignment="Right" Cursor="SizeWE"
+                                       Tag="Target" DragDelta="OnColumnResize" Focusable="False">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="Transparent" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                                <Thumb Grid.Column="3" Width="7" HorizontalAlignment="Right" Cursor="SizeWE"
+                                       Tag="Rtt" DragDelta="OnColumnResize" Focusable="False">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="Transparent" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                                <Thumb Grid.Column="4" Width="7" HorizontalAlignment="Right" Cursor="SizeWE"
+                                       Tag="Loss" DragDelta="OnColumnResize" Focusable="False">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="Transparent" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                                <Thumb Grid.Column="5" Width="7" HorizontalAlignment="Right" Cursor="SizeWE"
+                                       Tag="Spark" DragDelta="OnColumnResize" Focusable="False">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="Transparent" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,4" />
                         </StackPanel>
