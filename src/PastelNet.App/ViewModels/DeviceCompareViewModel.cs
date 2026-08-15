@@ -27,17 +27,20 @@ public sealed class DeviceCompareViewModel : ObservableObject
     private DeviceOutputKind _mode = DeviceOutputKind.RouteTable;
     private int _selectedIndex = -1;
 
+    private DeviceEntryViewModel _selectedDevice;
+
     /// <summary>
-    /// 対象ごとに貼り付けた内容。
-    ///
-    /// 1 回の作業で show ip route と show run の両方を見比べることが多い。
-    /// 作業前にまとめて貼っておき、作業後に順に突き合わせられるよう、
-    /// 対象を切り替えても消えないようにしている。
+    /// 差し替えの最中は貼り付けを預けない。
+    /// 作業前を入れ終える前に作業後がまだ古いままなので、
+    /// 途中の状態を預けると別の機器の内容が混ざる。
     /// </summary>
-    private readonly Dictionary<DeviceOutputKind, PastedPair> _pasted = [];
+    private bool _restoring;
 
     public DeviceCompareViewModel()
     {
+        _selectedDevice = new DeviceEntryViewModel("機器 1");
+        Devices.Add(_selectedDevice);
+
         CompareCommand = new RelayCommand(Compare, () => BeforeText.Length > 0 || AfterText.Length > 0);
         EditCommand = new RelayCommand(() => IsEditing = true);
         SwapCommand = new RelayCommand(Swap);
@@ -48,6 +51,65 @@ public sealed class DeviceCompareViewModel : ObservableObject
         NextDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: true), () => DifferenceCount > 0);
         PreviousDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: false), () => DifferenceCount > 0);
 
+        AddDeviceCommand = new RelayCommand(AddDevice);
+        RemoveDeviceCommand = new RelayCommand(RemoveDevice, () => Devices.Count > 1);
+
+        RefreshModeMarks();
+    }
+
+    /// <summary>
+    /// 見比べる機器。
+    ///
+    /// 1 回の作業で何台も触ることがあるので、機器ごとに貼り付けを分けて持つ。
+    /// 台数ぶんの「作業前」を先に集めておき、作業後に順に突き合わせる使い方になる。
+    /// </summary>
+    public ObservableCollection<DeviceEntryViewModel> Devices { get; } = [];
+
+    public RelayCommand AddDeviceCommand { get; }
+    public RelayCommand RemoveDeviceCommand { get; }
+
+    public DeviceEntryViewModel SelectedDevice
+    {
+        get => _selectedDevice;
+        set
+        {
+            if (value is null || ReferenceEquals(value, _selectedDevice)) return;
+
+            // いまの機器の貼り付けを預けてから移る
+            RememberInto(_selectedDevice);
+            _selectedDevice = value;
+
+            OnPropertyChanged();
+            Restore();
+            RefreshModeMarks();
+        }
+    }
+
+    private void AddDevice()
+    {
+        RememberInto(_selectedDevice);
+
+        // 名前は後から書き換えられる。連番なのは、まず並べてから名前を付けることが多いため
+        var device = new DeviceEntryViewModel($"機器 {Devices.Count + 1}");
+        Devices.Add(device);
+        RemoveDeviceCommand.RaiseCanExecuteChanged();
+
+        SelectedDevice = device;
+    }
+
+    private void RemoveDevice()
+    {
+        if (Devices.Count <= 1) return;
+
+        int index = Devices.IndexOf(_selectedDevice);
+        Devices.Remove(_selectedDevice);
+        RemoveDeviceCommand.RaiseCanExecuteChanged();
+
+        // 消したら隣へ移る。末尾を消したときは 1 つ前
+        _selectedDevice = Devices[Math.Min(index, Devices.Count - 1)];
+
+        OnPropertyChanged(nameof(SelectedDevice));
+        Restore();
         RefreshModeMarks();
     }
 
@@ -164,7 +226,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
             if (value is null || value.Kind == _mode) return;
 
             // いまの対象の貼り付けを預けてから切り替え、行き先の分を出す
-            Remember();
+            RememberInto(_selectedDevice);
             _mode = value.Kind;
             Restore();
 
@@ -177,11 +239,16 @@ public sealed class DeviceCompareViewModel : ObservableObject
     /// <summary>貼り付けの有無を選択肢に映す。どの対象を record 済みかが一目で分かる。</summary>
     private void RefreshModeMarks()
     {
+        // 貼っている最中も機器側の数を合わせる。切り替えるまで反映されないと、
+        // 「何台ぶん集め終えたか」がその場で分からない
+        if (!_restoring)
+            RememberInto(_selectedDevice);
+
         foreach (DeviceModeViewModel mode in Modes)
         {
             (string before, string after) = mode.Kind == _mode
                 ? (BeforeText, AfterText)
-                : _pasted.TryGetValue(mode.Kind, out PastedPair? pair) ? (pair.Before, pair.After) : (string.Empty, string.Empty);
+                : _selectedDevice.Find(mode.Kind) is { } pair ? (pair.Before, pair.After) : (string.Empty, string.Empty);
 
             mode.SetState(before.Length > 0, after.Length > 0);
         }
@@ -197,22 +264,18 @@ public sealed class DeviceCompareViewModel : ObservableObject
             string[] done = [.. Modes.Where(m => m.HasAnything).Select(m => m.Name + m.StateMark)];
 
             return done.Length == 0
-                ? "まだ何も貼り付けていません。"
-                : "貼り付け済み: " + string.Join(" ／ ", done);
+                ? $"{SelectedDevice.Name}: まだ何も貼り付けていません。"
+                : $"{SelectedDevice.Name}: " + string.Join(" ／ ", done);
         }
     }
 
-    private void Remember()
-    {
-        if (BeforeText.Length == 0 && AfterText.Length == 0)
-            _pasted.Remove(_mode);
-        else
-            _pasted[_mode] = new PastedPair(BeforeText, AfterText);
-    }
+    private void RememberInto(DeviceEntryViewModel device)
+        => device.Remember(_mode, BeforeText, AfterText);
 
     private void Restore()
     {
-        _pasted.TryGetValue(_mode, out PastedPair? pair);
+        PastedPair? pair = _selectedDevice.Find(_mode);
+        _restoring = true;
 
         // 結果は対象ごとに持たない。切り替えたら貼り付け欄に戻し、必要なら比べ直す
         Rows.Clear();
@@ -226,6 +289,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
         BeforeText = pair?.Before ?? string.Empty;
         AfterText = pair?.After ?? string.Empty;
 
+        _restoring = false;
+
         OnPropertyChanged(nameof(HasNote));
         RefreshDifferenceState();
 
@@ -238,8 +303,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
         };
     }
 
-    /// <summary>対象ごとに預けてある貼り付け。</summary>
-    private sealed record PastedPair(string Before, string After);
+
 
     /// <summary>構造として比べられる対象か。行差分より上に変化の一覧を出す。</summary>
     public bool HasStructuredView => _mode
@@ -408,7 +472,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
     /// <summary>いまの対象の貼り付けだけを消す。他の対象に貼ってある分は残す。</summary>
     private void Clear()
     {
-        _pasted.Remove(_mode);
+        _selectedDevice.Remember(_mode, string.Empty, string.Empty);
 
         BeforeText = string.Empty;
         AfterText = string.Empty;
@@ -455,7 +519,12 @@ public sealed class DeviceCompareViewModel : ObservableObject
     /// <summary>貼り付けた内容と結果を起動時の状態へ戻す。</summary>
     public void Reset()
     {
-        _pasted.Clear();
+        Devices.Clear();
+        _selectedDevice = new DeviceEntryViewModel("機器 1");
+        Devices.Add(_selectedDevice);
+        OnPropertyChanged(nameof(SelectedDevice));
+        RemoveDeviceCommand.RaiseCanExecuteChanged();
+
         Clear();
         SelectedMode = Modes[0];
         RefreshModeMarks();
@@ -508,4 +577,54 @@ public sealed class DeviceModeViewModel : ObservableObject
             (false, true) => "（後）",
             _ => string.Empty,
         };
+}
+
+/// <summary>対象ごとに預けてある貼り付け。</summary>
+public sealed record PastedPair(string Before, string After);
+
+/// <summary>
+/// 見比べる機器 1 台。
+///
+/// 対象（show ip route / show run など）ごとの貼り付けを抱える。
+/// 1 回の作業で何台も設定変更することがあるので、台数ぶん並べて
+/// 「作業前」を先に集めておけるようにしている。
+/// </summary>
+public sealed class DeviceEntryViewModel : ObservableObject
+{
+    private readonly Dictionary<DeviceOutputKind, PastedPair> _pasted = [];
+    private string _name;
+
+    public DeviceEntryViewModel(string name) => _name = name;
+
+    /// <summary>機器名。ホスト名を入れておくと記録を見返すときに分かる。</summary>
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (SetProperty(ref _name, value))
+                OnPropertyChanged(nameof(Label));
+        }
+    }
+
+    /// <summary>貼り付けてある対象の数。</summary>
+    public int PastedCount => _pasted.Count;
+
+    /// <summary>一覧に出す表示。貼り付け済みの数を添えて、集め忘れに気づけるようにする。</summary>
+    public string Label => PastedCount == 0 ? Name : $"{Name}　{PastedCount}";
+
+    public PastedPair? Find(DeviceOutputKind kind)
+        => _pasted.TryGetValue(kind, out PastedPair? pair) ? pair : null;
+
+    /// <summary>貼り付けを預かる。両方とも空なら覚えない（数に含めない）。</summary>
+    public void Remember(DeviceOutputKind kind, string before, string after)
+    {
+        if (before.Length == 0 && after.Length == 0)
+            _pasted.Remove(kind);
+        else
+            _pasted[kind] = new PastedPair(before, after);
+
+        OnPropertyChanged(nameof(PastedCount));
+        OnPropertyChanged(nameof(Label));
+    }
 }

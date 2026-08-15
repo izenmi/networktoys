@@ -326,6 +326,41 @@
             仮想化が効くのは詳細表示のときだけ。多段は折り返しの都合で全件を組み立てる。
             参照するテンプレートより後に置くこと（StaticResource は前方参照できない）。
         -->
+        <!--
+            機器を選ぶ札。タブと同じ見た目にして「押して切り替えるもの」と分かるようにする。
+            選択中はアクセント色で塗り、貼り付け済みの数を添える。
+        -->
+        <Style x:Key="DeviceChip" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Chip"
+                                Background="{DynamicResource Brush.Surface}"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource Radius.Control}"
+                                Padding="9,2"
+                                Margin="0,0,3,0">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="TargetListBox" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -892,6 +927,46 @@
 
                         <!-- 操作 -->
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
+
+                            <!--
+                                機器の並び。1 回の作業で何台も設定変更することがあるので、
+                                台数ぶん並べて作業前をまとめて集められるようにしている。
+                            -->
+                            <DockPanel Margin="0,0,0,6">
+                                <Button DockPanel.Dock="Right" Content="削除"
+                                        Command="{Binding RemoveDeviceCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="4,0,0,0"
+                                        ToolTip="選んでいる機器を、貼り付けごと削除します。" />
+                                <Button DockPanel.Dock="Right" Content="＋ 機器"
+                                        Command="{Binding AddDeviceCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="8,0,0,0"
+                                        ToolTip="比較する機器を増やします。" />
+                                <TextBox DockPanel.Dock="Right" Width="150"
+                                         Text="{Binding SelectedDevice.Name, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="6,0,0,0" VerticalAlignment="Center"
+                                         ToolTip="機器名。ホスト名を入れておくと記録を見返すときに分かります。" />
+                                <TextBlock DockPanel.Dock="Right" Text="名前" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" Margin="10,0,0,0" />
+
+                                <ListBox ItemsSource="{Binding Devices}"
+                                         SelectedItem="{Binding SelectedDevice}"
+                                         ItemContainerStyle="{StaticResource DeviceChip}"
+                                         Background="Transparent" BorderThickness="0"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                         ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="対象" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" />
