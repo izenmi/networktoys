@@ -24,4 +24,7 @@ public sealed class AppSettingsDocument
 
     /// <summary>TCP 画面の宛先リストと測定の既定値。</summary>
     public TargetDocument Tcp { get; set; } = new();
+
+    /// <summary>IP 設定タブの名前付きプリセット。</summary>
+    public List<IpPreset> IpPresets { get; set; } = [];
 }

@@ -85,6 +85,43 @@ public class AppSettingsStoreTests
     }
 
     [Fact]
+    public void Ip_presets_round_trip_and_nameless_ones_are_dropped()
+    {
+        string path = TempPath();
+        try
+        {
+            var document = new AppSettingsDocument();
+            document.IpPresets.Add(new IpPreset
+            {
+                Name = "現場A",
+                Address = "192.168.10.50",
+                Mask = "24",
+                Gateway = "192.168.10.1",
+                Dns1 = "192.168.10.1",
+                Dns2 = "8.8.8.8",
+            });
+            document.IpPresets.Add(new IpPreset { Name = "事務所", Dhcp = true });
+            document.IpPresets.Add(new IpPreset { Name = "  " });   // 名前なし → 捨てる
+
+            AppSettingsStore.Save(path, document);
+            AppSettingsDocument loaded = AppSettingsStore.Load(path, out _);
+
+            Assert.Equal(2, loaded.IpPresets.Count);
+            IpPreset siteA = loaded.IpPresets[0];
+            Assert.Equal("現場A", siteA.Name);
+            Assert.Equal("192.168.10.50", siteA.Address);
+            Assert.Equal("24", siteA.Mask);
+            Assert.Equal("192.168.10.1", siteA.Gateway);
+            Assert.Equal("8.8.8.8", siteA.Dns2);
+            Assert.True(loaded.IpPresets[1].Dhcp);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void Invalid_targets_are_dropped_on_load()
     {
         string path = TempPath();

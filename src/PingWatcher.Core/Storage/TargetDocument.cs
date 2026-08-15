@@ -24,5 +24,6 @@ public sealed class TargetDocument
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(TargetDocument))]
 [JsonSerializable(typeof(AppSettingsDocument))]
+[JsonSerializable(typeof(IpPreset))]
 [JsonSerializable(typeof(Work.WorkSessionDocument))]
 public partial class PingWatcherJsonContext : JsonSerializerContext;

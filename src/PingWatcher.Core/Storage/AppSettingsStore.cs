@@ -69,6 +69,8 @@ public static class AppSettingsStore
         document.Tcp.Settings.Normalize();
         document.Tcp.Targets.RemoveAll(t => !t.IsValid());
 
+        document.IpPresets.RemoveAll(p => string.IsNullOrWhiteSpace(p.Name));
+
         if (document.Theme is not ("dark" or "light"))
             document.Theme = "dark";
     }
