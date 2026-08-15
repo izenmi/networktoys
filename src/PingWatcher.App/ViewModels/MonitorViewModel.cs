@@ -71,14 +71,16 @@ public sealed class MonitorViewModel : ObservableObject
         if (error is not null)
             StatusMessage = error;
 
+        // インターフェースの列挙は安くないので 1 回で済ませ、初期宛先にも使い回す
+        NetworkInfo = NetworkEnvironment.Current();
+
         if (document.Targets.Count == 0)
-            document.Targets.AddRange(CreateStarterTargets(alwaysTcp));
+            document.Targets.AddRange(CreateStarterTargets(alwaysTcp, NetworkInfo));
 
         foreach (Target target in document.Targets)
             AddRow(target);
 
         _targetListText = TargetListParser.Format(document.Targets);
-        NetworkInfo = NetworkEnvironment.Current();
 
         StartCommand = new RelayCommand(() => Start(_alwaysTcp), () => !IsRunning && Rows.Count > 0);
         StopCommand = new RelayCommand(() => _ = StopAsync(), () => IsRunning);
@@ -695,7 +697,7 @@ public sealed class MonitorViewModel : ObservableObject
     }
 
     /// <summary>初回起動時の宛先。何も無い画面より、すぐ測れる方が親切。</summary>
-    private static IEnumerable<Target> CreateStarterTargets(bool tcp)
+    private static IEnumerable<Target> CreateStarterTargets(bool tcp, NetworkSnapshot snapshot)
     {
         if (tcp)
         {
@@ -705,8 +707,6 @@ public sealed class MonitorViewModel : ObservableObject
             yield return new Target { Host = "8.8.8.8:53", Comment = "DNS（TCP）" };
             yield break;
         }
-
-        NetworkSnapshot snapshot = NetworkEnvironment.Current();
 
         if (snapshot.Gateway is not null)
             yield return new Target { Host = snapshot.Gateway.ToString(), Comment = "既定ゲートウェイ" };

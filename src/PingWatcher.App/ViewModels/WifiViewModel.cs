@@ -273,11 +273,14 @@ public sealed class WifiViewModel : ObservableObject
         {
             if (ap.Channel <= 0) continue;
 
-            Dictionary<int, int> target = ap.Band < 3 ? counts24 : counts5;
+            // 帯域はチャンネル番号で判定する。Band は取れないことがあり(0)、
+            // それを 2.4GHz に混ぜると 5GHz の AP が誤った帯に立ってしまう
+            Dictionary<int, int> target = ap.Channel <= 14 ? counts24 : counts5;
             target[ap.Channel] = target.GetValueOrDefault(ap.Channel) + 1;
         }
 
-        AddBars(Channels24, Enumerable.Range(1, 13), counts24, myChannel);
+        // 14ch まで並べる(国内の 11b 専用 AP が使う。13 までだと一覧から消える)
+        AddBars(Channels24, Enumerable.Range(1, 14), counts24, myChannel);
 
         // 5GHz は使われうるチャンネルだけを並べる（全部出すと横に長くなりすぎる）
         int[] used5 = [.. counts5.Keys.Order()];

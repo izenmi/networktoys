@@ -28,13 +28,34 @@ internal static class PathMtuProbe
     private const int MinPayload = 548;
     private const int MaxPayload = 1472;
 
+    /// <summary>探索全体に許す時間。ブラックホール経路では 1 回ごとにタイムアウトを
+    /// 待つため、上限が無いと二分探索の回数ぶん(最悪 20 回超)黙り込む。</summary>
+    private static readonly TimeSpan OverallTimeout = TimeSpan.FromSeconds(15);
+
     public static async Task<PathMtuResult> DiscoverAsync(IPAddress destination, int timeoutMs, CancellationToken token)
+    {
+        using var overall = CancellationTokenSource.CreateLinkedTokenSource(token);
+        overall.CancelAfter(OverallTimeout);
+
+        try
+        {
+            return await DiscoverCoreAsync(destination, timeoutMs, overall.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            return new PathMtuResult(0, false,
+                $"{OverallTimeout.TotalSeconds:0} 秒以内に判定できませんでした。経路が応答を返していません。");
+        }
+    }
+
+    private static async Task<PathMtuResult> DiscoverCoreAsync(IPAddress destination, int timeoutMs, CancellationToken token)
     {
         using var ping = new Ping();
         var options = new PingOptions(64, dontFragment: true);
 
         bool sawTooBig = false;
         bool sawTimeout = false;
+        bool sawUnreachable = false;
 
         async Task<bool> Fits(int payload)
         {
@@ -54,8 +75,14 @@ internal static class PathMtuProbe
                         sawTooBig = true;
                         return false;
 
-                    default:
+                    case IPStatus.TimedOut:
                         sawTimeout = true;
+                        return false;
+
+                    default:
+                        // 到達不能などをタイムアウト扱いにすると
+                        // 「ブラックホールの可能性」と誤った説明を出してしまう
+                        sawUnreachable = true;
                         return false;
                 }
             }
@@ -72,7 +99,9 @@ internal static class PathMtuProbe
             return new PathMtuResult(0, false,
                 sawTooBig
                     ? $"{MinPayload + Overhead} バイトでも通りませんでした。経路の MTU が極端に小さい可能性があります。"
-                    : "応答がありません。ICMP が遮断されているか、宛先に届いていません。");
+                    : sawUnreachable
+                        ? "到達不能が返っています。宛先か経路の設定を確認してください。"
+                        : "応答がありません。ICMP が遮断されているか、宛先に届いていません。");
         }
 
         // 上限が通るなら探索は不要

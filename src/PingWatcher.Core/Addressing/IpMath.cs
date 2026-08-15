@@ -49,6 +49,13 @@ public static class IpMath
     /// <summary>サブネットマスクからプレフィックス長を求める。連続しないマスクは受け付けない。</summary>
     public static int MaskToPrefix(IPAddress mask)
     {
+        ArgumentNullException.ThrowIfNull(mask);
+
+        // ここで検査しないと、ToUInt32 の中で paramName が "address" の例外になり
+        // 呼び出し側のどの引数が悪いのか分からなくなる
+        if (mask.AddressFamily != AddressFamily.InterNetwork)
+            throw new ArgumentException($"IPv4 のマスクではありません: {mask}", nameof(mask));
+
         uint value = ToUInt32(mask);
         int prefix = System.Numerics.BitOperations.LeadingZeroCount(~value);
         if (prefix > 32) prefix = 32;

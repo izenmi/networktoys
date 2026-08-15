@@ -263,6 +263,18 @@ internal static class SelfTest
             window.Close();
         });
 
+        Check("確認ダイアログを表示できる", () =>
+        {
+            // XAML ではなくコードで組んでいるが、リソースキーの打ち間違いは
+            // やはり実行時にしか分からないので、実際に表示まで通す
+            var dialog = new Views.ConfirmDialog("確認", "検査用の本文です。", "実行する");
+            dialog.Show();
+            dialog.UpdateLayout();
+
+            Assert(dialog.ActualWidth > 0 && dialog.ActualHeight > 0, "ダイアログの実サイズが 0");
+            dialog.Close();
+        });
+
         Check("ICMP を実行できる(応答の有無は問わない)", () =>
         {
             // 管理者権限なしで Ping が動くこと自体の確認。

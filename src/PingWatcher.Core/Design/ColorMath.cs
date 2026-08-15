@@ -44,6 +44,13 @@ public static class ColorMath
         if (span.Length == 8) span = span[2..];
         if (span.Length != 6) return false;
 
+        // NumberStyles.HexNumber は前後の空白を許してしまう。パレットの打ち間違いを
+        // 自己診断が「読めたから正しい」と信じる作りなので、桁は厳密に見る
+        foreach (char c in span)
+        {
+            if (!char.IsAsciiHexDigit(c)) return false;
+        }
+
         return TryHexByte(span[..2], out r)
                && TryHexByte(span.Slice(2, 2), out g)
                && TryHexByte(span.Slice(4, 2), out b);

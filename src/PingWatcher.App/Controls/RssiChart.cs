@@ -40,7 +40,26 @@ public sealed class RssiChart : FrameworkElement
         Unloaded += (_, _) => ThemeManager.ThemeChanged -= OnThemeChanged;
     }
 
-    private void OnThemeChanged(object? sender, EventArgs e) => InvalidateVisual();
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        // 色が変わるので、作り置きした Pen とラベルは捨てて描き直す
+        _gridPen = null;
+        _linePen = null;
+        _labels = null;
+        InvalidateVisual();
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        _labels = null;   // FormattedText は DPI を焼き込むので作り直す
+    }
+
+    // 毎 OnRender で Pen と FormattedText を作り直さないための置き場。
+    // リサイズ中は描画が連続するので、テキスト整形を毎回やると引っかかる
+    private Pen? _gridPen;
+    private Pen? _linePen;
+    private (double Level, FormattedText Text)[]? _labels;
 
     private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -65,30 +84,38 @@ public sealed class RssiChart : FrameworkElement
         if (Source is null || width <= 1 || height <= 1)
             return;
 
-        Brush gridBrush = TryFindResource("Brush.Border") as Brush ?? Brushes.LightGray;
-        Brush textBrush = TryFindResource("Brush.TextMuted") as Brush ?? Brushes.Gray;
-        Brush lineBrush = TryFindResource("Brush.Chart.Line") as Brush ?? Brushes.SteelBlue;
+        if (_gridPen is null || _linePen is null)
+        {
+            Brush gridBrush = TryFindResource("Brush.Border") as Brush ?? Brushes.LightGray;
+            Brush lineBrush = TryFindResource("Brush.Chart.Line") as Brush ?? Brushes.SteelBlue;
 
-        var gridPen = new Pen(gridBrush, 1);
-        gridPen.Freeze();
-        var linePen = new Pen(lineBrush, 1.6) { LineJoin = PenLineJoin.Round };
-        linePen.Freeze();
+            _gridPen = new Pen(gridBrush, 1);
+            _gridPen.Freeze();
+            _linePen = new Pen(lineBrush, 1.6) { LineJoin = PenLineJoin.Round };
+            _linePen.Freeze();
+        }
+
+        if (_labels is null)
+        {
+            Brush textBrush = TryFindResource("Brush.TextMuted") as Brush ?? Brushes.Gray;
+            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+
+            _labels = [.. new double[] { -30, -60, -90 }.Select(level =>
+                (level, new FormattedText(
+                    level.ToString("0", CultureInfo.InvariantCulture),
+                    CultureInfo.InvariantCulture,
+                    FlowDirection.LeftToRight,
+                    new Typeface("Consolas"),
+                    10,
+                    textBrush,
+                    pixelsPerDip)))];
+        }
 
         // 目盛り
-        foreach (double level in (double[])[-30, -60, -90])
+        foreach ((double level, FormattedText label) in _labels)
         {
             double y = ToY(level, height);
-            drawingContext.DrawLine(gridPen, new Point(30, y), new Point(width, y));
-
-            var label = new FormattedText(
-                $"{level:0}",
-                CultureInfo.InvariantCulture,
-                FlowDirection.LeftToRight,
-                new Typeface("Consolas"),
-                10,
-                textBrush,
-                VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
+            drawingContext.DrawLine(_gridPen, new Point(30, y), new Point(width, y));
             drawingContext.DrawText(label, new Point(4, y - label.Height / 2));
         }
 
@@ -110,7 +137,7 @@ public sealed class RssiChart : FrameworkElement
         }
 
         geometry.Freeze();
-        drawingContext.DrawGeometry(null, linePen, geometry);
+        drawingContext.DrawGeometry(null, _linePen, geometry);
     }
 
     private static double ToY(double rssi, double height)

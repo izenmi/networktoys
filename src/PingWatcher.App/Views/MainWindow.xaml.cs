@@ -172,17 +172,17 @@ public partial class MainWindow : Window
     /// </summary>
     private async void OnClearAll(object sender, RoutedEventArgs e)
     {
-        MessageBoxResult answer = MessageBox.Show(
+        // MessageBox はネイティブ描画で、ダークテーマだとそこだけ白い箱が出る。
+        // アプリの配色で描く自前の確認ダイアログを使う
+        bool confirmed = ConfirmDialog.Confirm(
             this,
+            "クリア",
             "測定結果・作業の記録・各画面の入力を、起動直後の状態に戻します。\n" +
             "宛先リストは残ります。保存済みのレポートやセッションのファイルは消えません。\n\n" +
             "元に戻せません。実行しますか？",
-            "クリア",
-            MessageBoxButton.OKCancel,
-            MessageBoxImage.Warning,
-            MessageBoxResult.Cancel);
+            okLabel: "すべて消す");
 
-        if (answer != MessageBoxResult.OK) return;
+        if (!confirmed) return;
 
         try
         {

@@ -79,4 +79,27 @@ public class ColorMathTests
 
         Assert.True(ratio >= ColorMath.MinimumForText, $"本文のコントラストが不足: {ratio}");
     }
+
+    [Theory]
+    [InlineData("# F0012")]
+    [InlineData("#FF 012")]
+    [InlineData("#\tFF0012")]
+    public void Hex_with_embedded_whitespace_is_rejected(string text)
+    {
+        // NumberStyles.HexNumber は空白を許す。打ち間違いを「読めたから正しい」と
+        // 信じる自己診断の前提が崩れるので、桁は厳密に見る
+        Assert.False(ColorMath.TryParseHex(text, out _, out _, out _));
+    }
+
+    [Fact]
+    public void The_alpha_prefix_is_dropped_not_the_suffix()
+    {
+        // WPF の #AARRGGBB 準拠。#RRGGBBAA 実装と取り違えると
+        // 半透明色のコントラスト検算が別の色で行われてしまう
+        Assert.True(ColorMath.TryParseHex("#80FF0012", out byte r, out byte g, out byte b));
+
+        Assert.Equal(0xFF, r);
+        Assert.Equal(0x00, g);
+        Assert.Equal(0x12, b);
+    }
 }
