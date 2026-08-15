@@ -70,9 +70,18 @@ internal static class SelfTest
                 "Brush.Ok.Bg", "Brush.Ok.Fg", "Brush.Warn.Bg", "Brush.Warn.Fg",
                 "Brush.Error.Bg", "Brush.Error.Fg", "Brush.Info.Bg", "Brush.Info.Fg",
                 "Brush.Accent.Bg", "Brush.Accent.Fg", "Brush.Chart.Line", "Brush.Chart.Fill",
+                "Brush.Chip.Edge", "Brush.Scroll.Thumb",
             ];
             foreach (string key in keys)
                 Assert(Application.Current.TryFindResource(key) is SolidColorBrush, $"{key} が SolidColorBrush として引けない");
+
+            // 面と枠のグラデーション。単色ではないので別に見る
+            string[] gradients =
+            [
+                "Brush.Window.Backdrop", "Brush.Card.Face", "Brush.Card.Edge", "Brush.Accent.Gradient",
+            ];
+            foreach (string key in gradients)
+                Assert(Application.Current.TryFindResource(key) is Brush, $"{key} が Brush として引けない");
         });
 
         Check("リソース: Controls.xaml のスタイルが解決できる", () =>
@@ -118,6 +127,48 @@ internal static class SelfTest
             Assert(missingInDark.Length == 0, $"ダークに無いキー: {string.Join(", ", missingInDark)}");
 
             log.AppendLine($"        共通のキー: {dark.Count} 件");
+        });
+
+        Check("配色: 文字と地のコントラストが足りている", () =>
+        {
+            // 淡くしたい気持ちと読めることは必ず衝突する。目で見て決めると、
+            // 明るい画面で作った色が暗い画面で沈む。ここで毎回検算する。
+            foreach (string source in new[] { "Resources/Palette.Dark.xaml", "Resources/Palette.xaml" })
+            {
+                var palette = new ResourceDictionary { Source = new Uri(source, UriKind.Relative) };
+                string name = source.Contains("Dark", StringComparison.Ordinal) ? "ダーク" : "ライト";
+
+                Color ColorOf(string key)
+                {
+                    Assert(palette[key] is SolidColorBrush, $"{name}: {key} が SolidColorBrush ではない");
+                    return ((SolidColorBrush)palette[key]!).Color;
+                }
+
+                void Ensure(string foreground, string background)
+                {
+                    Color f = ColorOf(foreground);
+                    Color b = ColorOf(background);
+                    double ratio = Core.Design.ColorMath.ContrastRatio(f.R, f.G, f.B, b.R, b.G, b.B);
+
+                    Assert(ratio >= Core.Design.ColorMath.MinimumForText,
+                           $"{name}: {foreground} を {background} に載せると {ratio:F2}（{Core.Design.ColorMath.MinimumForText} 必要）");
+                }
+
+                Ensure("Brush.Text", "Brush.Surface");
+                Ensure("Brush.Text", "Brush.Background");
+                Ensure("Brush.TextMuted", "Brush.Surface");
+                Ensure("Brush.TextMuted", "Brush.SurfaceAlt");
+                Ensure("Brush.TextMuted", "Brush.Background");
+
+                foreach (string state in new[] { "Ok", "Warn", "Error", "Info", "Accent" })
+                {
+                    // バッジ（地色つき）と、地色を敷かない場所の両方で読めること
+                    Ensure($"Brush.{state}.Fg", $"Brush.{state}.Bg");
+                    Ensure($"Brush.{state}.Fg", "Brush.Surface");
+                }
+
+                log.AppendLine($"        {name}: 15 組すべて基準を満たす");
+            }
         });
 
         Views.MainWindow? window = null;

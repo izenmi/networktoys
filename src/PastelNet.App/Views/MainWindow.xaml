@@ -6,7 +6,7 @@
         Width="1140" Height="720"
         MinWidth="900" MinHeight="480"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource Brush.Background}"
+        Background="{DynamicResource Brush.Window.Backdrop}"
         Foreground="{DynamicResource Brush.Text}"
         FontFamily="{DynamicResource Font.Ui}"
         FontSize="{DynamicResource Size.Body}"

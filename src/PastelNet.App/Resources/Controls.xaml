@@ -7,8 +7,14 @@
 
     <!-- ===== カード(各セクションの土台) ===== -->
     <Style x:Key="Card" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+        <!--
+            面はごく薄い縦グラデ、枠は上辺だけ明るいグラデにする。
+            影(DropShadowEffect)は使わない。カードの中身は毎秒書き換わるので、
+            効果を挟むと中間サーフェス経由の再描画になって重くなる。
+            上辺の明るい枠だけで、光が上から当たっているように見える。
+        -->
+        <Setter Property="Background" Value="{DynamicResource Brush.Card.Face}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Card.Edge}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{DynamicResource Radius.Card}" />
         <Setter Property="Padding" Value="10" />
@@ -28,7 +34,7 @@
 
     <!-- ===== 見出し ===== -->
     <Style x:Key="Heading" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource Size.Heading}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
         <Setter Property="Margin" Value="0,0,0,6" />
@@ -77,10 +83,18 @@
                             Background="{DynamicResource Brush.Surface}"
                             BorderBrush="{DynamicResource Brush.Border}"
                             BorderThickness="1"
-                            CornerRadius="7"
+                            CornerRadius="{DynamicResource Radius.Control}"
                             Padding="14,5"
                             Margin="0,0,5,0">
-                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
+                        <DockPanel>
+                            <!-- 選択中の下線。面の色だけより、どこを見ているかが掴みやすい -->
+                            <Rectangle x:Name="Underline" DockPanel.Dock="Bottom"
+                                       Height="2" Margin="1,3,1,-2"
+                                       RadiusX="1" RadiusY="1"
+                                       Visibility="Collapsed"
+                                       Fill="{DynamicResource Brush.Accent.Gradient}" />
+                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
+                        </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
                         <!-- ホバーを先に、選択を後に書く。順序を入れ替えると選択中もホバー色になる -->
@@ -91,6 +105,7 @@
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            <Setter TargetName="Underline" Property="Visibility" Value="Visible" />
                             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>
@@ -113,16 +128,23 @@
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Bd"
                             Background="{TemplateBinding Background}"
-                            CornerRadius="7"
-                            Padding="{TemplateBinding Padding}">
+                            CornerRadius="{DynamicResource Radius.Control}"
+                            Padding="{TemplateBinding Padding}"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="Press" />
+                        </Border.RenderTransform>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.82" />
                         </Trigger>
+                        <!-- わずかに縮めると押した手応えが出る。アニメーションは要らない -->
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.65" />
+                            <Setter TargetName="Press" Property="ScaleX" Value="0.97" />
+                            <Setter TargetName="Press" Property="ScaleY" Value="0.97" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
