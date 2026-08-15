@@ -1,8 +1,8 @@
 <!--
     PastelNet ダークテーマ。既定の配色。
 
-    深い紺の地に、彩度を保ったパステルを光らせる。監視画面として長時間見るので、
-    地は黒ではなく青みを残して沈ませ、状態の色だけが浮き上がるようにしている。
+    深く沈めた紺の地に、彩度を上げたパステルを光らせる。監視画面として長時間見るので、
+    地は黒ではなく青みを残し、状態の色とアクセントだけが発光して見えるようにしている。
 
     Palette.xaml と同じキーを同じ意味で定義する。片方にだけキーを足すと
     切り替えた瞬間に色が消えるので、追加は必ず両方へ。自己診断が突き合わせている。
@@ -20,40 +20,40 @@
                     mc:Ignorable="po">
 
     <!-- ベース(深い紺) -->
-    <SolidColorBrush x:Key="Brush.Background"   Color="#0E1424" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Surface"      Color="#171E33" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#1F2740" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Border"       Color="#303C60" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Text"         Color="#E8ECF8" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#9AA7CC" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Background"   Color="#080D1A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Surface"      Color="#111829" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#18213A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Border"       Color="#2E3C66" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Text"         Color="#EAF0FF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#93A4D0" po:Freeze="True" />
 
     <!-- 状態: 応答あり(ミント) -->
-    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#1B4A3A" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#6FE7B4" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#0F4436" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#4DF0B0" po:Freeze="True" />
 
     <!-- 状態: 遅延・警告(アンバー) -->
-    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#54401F" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#FFC97A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#4D3A12" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#FFC24D" po:Freeze="True" />
 
     <!-- 状態: 不達・エラー(コーラル) -->
-    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#5C2C30" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#FF9E97" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#5A2129" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#FF8C86" po:Freeze="True" />
 
     <!-- 状態: 実行中・情報(スカイ) -->
-    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#1B4059" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#7CCDF4" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#123D5C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#57C9FF" po:Freeze="True" />
 
     <!-- 選択・アクセント(ペリウィンクル) -->
-    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#333C76" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#A7B2FF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#28327A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#9AA8FF" po:Freeze="True" />
 
     <!-- グラフ描画用 -->
-    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#6FC3F0" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#1B3A52" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#4FD2FF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#123044" po:Freeze="True" />
 
     <!-- 細部。枠と面をわずかに変えるだけで、平坦な暗い画面に奥行きが出る -->
-    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#2C3A5E" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#4C5878" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#26355C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#3E4C7A" po:Freeze="True" />
 
     <!--
         面と枠のグラデーション。影(DropShadowEffect)は使わない。
@@ -61,23 +61,23 @@
         上辺を明るくした枠で、影の代わりの立体感を出す。
     -->
     <LinearGradientBrush x:Key="Brush.Window.Backdrop" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#0E1424" />
-        <GradientStop Offset="1" Color="#131A30" />
+        <GradientStop Offset="0" Color="#080D1A" />
+        <GradientStop Offset="1" Color="#0D1526" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Face" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#1A2238" />
-        <GradientStop Offset="1" Color="#141B2E" />
+        <GradientStop Offset="0" Color="#141D33" />
+        <GradientStop Offset="1" Color="#0F1524" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Edge" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#3A4668" />
-        <GradientStop Offset="1" Color="#232C4A" />
+        <GradientStop Offset="0" Color="#3C4E86" />
+        <GradientStop Offset="1" Color="#1E2947" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Accent.Gradient" StartPoint="0,0" EndPoint="1,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#A7B2FF" />
-        <GradientStop Offset="1" Color="#7CCDF4" />
+        <GradientStop Offset="0" Color="#9AA8FF" />
+        <GradientStop Offset="1" Color="#4FD2FF" />
     </LinearGradientBrush>
 
 </ResourceDictionary>

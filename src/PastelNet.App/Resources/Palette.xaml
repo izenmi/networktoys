@@ -22,40 +22,40 @@
                     mc:Ignorable="po">
 
     <!-- ベース -->
-    <SolidColorBrush x:Key="Brush.Background"   Color="#FAF7F2" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Background"   Color="#F8F5F0" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Surface"      Color="#FFFFFF" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#F3EEF9" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#F0EBF8" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Border"       Color="#E6DFEF" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Text"         Color="#3D3650" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#6F678A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Text"         Color="#332C46" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.TextMuted"    Color="#665E82" po:Freeze="True" />
 
     <!-- 状態: 応答あり(ミント) -->
-    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#BFEEDD" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#1F6A4C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#B4EDD6" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#126343" po:Freeze="True" />
 
     <!-- 状態: 遅延・警告(ピーチ) -->
-    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#FFE3B8" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#8F5210" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#FFDCA8" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#84490B" po:Freeze="True" />
 
     <!-- 状態: 不達・エラー(ローズ) -->
-    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#FFD1CE" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#A93832" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#FFC8C4" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#A32F29" po:Freeze="True" />
 
     <!-- 状態: 実行中・情報(スカイ) -->
-    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#C6E9FB" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#175D80" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#BCE5FB" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#0F5678" po:Freeze="True" />
 
     <!-- 選択・アクセント(ラベンダー) -->
-    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#CBD2F2" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#3D478F" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#C3CCF5" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#333E8C" po:Freeze="True" />
 
     <!-- グラフ描画用の淡色(スパークラインの塗り) -->
-    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#5E9EC8" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chart.Line"   Color="#4E92C4" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#DDEEF9" po:Freeze="True" />
 
     <!-- 細部。ダークと同じキーを揃える -->
-    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#EFEAF5" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#CFC7DD" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#E7E1F2" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#C7BFD8" po:Freeze="True" />
 
     <!--
         面と枠のグラデーション。影(DropShadowEffect)は使わない。
@@ -63,8 +63,8 @@
         上辺を明るくした枠で、影の代わりの立体感を出す。
     -->
     <LinearGradientBrush x:Key="Brush.Window.Backdrop" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#FBF8F3" />
-        <GradientStop Offset="1" Color="#F6F1EA" />
+        <GradientStop Offset="0" Color="#FAF7F2" />
+        <GradientStop Offset="1" Color="#F3EEE7" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card.Face" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
@@ -78,8 +78,8 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Accent.Gradient" StartPoint="0,0" EndPoint="1,1" po:Freeze="True">
-        <GradientStop Offset="0" Color="#4A54A0" />
-        <GradientStop Offset="1" Color="#1F6E96" />
+        <GradientStop Offset="0" Color="#333E8C" />
+        <GradientStop Offset="1" Color="#0F5678" />
     </LinearGradientBrush>
 
 </ResourceDictionary>
