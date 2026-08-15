@@ -47,6 +47,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
         ClearCommand = new RelayCommand(Clear);
         LoadBeforeCommand = new RelayCommand(() => LoadInto(before: true));
         LoadAfterCommand = new RelayCommand(() => LoadInto(before: false));
+        SaveBeforeCommand = new RelayCommand(() => SaveFrom(before: true), () => BeforeText.Length > 0);
+        SaveAfterCommand = new RelayCommand(() => SaveFrom(before: false), () => AfterText.Length > 0);
 
         NextDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: true), () => DifferenceCount > 0);
         PreviousDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: false), () => DifferenceCount > 0);
@@ -206,21 +208,24 @@ public sealed class DeviceCompareViewModel : ObservableObject
     public RelayCommand ClearCommand { get; }
     public RelayCommand LoadBeforeCommand { get; }
     public RelayCommand LoadAfterCommand { get; }
+    public RelayCommand SaveBeforeCommand { get; }
+    public RelayCommand SaveAfterCommand { get; }
 
-    /// <summary>並び順は <see cref="DeviceOutputKind"/> と対応させること。</summary>
+    /// <summary>
+    /// 比較対象の選択肢。<see cref="DeviceOutputKind"/> の一部だけを載せる
+    /// （interface brief / cdp / mac address-table は 2026-08-15 に削除）。
+    /// 参照は <see cref="SelectedMode"/> で Kind から引くので、並び順に依存しない。
+    /// </summary>
     public DeviceModeViewModel[] Modes { get; } =
     [
         new(DeviceOutputKind.RouteTable, "show ip route"),
-        new(DeviceOutputKind.InterfaceBrief, "show ip interface brief"),
-        new(DeviceOutputKind.CdpNeighbors, "show cdp neighbors"),
-        new(DeviceOutputKind.MacTable, "show mac address-table"),
         new(DeviceOutputKind.Configuration, "show run"),
         new(DeviceOutputKind.PlainText, "そのまま比較"),
     ];
 
     public DeviceModeViewModel SelectedMode
     {
-        get => Modes[(int)_mode];
+        get => Array.Find(Modes, m => m.Kind == _mode) ?? Modes[0];
         set
         {
             if (value is null || value.Kind == _mode) return;
@@ -344,6 +349,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
             if (!SetProperty(ref _beforeText, value)) return;
 
             CompareCommand.RaiseCanExecuteChanged();
+            SaveBeforeCommand.RaiseCanExecuteChanged();
             RefreshModeMarks();
         }
     }
@@ -356,6 +362,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
             if (!SetProperty(ref _afterText, value)) return;
 
             CompareCommand.RaiseCanExecuteChanged();
+            SaveAfterCommand.RaiseCanExecuteChanged();
             RefreshModeMarks();
         }
     }
@@ -514,6 +521,33 @@ public sealed class DeviceCompareViewModel : ObservableObject
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Status = $"読み込めませんでした: {ex.Message}";
+        }
+    }
+
+    /// <summary>作業前／作業後の貼り付けをそのままテキストファイルへ保存する。</summary>
+    private void SaveFrom(bool before)
+    {
+        string text = before ? BeforeText : AfterText;
+        if (text.Length == 0) return;
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = "テキスト (*.txt)|*.txt|ログ (*.log)|*.log|すべてのファイル (*.*)|*.*",
+            FileName = $"{SelectedMode.Kind}-{(before ? "before" : "after")}.txt",
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            // BOM 付き UTF-8。メモ帳でも Excel でも文字化けしない（レポートと同じ判断）
+            File.WriteAllText(dialog.FileName, text, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"保存できませんでした: {ex.Message}";
         }
     }
 
