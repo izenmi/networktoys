@@ -27,6 +27,7 @@ public sealed class ShellViewModel
         Ftp = new FtpViewModel(Monitor.LocalAddress);
         Tftp = new TftpViewModel(Monitor.LocalAddress);
         Sftp = new SftpViewModel(Monitor.LocalAddress);
+        Syslog = new SyslogViewModel(Monitor.LocalAddress);
 
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
@@ -60,6 +61,9 @@ public sealed class ShellViewModel
     /// <summary>使い捨て SFTP サーバ。</summary>
     public SftpViewModel Sftp { get; }
 
+    /// <summary>syslog 受信サーバ。</summary>
+    public SyslogViewModel Syslog { get; }
+
     public WifiViewModel Wifi { get; }
 
     public ReportViewModel Report { get; }
@@ -90,6 +94,7 @@ public sealed class ShellViewModel
         Ftp.Reset();
         Tftp.Reset();
         Sftp.Reset();
+        Syslog.Reset();
         Dns.Reset();
         Trace.Reset();
         Wifi.Reset();

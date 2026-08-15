@@ -349,6 +349,15 @@ internal static class SelfTest
             Assert(!server.IsRunning, "SFTP サーバが停止していない");
         });
 
+        Check("syslog サーバを起動して停止できる", () =>
+        {
+            using var server = new Services.SyslogReceiver();
+            server.Start(0);   // ポート 0 で衝突を避ける
+            Assert(server.IsRunning, "syslog サーバが起動していない");
+            server.Stop();
+            Assert(!server.IsRunning, "syslog サーバが停止していない");
+        });
+
         Check("traceroute を実行できる", () =>
         {
             // ループバック相手なら 1 ホップで届くはず。ここでも見たいのは

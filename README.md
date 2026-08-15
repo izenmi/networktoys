@@ -22,6 +22,7 @@ ping のほかに TCP 接続・DNS・traceroute・IP スキャン・無線 LAN�
 | **SFTP** | 使い捨ての SFTP サーバ（SSH 越しで暗号化）。WinSCP などで `sftp\` フォルダへ読み書き。ホスト鍵は初回に生成して保存 |
 | **DNS** | 同じ名前を複数の DNS サーバへ同時に問い合わせて横並び比較。A / AAAA / CNAME / MX / NS / TXT / SOA / SRV / PTR |
 | **経路** | traceroute（TTL を並列に投げるので速い）、Path MTU 探索、経路変化の見張り |
+| **syslog** | 機器からの syslog を受けて一覧表示。`logging <このPCのIP>` を機器に入れるだけ。`logs\` にも保存 |
 | **無線** | 接続中 AP の詳細、受信強度の推移、チャンネルの混み具合、周辺 AP 一覧 |
 | **記録** | HTML・テキスト・CSV で書き出し |
 
