@@ -95,10 +95,12 @@ HTML とテキストには次が入ります。
 
 [Actions](../../actions) の最新ビルドから成果物をダウンロードしてください。
 
-| 成果物 | サイズ | 中身 |
-|---|---|---|
-| `PingWatcher-win-x64` | 約 125MB | 単一 exe。.NET のインストール不要。こちらを推奨 |
-| `PingWatcher-win-x64-runtime-required` | 約 0.2MB | 軽量版。別途 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要 |
+| 成果物 | 展開後 | ダウンロード(zip) | 中身 |
+|---|---|---|---|
+| `PingWatcher-win-x64` | 約 125MB | 約 60MB | 単一 exe。.NET のインストール不要。こちらを推奨 |
+| `PingWatcher-win-x64-runtime-required` | 約 5MB | 約 5MB | 軽量版。別途 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要 |
+
+**サイズを最優先するなら軽量版**を選んでください（.NET 10 Desktop Runtime の導入が一度だけ必要です。中身はフォント同梱のアプリ本体のみ）。
 
 WPF はトリミングできないため、.NET を同梱すると 125MB になります。単一ファイルの圧縮でサイズを半分にはできますが、メモリ消費が倍（約 183MB）になり初回起動も 5 秒近くかかるため採用していません。
 

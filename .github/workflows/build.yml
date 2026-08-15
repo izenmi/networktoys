@@ -179,7 +179,7 @@ jobs:
           mkdir -p release
           for dir in artifacts/*/; do
             name=$(basename "$dir")
-            (cd "$dir" && zip -qr "../../release/${name}-${GITHUB_REF_NAME}.zip" .)
+            (cd "$dir" && zip -q9r "../../release/${name}-${GITHUB_REF_NAME}.zip" .)
           done
           cd release && sha256sum *.zip | tee SHA256SUMS.txt
 
