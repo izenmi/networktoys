@@ -1,7 +1,7 @@
 <!--
     PingWatcher のアイコン。見張るふくろう。
 
-    ・瞳を同心円にして、ping の波紋を兼ねている
+    ・瞳を同心円にして、ping の波紋を兼ねている（色は本体の配色に合わせる）
     ・タイル（背景の角丸四角）は敷かない。地は透過のまま
     ・大きな目が 2 つある輪郭は小さくしても崩れないので、16px でも顔が残る
 
@@ -14,23 +14,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
   <g transform="translate(12,13.65) scale(1.19) translate(-12,-13.65)">
     <!-- 耳 -->
-    <path d="M4.7 4.2l5.1 2.9-5.4 2.3z" fill="#4DF0B0"/>
-    <path d="M19.3 4.2l-5.1 2.9 5.4 2.3z" fill="#4DF0B0"/>
+    <path d="M4.7 4.2l5.1 2.9-5.4 2.3z" fill="#F792C6"/>
+    <path d="M19.3 4.2l-5.1 2.9 5.4 2.3z" fill="#F792C6"/>
 
     <!-- 体 -->
-    <rect x="3.4" y="6.5" width="17.2" height="14.3" rx="8.6" fill="#4DF0B0"/>
+    <rect x="3.4" y="6.5" width="17.2" height="14.3" rx="8.6" fill="#F792C6"/>
 
     <!-- 目。外側の暗い円は、地が明るくても暗くても目として読めるように置いている -->
-    <circle cx="8.5" cy="12.2" r="3.35" fill="#0E1524"/>
-    <circle cx="15.5" cy="12.2" r="3.35" fill="#0E1524"/>
+    <circle cx="8.5" cy="12.2" r="3.35" fill="#4A2352"/>
+    <circle cx="15.5" cy="12.2" r="3.35" fill="#4A2352"/>
 
     <!-- 瞳＝波紋 -->
-    <circle cx="8.5" cy="12.2" r="2.25" fill="none" stroke="#4FD2FF" stroke-width="0.9"/>
-    <circle cx="15.5" cy="12.2" r="2.25" fill="none" stroke="#4FD2FF" stroke-width="0.9"/>
-    <circle cx="8.5" cy="12.2" r="0.95" fill="#4FD2FF"/>
-    <circle cx="15.5" cy="12.2" r="0.95" fill="#4FD2FF"/>
+    <circle cx="8.5" cy="12.2" r="2.25" fill="none" stroke="#7ADCF5" stroke-width="0.9"/>
+    <circle cx="15.5" cy="12.2" r="2.25" fill="none" stroke="#7ADCF5" stroke-width="0.9"/>
+    <circle cx="8.5" cy="12.2" r="0.95" fill="#7ADCF5"/>
+    <circle cx="15.5" cy="12.2" r="0.95" fill="#7ADCF5"/>
 
     <!-- くちばし。緑と青に偏らないよう 1 点だけ黄を置く -->
-    <path d="M12 14.9l1.5 2.3h-3z" fill="#FFC24D"/>
+    <path d="M12 14.9l1.5 2.3h-3z" fill="#FFD060"/>
   </g>
 </svg>

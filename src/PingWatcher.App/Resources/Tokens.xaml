@@ -15,11 +15,15 @@
     <FontFamily x:Key="Font.Ui">Yu Gothic UI, Meiryo UI, Segoe UI</FontFamily>
     <FontFamily x:Key="Font.Mono">Consolas, BIZ UDGothic, MS Gothic</FontFamily>
 
-    <!-- 角丸 -->
-    <CornerRadius x:Key="Radius.Card">10</CornerRadius>
-    <CornerRadius x:Key="Radius.Control">6</CornerRadius>
-    <CornerRadius x:Key="Radius.Badge">5</CornerRadius>
-    <CornerRadius x:Key="Radius.Chip">4</CornerRadius>
+    <!--
+        角丸。キャンディらしい柔らかさを出すため、全体に一段丸めてある。
+        ただし行の中の小片(Chip)まで丸くすると、敷き詰めたときに粒がぼやけて
+        一覧性が落ちるので、そこだけは控えめにしている。
+    -->
+    <CornerRadius x:Key="Radius.Card">14</CornerRadius>
+    <CornerRadius x:Key="Radius.Control">9</CornerRadius>
+    <CornerRadius x:Key="Radius.Badge">7</CornerRadius>
+    <CornerRadius x:Key="Radius.Chip">5</CornerRadius>
 
     <!-- 文字の大きさ -->
     <sys:Double x:Key="Size.Title">15</sys:Double>

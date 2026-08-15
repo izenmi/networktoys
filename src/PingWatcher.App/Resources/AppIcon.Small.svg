@@ -15,18 +15,18 @@
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
   <!-- 耳。通常版より大きく、角を立てる -->
-  <path d="M2.2 1.4l7.4 3.9-7.8 3.2z" fill="#4DF0B0"/>
-  <path d="M21.8 1.4l-7.4 3.9 7.8 3.2z" fill="#4DF0B0"/>
+  <path d="M2.2 1.4l7.4 3.9-7.8 3.2z" fill="#F792C6"/>
+  <path d="M21.8 1.4l-7.4 3.9 7.8 3.2z" fill="#F792C6"/>
 
   <!-- 体 -->
-  <rect x="1.4" y="4.2" width="21.2" height="18.4" rx="10.6" fill="#4DF0B0"/>
+  <rect x="1.4" y="4.2" width="21.2" height="18.4" rx="10.6" fill="#F792C6"/>
 
   <!-- 目。輪は置かず、太い瞳だけにする -->
-  <circle cx="7.5" cy="11.6" r="4.1" fill="#0E1524"/>
-  <circle cx="16.5" cy="11.6" r="4.1" fill="#0E1524"/>
-  <circle cx="7.5" cy="11.6" r="1.95" fill="#4FD2FF"/>
-  <circle cx="16.5" cy="11.6" r="1.95" fill="#4FD2FF"/>
+  <circle cx="7.5" cy="11.6" r="4.1" fill="#4A2352"/>
+  <circle cx="16.5" cy="11.6" r="4.1" fill="#4A2352"/>
+  <circle cx="7.5" cy="11.6" r="1.95" fill="#7ADCF5"/>
+  <circle cx="16.5" cy="11.6" r="1.95" fill="#7ADCF5"/>
 
   <!-- くちばし -->
-  <path d="M12 15.4l2.1 3.2h-4.2z" fill="#FFC24D"/>
+  <path d="M12 15.4l2.1 3.2h-4.2z" fill="#FFD060"/>
 </svg>
