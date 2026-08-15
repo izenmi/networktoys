@@ -31,6 +31,9 @@ public sealed class ShellViewModel
         SnmpGet = new SnmpGetViewModel(Monitor.GatewayText is "—" ? null : Monitor.GatewayText);
         SnmpTrap = new SnmpTrapViewModel(Monitor.LocalAddress);
 
+        // 接続一覧もタブが開かれている間だけ OS を叩く
+        Connections = new ConnectionsViewModel();
+
         // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
         Wifi = new WifiViewModel();
 
@@ -72,6 +75,9 @@ public sealed class ShellViewModel
     /// <summary>SNMP Trap の受信。</summary>
     public SnmpTrapViewModel SnmpTrap { get; }
 
+    /// <summary>PC 上の TCP/UDP 接続一覧。</summary>
+    public ConnectionsViewModel Connections { get; }
+
     public WifiViewModel Wifi { get; }
 
     public ReportViewModel Report { get; }
@@ -107,6 +113,7 @@ public sealed class ShellViewModel
         SnmpTrap.Reset();
         Dns.Reset();
         Trace.Reset();
+        Connections.Reset();
         Wifi.Reset();
         Report.Reset();
     }

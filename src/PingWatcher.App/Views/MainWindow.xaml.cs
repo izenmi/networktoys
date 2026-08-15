@@ -211,6 +211,12 @@ public partial class MainWindow : Window
         else
             _shell.Wifi.OnDeactivated();
 
+        // 接続一覧もタブが見えている間だけ OS を叩く
+        if (ConnectionsTab.IsSelected)
+            _shell.Connections.OnActivated();
+        else
+            _shell.Connections.OnDeactivated();
+
         if (ReportTab.IsSelected)
             _shell.Report.OnActivated();
     }
@@ -231,6 +237,7 @@ public partial class MainWindow : Window
             _shell.Monitor.BeginStop();
             _shell.Tcp.BeginStop();
             _shell.Wifi.OnDeactivated();
+            _shell.Connections.OnDeactivated();
             _shell.Ftp.Reset();
             _shell.Tftp.Reset();
             _shell.Sftp.Reset();

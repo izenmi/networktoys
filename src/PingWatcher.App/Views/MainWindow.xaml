@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:PingWatcher.App.Controls"
         xmlns:vm="clr-namespace:PingWatcher.App.ViewModels"
+        xmlns:net="clr-namespace:PingWatcher.Core.Net;assembly=PingWatcher.Core"
         Title="PingWatcher"
         Width="740" Height="720"
         MinWidth="700" MinHeight="480"
@@ -1755,6 +1756,131 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ===== 接続（この PC の TCP/UDP 通信をプロセスごとに見る） ===== -->
+            <TabItem x:Name="ConnectionsTab" Header="接続" DataContext="{Binding Connections}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <CheckBox Content="一時停止" IsChecked="{Binding IsPaused}"
+                                      VerticalAlignment="Center" Margin="0,0,12,0"
+                                      ToolTip="更新を止めて、じっくり読んだり選択したりできます。" />
+                            <TextBlock Text="絞り込み" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="220" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     ToolTip="プロセス名・アドレス・ポート・状態の部分一致で絞り込みます。" />
+                        </StackPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="56" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="110" />
+                                        <ColumnDefinition Width="76" />
+                                        <ColumnDefinition Width="76" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="プロト" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="ローカル" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="リモート" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="状態" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="4" Text="送信" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="5" Text="受信" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                <ListBox ItemsSource="{Binding Rows}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                    <ListBox.Resources>
+                                        <!-- 見出し行(プロセス)と接続行を型で出し分ける -->
+                                        <DataTemplate DataType="{x:Type net:ConnectionGroupRow}">
+                                            <Border Height="{DynamicResource Size.RowHeight}"
+                                                    Background="{DynamicResource Brush.SurfaceAlt}" Padding="4,0">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="56" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="110" />
+                                                        <ColumnDefinition Width="76" />
+                                                        <ColumnDefinition Width="76" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding ProcessName}" VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding PidText}" Style="{StaticResource Caption}"
+                                                                   VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                        <TextBlock Text="{Binding CountText}" Style="{StaticResource Caption}"
+                                                                   VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="4" Text="{Binding SentText}" Style="{StaticResource Mono}"
+                                                               FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                               HorizontalAlignment="Right" />
+                                                    <TextBlock Grid.Column="5" Text="{Binding ReceivedText}" Style="{StaticResource Mono}"
+                                                               FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                               HorizontalAlignment="Right" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                        <DataTemplate DataType="{x:Type net:ConnectionDetailRow}">
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="56" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="110" />
+                                                    <ColumnDefinition Width="76" />
+                                                    <ColumnDefinition Width="76" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Protocol}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           Margin="12,0,0,0" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Local}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Local}" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Remote}" />
+                                                <TextBlock Grid.Column="3" Text="{Binding StateText}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding StateKind}" Value="Ok">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding StateKind}" Value="Info">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Grid.Column="4" Text="{Binding SentText}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="5" Text="{Binding ReceivedText}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           HorizontalAlignment="Right" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.Resources>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
                     </DockPanel>
                 </Border>
             </TabItem>
