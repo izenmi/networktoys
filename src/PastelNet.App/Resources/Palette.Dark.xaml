@@ -23,28 +23,28 @@
     <SolidColorBrush x:Key="Brush.Background"   Color="#0E1424" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Surface"      Color="#171E33" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.SurfaceAlt"   Color="#1F2740" po:Freeze="True" />
-    <SolidColorBrush x:Key="Brush.Border"       Color="#2A3352" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Border"       Color="#303C60" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Text"         Color="#E8ECF8" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.TextMuted"    Color="#9AA7CC" po:Freeze="True" />
 
     <!-- 状態: 応答あり(ミント) -->
-    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#163A2E" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Ok.Bg"        Color="#1B4A3A" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Ok.Fg"        Color="#6FE7B4" po:Freeze="True" />
 
     <!-- 状態: 遅延・警告(アンバー) -->
-    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#43321A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Warn.Bg"      Color="#54401F" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Warn.Fg"      Color="#FFC97A" po:Freeze="True" />
 
     <!-- 状態: 不達・エラー(コーラル) -->
-    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#4A2326" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Error.Bg"     Color="#5C2C30" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Error.Fg"     Color="#FF9E97" po:Freeze="True" />
 
     <!-- 状態: 実行中・情報(スカイ) -->
-    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#16334A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Info.Bg"      Color="#1B4059" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Info.Fg"      Color="#7CCDF4" po:Freeze="True" />
 
     <!-- 選択・アクセント(ペリウィンクル) -->
-    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#2A3163" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Accent.Bg"    Color="#333C76" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Accent.Fg"    Color="#A7B2FF" po:Freeze="True" />
 
     <!-- グラフ描画用 -->
@@ -52,7 +52,7 @@
     <SolidColorBrush x:Key="Brush.Chart.Fill"   Color="#1B3A52" po:Freeze="True" />
 
     <!-- 細部。枠と面をわずかに変えるだけで、平坦な暗い画面に奥行きが出る -->
-    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#26304E" po:Freeze="True" />
+    <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#2C3A5E" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#4C5878" po:Freeze="True" />
 
     <!--

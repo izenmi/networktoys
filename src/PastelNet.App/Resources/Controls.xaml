@@ -17,13 +17,13 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Card.Edge}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{DynamicResource Radius.Card}" />
-        <Setter Property="Padding" Value="10" />
+        <Setter Property="Padding" Value="7" />
     </Style>
 
     <!-- ===== 状態バッジ(地色を敷いてよい唯一の要素) ===== -->
     <Style x:Key="Badge" TargetType="Border">
         <Setter Property="CornerRadius" Value="{DynamicResource Radius.Badge}" />
-        <Setter Property="Padding" Value="5,1" />
+        <Setter Property="Padding" Value="4,0" />
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
 
@@ -37,7 +37,7 @@
         <Setter Property="FontSize" Value="{DynamicResource Size.Heading}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="Margin" Value="0,0,0,4" />
     </Style>
 
     <Style x:Key="Caption" TargetType="TextBlock">
@@ -59,7 +59,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TabControl">
                     <DockPanel>
-                        <TabPanel DockPanel.Dock="Top" IsItemsHost="True" Margin="0,0,0,8" />
+                        <TabPanel DockPanel.Dock="Top" IsItemsHost="True" Margin="0,0,0,5" />
                         <ContentPresenter ContentSource="SelectedContent" />
                     </DockPanel>
                 </ControlTemplate>
@@ -84,8 +84,8 @@
                             BorderBrush="{DynamicResource Brush.Border}"
                             BorderThickness="1"
                             CornerRadius="{DynamicResource Radius.Control}"
-                            Padding="14,5"
-                            Margin="0,0,5,0">
+                            Padding="10,3"
+                            Margin="0,0,3,0">
                         <DockPanel>
                             <!-- 選択中の下線。面の色だけより、どこを見ているかが掴みやすい -->
                             <Rectangle x:Name="Underline" DockPanel.Dock="Bottom"
@@ -119,9 +119,9 @@
     <Style TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
         <Setter Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
-        <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
+        <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Padding" Value="11,4" />
+        <Setter Property="Padding" Value="8,2" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
@@ -169,7 +169,7 @@
 
     <!-- 記号を主体にした小さなボタン(配色の切り替えなど) -->
     <Style x:Key="Button.Icon" TargetType="Button" BasedOn="{StaticResource Button.Subtle}">
-        <Setter Property="Padding" Value="8,3" />
+        <Setter Property="Padding" Value="6,2" />
     </Style>
 
     <!-- ===== 入力欄 ===== -->
@@ -179,7 +179,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
-        <Setter Property="Padding" Value="7,4" />
+        <Setter Property="Padding" Value="5,2" />
         <Setter Property="CaretBrush" Value="{DynamicResource Brush.Text}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -264,7 +264,7 @@
     <Style TargetType="ComboBox">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
         <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
-        <Setter Property="Height" Value="26" />
+        <Setter Property="Height" Value="22" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">

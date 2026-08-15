@@ -129,7 +129,7 @@
         -->
         <DataTemplate x:Key="CompactRowTemplate">
             <Border x:Name="Cell"
-                    Width="248" Height="19"
+                    Width="322" Height="19"
                     CornerRadius="{DynamicResource Radius.Chip}"
                     Padding="5,0"
                     BorderThickness="1"
@@ -139,8 +139,9 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="12" />
                         <ColumnDefinition Width="*" MinWidth="56" />
-                        <ColumnDefinition Width="50" />
-                        <ColumnDefinition Width="58" />
+                        <ColumnDefinition Width="84" />
+                        <ColumnDefinition Width="46" />
+                        <ColumnDefinition Width="52" />
                     </Grid.ColumnDefinitions>
 
                     <TextBlock x:Name="Mark" Grid.Column="0"
@@ -152,17 +153,24 @@
                                Text="{Binding Host}"
                                Margin="3,0,0,0"
                                VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+
+                    <TextBlock x:Name="CommentText" Grid.Column="2"
+                               Text="{Binding Comment}"
+                               Style="{StaticResource Caption}"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding Comment}" />
 
-                    <TextBlock x:Name="RttText" Grid.Column="2"
+                    <TextBlock x:Name="RttText" Grid.Column="3"
                                Text="{Binding LatestRtt}"
                                Style="{StaticResource Mono}"
                                FontSize="{DynamicResource Size.Caption}"
                                HorizontalAlignment="Right"
                                VerticalAlignment="Center" />
 
-                    <controls:Sparkline Grid.Column="3" Source="{Binding}" Margin="5,4,0,4"
+                    <controls:Sparkline Grid.Column="4" Source="{Binding}" Margin="5,4,0,4"
                                         LineBrush="{DynamicResource Brush.Chart.Line}"
                                         LostBrush="{DynamicResource Brush.Error.Fg}" />
                 </Grid>
@@ -180,6 +188,7 @@
                     <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                     <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                     <Setter TargetName="RttText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                    <Setter TargetName="CommentText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Refused">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
@@ -187,6 +196,7 @@
                     <Setter TargetName="Mark" Property="Text" Value="⊘" />
                     <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                     <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                    <Setter TargetName="CommentText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Down">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
@@ -195,6 +205,7 @@
                     <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="HostText" Property="FontWeight" Value="SemiBold" />
+                    <Setter TargetName="CommentText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Unresolved">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
@@ -202,6 +213,7 @@
                     <Setter TargetName="Mark" Property="Text" Value="?" />
                     <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                     <Setter TargetName="HostText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                    <Setter TargetName="CommentText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Pending">
                     <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
@@ -340,7 +352,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="10,8,10,6">
+    <Grid Margin="6,5,6,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -348,11 +360,11 @@
         </Grid.RowDefinitions>
 
         <!-- ===== ヘッダ ===== -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,8">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,5">
             <Border Background="{DynamicResource Brush.Accent.Gradient}"
-                    CornerRadius="{DynamicResource Radius.Control}" Width="22" Height="22"
+                    CornerRadius="{DynamicResource Radius.Control}" Width="19" Height="19"
                     VerticalAlignment="Center">
-                <TextBlock Text="◔" FontSize="13"
+                <TextBlock Text="◔" FontSize="11"
                            Foreground="{DynamicResource Brush.Surface}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
@@ -369,8 +381,10 @@
                 <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
                 <Button Content="{Binding TcpButtonLabel}" Command="{Binding StartTcpCommand}" Margin="0,0,4,0"
                         ToolTip="ICMP ではなく TCP 接続で測ります。ping が塞がれている相手の確認に。" />
-                <TextBox Width="48" Text="{Binding TcpPort, UpdateSourceTrigger=PropertyChanged}"
+                <TextBox Width="56" Text="{Binding TcpPort, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,5,0" VerticalAlignment="Center"
+                         HorizontalContentAlignment="Center"
+                         FontFamily="{DynamicResource Font.Mono}"
                          ToolTip="TCP Ping で使うポート。宛先に :ポート が書いてあればそちらが優先されます。" />
                 <Button Content="停止" Command="{Binding StopCommand}"
                         Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
@@ -394,6 +408,10 @@
                       ToolTip="他のウィンドウの手前に固定します。" />
         </StackPanel>
 
+        <!-- 操作の帯と本体を分ける罫線。1 本引くだけで画面が締まる -->
+        <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1"
+                Background="{DynamicResource Brush.Border}" Margin="0,0,0,-1" />
+
         <!-- ===== 本体 ===== -->
         <TabControl Grid.Row="1" SelectionChanged="OnTabSelectionChanged">
 
@@ -405,7 +423,7 @@
 
                         <Border DockPanel.Dock="Top"
                                 Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="{DynamicResource Radius.Control}" Padding="10,7" Margin="0,0,0,8">
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="7,5" Margin="0,0,0,5">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
                                     1 行に 1 宛先。アドレスの後ろに<Run FontWeight="SemiBold">半角スペース</Run>を空けると、そこから行末までが備考になります。
@@ -424,7 +442,7 @@
                             </StackPanel>
                         </Border>
 
-                        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <StackPanel DockPanel.Dock="Bottom" Margin="0,5,0,0">
                             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
                                        Text="書き換えると自動で反映されます（測定は止まりません。増えた宛先だけ測り始め、消えた宛先だけ止めます）。解釈できない行がある間は反映を保留します。" />
                             <TextBlock Text="{Binding ListSummary}" Style="{StaticResource Caption}"
@@ -450,7 +468,7 @@
 
                         <!-- 操作列。開始・停止はヘッダへ移したので、ここに残すのは
                              この画面でしか使わないものだけ -->
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
                             <Button Content="履歴を消去"
                                     Command="{Binding ClearHistoryCommand}"
                                     Style="{StaticResource Button.Subtle}"
@@ -520,7 +538,7 @@
                             </Grid.RowDefinitions>
 
                             <!-- ===== 応答なし（2 回連続で失敗） ===== -->
-                            <Border Grid.Row="0" Margin="0,0,0,8"
+                            <Border Grid.Row="0" Margin="0,0,0,5"
                                     Background="{DynamicResource Brush.Error.Bg}"
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource Brush.Error.Fg}"
@@ -537,11 +555,15 @@
                                 </Border.Style>
 
                                 <DockPanel MaxHeight="188">
-                                    <TextBlock DockPanel.Dock="Top"
-                                               Text="{Binding DownHeader}"
-                                               Foreground="{DynamicResource Brush.Error.Fg}"
-                                               FontWeight="SemiBold"
-                                               Margin="4,0,0,4" />
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                                                Margin="1,0,0,4">
+                                        <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                                Background="{DynamicResource Brush.Error.Fg}" />
+                                        <TextBlock Text="{Binding DownHeader}"
+                                                   Foreground="{DynamicResource Brush.Error.Fg}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
 
                                     <ListBox ItemsSource="{Binding DownRows}"
                                              SelectedItem="{Binding SelectedRow}"
@@ -551,13 +573,20 @@
 
                             <!-- ===== 応答あり ===== -->
                             <DockPanel Grid.Row="1">
-                                <Border DockPanel.Dock="Top"
-                                        Background="{DynamicResource Brush.Ok.Bg}"
-                                        CornerRadius="{DynamicResource Radius.Control}" Padding="8,3" Margin="0,0,0,4">
+                                <!--
+                                    帯に地色を敷かない。暗い配色では地の緑が沈んで濁り、
+                                    その上の文字が読みにくかった。面の上に発光色の文字を
+                                    直接置き、左の細い棒で区切りを示す方がはっきり見える。
+                                -->
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                                            Margin="1,0,0,4">
+                                    <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                            Background="{DynamicResource Brush.Ok.Fg}" />
                                     <TextBlock Text="{Binding AliveHeader}"
                                                Foreground="{DynamicResource Brush.Ok.Fg}"
-                                               FontWeight="SemiBold" />
-                                </Border>
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
 
                                 <!-- 仮想化を効かせるため行高は固定にしている -->
                                 <ListBox ItemsSource="{Binding AliveRows}"
@@ -575,7 +604,7 @@
                     <DockPanel>
 
                         <!-- 操作と判定 -->
-                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="作業名" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" />
@@ -594,7 +623,7 @@
                             </StackPanel>
 
                             <!-- 判定。開いた瞬間に結論が分かること -->
-                            <Border CornerRadius="{DynamicResource Radius.Card}" Padding="12,8">
+                            <Border CornerRadius="{DynamicResource Radius.Card}" Padding="9,6">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
@@ -645,7 +674,7 @@
                         </StackPanel>
 
                         <!-- 出力とメモ -->
-                        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <StackPanel DockPanel.Dock="Bottom" Margin="0,5,0,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="メモ" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" />
@@ -838,7 +867,7 @@
                     <DockPanel>
 
                         <!-- 操作 -->
-                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="対象" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" />
@@ -948,7 +977,7 @@
                                 </DockPanel.Style>
 
                                 <!-- 経路として見た変化。行の差分より先に見てほしい -->
-                                <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="10,7"
+                                <Border DockPanel.Dock="Top" Margin="0,0,0,5" Padding="7,5"
                                         Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="{DynamicResource Radius.Card}">
                                     <Border.Style>
                                         <Style TargetType="Border">
@@ -1072,7 +1101,7 @@
                     <DockPanel>
 
                         <!-- 操作 -->
-                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="範囲" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" />
@@ -1095,7 +1124,7 @@
                             </StackPanel>
 
                             <!-- RangeBase.Value は既定が TwoWay。読み取り専用プロパティに繋ぐので OneWay を明示する -->
-                            <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Margin="0,8,0,0" />
+                            <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Margin="0,5,0,0" />
 
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        Margin="0,6,0,0" TextWrapping="Wrap" />
@@ -1170,7 +1199,7 @@
                     <DockPanel>
 
                         <!-- 入力 -->
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
                             <TextBlock Text="名前" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,6,0" />
                             <TextBox Width="240"
@@ -1213,7 +1242,7 @@
                                                 BorderBrush="{DynamicResource Brush.Border}"
                                                 BorderThickness="1"
                                                 CornerRadius="{DynamicResource Radius.Card}"
-                                                Padding="10,8"
+                                                Padding="7,5"
                                                 Margin="0,0,8,8"
                                                 Width="278">
                                             <StackPanel>
@@ -1278,7 +1307,7 @@
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
                             <TextBlock Text="宛先" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,6,0" />
                             <TextBox Width="240"
@@ -1406,7 +1435,7 @@
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
-                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding ConnectionSummary}" FontWeight="SemiBold"
                                            VerticalAlignment="Center" Margin="0,0,12,0" />
@@ -1417,7 +1446,7 @@
 
                             <!-- 位置情報が許可されていないときの案内 -->
                             <Border Background="{DynamicResource Brush.Warn.Bg}"
-                                    CornerRadius="{DynamicResource Radius.Card}" Padding="10,7" Margin="0,8,0,0">
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="7,5" Margin="0,5,0,0">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -1439,14 +1468,14 @@
                         </StackPanel>
 
                         <!-- 接続中 AP の詳細と RSSI 推移 -->
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
                             <Border Grid.Column="0" Background="{DynamicResource Brush.SurfaceAlt}"
-                                    CornerRadius="{DynamicResource Radius.Card}" Padding="10,8" Margin="0,0,5,0">
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="7,5" Margin="0,0,5,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="72" />
@@ -1490,7 +1519,7 @@
                             </Border>
 
                             <Border Grid.Column="1" Background="{DynamicResource Brush.SurfaceAlt}"
-                                    CornerRadius="{DynamicResource Radius.Card}" Padding="10,8" Margin="5,0,0,0">
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="7,5" Margin="5,0,0,0">
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Top" Text="受信強度の推移（dBm・直近2分）"
                                                Style="{StaticResource Caption}" Margin="0,0,0,4" />
@@ -1501,7 +1530,7 @@
 
                         <!-- チャンネル混雑 -->
                         <Border DockPanel.Dock="Top" Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="{DynamicResource Radius.Card}" Padding="10,8" Margin="0,0,0,10">
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="7,5" Margin="0,0,0,6">
                             <StackPanel>
                                 <TextBlock Text="チャンネルの混み具合（そのチャンネルを使っている AP の数）"
                                            Style="{StaticResource Caption}" Margin="0,0,0,6" />
@@ -1645,7 +1674,7 @@
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,12"
                                    Text="いま監視画面に出ている結果を書き出します。HTML は 1 ファイル完結で、外部の CSS や JavaScript を参照しないため、客先のオフライン環境でもそのまま開けます。CSV は Excel 用に BOM 付き UTF-8 で保存します。" />
 
-                        <Grid Margin="0,0,0,10">
+                        <Grid Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="60" />
                                 <ColumnDefinition Width="*" MaxWidth="520" />
@@ -1685,7 +1714,7 @@
         </TabControl>
 
         <!-- ===== ステータスバー ===== -->
-        <Border Grid.Row="2" Margin="0,8,0,0" Padding="10,4"
+        <Border Grid.Row="2" Margin="0,5,0,0" Padding="10,4"
                 DataContext="{Binding Monitor}"
                 Background="{DynamicResource Brush.Surface}"
                 BorderBrush="{DynamicResource Brush.Border}"
