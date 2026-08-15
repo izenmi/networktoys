@@ -53,7 +53,8 @@ public sealed class ScanViewModel : ObservableObject
     private string _preview = string.Empty;
     private string _status = string.Empty;
     private bool _isBusy;
-    private bool _resolveNames = true;
+    // 逆引きは引けない相手の方が多く、待ちのぶんスキャンが延びるので既定は OFF
+    private bool _resolveNames;
     private bool _scanPorts;
     private double _progress;
     private CancellationTokenSource? _cts;
@@ -222,7 +223,7 @@ public sealed class ScanViewModel : ObservableObject
         AddToTargetsCommand.RaiseCanExecuteChanged();
 
         RangeText = _defaultRange;
-        ResolveNames = true;
+        ResolveNames = false;
         ScanPorts = false;
         Progress = 0;
         Status = string.Empty;

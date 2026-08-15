@@ -33,7 +33,7 @@ internal sealed class ScanOptions
     /// <summary>同時に飛ばす ping の数。多すぎると自分の回線を潰す。</summary>
     public int Concurrency { get; init; } = 128;
 
-    public bool ResolveNames { get; init; } = true;
+    public bool ResolveNames { get; init; }
 
     public bool ScanPorts { get; init; }
 
