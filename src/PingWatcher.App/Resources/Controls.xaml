@@ -203,7 +203,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="9">
+                            CornerRadius="{DynamicResource Radius.Control}">
                         <!-- 複数行 TextBox でも使うので、中央寄せは指定しない -->
                         <ScrollViewer x:Name="PART_ContentHost"
                                       Margin="{TemplateBinding Padding}" />
@@ -230,7 +230,7 @@
                             Background="{DynamicResource Brush.Surface}"
                             BorderBrush="{DynamicResource Brush.Border}"
                             BorderThickness="1"
-                            CornerRadius="7">
+                            CornerRadius="{DynamicResource Radius.Control}">
                         <Path x:Name="Arrow"
                               HorizontalAlignment="Right"
                               VerticalAlignment="Center"
@@ -257,7 +257,7 @@
                 <ControlTemplate TargetType="ComboBoxItem">
                     <Border x:Name="Bd"
                             Background="Transparent"
-                            CornerRadius="5"
+                            CornerRadius="{DynamicResource Radius.Control}"
                             Margin="3,1"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter />
@@ -303,7 +303,7 @@
                             <Border Background="{DynamicResource Brush.Surface}"
                                     BorderBrush="{DynamicResource Brush.Border}"
                                     BorderThickness="1"
-                                    CornerRadius="7"
+                                    CornerRadius="{DynamicResource Radius.Control}"
                                     Margin="0,2,0,0"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                                 <ScrollViewer MaxHeight="240">
@@ -316,7 +316,7 @@
                         <Border x:Name="FocusRing"
                                 BorderBrush="Transparent"
                                 BorderThickness="1.5"
-                                CornerRadius="7"
+                                CornerRadius="{DynamicResource Radius.Control}"
                                 IsHitTestVisible="False" />
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -340,7 +340,7 @@
                     <StackPanel Orientation="Horizontal" Background="Transparent">
                         <Border x:Name="Box"
                                 Width="15" Height="15"
-                                CornerRadius="4"
+                                CornerRadius="{DynamicResource Radius.Control}"
                                 Background="{DynamicResource Brush.Surface}"
                                 BorderBrush="{DynamicResource Brush.Border}"
                                 BorderThickness="1"
@@ -380,7 +380,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
-                    <Border Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="2">
+                    <Border Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="{DynamicResource Radius.Control}">
                         <Grid ClipToBounds="True">
                             <Rectangle x:Name="PART_Track" />
                             <Rectangle x:Name="PART_Indicator"
@@ -513,7 +513,7 @@
                 <ControlTemplate TargetType="Thumb">
                     <Border x:Name="Bd"
                             Background="{DynamicResource Brush.Scroll.Thumb}"
-                            CornerRadius="5"
+                            CornerRadius="{DynamicResource Radius.Control}"
                             Margin="2" />
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -537,7 +537,7 @@
                 <ControlTemplate TargetType="ScrollBar">
                     <Grid Background="{TemplateBinding Background}">
                         <Border Background="{DynamicResource Brush.Scroll.Track}"
-                                CornerRadius="7"
+                                CornerRadius="{DynamicResource Radius.Control}"
                                 Margin="1" />
                         <Track x:Name="PART_Track"
                                Orientation="{TemplateBinding Orientation}"

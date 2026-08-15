@@ -548,7 +548,7 @@
                                 <DockPanel MaxHeight="188">
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
                                                 Margin="1,0,0,4">
-                                        <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                        <Border Width="3" CornerRadius="0" Margin="0,1,6,1"
                                                 Background="{DynamicResource Brush.Error.Fg}" />
                                         <TextBlock Text="{Binding DownHeader}"
                                                    Foreground="{DynamicResource Brush.Error.Fg}"
@@ -575,7 +575,7 @@
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
                                                 Margin="1,0,0,4">
-                                        <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                        <Border Width="3" CornerRadius="0" Margin="0,1,6,1"
                                                 Background="{DynamicResource Brush.Ok.Fg}" />
                                         <TextBlock Text="{Binding AliveHeader}"
                                                    Foreground="{DynamicResource Brush.Ok.Fg}"
@@ -672,7 +672,7 @@
 
                                 <DockPanel MaxHeight="188">
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="1,0,0,4">
-                                        <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                        <Border Width="3" CornerRadius="0" Margin="0,1,6,1"
                                                 Background="{DynamicResource Brush.Error.Fg}" />
                                         <TextBlock Text="{Binding DownHeader}"
                                                    Foreground="{DynamicResource Brush.Error.Fg}"
@@ -694,7 +694,7 @@
                                     CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="1,0,0,4">
-                                        <Border Width="3" CornerRadius="1.5" Margin="0,1,6,1"
+                                        <Border Width="3" CornerRadius="0" Margin="0,1,6,1"
                                                 Background="{DynamicResource Brush.Ok.Fg}" />
                                         <TextBlock Text="{Binding AliveHeader}"
                                                    Foreground="{DynamicResource Brush.Ok.Fg}"
@@ -1243,7 +1243,7 @@
                                                            Foreground="{DynamicResource Brush.TextMuted}"
                                                            HorizontalAlignment="Right" Margin="0,0,6,0" />
 
-                                                <Border x:Name="LeftCell" Grid.Column="1" Padding="4,1" CornerRadius="3" Margin="0,0,6,0">
+                                                <Border x:Name="LeftCell" Grid.Column="1" Padding="4,1" CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
                                                     <TextBlock Text="{Binding LeftText}"
                                                                Style="{StaticResource Mono}"
                                                                FontSize="{DynamicResource Size.Caption}"
@@ -1256,7 +1256,7 @@
                                                            Foreground="{DynamicResource Brush.TextMuted}"
                                                            HorizontalAlignment="Right" Margin="0,0,6,0" />
 
-                                                <Border x:Name="RightCell" Grid.Column="3" Padding="4,1" CornerRadius="3">
+                                                <Border x:Name="RightCell" Grid.Column="3" Padding="4,1" CornerRadius="{DynamicResource Radius.Chip}">
                                                     <TextBlock Text="{Binding RightText}"
                                                                Style="{StaticResource Mono}"
                                                                FontSize="{DynamicResource Size.Caption}"
@@ -1853,7 +1853,7 @@
                                                                    HorizontalAlignment="Center" />
                                                         <Border x:Name="Bar" Width="14" Height="{Binding Height}"
                                                                 Background="{DynamicResource Brush.Accent.Bg}"
-                                                                CornerRadius="3,3,0,0"
+                                                                CornerRadius="0"
                                                                 HorizontalAlignment="Center" />
                                                         <TextBlock Text="{Binding Channel}" Style="{StaticResource Caption}"
                                                                    HorizontalAlignment="Center" Margin="0,2,0,0" />
@@ -1883,7 +1883,7 @@
                                                                    HorizontalAlignment="Center" />
                                                         <Border x:Name="Bar5" Width="18" Height="{Binding Height}"
                                                                 Background="{DynamicResource Brush.Info.Bg}"
-                                                                CornerRadius="3,3,0,0"
+                                                                CornerRadius="0"
                                                                 HorizontalAlignment="Center" />
                                                         <TextBlock Text="{Binding Channel}" Style="{StaticResource Caption}"
                                                                    HorizontalAlignment="Center" Margin="0,2,0,0" />
