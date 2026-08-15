@@ -73,8 +73,10 @@ public class ReportWriterTests
         string html = HtmlReportWriter.Render(Sample());
 
         Assert.Contains("192.168.1.1", html, StringComparison.Ordinal);
-        Assert.Contains("非常に良い", html, StringComparison.Ordinal);
-        Assert.Contains("4.4", html, StringComparison.Ordinal);
+        Assert.Contains("1階 EPS", html, StringComparison.Ordinal);
+
+        // 平均 RTT。MOS と p95 は載せなくなったので、実測値そのものを見る
+        Assert.Contains("1.4", html, StringComparison.Ordinal);
         Assert.Contains("<svg", html, StringComparison.Ordinal);
     }
 
