@@ -99,6 +99,10 @@ public sealed class TargetRowViewModel : ObservableObject
     /// <summary>一覧内の並び順。振り分け後も元の順序を保つために使う。</summary>
     internal int Order { get; set; }
 
+    /// <summary>見出しクリックの並べ替え用の数値キー。値なしは最後に回す。</summary>
+    internal double SortRtt { get; private set; } = double.MaxValue;
+    internal double SortLoss { get; private set; } = double.MaxValue;
+
     /// <summary>名前解決の結果。ホスト名で登録された宛先で意味を持つ。</summary>
     public string Address
     {
@@ -228,11 +232,12 @@ public sealed class TargetRowViewModel : ObservableObject
                  || (_machine.State == LinkState.Stalled && _machine.StateBeforeStall == LinkState.Down);
 
         // 拒否のときも RTT は意味を持つ（そこまで届いている証拠なので）
-        LatestRtt = latest.Status is ProbeStatus.Success or ProbeStatus.Refused
-            ? FormatMilliseconds(latest.RttMs)
-            : "—";
+        bool hasRtt = latest.Status is ProbeStatus.Success or ProbeStatus.Refused;
+        LatestRtt = hasRtt ? FormatMilliseconds(latest.RttMs) : "—";
         AverageRtt = stats.Successes > 0 ? FormatMilliseconds(stats.AverageMs) : "—";
         Loss = stats.Attempts > 0 ? FormatLoss(stats.LossPercent) : "—";
+        SortRtt = hasRtt ? latest.RttMs : double.MaxValue;
+        SortLoss = stats.Attempts > 0 ? stats.LossPercent : double.MaxValue;
 
         HistoryChanged?.Invoke(this, EventArgs.Empty);
         return true;
@@ -281,6 +286,8 @@ public sealed class TargetRowViewModel : ObservableObject
         LatestRtt = "—";
         AverageRtt = "—";
         Loss = "—";
+        SortRtt = double.MaxValue;
+        SortLoss = double.MaxValue;
         HistoryChanged?.Invoke(this, EventArgs.Empty);
     }
 

@@ -62,6 +62,10 @@ public sealed class MonitorViewModel : ObservableObject
     /// </summary>
     private readonly bool _alwaysTcp;
 
+    // 見出しクリックの並べ替え。空文字は「元の並び(宛先リストに書いた順)」
+    private string _sortColumn = "";
+    private bool _sortDescending;
+
     /// <param name="fileName">宛先の保存先。画面ごとに分ける。</param>
     /// <param name="alwaysTcp">TCP 接続で測る画面にするか。</param>
     public MonitorViewModel(string fileName = "targets.json", bool alwaysTcp = false)
@@ -114,6 +118,75 @@ public sealed class MonitorViewModel : ObservableObject
 
     /// <summary>応答なしが 1 件も無ければ、その欄は場所を取らない。</summary>
     public bool HasDownRows => DownRows.Count > 0;
+
+    /// <summary>一覧の見出し。ソート中の列に ▲/▼ を添える。</summary>
+    public string HeaderState => HeaderLabel("State", "状態");
+    public string HeaderTarget => HeaderLabel("Target", "宛先");
+    public string HeaderNote => HeaderLabel("Comment", "備考");
+    public string HeaderRtt => HeaderLabel("Rtt", "RTT");
+    public string HeaderLoss => HeaderLabel("Loss", "ロス");
+
+    /// <summary>
+    /// 見出しクリックの並べ替え。同じ列を続けてクリックすると
+    /// 昇順 → 降順 → 元の並び(宛先リストに書いた順)と巡る。
+    /// 並べ替えはクリックの瞬間に 1 回だけ行い、測定のたびに行を
+    /// 動かさない(数値が揺れるたびに並び直すと一覧が読めなくなる)。
+    /// </summary>
+    public void SortBy(string column)
+    {
+        if (_sortColumn == column)
+        {
+            if (!_sortDescending)
+            {
+                _sortDescending = true;
+            }
+            else
+            {
+                _sortColumn = "";
+                _sortDescending = false;
+            }
+        }
+        else
+        {
+            _sortColumn = column;
+            _sortDescending = false;
+        }
+
+        SortInPlace(Rows);
+        SortInPlace(AliveRows);
+        SortInPlace(DownRows);
+
+        OnPropertyChanged(nameof(HeaderState));
+        OnPropertyChanged(nameof(HeaderTarget));
+        OnPropertyChanged(nameof(HeaderNote));
+        OnPropertyChanged(nameof(HeaderRtt));
+        OnPropertyChanged(nameof(HeaderLoss));
+    }
+
+    private string HeaderLabel(string column, string title)
+        => _sortColumn == column ? $"{title} {(_sortDescending ? "▼" : "▲")}" : title;
+
+    /// <summary>
+    /// 表示順の全順序。ソート列が同値(または未指定)のときは
+    /// 宛先リストに書いた順(<see cref="TargetRowViewModel.Order"/>)で確定する。
+    /// </summary>
+    private int CompareRows(TargetRowViewModel x, TargetRowViewModel y)
+    {
+        int result = _sortColumn switch
+        {
+            "State" => ((int)x.State).CompareTo((int)y.State),
+            "Target" => string.Compare(x.HostDisplay, y.HostDisplay, StringComparison.OrdinalIgnoreCase),
+            "Comment" => string.Compare(x.Comment, y.Comment, StringComparison.OrdinalIgnoreCase),
+            "Rtt" => x.SortRtt.CompareTo(y.SortRtt),
+            "Loss" => x.SortLoss.CompareTo(y.SortLoss),
+            _ => 0,
+        };
+
+        if (_sortDescending)
+            result = -result;
+
+        return result != 0 ? result : x.Order.CompareTo(y.Order);
+    }
 
     /// <summary>
     /// 接続環境。System.Environment と紛らわしくならない名前にしている。
@@ -656,13 +729,13 @@ public sealed class MonitorViewModel : ObservableObject
         SortInPlace(DownRows);
     }
 
-    private static void SortInPlace(ObservableCollection<TargetRowViewModel> collection)
+    private void SortInPlace(ObservableCollection<TargetRowViewModel> collection)
     {
         // Move は 1 回ごとに CollectionChanged が飛び、一覧がコンテナを動かす。
         // 挿入ソートだと大きく入れ替えたとき通知が O(n²) 回になり、500 件を
         // 表計算から貼り直しただけで UI が数秒固まる。並び順を先に決めて、
         // 位置のずれた要素だけを Move する（通知は最大 n 回）
-        List<TargetRowViewModel> sorted = [.. collection.OrderBy(r => r.Order)];
+        List<TargetRowViewModel> sorted = [.. collection.OrderBy(r => r, Comparer<TargetRowViewModel>.Create(CompareRows))];
 
         for (int i = 0; i < sorted.Count; i++)
         {
@@ -731,7 +804,7 @@ public sealed class MonitorViewModel : ObservableObject
             return;   // すでに正しい側にいる
 
         int index = 0;
-        while (index < to.Count && to[index].Order < row.Order)
+        while (index < to.Count && CompareRows(to[index], row) < 0)
             index++;
 
         to.Insert(index, row);

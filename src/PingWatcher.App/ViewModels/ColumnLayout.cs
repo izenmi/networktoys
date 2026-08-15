@@ -18,25 +18,29 @@ public sealed class ColumnLayout : ObservableObject
 
     public static ColumnLayout Instance { get; } = Load();
 
+    // 備考を宛先の右隣に置いてから(ユーザー指示)、可変幅の星列は末尾の推移。
+    // 保存形式は列構成が変わったので v2(旧形式は既定幅で開き直す)
+    private const string FormatMarker = "v2";
+
     private GridLength _state = new(66);
     private GridLength _target = new(140);
+    private GridLength _note = new(110);
     private GridLength _rtt = new(62);
     private GridLength _loss = new(48);
-    private GridLength _spark = new(80);
 
     public GridLength State { get => _state; set => SetProperty(ref _state, value); }
     public GridLength Target { get => _target; set => SetProperty(ref _target, value); }
+    public GridLength Note { get => _note; set => SetProperty(ref _note, value); }
     public GridLength Rtt { get => _rtt; set => SetProperty(ref _rtt, value); }
     public GridLength Loss { get => _loss; set => SetProperty(ref _loss, value); }
-    public GridLength Spark { get => _spark; set => SetProperty(ref _spark, value); }
 
     /// <summary>アプリを閉じるときに呼ぶ。書けなくても落とさない。</summary>
     public void Save()
     {
         try
         {
-            string line = string.Join('\t',
-                new[] { State, Target, Rtt, Loss, Spark }
+            string line = FormatMarker + '\t' + string.Join('\t',
+                new[] { State, Target, Note, Rtt, Loss }
                     .Select(w => w.Value.ToString("0", CultureInfo.InvariantCulture)));
 
             File.WriteAllText(AppData.PathOf(FileName), line);
@@ -57,7 +61,7 @@ public sealed class ColumnLayout : ObservableObject
             if (!File.Exists(path)) return layout;
 
             string[] parts = File.ReadAllText(path).Trim().Split('\t');
-            if (parts.Length != 5) return layout;
+            if (parts.Length != 6 || parts[0] != FormatMarker) return layout;
 
             GridLength Read(string text, GridLength fallback)
                 => double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
@@ -65,11 +69,11 @@ public sealed class ColumnLayout : ObservableObject
                     ? new GridLength(value)
                     : fallback;
 
-            layout._state = Read(parts[0], layout._state);
-            layout._target = Read(parts[1], layout._target);
-            layout._rtt = Read(parts[2], layout._rtt);
-            layout._loss = Read(parts[3], layout._loss);
-            layout._spark = Read(parts[4], layout._spark);
+            layout._state = Read(parts[1], layout._state);
+            layout._target = Read(parts[2], layout._target);
+            layout._note = Read(parts[3], layout._note);
+            layout._rtt = Read(parts[4], layout._rtt);
+            layout._loss = Read(parts[5], layout._loss);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
