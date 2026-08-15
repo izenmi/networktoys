@@ -25,6 +25,8 @@
         -->
         <Style x:Key="SubTabItem" TargetType="TabItem">
             <Setter Property="Cursor" Value="Hand" />
+            <!-- 文字は常に本文色（ダークではほぼ白）。選択中に淡い水色にすると沈んで読みづらい -->
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
@@ -44,8 +46,7 @@
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
-                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="FontWeight" Value="Medium" />
                                 <Setter Property="Panel.ZIndex" Value="1" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
