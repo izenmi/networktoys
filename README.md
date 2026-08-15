@@ -24,6 +24,7 @@ ping のほかに TCP 接続・DNS・traceroute・IP スキャン・無線 LAN�
 | **syslog** | 機器からの syslog を受けて一覧表示。`logging <このPCのIP>` を機器に入れるだけ。`logs\` にも保存 |
 | **SNMP** | v1/v2c の GET・ウォークと、Trap 受信（UDP/162）。sysDescr など主要 OID のプリセットつき |
 | **無線** | 接続中 AP の詳細、受信強度の推移、チャンネルの混み具合、周辺 AP 一覧。「保存」でいまの状況をテキストに残せます |
+| **変換** | Cisco コマンドの出力(show ip route / interfaces status / inventory / version / logging など 8 種)を貼り付けると CSV に変換。種類は自動判定 |
 | **記録** | HTML・テキスト・CSV で書き出し |
 
 Ping と TCP の一覧は、行を**右クリック**するとその宛先の経路や名前をそのまま調べられます。

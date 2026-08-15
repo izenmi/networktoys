@@ -257,6 +257,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 | 経路 | traceroute。ホップ一覧 + 経路変化の履歴 |
 | 接続 | この PC の TCP/UDP 接続をプロセスごとにグループ化して 2 秒間隔で表示。管理者起動時は ETW で接続ごとの送受信 B/秒 も出す（非管理者では「—」+案内に縮退） |
 | 無線 | 接続中AP詳細 / RSSI時系列 / 周辺APのチャンネル混雑グラフ |
+| 変換 | Cisco コマンド出力の CSV 変換(既存4パーサ+interfaces status/inventory/version/logging。自動判定つき) |
 | 記録 | 保存済みセッションの閲覧、HTML/CSVエクスポート |
 
 ### パステル配色(`Resources/Palette.xaml` に定義)

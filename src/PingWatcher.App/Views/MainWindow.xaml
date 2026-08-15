@@ -2452,6 +2452,68 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== 変換(Cisco コマンド出力 → CSV) ===== -->
+            <TabItem Header="変換" DataContext="{Binding Converter}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="種別" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <ComboBox Width="180"
+                                      ItemsSource="{Binding Modes}"
+                                      SelectedItem="{Binding SelectedMode}"
+                                      Margin="0,0,12,0"
+                                      ToolTip="貼り付けたコマンドの種類。自動判定で決まらないときはここで選びます。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}" Margin="0,0,6,0" />
+                            <Button Content="コピー" Command="{Binding CopyCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0"
+                                    ToolTip="CSV テキストをクリップボードへコピーします。" />
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- 貼り付け欄。Cisco の出力は長いので折り返さず横スクロール -->
+                            <TextBox Grid.Row="0"
+                                     Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     FontSize="{DynamicResource Size.Caption}"
+                                     AcceptsReturn="True" AcceptsTab="False"
+                                     TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalContentAlignment="Top"
+                                     ToolTip="show ip route / show interfaces status などの出力をそのまま貼り付けます。" />
+
+                            <TextBlock Grid.Row="1" Text="CSV プレビュー" Style="{StaticResource Caption}" Margin="0,6,0,3" />
+
+                            <TextBox Grid.Row="2"
+                                     Text="{Binding Preview, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     FontSize="{DynamicResource Size.Caption}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalContentAlignment="Top" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== 記録 ===== -->
             <TabItem x:Name="ReportTab" Header="記録" DataContext="{Binding Report}">
                 <Border Style="{StaticResource Card}">

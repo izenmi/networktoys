@@ -41,6 +41,7 @@ public sealed class ShellViewModel
         Report = new ReportViewModel(Monitor, Wifi);
         Work = new WorkViewModel(Monitor);
         DeviceCompare = new DeviceCompareViewModel();
+        Converter = new ConvertViewModel();
     }
 
     public MonitorViewModel Monitor { get; }
@@ -88,6 +89,9 @@ public sealed class ShellViewModel
     /// <summary>機器の出力（show ip route / show run）を作業前後で見比べる。</summary>
     public DeviceCompareViewModel DeviceCompare { get; }
 
+    /// <summary>Cisco コマンド出力の CSV 変換。Convert は System.Convert と紛れるので Converter。</summary>
+    public ConvertViewModel Converter { get; }
+
     /// <summary>
     /// 測った結果をすべて捨てて、起動直後の状態へ戻す。
     ///
@@ -115,6 +119,7 @@ public sealed class ShellViewModel
         Trace.Reset();
         Connections.Reset();
         Wifi.Reset();
+        Converter.Reset();
         Report.Reset();
     }
 }
