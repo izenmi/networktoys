@@ -330,6 +330,30 @@ internal static class SelfTest
             }
         });
 
+        Check("設定を exe と同じフォルダに置ける", () =>
+        {
+            string directory = AppData.Directory();
+
+            Assert(System.IO.Directory.Exists(directory), $"保存先が作られていない: {directory}");
+
+            // 実際に書けることまで見る。場所が決まっただけでは保存できるとは限らない
+            string probe = AppData.PathOf($"selftest-{Guid.NewGuid():N}.tmp");
+            try
+            {
+                File.WriteAllText(probe, "確認");
+                Assert(File.ReadAllText(probe) == "確認", "書いた内容を読み戻せない");
+            }
+            finally
+            {
+                if (File.Exists(probe)) File.Delete(probe);
+            }
+
+            log.AppendLine($"        保存先: {directory}");
+            log.AppendLine(AppData.IsBesideExecutable
+                ? "        exe と同じフォルダに置いています"
+                : "        exe の横に書けないため %APPDATA% へ逃がしています");
+        });
+
         Check("アイコンが exe に埋め込まれている", () =>
         {
             // ApplicationIcon の指定漏れやパスの打ち間違いはビルドを通ってしまう。

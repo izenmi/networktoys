@@ -208,7 +208,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 
 - 宛先リスト / 設定 / プロファイル: JSON。`System.Text.Json` の **source generator** を使いリフレクションを回避(起動速度に効く)
 - 測定結果: セッション単位の **JSONL**(1行1サンプル)。追記のみなので軽く、途中でクラッシュしても壊れない
-- 保存先: `%APPDATA%\PingWatcher\`(`targets.json`, `settings.json`, `sessions\YYYYMMDD-HHmmss.jsonl`)
+- 保存先: **exe と同じフォルダ**(`targets.json`, `tcp-targets.json`, `theme.txt`, `sessions\`)。書き込めない場所に置かれたときだけ `%APPDATA%\PingWatcher\` へ逃がす
 - 古いセッションは既定30日で自動削除(設定可)
 
 ### レポート出力

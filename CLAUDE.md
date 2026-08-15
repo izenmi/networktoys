@@ -76,7 +76,9 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 
 ## 設定の保存先
 
-`%APPDATA%\PingWatcher\`。`AppData.PathOf()` を通すこと。
+**exe と同じフォルダ**。`AppData.PathOf()` を通すこと。持ち出して使うための作り。
+書き込めない場所（Program Files など）に置かれたときだけ `%APPDATA%\PingWatcher\` へ逃がす。
+場所は**実際に 1 ファイル書いて消して**決めている。属性だけでは判定できないため。
 旧名 `PastelNet` のフォルダがあれば初回に一度だけ複製して引き継ぐ（移動ではない）。
 
 ## 構成
