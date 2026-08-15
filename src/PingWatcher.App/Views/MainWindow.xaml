@@ -224,6 +224,58 @@
         </Style>
 
         <!--
+            応答なし欄用の行コンテナ。選択はアクセントの緑ではなく赤系で示す。
+            赤いカードの中で選択行だけ緑に光ると、状態が変わったように見えてしまう。
+        -->
+        <Style x:Key="DownRowContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                BorderThickness="1"
+                                BorderBrush="Transparent"
+                                CornerRadius="{DynamicResource Radius.Badge}"
+                                Padding="{TemplateBinding Padding}">
+                            <!--
+                                右クリックの行き先。イベントの結線はテンプレートの中でしか当てにできない。
+                                Style の Setter へ直接 ContextMenu を置くと、リソースが後から
+                                展開される都合で結線がずれ、起動時に落ちる（自己診断で実証済み）。
+
+                                メニューは論理ツリーが切れているので、PlacementTarget 経由で
+                                右クリックした行そのものを DataContext にする。
+                                選択は動かさない（左クリックの挙動は今まで通り）。
+                            -->
+                            <Border.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
+                                                           RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
+                                    <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
+                                    <Separator />
+                                    <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
+                                    <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                            </Trigger>
+                            <!-- 面を一段持ち上げ、状態色の枠で示す(緑のアクセントは使わない) -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Surface}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Error.Fg}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--
             1 行 1 件の一覧（仮想化必須）。
             参照するテンプレートより後に置くこと（StaticResource は前方参照できない）。
         -->
@@ -499,7 +551,8 @@
                                     </StackPanel>
 
                                     <ListBox ItemsSource="{Binding DownRows}"
-                                             SelectedItem="{Binding SelectedRow}"
+                                             SelectedItem="{Binding SelectedDownRow}"
+                                             ItemContainerStyle="{StaticResource DownRowContainer}"
                                              Style="{StaticResource TargetListBox}" />
                                 </DockPanel>
                             </Border>
@@ -526,7 +579,7 @@
 
                                     <!-- 仮想化を効かせるため行高は固定にしている -->
                                     <ListBox ItemsSource="{Binding AliveRows}"
-                                             SelectedItem="{Binding SelectedRow}"
+                                             SelectedItem="{Binding SelectedAliveRow}"
                                              Style="{StaticResource TargetListBox}" />
                                 </DockPanel>
                             </Border>
@@ -620,7 +673,8 @@
                                     </StackPanel>
 
                                     <ListBox ItemsSource="{Binding DownRows}"
-                                             SelectedItem="{Binding SelectedRow}"
+                                             SelectedItem="{Binding SelectedDownRow}"
+                                             ItemContainerStyle="{StaticResource DownRowContainer}"
                                              Style="{StaticResource TargetListBox}" />
                                 </DockPanel>
                             </Border>
@@ -641,7 +695,7 @@
                                     </StackPanel>
 
                                     <ListBox ItemsSource="{Binding AliveRows}"
-                                             SelectedItem="{Binding SelectedRow}"
+                                             SelectedItem="{Binding SelectedAliveRow}"
                                              Style="{StaticResource TargetListBox}" />
                                 </DockPanel>
                             </Border>

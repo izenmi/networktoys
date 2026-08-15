@@ -42,6 +42,11 @@ public sealed class MonitorViewModel : ObservableObject
     private string _targetListText = string.Empty;
     private string _listSummary = string.Empty;
     private TargetRowViewModel? _selectedRow;
+    private TargetRowViewModel? _selectedAliveRow;
+    private TargetRowViewModel? _selectedDownRow;
+
+    /// <summary>選択の同期中か。一覧側のセッターが同期の書き戻しに反応しないようにする。</summary>
+    private bool _syncingSelection;
     private string _statusMessage = string.Empty;
     private string _detailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
     private DispatcherTimer? _listDebounce;
@@ -206,13 +211,68 @@ public sealed class MonitorViewModel : ObservableObject
         private set => SetProperty(ref _listSummary, value);
     }
 
+    /// <summary>
+    /// 選ばれている行。応答なし/応答ありの 2 つの一覧をまたいで<b>常に 1 行だけ</b>。
+    /// ListBox が別々なので、そのまま同じプロパティに双方向で繋ぐと
+    /// 「もう片方の選択が残ったまま」になる。一覧ごとのプロパティを経由して同期する。
+    /// </summary>
     public TargetRowViewModel? SelectedRow
     {
         get => _selectedRow;
         set
         {
-            if (SetProperty(ref _selectedRow, value))
+            bool changed = SetProperty(ref _selectedRow, value);
+
+            // 値が同じでも、行が欄をまたいで移った直後は一覧側の選択が外れている
+            SyncListSelection();
+
+            if (changed)
                 UpdateDetail();
+        }
+    }
+
+    public TargetRowViewModel? SelectedAliveRow
+    {
+        get => _selectedAliveRow;
+        set
+        {
+            if (!SetProperty(ref _selectedAliveRow, value) || _syncingSelection) return;
+
+            // null は「この一覧の選択が外れた」。別の欄で選ばれたときにも来るので、
+            // いま選ばれている行がこの欄のものだったときだけ選択を解く
+            if (value is not null)
+                SelectedRow = value;
+            else if (SelectedRow is { IsDown: false })
+                SelectedRow = null;
+        }
+    }
+
+    public TargetRowViewModel? SelectedDownRow
+    {
+        get => _selectedDownRow;
+        set
+        {
+            if (!SetProperty(ref _selectedDownRow, value) || _syncingSelection) return;
+
+            if (value is not null)
+                SelectedRow = value;
+            else if (SelectedRow is { IsDown: true })
+                SelectedRow = null;
+        }
+    }
+
+    /// <summary>一覧側の選択を <see cref="SelectedRow"/> に合わせる。</summary>
+    private void SyncListSelection()
+    {
+        _syncingSelection = true;
+        try
+        {
+            SelectedAliveRow = _selectedRow is { IsDown: false } ? _selectedRow : null;
+            SelectedDownRow = _selectedRow is { IsDown: true } ? _selectedRow : null;
+        }
+        finally
+        {
+            _syncingSelection = false;
         }
     }
 
@@ -672,6 +732,11 @@ public sealed class MonitorViewModel : ObservableObject
             index++;
 
         to.Insert(index, row);
+
+        // 選ばれている行が欄をまたいで移ったときは、移った先でも選択を保つ
+        // （元の一覧から Remove された時点で、その一覧の選択は外れている）
+        if (ReferenceEquals(SelectedRow, row))
+            SyncListSelection();
 
         OnPropertyChanged(nameof(AliveHeader));
         OnPropertyChanged(nameof(DownHeader));
