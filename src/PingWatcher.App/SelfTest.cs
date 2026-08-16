@@ -465,12 +465,12 @@ internal static class SelfTest
             object? original = window.MainTabs.SelectedItem;
 
             window.CollectTab.IsSelected = true;
-            shell.Collect.DeviceListText = "192.0.2.1,admin,自己診断用\n";
+            shell.Collect.Import([("192.0.2.1", "自己診断用")]);
             window.UpdateLayout();
 
             Assert(shell.Collect.Rows.Count == 1, $"機器の行が作られない: {shell.Collect.Rows.Count}");
 
-            shell.Collect.DeviceListText = "";
+            shell.Collect.Reset();
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
         });

@@ -11,14 +11,40 @@ namespace PingWatcher.App.ViewModels;
 public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
 {
     private bool _selected = true;
+    private string _host = entry.Host;
+    private bool _useSsh = entry.UseSsh;
     private string _userName = entry.UserName;
+    private string _memo = entry.Memo;
     private string _status = "◌ 待機";
     private string _password = "";
     private string _enablePassword = "";
 
-    public string Host { get; } = entry.Host;
-    public int Port { get; } = entry.Port;
-    public string Memo { get; } = entry.Memo;
+    public string Host
+    {
+        get => _host;
+        set => SetProperty(ref _host, value);
+    }
+
+    /// <summary>SSH でつなぐか。外すと Telnet。ポートは方式から決まる。</summary>
+    public bool UseSsh
+    {
+        get => _useSsh;
+        set
+        {
+            if (SetProperty(ref _useSsh, value))
+                OnPropertyChanged(nameof(MethodText));
+        }
+    }
+
+    public string MethodText => UseSsh ? "SSH" : "Telnet";
+
+    public int Port => UseSsh ? DeviceEntry.SshPort : DeviceEntry.TelnetPort;
+
+    public string Memo
+    {
+        get => _memo;
+        set => SetProperty(ref _memo, value);
+    }
 
     /// <summary>この機器から集めるか。外すと飛ばす。</summary>
     public bool Selected
@@ -62,7 +88,7 @@ public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
         EnablePassword = "";
     }
 
-    public DeviceEntry ToEntry() => new(Host, Port, UserName, Memo);
+    public DeviceEntry ToEntry() => new(Host, UseSsh, UserName, Memo);
 }
 
 /// <summary>
@@ -74,10 +100,7 @@ public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
 /// </summary>
 public sealed class CollectViewModel : ObservableObject
 {
-    private const int TelnetPort = 23;
-    private const int SshPort = 22;
-
-    private string _deviceListText = "";
+    private string _lastImportSummary = "";
     private string _commandText = RecommendedCommands.Ios;
     private string _status = "宛先リストから取り込むか、機器を直接書いて「収集を開始」を押します。";
     private string _notice = "";
@@ -85,7 +108,6 @@ public sealed class CollectViewModel : ObservableObject
     private int _connectSeconds = 10;
     private int _idleSeconds = 15;
     private string _lastFolder = "";
-    private bool _useSsh = true;
     private CancellationTokenSource? _cts;
 
     public CollectViewModel()
@@ -93,7 +115,8 @@ public sealed class CollectViewModel : ObservableObject
         Presets = [.. RecommendedCommands.Presets.Select(p => new CollectPreset(p.Name, p.Commands))];
         _selectedPreset = Presets[0];
 
-        ApplyDeviceListCommand = new RelayCommand(ApplyDeviceList);
+        AddDeviceCommand = new RelayCommand(() => AddRow(new DeviceEntry("", true, "", "")));
+        RemoveDeviceCommand = new RelayCommand(RemoveSelected, () => Rows.Count > 0);
         ImportFromTargetsCommand = new RelayCommand(() => RequestImport?.Invoke(this, EventArgs.Empty));
         StartCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && Rows.Count > 0);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
@@ -103,7 +126,8 @@ public sealed class CollectViewModel : ObservableObject
         if (Settings.Current.CollectCommands.Length > 0)
             _commandText = Settings.Current.CollectCommands;
 
-        DeviceListText = Settings.Current.CollectDevices;
+        foreach (DeviceEntry entry in DeviceListParser.Parse(Settings.Current.CollectDevices, defaultUseSsh: true).Devices)
+            AddRow(entry);
     }
 
     /// <summary>宛先リストから取り込みたい、という合図（実際の取り込みは画面側）。</summary>
@@ -129,21 +153,18 @@ public sealed class CollectViewModel : ObservableObject
         }
     }
 
-    public RelayCommand ApplyDeviceListCommand { get; }
+    public RelayCommand AddDeviceCommand { get; }
+    public RelayCommand RemoveDeviceCommand { get; }
     public RelayCommand ImportFromTargetsCommand { get; }
     public RelayCommand StartCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
 
-    /// <summary>機器の一覧（<c>ホスト[:ポート],ユーザー名[,メモ]</c>）。</summary>
-    public string DeviceListText
+    /// <summary>取り込みの結果を短く伝える。</summary>
+    public string LastImportSummary
     {
-        get => _deviceListText;
-        set
-        {
-            if (SetProperty(ref _deviceListText, value))
-                ApplyDeviceList();
-        }
+        get => _lastImportSummary;
+        private set => SetProperty(ref _lastImportSummary, value);
     }
 
     public string CommandText
@@ -210,22 +231,6 @@ public sealed class CollectViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// SSH でつなぐか。外すと Telnet。既定の待受ポートも切り替わる
-    /// （機器ごとに <c>:ポート</c> を書けばそちらが優先される）。
-    /// </summary>
-    public bool UseSsh
-    {
-        get => _useSsh;
-        set
-        {
-            if (!SetProperty(ref _useSsh, value)) return;
-
-            // ポートを書いていない機器の既定ポートが変わるので読み直す
-            ApplyDeviceList();
-        }
-    }
-
     /// <summary>接続の待ち（秒）。</summary>
     public int ConnectSeconds
     {
@@ -240,13 +245,13 @@ public sealed class CollectViewModel : ObservableObject
         set => SetProperty(ref _idleSeconds, Math.Clamp(value, 3, 300));
     }
 
-    /// <summary>宛先リストから取り込む（画面側が集めた行を渡す）。</summary>
+    /// <summary>宛先リストから選ばれた分を行として足す（選ぶのは画面側）。</summary>
     public void Import(IEnumerable<(string Host, string Memo)> targets)
     {
         ArgumentNullException.ThrowIfNull(targets);
 
         HashSet<string> known = [.. Rows.Select(r => r.Host)];
-        List<string> added = [];
+        int added = 0;
 
         foreach ((string host, string memo) in targets)
         {
@@ -255,48 +260,32 @@ public sealed class CollectViewModel : ObservableObject
             // 前に使ったユーザー名があれば埋めておく(覚えているのはこれだけ)
             string user = Settings.Current.CollectUserNames.GetValueOrDefault(host, "");
 
-            added.Add(memo.Length > 0 ? $"{host},{user},{memo}" : $"{host},{user}");
+            AddRow(new DeviceEntry(host, UseSsh: true, user, memo));
+            added++;
         }
 
-        if (added.Count == 0)
-        {
-            Status = "宛先リストから新しく足せる機器はありませんでした。";
-            return;
-        }
+        LastImportSummary = added == 0
+            ? "選んだ宛先はすべて追加済みでした。"
+            : $"{added} 台を追加しました。パスワードを入れてください。";
 
-        string current = DeviceListText.TrimEnd('\n', '\r');
-        DeviceListText = current.Length == 0
-            ? string.Join('\n', added) + "\n"
-            : current + "\n" + string.Join('\n', added) + "\n";
-
-        Status = $"宛先リストから {added.Count} 台を取り込みました。パスワードを入れてください。";
+        Status = LastImportSummary;
     }
 
-    private void ApplyDeviceList()
+    private void AddRow(DeviceEntry entry)
     {
-        DeviceListParseResult parsed = DeviceListParser.Parse(DeviceListText, UseSsh ? SshPort : TelnetPort);
-
-        // 入力中のパスワードは消さない(打ち直しになる)
-        Dictionary<string, CollectRowViewModel> existing = [];
-        foreach (CollectRowViewModel row in Rows)
-            existing[row.Host] = row;
-
-        Rows.Clear();
-
-        foreach (DeviceEntry entry in parsed.Devices)
-        {
-            if (existing.TryGetValue(entry.Host, out CollectRowViewModel? kept))
-            {
-                kept.UserName = entry.UserName.Length > 0 ? entry.UserName : kept.UserName;
-                Rows.Add(kept);
-                continue;
-            }
-
-            Rows.Add(new CollectRowViewModel(entry));
-        }
-
-        Notice = parsed.Errors.Count > 0 ? "⚠ " + string.Join(" / ", parsed.Errors) : "";
+        Rows.Add(new CollectRowViewModel(entry));
         StartCommand.RaiseCanExecuteChanged();
+        RemoveDeviceCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>チェックの外れている行を消す（残す方を選んでもらう形にする）。</summary>
+    private void RemoveSelected()
+    {
+        foreach (CollectRowViewModel row in Rows.Where(r => !r.Selected).ToList())
+            Rows.Remove(row);
+
+        StartCommand.RaiseCanExecuteChanged();
+        RemoveDeviceCommand.RaiseCanExecuteChanged();
     }
 
     private async Task RunAsync()
@@ -353,7 +342,7 @@ public sealed class CollectViewModel : ObservableObject
                 RememberUserName(row);
 
                 var request = new CollectRequest(
-                    row.Host, row.Port, UseSsh,
+                    row.Host, row.Port, row.UseSsh,
                     new DeviceCredentials(row.UserName, row.Password, row.EnablePassword),
                     row.Memo);
 
@@ -454,7 +443,7 @@ public sealed class CollectViewModel : ObservableObject
     {
         try
         {
-            Settings.Current.CollectDevices = DeviceListText;
+            Settings.Current.CollectDevices = DeviceListParser.Format(Rows.Select(r => r.ToEntry()));
             Settings.Current.CollectCommands = CommandText;
             Settings.Save();
         }
@@ -473,7 +462,9 @@ public sealed class CollectViewModel : ObservableObject
 
         SecretsCleared?.Invoke(this, EventArgs.Empty);
 
-        DeviceListText = "";
+        Rows.Clear();
+        StartCommand.RaiseCanExecuteChanged();
+        RemoveDeviceCommand.RaiseCanExecuteChanged();
         CommandText = RecommendedCommands.Ios;
         Status = "宛先リストから取り込むか、機器を直接書いて「収集を開始」を押します。";
         Notice = "";

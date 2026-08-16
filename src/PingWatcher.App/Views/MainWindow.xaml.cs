@@ -700,16 +700,37 @@ public partial class MainWindow : Window
             row.Password = box.Password;
     }
 
-    /// <summary>Ping と TCP の宛先を収集タブへ取り込む。</summary>
+    /// <summary>
+    /// Ping と TCP の宛先から、取り込む相手を選んでもらう。
+    /// 全部入れると使わない機器まで並ぶので、絞り込みつきの選択画面を出す。
+    /// </summary>
     private void ImportTargetsIntoCollect()
     {
-        List<(string Host, string Memo)> targets =
-        [
-            .. _shell.Monitor.Rows.Select(r => (r.Host, r.Comment)),
-            .. _shell.Tcp.Rows.Select(r => (r.Host, r.Comment)),
-        ];
+        // 同じ宛先が Ping と TCP の両方にあることがあるので、先に畳む
+        Dictionary<string, string> unique = [];
 
-        _shell.Collect.Import(targets);
+        foreach ((string host, string memo) in
+                 _shell.Monitor.Rows.Select(r => (r.Host, r.Comment))
+                 .Concat(_shell.Tcp.Rows.Select(r => (r.Host, r.Comment))))
+        {
+            if (host.Length == 0) continue;
+
+            if (!unique.TryGetValue(host, out string? existing) || existing.Length == 0)
+                unique[host] = memo;
+        }
+
+        if (unique.Count == 0)
+        {
+            ConfirmDialog.Show(this, "宛先がありません",
+                "Ping と TCP のタブに宛先が登録されていません。先に宛先を登録してください。");
+            return;
+        }
+
+        IReadOnlyList<(string Host, string Memo)> picked = TargetPickerDialog.Pick(
+            this, unique.Select(p => (p.Key, p.Value)));
+
+        if (picked.Count > 0)
+            _shell.Collect.Import(picked);
     }
 
     /// <summary>

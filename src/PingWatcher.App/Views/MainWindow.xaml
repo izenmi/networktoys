@@ -1198,21 +1198,27 @@
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <Button Content="宛先リストから取り込む" Command="{Binding ImportFromTargetsCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
-                                    ToolTip="Ping と TCP のタブに登録してある宛先を機器一覧へ足します。" />
+                            <Button Content="宛先リストから選ぶ" Command="{Binding ImportFromTargetsCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                    ToolTip="Ping と TCP のタブに登録してある宛先から、取り込む相手を選びます。" />
+                            <Button Content="行を追加" Command="{Binding AddDeviceCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                            <Button Content="チェックの無い行を消す" Command="{Binding RemoveDeviceCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2" />
 
-                            <CheckBox Content="SSH" IsChecked="{Binding UseSsh}"
-                                      VerticalAlignment="Center" Margin="0,0,12,2"
-                                      ToolTip="外すと Telnet でつなぎます。既定のポートも切り替わります（機器ごとに :ポート を書けばそちらが優先）。" />
+                            <TextBlock Text="接続の待ち" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,4,2" />
+                            <TextBox Width="40" Text="{Binding ConnectSeconds}" Margin="0,0,2,2"
+                                     ToolTip="機器につながるまで待つ時間です。この時間を過ぎたら、その機器は諦めて次へ進みます。" />
+                            <TextBlock Text="秒" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,12,2" />
 
-                            <TextBlock Text="接続" Style="{StaticResource Caption}"
+                            <TextBlock Text="応答の待ち" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,4,2" />
-                            <TextBox Width="44" Text="{Binding ConnectSeconds}" Margin="0,0,2,2" />
-                            <TextBlock Text="秒　無音" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,4,2" />
-                            <TextBox Width="44" Text="{Binding IdleSeconds}" Margin="0,0,12,2"
-                                     ToolTip="コマンドの応答が途切れてから諦めるまでの時間です。" />
+                            <TextBox Width="40" Text="{Binding IdleSeconds}" Margin="0,0,2,2"
+                                     ToolTip="コマンドを送った後、出力が途切れてから諦めるまでの時間です。長い show でも出力が続いている間は待ち続けます。" />
+                            <TextBlock Text="秒" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,16,2" />
 
                             <Button Content="収集を開始" Command="{Binding StartCommand}" Margin="0,0,6,2" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
@@ -1233,25 +1239,38 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="360" />
                             </Grid.ColumnDefinitions>
 
-                            <!-- 左: 機器 -->
-                            <DockPanel Grid.Column="0">
-                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Margin="0,0,0,3"
-                                           Text="機器（ホスト[:ポート],ユーザー名[,メモ]　! で始まる行は注釈）" />
-                                <TextBox DockPanel.Dock="Top" Height="80"
-                                         Text="{Binding DeviceListText, UpdateSourceTrigger=LostFocus}"
-                                         FontFamily="{DynamicResource Font.Mono}"
-                                         FontSize="{DynamicResource Size.Caption}"
-                                         AcceptsReturn="True" TextWrapping="NoWrap"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         VerticalContentAlignment="Top" Margin="0,0,0,6" />
+                            <!-- 左: 機器（1 台 1 行の表。書式を人に覚えてもらわない） -->
+                            <Border Grid.Column="0"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                <DockPanel>
+                                    <!-- 見出し。どの欄に何を入れるかはここで示す -->
+                                    <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="26" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="130" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="収集" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="1" Text="機器のアドレス" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="2" Text="接続方法" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="3" Text="ユーザー名" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="4" Text="パスワード" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="5" Text="enable" Style="{StaticResource Caption}"
+                                                   ToolTip="特権モードに入るためのパスワード。要らない機器は空のままで構いません。" />
+                                        <TextBlock Grid.Column="6" Text="状態" Style="{StaticResource Caption}" />
+                                    </Grid>
+                                    <Border DockPanel.Dock="Top" Height="1"
+                                            Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
-                                <Border Background="{DynamicResource Brush.Surface}"
-                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <!--
                                         この一覧だけ仮想化を切る。行コンテナを使い回すと、
                                         PasswordBox はバインドを持たないので DataContext が変わっても
@@ -1262,57 +1281,63 @@
                                     <ListBox ItemsSource="{Binding Rows}"
                                              Background="Transparent" BorderThickness="0"
                                              HorizontalContentAlignment="Stretch"
+                                             ItemContainerStyle="{StaticResource PlainRowContainer}"
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              VirtualizingPanel.IsVirtualizing="False">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Grid Margin="0,0,0,4">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                    </Grid.RowDefinitions>
+                                                <Grid Height="26">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="26" />
                                                         <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="110" />
+                                                        <ColumnDefinition Width="80" />
+                                                        <ColumnDefinition Width="90" />
+                                                        <ColumnDefinition Width="90" />
+                                                        <ColumnDefinition Width="90" />
+                                                        <ColumnDefinition Width="130" />
                                                     </Grid.ColumnDefinitions>
 
-                                                    <CheckBox Grid.Row="0" Grid.Column="0"
-                                                              IsChecked="{Binding Selected}"
-                                                              VerticalAlignment="Center" Margin="0,0,6,0"
+                                                    <CheckBox Grid.Column="0" IsChecked="{Binding Selected}"
+                                                              VerticalAlignment="Center"
                                                               ToolTip="外すとこの機器は飛ばします。" />
-                                                    <TextBlock Grid.Row="0" Grid.Column="1"
-                                                               Text="{Binding Host}" Style="{StaticResource Mono}"
-                                                               FontSize="{DynamicResource Size.Caption}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               ToolTip="{Binding Memo}" />
-                                                    <TextBlock Grid.Row="0" Grid.Column="2"
-                                                               Text="{Binding Status}"
+
+                                                    <TextBox Grid.Column="1" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontFamily="{DynamicResource Font.Mono}"
+                                                             FontSize="{DynamicResource Size.Caption}"
+                                                             Margin="0,0,4,0" VerticalAlignment="Center"
+                                                             ToolTip="機器の IP かホスト名。" />
+
+                                                    <CheckBox Grid.Column="2" IsChecked="{Binding UseSsh}"
+                                                              Content="{Binding MethodText}"
+                                                              VerticalAlignment="Center" Margin="0,0,4,0"
+                                                              ToolTip="チェックで SSH、外すと Telnet。ポートは方式に応じて 22 / 23 を使います。" />
+
+                                                    <TextBox Grid.Column="3" Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontSize="{DynamicResource Size.Caption}"
+                                                             Margin="0,0,4,0" VerticalAlignment="Center"
+                                                             ToolTip="ログインするユーザー名。次回も覚えています。" />
+
+                                                    <PasswordBox Grid.Column="4" Tag="login"
+                                                                 PasswordChanged="OnCollectPasswordChanged"
+                                                                 Margin="0,0,4,0" VerticalAlignment="Center"
+                                                                 ToolTip="ログインのパスワード。保存しません（毎回入力）。" />
+
+                                                    <PasswordBox Grid.Column="5" Tag="enable"
+                                                                 PasswordChanged="OnCollectPasswordChanged"
+                                                                 Margin="0,0,4,0" VerticalAlignment="Center"
+                                                                 ToolTip="enable のパスワード。要らない機器は空のままで構いません。" />
+
+                                                    <TextBlock Grid.Column="6" Text="{Binding Status}"
                                                                FontSize="{DynamicResource Size.Caption}"
                                                                VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis"
                                                                ToolTip="{Binding Status}" />
-
-                                                    <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                                                               Margin="0,2,0,0">
-                                                        <TextBox Width="90" Text="{Binding UserName}"
-                                                                 FontSize="{DynamicResource Size.Caption}"
-                                                                 Margin="0,0,4,0"
-                                                                 ToolTip="ユーザー名だけは次回も覚えています。" />
-                                                        <PasswordBox Width="90" Margin="0,0,4,0" Tag="login"
-                                                                     PasswordChanged="OnCollectPasswordChanged"
-                                                                     ToolTip="ログインパスワード。保存しません。" />
-                                                        <PasswordBox Width="90" Tag="enable"
-                                                                     PasswordChanged="OnCollectPasswordChanged"
-                                                                     ToolTip="enable パスワード。無ければ空のままで構いません。" />
-                                                    </WrapPanel>
                                                 </Grid>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
-                                </Border>
-                            </DockPanel>
+                                </DockPanel>
+                            </Border>
 
                             <!-- 右: コマンド -->
                             <DockPanel Grid.Column="2">
@@ -1351,7 +1376,7 @@
                                          VerticalScrollBarVisibility="Auto"
                                          HorizontalScrollBarVisibility="Auto"
                                          VerticalContentAlignment="Top"
-                                         ToolTip="1 行 1 コマンド。! で始まる行は注釈です（行の途中の ! は解釈しません）。" />
+                                         ToolTip="1 行 1 コマンド。打つ順に並べます。" />
                             </DockPanel>
                         </Grid>
                     </DockPanel>

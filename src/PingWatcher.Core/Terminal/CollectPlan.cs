@@ -15,7 +15,14 @@ public sealed record CommandListParseResult(
 }
 
 /// <summary>収集する機器 1 台。</summary>
-public sealed record DeviceEntry(string Host, int Port, string UserName, string Memo);
+/// <param name="UseSsh">true なら SSH、false なら Telnet。ポートは方式から決まる。</param>
+public sealed record DeviceEntry(string Host, bool UseSsh, string UserName, string Memo)
+{
+    public const int SshPort = 22;
+    public const int TelnetPort = 23;
+
+    public int Port => UseSsh ? SshPort : TelnetPort;
+}
 
 public sealed record DeviceListParseResult(
     IReadOnlyList<DeviceEntry> Devices,
@@ -74,14 +81,16 @@ public static class CommandListParser
 }
 
 /// <summary>
-/// 機器一覧テキストの解釈。書式は <c>ホスト[:ポート],ユーザー名[,メモ]</c>。
-/// 区切りはカンマとタブ（表計算からの貼り付けを受ける）。
+/// 機器一覧の読み書き。設定ファイルへ往復させるためだけのもので、
+/// 画面では 1 台 1 行の表として編集する（書式を人に覚えてもらわない）。
+///
+/// 1 行は <c>ホスト,ssh|telnet,ユーザー名,メモ</c>。区切りはカンマとタブ。
 /// </summary>
 public static class DeviceListParser
 {
     public const int DefaultLimit = 200;
 
-    public static DeviceListParseResult Parse(string? text, int defaultPort, int limit = DefaultLimit)
+    public static DeviceListParseResult Parse(string? text, bool defaultUseSsh, int limit = DefaultLimit)
     {
         List<DeviceEntry> devices = [];
         List<string> errors = [];
@@ -112,13 +121,7 @@ public static class DeviceListParser
             }
 
             string[] fields = line.Split([',', '\t'], StringSplitOptions.TrimEntries);
-            string hostField = fields[0];
-
-            if (!TrySplitHost(hostField, defaultPort, out string host, out int port))
-            {
-                errors.Add($"{i + 1} 行目: ポート番号が正しくありません（{hostField}）。");
-                continue;
-            }
+            string host = fields[0];
 
             if (host.Length == 0)
             {
@@ -126,18 +129,37 @@ public static class DeviceListParser
                 continue;
             }
 
+            // 2 番目が ssh / telnet なら方式。そうでなければユーザー名として読む
+            // (方式を持たなかった頃に書かれた行をそのまま受けられるように)
+            bool useSsh = defaultUseSsh;
+            int next = 1;
+
+            if (fields.Length > 1)
+            {
+                if (string.Equals(fields[1], "ssh", StringComparison.OrdinalIgnoreCase))
+                {
+                    useSsh = true;
+                    next = 2;
+                }
+                else if (string.Equals(fields[1], "telnet", StringComparison.OrdinalIgnoreCase))
+                {
+                    useSsh = false;
+                    next = 2;
+                }
+            }
+
             devices.Add(new DeviceEntry(
                 Host: host,
-                Port: port,
-                UserName: fields.Length > 1 ? fields[1] : "",
-                Memo: fields.Length > 2 ? string.Join(", ", fields[2..]) : ""));
+                UseSsh: useSsh,
+                UserName: fields.Length > next ? fields[next] : "",
+                Memo: fields.Length > next + 1 ? string.Join(", ", fields[(next + 1)..]) : ""));
         }
 
         return new DeviceListParseResult(devices, comments, errors);
     }
 
     /// <summary>settings.json へ往復させるための書き戻し。</summary>
-    public static string Format(IEnumerable<DeviceEntry> devices, int defaultPort)
+    public static string Format(IEnumerable<DeviceEntry> devices)
     {
         ArgumentNullException.ThrowIfNull(devices);
 
@@ -145,12 +167,9 @@ public static class DeviceListParser
 
         foreach (DeviceEntry device in devices)
         {
-            builder.Append(device.Host);
-
-            if (device.Port != defaultPort)
-                builder.Append(':').Append(device.Port.ToString(CultureInfo.InvariantCulture));
-
-            builder.Append(',').Append(device.UserName);
+            builder.Append(device.Host).Append(',')
+                   .Append(device.UseSsh ? "ssh" : "telnet").Append(',')
+                   .Append(device.UserName);
 
             if (device.Memo.Length > 0)
                 builder.Append(',').Append(device.Memo);
@@ -159,30 +178,5 @@ public static class DeviceListParser
         }
 
         return builder.ToString();
-    }
-
-    /// <summary>
-    /// <c>ホスト:ポート</c> を割る。
-    /// <b>コロンが 1 つのときだけ</b>割るのは、IPv6 リテラルを誤って割らないため
-    /// （既存の宛先リストの解釈と同じ規則）。
-    /// </summary>
-    private static bool TrySplitHost(string field, int defaultPort, out string host, out int port)
-    {
-        host = field;
-        port = defaultPort;
-
-        int colons = field.Count(c => c == ':');
-        if (colons != 1) return true;
-
-        int index = field.IndexOf(':', StringComparison.Ordinal);
-        string portText = field[(index + 1)..];
-
-        if (!int.TryParse(portText, CultureInfo.InvariantCulture, out int parsed)
-            || parsed is < 1 or > 65535)
-            return false;
-
-        host = field[..index];
-        port = parsed;
-        return true;
     }
 }
