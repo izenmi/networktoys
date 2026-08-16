@@ -141,6 +141,9 @@ public sealed class ReportViewModel : ObservableObject
         RefreshPreview();
     }
 
+    /// <summary>自己診断から中身を確かめるための口。ipconfig は取りに行かない。</summary>
+    internal ReportData BuildReportForSelfTest() => BuildData(ipConfig: null);
+
     /// <summary>起動時の状態へ戻す。</summary>
     public void Reset()
     {

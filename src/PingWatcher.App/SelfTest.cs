@@ -616,6 +616,58 @@ internal static class SelfTest
             window.UpdateLayout();
         });
 
+        Check("試験: 結果を HTML の報告書にできる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+
+            // 実際には走らせない（CI のランナーは外に出られる）。
+            // 組み立てだけを確かめたいので、作り物の結果を入れて回収する
+            shell.Verify.Results.Add(new Core.Verify.CheckResult(
+                "自己診断の項目", Core.Verify.CheckKind.Http, "https://example.jp/", "直接",
+                Core.Verify.CheckVerdict.Fail, "接続できませんでした", 12));
+
+            try
+            {
+                string html = Core.Reporting.HtmlReportWriter.Render(shell.Verify.BuildReport());
+
+                Assert(html.Contains("自己診断の項目", StringComparison.Ordinal), "試験の項目が報告書に出ない");
+                Assert(html.Contains("✕ 不合格", StringComparison.Ordinal), "合否が記号と文字で出ていない");
+
+                // 測定が空なので、空の測定表を出さないこと
+                Assert(!html.Contains("記録された宛先がありません", StringComparison.Ordinal),
+                       "試験だけの報告書に、空の測定表が出ている");
+
+                // 記録タブからも同じ結果が載ること（作業の証跡は 1 つにまとまる）
+                Assert(shell.Report.BuildReportForSelfTest().Checks is { Count: > 0 },
+                       "記録タブの書き出しに試験の結果が載っていない");
+            }
+            finally
+            {
+                shell.Verify.Reset();
+            }
+        });
+
+        Check("収集: 宛先リストから備考も取り込む", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+            int before = shell.Collect.Rows.Count;
+
+            shell.Collect.Import([("selftest-device.example.jp", "1階 EPS")]);
+
+            ViewModels.CollectRowViewModel? added =
+                shell.Collect.Rows.FirstOrDefault(r => r.Host == "selftest-device.example.jp");
+
+            Assert(added is not null, "取り込んだ行が見つからない");
+            Assert(added!.Memo == "1階 EPS", $"備考が引き継がれていない: 「{added.Memo}」");
+
+            shell.Collect.RemoveDeviceCommand.Execute(added);
+            Assert(shell.Collect.Rows.Count == before, "後始末で行数が戻っていない");
+        });
+
         Check("試験: 偽の STUN サーバと UDP で往復できる", () =>
         {
             // Teams の音声が通るかは UDP の応答で決まる。実機も外部通信も要らずに、
