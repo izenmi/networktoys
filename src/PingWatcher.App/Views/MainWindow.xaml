@@ -501,7 +501,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Ping}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="登録した相手すべてに ping を打ち続け、応答・遅延・パケットロスを一覧で見張ります。宛先ごとに独立した周期で並列に打つので、落ちている相手が他の測定を遅らせません。測る相手は「宛先リスト ▾」を押して書きます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="相手に ping を打ち続けて、つながっているかを見張ります。" />
                         </DockPanel>
 
 
@@ -773,7 +773,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Wifi}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="いま繋がっている無線 LAN の詳細（SSID・規格・速度）と、電波の強さの推移、周りの AP がどのチャンネルに集まっているかを見ます。「電波は立っているのに遅い・切れる」の原因を、電波強度とチャンネルの混雑から切り分けるための画面です。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="つないでいる Wi-Fi の電波の強さと、周りの混み具合を見ます。" />
                         </DockPanel>
 
 
@@ -1078,7 +1078,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Diff}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="作業の前と後で機器の設定や状態がどう変わったかを、貼り付けて突き合わせます。複数台ぶんを同時に抱えられるので、作業前にまとめて貼っておき、作業後に残り半分を貼るのが基本の使い方です。経路表は行の差分ではなく構造として比べるため、経過時間だけが違う行は差分になりません。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器の設定を、作業の前と後で見比べます。" />
                         </DockPanel>
 
 
@@ -1408,7 +1408,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Wfp}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC のファイアウォールやセキュリティ製品が遮断した通信を、いつ・どのアプリが・どこへ出ようとしたかまで一覧にします。経路も機器も正常なのに繋がらない、というときに「自分の PC が止めていた」を確かめるための画面です（管理者権限が必要）。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="Windows が遮断した通信を一覧にします。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -1602,7 +1602,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.IpConfig}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC のアダプタを選んで、DHCP と固定 IP を切り替えます。現場ごとの設定はプリセットとして名前を付けて残せるので、客先へ行くたびにコントロールパネルを開き直す必要がありません。下段では Windows のプロキシ設定も変えられます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC の IP アドレスとプロキシを切り替えます。" />
                         </DockPanel>
 
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
@@ -1814,7 +1814,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Verify}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="ネットワークやプロキシを入れ替えたあとの業務確認試験を、判定できるところまで自動で行います。Web が見られるか・Teams で通話できるか・メールサーバが応答するかを順に試し、プロキシを切り替えて同じ試験を回せるので、入れ替えの前後を並べて比べられます。結果は CSV と HTML の報告書になります。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="Web・Teams・メールが使えるかをまとめて試験します。" />
                         </DockPanel>
 
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
@@ -2225,7 +2225,7 @@
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                    ToolTip="{x:Static help:TabHelp.Probe}" />
-                        <TextBlock Style="{StaticResource TabIntro}" Text="相手や自分の状態を確かめる道具をまとめてあります。このタブを押すとメニューが出るので、そこから選んでください。" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="相手や自分の状態を調べる道具をまとめてあります。" />
                     </DockPanel>
 
                     <!--
@@ -2244,7 +2244,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Tcp}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="指定したポートへ TCP でつなげるかを繰り返し試します。ping（ICMP）を返さない相手や、「サーバは生きているがサービスが落ちている」を見分けるのに使います。結果は、つながる／拒否（ホストは生きていてポートが閉じている）／無応答 の 3 状態で出ます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="ポートにつなげるかを繰り返し試します。" />
                         </DockPanel>
 
 
@@ -2369,7 +2369,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Trace}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="相手までにどのルータを通っているかを 1 ホップずつ調べます。どこで止まっているか・経路が普段と変わっていないかが分かるので、遅延や不通の原因が自社内か回線かを切り分けられます。Path MTU 探索と、経路が変わったときの見張りも付いています。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="相手までの経路を 1 ホップずつたどります。" />
                         </DockPanel>
 
 
@@ -2529,7 +2529,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Scan}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="IP の範囲を指定して一斉に応答を確かめ、そこに居る機器を洗い出します。MAC アドレスからメーカー名まで分かるので、台帳に載っていない機器の発見や、空いている IP アドレスを探すのに使えます。見つけた相手はそのまま Ping の宛先に追加できます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="IP の範囲を掃いて、そこに居る機器を洗い出します。" />
                         </DockPanel>
 
 
@@ -2663,7 +2663,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Dns}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="同じ名前を複数の DNS サーバへ同時に問い合わせ、返ってきた答えを横に並べて比べます。「社内 DNS では引けるが外では引けない」「古いアドレスを返すサーバが混ざっている」を一目で見つけるための画面です。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="複数の DNS サーバに同じ名前を引いて、答えを見比べます。" />
                         </DockPanel>
 
 
@@ -2785,7 +2785,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Connections}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC のどのアプリが、どこと通信しているかをプロセスごとにまとめて表示します。身に覚えのない通信先を見つけたり、帯域を食っているアプリを特定したりできます（送受信量の表示だけは管理者権限が必要です）。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="どのアプリがどこと通信しているかを見ます。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -3005,7 +3005,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Subnet}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="CIDR やマスク付きの IP を入れると、ネットワークアドレス・ブロードキャスト・使えるホストの範囲・分割したときの一覧を出します。設計や切り分けの場で暗算しないための道具です。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="CIDR から、ネットワークの範囲と分割案を出します。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
@@ -3130,7 +3130,7 @@
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                    ToolTip="{x:Static help:TabHelp.Devices}" />
-                        <TextBlock Style="{StaticResource TabIntro}" Text="ネットワーク機器から情報を集めたり、集めたものを読んだりする道具をまとめてあります。このタブを押すとメニューが出るので、そこから選んでください。" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="ネットワーク機器を相手にする道具をまとめてあります。" />
                     </DockPanel>
 
                     <!--
@@ -3149,7 +3149,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Collect}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="Cisco 機器へ SSH / Telnet で順に入り、決めておいた show コマンドの出力を集めて1 台 1 ファイルに保存します。作業前後の証跡取りを、機器 1 台ずつ手で打つ代わりに一括で済ませられます。パスワードは保存せず、危ないコマンドは実行前に弾きます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="Cisco 機器に入って、show の出力をまとめて集めます。" />
                         </DockPanel>
 
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
@@ -3411,7 +3411,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Convert}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="機器のコマンド出力を貼り付けると、表計算で扱える CSV に変換します。経路表やインターフェース一覧を台帳に貼りたいとき、目で拾う代わりに使ってください。種類は自動で判定します。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器のコマンド出力を貼り付けると CSV に変換します。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -3481,7 +3481,7 @@
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                    ToolTip="{x:Static help:TabHelp.Meraki}" />
-                        <TextBlock Style="{StaticResource TabIntro}" Text="Meraki ダッシュボードの API から、拠点の機器・アップリンク回線・接続中の端末の状況を取ってきます。ブラウザでダッシュボードを開いて回るより速く、結果をそのまま CSV で残せます。" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="Meraki ダッシュボードから拠点の状況を取ってきます。" />
                     </DockPanel>
 
                     <!-- 操作行はサブタブ共通。API キーは伏せ字(画面を PNG 保存できるため) -->
@@ -3532,7 +3532,7 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiNetworks}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="組織に登録されている拠点（ネットワーク）の一覧です。ここで選んだ拠点が、右の「機器」「アップリンク」「クライアント」の照会先になります。まずここから選んでください。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="組織の拠点を一覧にします。まずここで選びます。" />
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -3635,7 +3635,7 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiDevices}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点に置かれている機器の一覧です。型番・シリアル・ファームウェアの版・稼働状態が分かるので、版ずれの洗い出しや棚卸しに使えます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点にある機器を一覧にします。" />
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -3785,7 +3785,7 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiUplinks}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点の MX が使っている WAN 回線の状態と、外から見えるグローバル IP です。回線が生きているか、いま何本目の回線に切り替わっているかを確かめられます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点の WAN 回線の状態を見ます。" />
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -3927,7 +3927,7 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiClients}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点にいま繋がっている端末の一覧です。VLAN と最終確認時刻も出るので、「その端末はどこに居るか」「本当に繋がっているか」を確かめられます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点に繋がっている端末を一覧にします。" />
                                     </DockPanel>
 
                                     <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
@@ -4085,7 +4085,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.SnmpGet}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="機器の状態や設定を SNMP で問い合わせます（v1 / v2c の GET とウォーク）。ログインせずに機種名・稼働時間・インターフェースの状態などを確かめられるので、台数の多い機器をまとめて確認するのに向いています。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器の値を SNMP で問い合わせます。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -4199,7 +4199,7 @@
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                    ToolTip="{x:Static help:TabHelp.Receive}" />
-                        <TextBlock Style="{StaticResource TabIntro}" Text="機器から送られてくるファイルやログを受け取るサーバをまとめてあります。どれも押したときだけ待ち受ける使い捨てです。このタブを押すとメニューが出るので、そこから選んでください。" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="機器から送られてくるものを受け取るサーバです。" />
                     </DockPanel>
 
                     <!--
@@ -4217,7 +4217,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Ftp}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に FTP サーバにして、機器の copy running-config ftp: を受け取ります。設定のバックアップを取るのにサーバを用意する必要がありません。平文なので、使うときだけ開始してすぐ止めてください。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に FTP サーバにして、設定を受け取ります。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -4337,7 +4337,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Tftp}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に TFTP サーバにして、機器の copy … tftp: を受け取ります。古い機器やブート時の転送で使われる方式です。認証がまったく無いので、使うときだけ開始してください。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に TFTP サーバにして、設定を受け取ります。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -4441,7 +4441,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Sftp}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に SFTP サーバにします。SSH 越しなので中身が暗号化され、平文の FTP / TFTP が使えない環境でも設定のやり取りができます。WinSCP などからも繋げます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に SFTP サーバにします（暗号化されます）。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -4557,7 +4557,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Syslog}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="機器が吐く syslog をこの PC で受けて一覧にします。機器側に logging の設定を 1 行入れるだけです。作業中に何が起きたかを時刻付きで残せるので、リンクの上げ下げや障害の前後関係を追うのに使えます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器が送ってくる syslog を受けて一覧にします。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -4697,7 +4697,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.SnmpTrap}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="機器が異常時に自発的に送ってくる SNMP Trap を受けて一覧にします。こちらから問い合わせなくても、機器側で何かが起きた瞬間に届くので、作業中の見張りに向いています。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器が送ってくる SNMP Trap を受けて一覧にします。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">

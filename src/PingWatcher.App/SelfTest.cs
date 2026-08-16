@@ -650,12 +650,18 @@ internal static class SelfTest
                 foreach (string problem in CheckHelpShape(name, help))
                     missing.Add(problem);
 
-                // 1 行の説明は短すぎると意味がない（「〜の一覧です」だけでは何も伝わらない）。
-                // 何をする画面かに加えて、いつ使うものかまで書けばこの長さは自然に超える
-                if (!blocks.Any(t => t.Style == tab.TryFindResource("TabIntro") as Style
-                                     && t.Text is { Length: >= 40 }))
+                // 1 行の説明は「その画面で何ができるか」を一言で。
+                // 短すぎると伝わらないが、長いと 1 行の役目を外れる
+                // （細かい話は ⓘ に置く。以前は 100 文字を超えていて読まれなかった）。
+                if (blocks.FirstOrDefault(t => t.Style == tab.TryFindResource("TabIntro") as Style)
+                    is not { Text: { } intro })
                 {
-                    missing.Add($"{header}（説明が短い）");
+                    missing.Add($"{header}（1 行の説明が無い）");
+                }
+                else if (Core.Reporting.TextWidth.Of(intro) is < 20 or > 100)
+                {
+                    int chars = Core.Reporting.TextWidth.Of(intro) / 2;
+                    missing.Add($"{header}（1 行の説明が {chars} 字。10〜50 字に収めること）");
                 }
             }
 
@@ -1650,13 +1656,13 @@ internal static class SelfTest
         if (!lines[0].Contains(name, StringComparison.Ordinal))
             yield return $"{name}（1 行目にタブ名が無い: 「{lines[0]}」）";
 
-        // 幅は ToolTip の MaxWidth 420px = 全角 34 字ぶん。
+        // 幅は ToolTip の MaxWidth 840px = 全角 68 字ぶん。
         // 文字数ではなく表示幅で数える（日本語と URL で基準が変わるため）
         foreach (string line in lines)
         {
             int width = Core.Reporting.TextWidth.Of(line);
 
-            if (width > 68)
+            if (width > 136)
                 yield return $"{name}（{width / 2} 字で折り返す: 「{line}」）";
         }
     }

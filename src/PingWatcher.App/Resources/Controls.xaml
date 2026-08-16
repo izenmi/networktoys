@@ -691,12 +691,13 @@
         <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
         <!--
             長い説明は折り返す。既定では 1 行に伸びて画面からはみ出す。
-            幅は全角 34 字ぶん — これより広げると目が行頭へ戻れなくなる。
+            幅は全角 68 字ぶん。狭くすると 1 行が短くなりすぎ、
+            箇条書きが数語ごとに折り返して、かえってぶつ切りに見える。
 
             ContentTemplate は「文字列を渡されたとき」だけに当てる
             （中に要素を組んだ ToolTip まで文字列として描き直してしまわないように）。
         -->
-        <Setter Property="MaxWidth" Value="420" />
+        <Setter Property="MaxWidth" Value="840" />
         <Setter Property="ContentTemplate">
             <Setter.Value>
                 <DataTemplate DataType="{x:Type sys:String}">
