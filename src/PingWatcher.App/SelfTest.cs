@@ -294,18 +294,12 @@ internal static class SelfTest
             // 他のタブのテンプレート適用時のエラー(リソースキーの打ち間違いなど)を見逃す
             object? original = window!.MainTabs.SelectedItem;
 
-            foreach (object? item in window.MainTabs.Items)
-            {
-                // 無線タブは選んだ時点で WLAN API に触れる作り(位置情報の同意の
-                // タイミングを人の操作に合わせるため)なので、ここでは選ばない
-                if (ReferenceEquals(item, window.WifiTab)) continue;
-
-                window.MainTabs.SelectedItem = item;
-                window.UpdateLayout();
-            }
+            int visited = VisitTabs(window, window.MainTabs, _ => { });
 
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
+
+            log.AppendLine($"        実体化したタブ: {visited} 枚");
         });
 
         Check("表の見出しと行の左右が揃っている", () =>
@@ -328,14 +322,8 @@ internal static class SelfTest
             var problems = new List<string>();
             int headers = 0;
 
-            foreach (object? item in window.MainTabs.Items)
+            VisitTabs(window, window.MainTabs, _ =>
             {
-                // 無線タブは選ぶと WLAN API に触れるので、ここでも選ばない
-                if (ReferenceEquals(item, window.WifiTab)) continue;
-
-                window.MainTabs.SelectedItem = item;
-                window.UpdateLayout();
-
                 foreach (System.Windows.Controls.Grid header in FindTableHeaders(window))
                 {
                     headers++;
@@ -343,13 +331,43 @@ internal static class SelfTest
                     if (header.Margin != expected)
                         problems.Add($"見出しの余白が {header.Margin}（期待は {expected}）");
                 }
-            }
+            });
 
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
 
             Assert(problems.Count == 0, string.Join(" / ", problems.Distinct()));
             log.AppendLine($"        見合わせた見出し: {headers} 個");
+        });
+
+        Check("見えていないタブは動き出さない", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // TabItem.IsSelected は「その TabControl の中で選ばれているか」しか表さない。
+            // 内側の TabControl は生成時に先頭の子を自動で選ぶので、親タブを一度も
+            // 開いていなくても内側の 1 枚目は true になる。
+            // そのまま OnActivated() を呼ぶと、見えていないタブが OS を叩き始める
+            // （無線は位置情報の同意を求め、遮断は WFP を開き、接続は ETW を回す）。
+            object? original = window!.MainTabs.SelectedItem;
+
+            // 記録タブを選ぶ = ほかのタブはどれも見えていない状態
+            window.ReportTab.IsSelected = true;
+            window.UpdateLayout();
+
+            TabItem[] mustBeHidden =
+                [window.WifiTab, window.WfpTab, window.ConnectionsTab, window.TraceTab, window.IpConfigTab];
+
+            foreach (TabItem tab in mustBeHidden)
+            {
+                Assert(!Views.MainWindow.IsShowing(tab),
+                       $"記録タブを選んでいるのに「{tab.Header}」が見えている扱いになっている");
+            }
+
+            Assert(Views.MainWindow.IsShowing(window.ReportTab), "選んだタブが見えている扱いにならない");
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
         });
 
         Check("Meraki タブのサブタブをすべて表示できる", () =>
@@ -1328,6 +1346,64 @@ internal static class SelfTest
         catch (Exception)
         {
             // 自己診断の相手役なので、切れたら黙って終わる
+        }
+    }
+
+    /// <summary>
+    /// タブを 1 枚ずつ選んで実体化する。<b>束ねたタブ(内側の TabControl)まで再帰する。</b>
+    ///
+    /// TabControl は選ばれたタブしか実体化しないので、既定の表示だけでは
+    /// テンプレート適用時のエラー(リソースキーの打ち間違いなど)を見逃す。
+    /// 内側まで下りないと、束ねたタブが丸ごと検査から漏れる。
+    ///
+    /// <b>無線タブだけは選ばない。</b>選んだ時点で WLAN API に触れる作りで、
+    /// 位置情報の同意を求める時機を人の操作に合わせているため。
+    /// </summary>
+    /// <returns>実体化したタブの枚数。</returns>
+    private static int VisitTabs(
+        Views.MainWindow window, System.Windows.Controls.TabControl tabs, Action<TabItem> onShown)
+    {
+        int visited = 0;
+        object? original = tabs.SelectedItem;
+
+        foreach (object? item in tabs.Items)
+        {
+            if (item is not TabItem tab) continue;
+            if (ReferenceEquals(tab, window.WifiTab)) continue;
+
+            tabs.SelectedItem = tab;
+            window.UpdateLayout();
+
+            visited++;
+            onShown(tab);
+
+            // 中身が実体化した後でないと内側の TabControl は見つからない
+            foreach (System.Windows.Controls.TabControl inner in FindInnerTabs(tab))
+                visited += VisitTabs(window, inner, onShown);
+        }
+
+        tabs.SelectedItem = original;
+        window.UpdateLayout();
+
+        return visited;
+    }
+
+    private static IEnumerable<System.Windows.Controls.TabControl> FindInnerTabs(DependencyObject node)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(node);
+
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(node, i);
+
+            if (child is System.Windows.Controls.TabControl inner)
+            {
+                yield return inner;
+                continue;   // その中はこの TabControl 自身の巡回で辿る
+            }
+
+            foreach (System.Windows.Controls.TabControl found in FindInnerTabs(child))
+                yield return found;
         }
     }
 

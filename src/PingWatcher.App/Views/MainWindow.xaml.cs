@@ -88,14 +88,9 @@ public partial class MainWindow : Window
             if (handover.WindowMaximized)
                 WindowState = WindowState.Maximized;
 
-            foreach (object? item in MainTabs.Items)
-            {
-                if (item is TabItem tab && Equals(tab.Header, handover.SelectedTab))
-                {
-                    tab.IsSelected = true;
-                    break;
-                }
-            }
+            // 束ねたタブも探せるよう内側までたどる。見つからなければ既定のまま
+            if (FindTabByHeader(MainTabs, handover.SelectedTab) is { } saved)
+                Show(saved);
 
             // 止まっていたなら止まったまま。動いていたなら測り直しではなく続きから
             if (handover.WasRunning && _shell.Monitor.StartCommand.CanExecute(null))
@@ -127,7 +122,7 @@ public partial class MainWindow : Window
         if (!_shell.Monitor.StartCommand.CanExecute(null)) return;
 
         _shell.Monitor.StartCommand.Execute(null);
-        PingTab.IsSelected = true;
+        Show(PingTab);
     }
 
     /// <summary>
@@ -165,7 +160,7 @@ public partial class MainWindow : Window
         // ボタンの DataContext がどちらの画面かで見分ける
         if (sender is FrameworkElement { DataContext: MonitorViewModel { IsTcpScreen: true } }) return;
 
-        PingTab.IsSelected = true;
+        Show(PingTab);
     }
 
     /// <summary>
@@ -708,7 +703,7 @@ public partial class MainWindow : Window
             line += "\t" + row.Comment;
 
         _shell.Tcp.AppendToTargetList([line]);
-        TcpTab.IsSelected = true;
+        Show(TcpTab);
     }
 
     /// <summary>
@@ -782,8 +777,54 @@ public partial class MainWindow : Window
     /// </summary>
     private void ClearCollectPasswordBoxes()
     {
-        foreach (PasswordBox box in FindPasswordBoxes(CollectTab))
-            box.Clear();
+        // 起点をウィンドウ全体にする。収集タブを束ねたとき、親が選ばれていないと
+        // タブの中身は実体化しておらず、そこを起点にすると 1 つも見つからない。
+        // 収集の欄は Tag が login / enable（FTP と SFTP は ftp / sftp）
+        foreach (PasswordBox box in FindPasswordBoxes(this))
+        {
+            if (box.Tag is "login" or "enable")
+                box.Clear();
+        }
+    }
+
+    /// <summary>
+    /// 見出しでタブを探す。<b>内側の TabControl までたどる</b>。
+    /// 昇格して起動し直したときに、開いていたタブへ戻すのに使う。
+    /// </summary>
+    private static TabItem? FindTabByHeader(TabControl tabs, string? header)
+    {
+        if (string.IsNullOrEmpty(header)) return null;
+
+        foreach (object? item in tabs.Items)
+        {
+            if (item is not TabItem tab) continue;
+
+            if (Equals(tab.Header, header)) return tab;
+
+            // 中身がまだ実体化していないと子は見つからない。
+            // それでも既定のタブで起動するだけなので、探せる範囲で探す
+            foreach (TabControl inner in FindDescendants<TabControl>(tab))
+            {
+                if (FindTabByHeader(inner, header) is { } found) return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<T> FindDescendants<T>(DependencyObject node) where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(node);
+
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(node, i);
+
+            if (child is T match) yield return match;
+
+            foreach (T found in FindDescendants<T>(child))
+                yield return found;
+        }
     }
 
     private static IEnumerable<PasswordBox> FindPasswordBoxes(DependencyObject node)
@@ -861,7 +902,7 @@ public partial class MainWindow : Window
         if (RowOf(sender) is not { } row) return;
 
         _shell.Trace.Host = row.Host;
-        TraceTab.IsSelected = true;
+        Show(TraceTab);
 
         if (_shell.Trace.TraceCommand.CanExecute(null))
             _shell.Trace.TraceCommand.Execute(null);
@@ -872,7 +913,7 @@ public partial class MainWindow : Window
         if (RowOf(sender) is not { } row) return;
 
         _shell.Dns.Name = row.Host;
-        DnsTab.IsSelected = true;
+        Show(DnsTab);
 
         if (_shell.Dns.QueryCommand.CanExecute(null))
             _shell.Dns.QueryCommand.Execute(null);
@@ -955,7 +996,7 @@ public partial class MainWindow : Window
         if (AddressOf(sender) is not { Length: > 0 } address) return;
 
         _shell.Monitor.AppendToTargetList([address]);
-        PingTab.IsSelected = true;
+        Show(PingTab);
     }
 
     private void OnSendToTcp(object sender, RoutedEventArgs e)
@@ -966,7 +1007,7 @@ public partial class MainWindow : Window
         string port = _shell.Tcp.TcpPort.Trim();
 
         _shell.Tcp.AppendToTargetList([port.Length > 0 ? $"{address}:{port}" : address]);
-        TcpTab.IsSelected = true;
+        Show(TcpTab);
     }
 
     private void OnSendToCollect(object sender, RoutedEventArgs e)
@@ -974,7 +1015,7 @@ public partial class MainWindow : Window
         if (AddressOf(sender) is not { Length: > 0 } address) return;
 
         _shell.Collect.Import([(address, string.Empty)]);
-        CollectTab.IsSelected = true;
+        Show(CollectTab);
     }
 
     private void OnSendToTrace(object sender, RoutedEventArgs e)
@@ -982,7 +1023,7 @@ public partial class MainWindow : Window
         if (AddressOf(sender) is not { Length: > 0 } address) return;
 
         _shell.Trace.Host = address;
-        TraceTab.IsSelected = true;
+        Show(TraceTab);
 
         if (_shell.Trace.TraceCommand.CanExecute(null))
             _shell.Trace.TraceCommand.Execute(null);
@@ -994,7 +1035,7 @@ public partial class MainWindow : Window
 
         _shell.Dns.Name = address;
         _shell.Dns.SelectedType = "PTR";   // IP を渡すので、名前を知りたいなら逆引き
-        DnsTab.IsSelected = true;
+        Show(DnsTab);
 
         if (_shell.Dns.QueryCommand.CanExecute(null))
             _shell.Dns.QueryCommand.Execute(null);
@@ -1009,7 +1050,7 @@ public partial class MainWindow : Window
         if (AddressOf(sender) is not { Length: > 0 } address) return;
 
         _shell.SnmpGet.Host = address;
-        SnmpTab.IsSelected = true;
+        Show(SnmpTab);
     }
 
     private void OnCopyRowAddress(object sender, RoutedEventArgs e) => CopyText(AddressOf(sender));
@@ -1029,40 +1070,86 @@ public partial class MainWindow : Window
 
     private void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        // 内側の ListBox などの選択変更が浮上してくるので、TabControl 由来だけを扱う
-        if (!ReferenceEquals(e.OriginalSource, sender)) return;
+        // 内側の ListBox などの選択変更が浮上してくるので、TabControl 由来だけを扱う。
+        // 内側の TabControl(サブタブ)の変更もここへ通す — 弾くと、束ねたタブを
+        // 切り替えても OnActivated / OnDeactivated が走らなくなる
+        if (e.OriginalSource is not TabControl) return;
 
         if (SuppressWifiActivation) return;
 
-        if (WifiTab.IsSelected)
+        if (IsShowing(WifiTab))
             _shell.Wifi.OnActivated();
         else
             _shell.Wifi.OnDeactivated();
 
         // 接続一覧もタブが見えている間だけ OS を叩く
-        if (ConnectionsTab.IsSelected)
+        if (IsShowing(ConnectionsTab))
             _shell.Connections.OnActivated();
         else
             _shell.Connections.OnDeactivated();
 
         // 遮断一覧も見えている間だけ WFP のエンジンを開く
-        if (WfpTab.IsSelected)
+        if (IsShowing(WfpTab))
             _shell.Wfp.OnActivated();
         else
             _shell.Wfp.OnDeactivated();
 
         // 経路の見張り(60 秒ごと)も、見えていないタブで裏を走らせない
-        if (TraceTab.IsSelected)
+        if (IsShowing(TraceTab))
             _shell.Trace.OnActivated();
         else
             _shell.Trace.OnDeactivated();
 
         // IP設定はタブを開いたときにアダプタを列挙し直す
-        if (IpConfigTab.IsSelected)
+        if (IsShowing(IpConfigTab))
             _shell.IpConfig.OnActivated();
 
-        if (ReportTab.IsSelected)
+        if (IsShowing(ReportTab))
             _shell.Report.OnActivated();
+    }
+
+    /// <summary>
+    /// そのタブが<b>実際に見えているか</b>。
+    ///
+    /// <b><see cref="TabItem.IsSelected"/> だけを見てはいけない。</b>これは
+    /// 「その TabControl の中で選ばれているか」しか表さず、内側の TabControl は
+    /// 生成時に先頭の子を自動で選ぶので、<b>親タブを一度も開いていなくても
+    /// 内側の 1 枚目は true になる</b>。
+    ///
+    /// そのまま <c>OnActivated()</c> を呼ぶと、見えていないタブが OS を叩き始める
+    /// （無線は位置情報の同意を求め、遮断は WFP のエンジンを開き、接続は ETW を回す）。
+    /// 先祖の TabItem をすべてたどって確かめる。
+    /// </summary>
+    internal static bool IsShowing(TabItem tab)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+
+        for (DependencyObject? node = tab; node is not null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is TabItem item && !item.IsSelected) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// そのタブを開く。<b>束ねられていれば先祖もたどって開く</b>。
+    /// <c>IsSelected = true</c> だけでは、親タブが選ばれていないと画面が変わらない。
+    /// </summary>
+    internal static void Show(TabItem tab)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+
+        // 外側から順に選ぶ。先に内側を選んでも親の切り替えで戻されることがある
+        var chain = new List<TabItem>();
+
+        for (DependencyObject? node = tab; node is not null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is TabItem item) chain.Add(item);
+        }
+
+        for (int i = chain.Count - 1; i >= 0; i--)
+            chain[i].IsSelected = true;
     }
 
     /// <summary>
