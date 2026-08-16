@@ -50,7 +50,15 @@ public sealed record WfpBlockedRow(
     string CountText,
     string FilterId,
     string LayerId,
-    string SortKey);
+    string SortKey,
+    WfpDirection Direction = WfpDirection.Unknown)
+{
+    /// <summary>外へ出ようとして落ちた。画面の色分けに使う。</summary>
+    public bool IsOutbound => Direction == WfpDirection.Outbound;
+
+    /// <summary>外から来て落ちた。画面の色分けに使う。</summary>
+    public bool IsInbound => Direction == WfpDirection.Inbound;
+}
 
 /// <summary>WFP のイベントを人が読める文字列にする。</summary>
 public static class WfpFormat
@@ -220,6 +228,7 @@ public static class WfpEventView
                 TimeText: latest.TimeUtc.ToLocalTime().ToString("MM/dd HH:mm:ss", CultureInfo.InvariantCulture),
                 LatestUtc: latest.TimeUtc,
                 DirectionText: WfpFormat.Direction(latest.Direction, latest.DirectionRaw),
+                Direction: latest.Direction,
                 Protocol: WfpFormat.Protocol(latest.Protocol),
                 Local: WfpFormat.Endpoint(latest.Local, latest.LocalPort, latest.ScopeId),
                 Remote: WfpFormat.Endpoint(latest.Remote, latest.RemotePort, latest.ScopeId),

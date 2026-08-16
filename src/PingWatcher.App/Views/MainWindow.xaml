@@ -3200,7 +3200,7 @@
                                                 <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <TextBlock Grid.Column="0" Text="{Binding TimeText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding DirectionText}"
+                                                <TextBlock x:Name="DirectionText" Grid.Column="1" Text="{Binding DirectionText}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Protocol}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
@@ -3217,6 +3217,23 @@
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
                                                            HorizontalAlignment="Right" />
                                             </Grid>
+
+                                            <!--
+                                                送信と受信で色を変える。既存のパレットから選んでいるので
+                                                新しい色は足していない(明暗どちらの配色でもコントラストは検算済み)。
+                                                色だけに頼らないよう、文字は「→ 送信」「← 受信」のまま残す。
+                                                向きが読めなかった行は色を付けない(生の値を出したまま)。
+                                            -->
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsOutbound}" Value="True">
+                                                    <Setter TargetName="DirectionText" Property="Foreground"
+                                                            Value="{DynamicResource Brush.Info.Fg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsInbound}" Value="True">
+                                                    <Setter TargetName="DirectionText" Property="Foreground"
+                                                            Value="{DynamicResource Brush.Warn.Fg}" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>

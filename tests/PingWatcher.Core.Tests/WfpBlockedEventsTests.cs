@@ -15,10 +15,12 @@ public class WfpBlockedEventsTests
         ushort remotePort = 443,
         byte protocol = 6,
         ulong filterId = 12345,
-        int secondsLater = 0)
+        int secondsLater = 0,
+        WfpDirection direction = WfpDirection.Outbound,
+        uint directionRaw = 0)
         => new(
             TimeUtc: Base.AddSeconds(secondsLater),
-            Direction: WfpDirection.Outbound,
+            Direction: direction,
             Protocol: protocol,
             Local: IPAddress.Parse("192.168.1.10"),
             LocalPort: 51234,
@@ -28,7 +30,8 @@ public class WfpBlockedEventsTests
             AppIdRaw: app,
             FilterId: filterId,
             LayerId: 44,
-            IsLoopback: false);
+            IsLoopback: false,
+            DirectionRaw: directionRaw);
 
     // ===== バイトオーダー =====
 
@@ -122,6 +125,35 @@ public class WfpBlockedEventsTests
         Assert.Equal("bare.exe", NtPathText.FileName("bare.exe"));
         // 末尾が \ ならファイル名が無い。空欄にせず元の文字列を残す
         Assert.Equal(@"\device\a\", NtPathText.FileName(@"\device\a\"));
+    }
+
+    // ===== 向き =====
+
+    [Theory]
+    [InlineData(WfpDirection.Outbound, "→ 送信", true, false)]
+    [InlineData(WfpDirection.Inbound, "← 受信", false, true)]
+    public void Direction_reaches_the_row_as_a_value_not_just_text(
+        WfpDirection direction, string text, bool outbound, bool inbound)
+    {
+        // 画面は色を分けるのに値を見る。文字列を読み直させると
+        // 文言を変えた瞬間に色分けが静かに壊れる
+        WfpBlockedRow row = Assert.Single(WfpEventView.Group([Event(direction: direction)]));
+
+        Assert.Equal(text, row.DirectionText);
+        Assert.Equal(outbound, row.IsOutbound);
+        Assert.Equal(inbound, row.IsInbound);
+    }
+
+    [Fact]
+    public void An_unreadable_direction_gets_no_colour()
+    {
+        // 対応表に無い値は生の数字を出す決まり。どちらの色も付けない
+        WfpBlockedRow row = Assert.Single(
+            WfpEventView.Group([Event(direction: WfpDirection.Unknown, directionRaw: 7)]));
+
+        Assert.Equal("? 7", row.DirectionText);
+        Assert.False(row.IsOutbound);
+        Assert.False(row.IsInbound);
     }
 
     // ===== 畳み込み =====
