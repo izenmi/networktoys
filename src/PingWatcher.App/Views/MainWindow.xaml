@@ -428,7 +428,7 @@
             すべてフラットに並べる。Style の Setter ではなく要素へ直接置いているので
             Click の結線はずれない(CLAUDE.md 参照)。
         -->
-        <Menu x:Name="MainMenu" Grid.Row="0" Margin="0,0,0,1" Background="Transparent">
+        <Menu x:Name="MainMenu" Grid.Row="0" Margin="0,0,0,5" Background="Transparent">
             <!-- 開く直前に「保存できるか」を聞き直す。記録の画面を畳んだので、
                  ここを逃すと起動直後の判定のまま押せなくなる -->
             <MenuItem Header="ファイル(_F)" Style="{StaticResource MenuBarItem}"
@@ -481,8 +481,8 @@
                        VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- メニューの帯と本体を分ける罫線 -->
-        <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1"
+        <!-- メニューの帯と本体を分ける罫線。タブに近づきすぎないよう間を空ける -->
+        <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Margin="0,0,0,4"
                 Background="{DynamicResource Brush.Border}" />
 
         <!-- ===== 本体 ===== -->
