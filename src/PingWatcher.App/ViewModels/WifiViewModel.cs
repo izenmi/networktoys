@@ -57,7 +57,8 @@ public sealed class ChannelBarViewModel
         Count = count;
         IsMine = isMine;
 
-        // 一番混んでいるチャンネルを 1 として高さを決める
+        // 一番混んでいるチャンネルを 1 として高さを決める。
+        // 上限は表示枠(98px)から台数の数字とチャンネル番号のぶんを引いた残り
         Height = maxCount <= 0 ? 0 : Math.Max(3, count * 60.0 / maxCount);
         Label = count > 0 ? count.ToString() : string.Empty;
     }

@@ -1033,9 +1033,10 @@
                             <StackPanel>
                                 <TextBlock Text="チャンネルの混み具合（そのチャンネルを使っている AP の数）"
                                            Style="{StaticResource Caption}" Margin="0,0,0,6" />
-                                <StackPanel Orientation="Horizontal">
-                                    <StackPanel Margin="0,0,24,0">
-                                        <ItemsControl ItemsSource="{Binding Channels24}" Height="76" VerticalAlignment="Bottom">
+                                <!-- 5GHz は 18 本あるので、狭い窓では折り返して縦に積む -->
+                                <WrapPanel Orientation="Horizontal">
+                                    <StackPanel Margin="0,0,24,6">
+                                        <ItemsControl ItemsSource="{Binding Channels24}" Height="98" VerticalAlignment="Bottom">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" />
@@ -1065,7 +1066,7 @@
                                     </StackPanel>
 
                                     <StackPanel>
-                                        <ItemsControl ItemsSource="{Binding Channels5}" Height="76" VerticalAlignment="Bottom">
+                                        <ItemsControl ItemsSource="{Binding Channels5}" Height="98" VerticalAlignment="Bottom">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" />
@@ -1093,7 +1094,7 @@
                                         </ItemsControl>
                                         <TextBlock Text="5 GHz 以上" Style="{StaticResource Caption}" Margin="0,2,0,0" />
                                     </StackPanel>
-                                </StackPanel>
+                                </WrapPanel>
                             </StackPanel>
                         </Border>
 
