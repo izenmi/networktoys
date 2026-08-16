@@ -532,6 +532,15 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// ファイルメニューを開くたびに、保存できるかを聞き直す。
+    ///
+    /// 記録の画面を畳んだので（2026-08-16）、判定を見直す機会がここしかない。
+    /// 保存したあとの結果もヘッダの文字で知らせる。
+    /// </summary>
+    private void OnFileMenuOpened(object sender, RoutedEventArgs e)
+        => _shell.Report.RefreshSaveCommands();
+
     /// <summary>結果はヘッダの文字で 2 秒だけ知らせる。トーストや別窓は出さない。</summary>
     private void ShowScreenshotResult(string text)
     {
@@ -554,11 +563,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// ボタンには「切り替えた先」を出す。いまの状態を出すと、
+    /// ボタンにもメニューにも「切り替えた先」を出す。いまの状態を出すと、
     /// 押すとどうなるのかが読み取れない。
     /// </summary>
     private void UpdateThemeToggle()
-        => ThemeToggle.Content = ThemeManager.Current == AppTheme.Dark ? "☀ 明るく" : "☾ 暗く";
+    {
+        bool dark = ThemeManager.Current == AppTheme.Dark;
+
+        ThemeToggle.Content = dark ? "☀ ライトモード" : "☾ ダークモード";
+        ThemeMenuItem.Header = dark ? "ライトモードにする" : "ダークモードにする";
+    }
 
     private void OnTopmostMenu(object sender, RoutedEventArgs e)
         => Topmost = TopmostMenuItem.IsChecked;
@@ -611,16 +625,6 @@ public partial class MainWindow : Window
             $"PingWatcher {version}\n\n" +
             "色々できるネットワーク診断ツール\n" +
             "https://github.com/izenmi/pingwatcher");
-    }
-
-    /// <summary>消す範囲を選ばせる。ボタンの下にメニューを出す。</summary>
-    private void OnClearMenu(object sender, RoutedEventArgs e)
-    {
-        if (ClearButton.ContextMenu is not { } menu) return;
-
-        menu.PlacementTarget = ClearButton;
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-        menu.IsOpen = true;
     }
 
     /// <summary>
@@ -1104,8 +1108,6 @@ public partial class MainWindow : Window
         if (IsShowing(IpConfigTab))
             _shell.IpConfig.OnActivated();
 
-        if (IsShowing(ReportTab))
-            _shell.Report.OnActivated();
     }
 
     /// <summary>

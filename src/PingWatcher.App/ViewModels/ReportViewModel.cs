@@ -20,7 +20,6 @@ public sealed class ReportViewModel : ObservableObject
     private readonly VerifyViewModel _verify;
 
     private string _status = string.Empty;
-    private string _preview = string.Empty;
 
     /// <param name="tcp">TCP 画面。宛先も結果も Ping とは別に持つので、別に受け取る。</param>
     /// <param name="verify">
@@ -37,7 +36,6 @@ public sealed class ReportViewModel : ObservableObject
         SaveHtmlCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Html), CanSave);
         SaveCsvCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Csv), CanSave);
         SaveTextCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Text), CanSave);
-        RefreshPreviewCommand = new RelayCommand(RefreshPreview);
     }
 
     public RelayCommand SaveHtmlCommand { get; }
@@ -49,23 +47,10 @@ public sealed class ReportViewModel : ObservableObject
     /// </summary>
     public RelayCommand SaveTextCommand { get; }
 
-    /// <summary>
-    /// プレビューの手動更新。タブを開いたときにも作り直すが、測定を流しながら
-    /// このタブを開きっぱなしにする使い方では手で更新できたほうが早い。
-    /// </summary>
-    public RelayCommand RefreshPreviewCommand { get; }
-
     public string Status
     {
         get => _status;
         private set => SetProperty(ref _status, value);
-    }
-
-    /// <summary>書き出される内容のプレビュー（テキスト形式）。タブを開くたびに作り直す。</summary>
-    public string Preview
-    {
-        get => _preview;
-        private set => SetProperty(ref _preview, value);
     }
 
     // 試験だけを回した日もある。測定が空でも書き出せるようにする
@@ -132,49 +117,28 @@ public sealed class ReportViewModel : ObservableObject
         }
     }
 
-    /// <summary>記録タブを開いたときに、保存できるかとプレビューを見直す。</summary>
-    public void OnActivated()
+    /// <summary>
+    /// 保存できるかを見直す。<b>ファイルメニューを開くたびに呼ぶ。</b>
+    ///
+    /// 記録の画面は畳んだ（2026-08-16）ので、ここを呼ぶ機会がメニューを開く瞬間しかない。
+    /// <see cref="RelayCommand"/> は <c>CommandManager</c> に乗っていないので、
+    /// 誰かが知らせない限り「まだ何も無い」判定のまま固まり、保存が押せなくなる。
+    /// </summary>
+    public void RefreshSaveCommands()
     {
         SaveHtmlCommand.RaiseCanExecuteChanged();
         SaveCsvCommand.RaiseCanExecuteChanged();
         SaveTextCommand.RaiseCanExecuteChanged();
-        RefreshPreview();
     }
 
     /// <summary>自己診断から中身を確かめるための口。ipconfig は取りに行かない。</summary>
     internal ReportData BuildReportForSelfTest() => BuildData(ipConfig: null);
 
     /// <summary>起動時の状態へ戻す。</summary>
-    public void Reset()
-    {
-        Status = string.Empty;
-        Preview = string.Empty;
-    }
+    public void Reset() => Status = string.Empty;
 
     /// <summary>
-    /// 出力内容のプレビューを作り直す。ipconfig /all は取得に時間がかかるので
-    /// プレビューには入れず、保存時にだけ取得して差し込む。
-    /// </summary>
-    private void RefreshPreview()
-    {
-        try
-        {
-            Preview = !CanSave()
-                ? "測定結果も試験結果もまだありません。Ping・TCP で測るか、試験タブで実行すると、"
-                  + "ここに書き出される内容が表示されます。"
-                : TextReportWriter.Render(BuildData(ipConfig: null))
-                  + Environment.NewLine
-                  + "※ HTML/テキストでの保存時は、ここに [ipconfig /all] の節も加わります。";
-        }
-        catch (Exception ex)
-        {
-            Preview = "プレビューを作れませんでした。";
-            CrashLog.Write(ex, "ReportViewModel.RefreshPreview");
-        }
-    }
-
-    /// <summary>
-    /// 保存とプレビューで同じ内容を組む(表題とメモは 2026-08-16 に廃止)。
+    /// 書き出す内容を組む(表題とメモは 2026-08-16 に廃止)。
     ///
     /// <b>Ping と TCP の両方を載せる。</b>種別の言い表し方は画面ごとに違うので、
     /// 組にして渡す。不通の記録も両方から集める。

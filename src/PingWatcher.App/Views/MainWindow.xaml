@@ -141,6 +141,27 @@
             </Setter>
         </Style>
 
+        <!--
+            各タブの先頭に置く 1 行の説明と、その左の ⓘ。
+            「何をする画面か」は開いた瞬間に分かる必要がある（タブ名だけでは足りない）。
+            詳しい話は ⓘ にマウスを載せたときだけ出し、常時は 1 行に抑える。
+        -->
+        <Style x:Key="TabIntro" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="TabInfoMark" TargetType="TextBlock">
+            <Setter Property="Text" Value="ⓘ" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
+            <Setter Property="Cursor" Value="Help" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <!-- すぐ出して、読み終わるまで消えないようにする -->
+            <Setter Property="ToolTipService.InitialShowDelay" Value="150" />
+            <Setter Property="ToolTipService.ShowDuration" Value="120000" />
+        </Style>
+
         <!-- 値の表示欄。読み取り専用の TextBox にして、選択してコピーできるようにする -->
         <Style x:Key="CopyableValue" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="IsReadOnly" Value="True" />
@@ -494,7 +515,10 @@
             Click の結線はずれない(CLAUDE.md 参照)。
         -->
         <Menu x:Name="MainMenu" Grid.Row="0" Margin="0,0,0,1" Background="Transparent">
-            <MenuItem Header="ファイル(_F)" Style="{StaticResource MenuBarItem}">
+            <!-- 開く直前に「保存できるか」を聞き直す。記録の画面を畳んだので、
+                 ここを逃すと起動直後の判定のまま押せなくなる -->
+            <MenuItem Header="ファイル(_F)" Style="{StaticResource MenuBarItem}"
+                      SubmenuOpened="OnFileMenuOpened">
                 <MenuItem Header="レポートを HTML で保存..." Command="{Binding Report.SaveHtmlCommand}" />
                 <MenuItem Header="レポートをテキストで保存..." Command="{Binding Report.SaveTextCommand}" />
                 <MenuItem Header="レポートを CSV で保存..." Command="{Binding Report.SaveCsvCommand}" />
@@ -516,7 +540,7 @@
                 <MenuItem Header="すべて消す（起動直後に戻す）" Click="OnClearAll" />
             </MenuItem>
             <MenuItem Header="表示(_V)" Style="{StaticResource MenuBarItem}">
-                <MenuItem Header="配色を切り替え" Click="OnThemeToggle" />
+                <MenuItem x:Name="ThemeMenuItem" Click="OnThemeToggle" />
                 <MenuItem x:Name="TopmostMenuItem" Header="最前面に固定" IsCheckable="True"
                           Click="OnTopmostMenu" />
             </MenuItem>
@@ -537,52 +561,25 @@
                        Margin="0,0,14,0" VerticalAlignment="Center" />
 
             <!--
-                測定の開始と停止はここに置く。どのタブを見ていても押せるように。
-                宛先を書き換えている最中や、機器の出力を見比べている最中に
-                止めたくなることが多い。
+                測定の開始・停止と「クリア」はここから外した（2026-08-16 ユーザー指示）。
+                開始と停止は Ping タブの中に、クリアはメニューバーの「測定」にある。
+                ここに残すのは、伝えないと困ること（失敗など）だけにする。
             -->
-            <StackPanel Orientation="Horizontal" DataContext="{Binding Monitor}">
-                <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}"
-                        Click="OnStartClicked" Margin="0,0,5,0" />
-                <Button Content="停止" Command="{Binding StopCommand}"
-                        Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+            <TextBlock Text="{Binding Monitor.StatusMessage}" Style="{StaticResource Caption}"
+                       VerticalAlignment="Center" MaxWidth="320"
+                       TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
 
-                <!--
-                    件数はここに出さない。宛先タブと一覧の見出しに出ているうえ、
-                    実行中かどうかはボタンの文字で分かる。
-                    ここに残すのは、伝えないと困ること（失敗など）だけにする。
-                -->
-                <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}"
-                           VerticalAlignment="Center" MaxWidth="260"
-                           TextTrimming="CharacterEllipsis" Margin="0,0,14,0" />
-            </StackPanel>
-
-            <!--
-                消す範囲を選ばせる。測り直したいだけのときに、作業前の記録や
-                機器の貼り付けまで巻き添えにするのは行き過ぎなので分けている。
-
-                メニューはボタンに直接付けている。Style の Setter に置くと
-                イベントの結線がずれて起動時に落ちる（CLAUDE.md 参照）。
-            -->
-            <Button x:Name="ClearButton" Content="クリア ▾" Click="OnClearMenu"
-                    Style="{StaticResource Button.Subtle}"
-                    Margin="0,0,8,0"
-                    ToolTip="消す範囲を選びます。">
-                <Button.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Ping の測定結果だけ消す" Click="OnClearPingResults" />
-                        <Separator />
-                        <MenuItem Header="すべて消す（起動直後に戻す）" Click="OnClearAll" />
-                    </ContextMenu>
-                </Button.ContextMenu>
-            </Button>
+            <!-- 保存の結果。記録の画面を畳んだので、伝える場所がここしかない -->
+            <TextBlock Text="{Binding Report.Status}" Style="{StaticResource Caption}"
+                       VerticalAlignment="Center" MaxWidth="320"
+                       TextTrimming="CharacterEllipsis" Margin="0,0,14,0" />
 
             <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
             <Button x:Name="ThemeToggle" Click="OnThemeToggle"
                     Style="{StaticResource Button.Icon}"
                     Margin="0,0,8,0"
                     AutomationProperties.Name="配色の切り替え"
-                    ToolTip="明るい配色と暗い配色を切り替えます。" />
+                    ToolTip="ライトモードとダークモードを切り替えます。" />
 
             <!-- 操作の結果を短く知らせる場所(画面保存の成否など)。数秒で消える -->
             <TextBlock x:Name="HeaderNotice" Style="{StaticResource Caption}"
@@ -600,6 +597,13 @@
             <TabItem Header="宛先リスト" DataContext="{Binding Monitor}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="1 行 1 宛先。アドレスの後ろに半角スペースを空けると備考になります。行頭が # ; ' 全角スペースの行は注釈です。192.168.1.10-20 の範囲指定、192.168.1.0/24 のサブネット指定、表計算からのタブ区切り貼り付けも受け付けます。書き換えると自動で反映され、測定は止まりません。TCP で測る相手は「TCP Ping」の側に書きます（そちらは末尾の :ポート が測る先）。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="測りたい相手をまとめて書く場所です。書式は EXPing に合わせています。" />
+                        </DockPanel>
+
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource Heading}" Text="宛先リスト" />
 
                         <Border DockPanel.Dock="Top"
@@ -642,10 +646,21 @@
             <TabItem x:Name="PingTab" Header="Ping" DataContext="{Binding Monitor}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="応答しない宛先が他を待たせることはありません。2 回続けて応答が無い宛先は上段の「応答なし」欄に浮き上がるので、落ちた瞬間を見逃しません。行を選ぶと下に平均・ジッタなどの詳しい統計が出ます。行を右クリックすると、その相手を TCP Ping に足したり、SSH / Telnet でつないだり、経路や名前を調べたりできます。状態は記号と文字で出ます（● 応答 / ✕ 不通 / ⊘ 拒否 / ? 名前 / … 停止）。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="宛先ごとに独立した周期で ping を並列に打ち、結果を一覧にします。" />
+                        </DockPanel>
 
-                        <!-- 操作列。開始・停止はヘッダへ移したので、ここに残すのは
-                             この画面でしか使わないものだけ -->
+
+                        <!-- 操作列。開始・停止はこの画面に置く（2026-08-16 ユーザー指示で
+                             ヘッダから移した）。F5 / Shift+F5 とメニューからも打てる -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
+                            <Button Content="{Binding RunButtonLabel}" Command="{Binding StartCommand}"
+                                    Click="OnStartClicked" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
                             <Button Content="履歴を消去"
                                     Command="{Binding ClearHistoryCommand}"
                                     Style="{StaticResource Button.Subtle}"
@@ -854,6 +869,13 @@
             <TabItem x:Name="WifiTab" Header="Wi-Fi" DataContext="{Binding Wifi}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="接続中 AP の詳細、受信強度（RSSI）の推移、周辺 AP のチャンネル混雑グラフ。「保存」でいまの状況をテキストに残せます。Windows 11 24H2 以降は OS の仕様で位置情報の許可が要ります。許可が無いと OS が情報を返さないので、画面の案内から設定を開いてください。許可を求める時機が読めなくなるため、この画面を開くまでスキャンはしません。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="つないでいる AP の詳細と、電波の強さ・チャンネルの混み具合を見ます。" />
+                        </DockPanel>
+
 
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
                             <StackPanel Orientation="Horizontal">
@@ -1152,6 +1174,13 @@
             <TabItem Header="差分比較" DataContext="{Binding DeviceCompare}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="対象は show run（既定）/ show ip route / そのまま比較。複数台ぶんを同時に抱えられるので、作業前にまとめて貼っておき、作業後にもう半分を貼るのが定石です。show ip route は行の差分ではなく構造として突き合わせるため、経過時間だけが違う行は差分になりません。「前の差分」「次の差分」で長い設定でもたどれます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器の show 出力を作業前後で貼って見比べます。" />
+                        </DockPanel>
+
 
                         <!-- 操作 -->
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
@@ -1469,13 +1498,12 @@
             <TabItem x:Name="WfpTab" Header="WFP" DataContext="{Binding Wfp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
-                        <!--
-                            「WFP」だけでは何の画面か伝わらないので、いちばん上で言い切る。
-                            ToolTip では気づかれない（そもそも何のタブか分からないと触らない）。
-                        -->
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
-                                   TextWrapping="Wrap" Margin="0,0,0,6"
-                                   Text="Windows Filtering Platform — Windows 自身が落とした通信の一覧です。ファイアウォールやセキュリティ製品に遮断された通信を、いつ・どのアプリが・どこへ出ようとしたかまで確かめられます。「繋がらないが原因が分からない」ときの最後の砦です。読み取りには管理者権限が要ります。" />
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="WFP は Windows Filtering Platform の略で、ファイアウォールやセキュリティ製品が通信を落とすときに通る仕組みです。いつ・どのアプリが・どこへ出ようとして落とされたかが分かります。読み取りにも管理者権限が要ります。さらに Windows は既定でこの記録を取っていないので、0 件のままなら「記録を有効にする」を押してください（PC 全体に効く設定で、閉じるとき元に戻します）。ここに出るのはこの PC の WFP が落としたものだけで、相手側やネットワーク機器で落とされた通信は出ません。プロセスが「—」なのは不具合ではありません。受信の遮断は通信が届く前に落ちているので、持ち主のアプリが存在しません。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="Windows 自身が落とした通信の一覧です。「繋がらないが原因が分からない」ときの最後の砦。" />
+                        </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <CheckBox Content="一時停止" IsChecked="{Binding IsPaused}"
@@ -1664,6 +1692,13 @@
             <TabItem x:Name="IpConfigTab" Header="IP設定" DataContext="{Binding IpConfig}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="アダプタを選ぶと現在の設定が入力欄に入ります。DHCP と固定 IP を切り替えられ、よく使う現場の設定はプリセットとして名前を付けて保存できます。適用のときだけ UAC の確認が 1 回出ます（アプリ自体は管理者になりません）。リモートデスクトップ越しの操作では、適用した瞬間に通信が切れることがあるので注意してください。下段のプロキシ（使わない / PAC / 固定サーバ）は管理者権限も UAC も要りません。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC の IPv4 設定とプロキシ設定を切り替えます。" />
+                        </DockPanel>
+
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
                             <TextBlock Text="アダプタ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
                             <ComboBox Width="300"
@@ -1832,6 +1867,13 @@
             <TabItem x:Name="VerifyTab" Header="業務確認" DataContext="{Binding Verify}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="ネットワークやプロキシを入れ替えたあとの業務確認試験を、判定できるところまで肩代わりします。プロキシを切り替えて同じ試験を回せるので、入れ替えの前後を並べて比べられます。HTTP は応答コードだけでは合格にしません（遮断ページは HTTP 200 で返るため、本文と最終 URL も見ます）。Teams は音声が通る UDP まで確かめます。ブラウザでしか開けないページは開くところまで肩代わりし、合否は人が付けます。結果は CSV と HTML の報告書にできます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="Web・Teams・メールが使えるかをまとめて試験し、証跡として書き出します。" />
+                        </DockPanel>
+
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <ComboBox Width="200" Margin="0,0,6,2"
                                       ItemsSource="{Binding Templates}"
@@ -2220,43 +2262,16 @@
                 </Border>
             </TabItem>
 
-            <TabItem x:Name="ReportTab" Header="結果保存" DataContext="{Binding Report}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="HTML で保存" Command="{Binding SaveHtmlCommand}" Margin="0,0,6,0" />
-                            <Button Content="テキストで保存" Command="{Binding SaveTextCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
-                                    ToolTip="等幅で読む前提の記録です。報告書に貼る・チケットに残す用途に。ipconfig /all と無線の情報も入ります。" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCsvCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                            <Button Content="更新" Command="{Binding RefreshPreviewCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0"
-                                    ToolTip="プレビューをいまの測定結果で作り直します(タブを開き直したときも自動で更新されます)。" />
-                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                   Text="いま監視画面に出ている結果を書き出します。" />
-
-                        <!-- 出力内容のプレビュー。コピーもできるよう読み取り専用の TextBox で出す -->
-                        <TextBox Text="{Binding Preview, Mode=OneWay}"
-                                 IsReadOnly="True"
-                                 FontFamily="{DynamicResource Font.Mono}"
-                                 FontSize="{DynamicResource Size.Caption}"
-                                 AcceptsReturn="True"
-                                 TextWrapping="NoWrap"
-                                 VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Auto"
-                                 VerticalContentAlignment="Top" />
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
             <!-- ===== 調べる（相手や自分の状態を確かめる道具） ===== -->
-            <TabItem x:Name="ProbeTab" Header="調べる　8 ▾">
+            <TabItem x:Name="ProbeTab" Header="調べる　7 ▾">
                 <DockPanel>
+                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                   ToolTip="TCP Ping・Traceroute・スキャン・DNS・SNMP Get・通信状況・サブネット計算。どれも単発で使う道具なので、1 つにまとめて畳んであります。" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="相手や自分の状態を確かめる道具です。左のメニューから選んでください。" />
+                    </DockPanel>
+
                     <!-- 左の縦メニューで中身を選ぶ。項目が増えても名前を省略せずに置ける -->
                     <TabControl TabStripPlacement="Left"
                                 ItemContainerStyle="{StaticResource MenuTabItem}"
@@ -2273,6 +2288,13 @@
             <TabItem x:Name="TcpTab" Header="TCP Ping" DataContext="{Binding Tcp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="結果は 3 状態で出ます — つながる / 拒否（ホストは生きているがポートが閉じている）/ 無応答。この区別が切り分けの決め手になります。宛先は Ping とは別に持ち、末尾の :ポート がつなぐ先です（省略すると画面の既定ポート）。測定用の接続はデータを流さず即座に閉じるので、相手に負担はかけません。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="TCP でつないで測ります。ping（ICMP）が塞がれている相手の確認に。" />
+                        </DockPanel>
+
 
                         <!-- 操作 -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
@@ -2391,6 +2413,13 @@
             <TabItem x:Name="TraceTab" Header="Traceroute" DataContext="{Binding Trace}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="TTL を並列に投げるので速く終わります（レート制限を避けるため少しずつずらして投げます）。経路の見張りは ECMP による誤検知を避けるため、2 回続けて変わったときだけ「変化」と判定します。Path MTU にはブラックホールがあり、ICMP を返さないルータがあると「大きすぎる」ではなく「無応答」になります。両者は書き分けています。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="相手までの経路をたどります。Path MTU 探索と経路変化の見張りつき。" />
+                        </DockPanel>
+
 
                         <!-- 起動幅では 1 行ぎりぎりなので折り返せるようにしておく -->
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,5">
@@ -2544,6 +2573,13 @@
             <TabItem Header="スキャン" DataContext="{Binding Scan}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="応答した機器の MAC・ベンダー名・ホスト名を一覧にします。そのまま宛先リストへ追加できます。ポート調査は既定で無効です。有効にすると、よく使う 22 ポートへ順に接続を試みます。ウイルス対策ソフトや EDR が反応することがあるので、自分が管理権限を持つネットワークでのみ使ってください。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="範囲を指定してサブネットを掃き、そこに居る機器を洗い出します。" />
+                        </DockPanel>
+
 
                         <!-- 操作 -->
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,5">
@@ -2671,6 +2707,13 @@
             <TabItem x:Name="DnsTab" Header="DNS" DataContext="{Binding Dns}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="「社内 DNS では引けるが外部では引けない」の切り分けに使います。A / AAAA / CNAME / MX / NS / TXT / SOA / SRV / PTR に対応。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="同じ名前を複数の DNS サーバへ同時に問い合わせ、答えを横並びで比べます。" />
+                        </DockPanel>
+
 
                         <!-- 入力 -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
@@ -2785,6 +2828,13 @@
             <TabItem x:Name="SnmpTab" Header="SNMP Get" DataContext="{Binding SnmpGet}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="sysDescr などよく使う OID のプリセットがあります。Trap の受信は「受ける」の中にあります。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器の値を SNMP で取ります（v1 / v2c の GET とウォーク）。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <TextBlock Text="宛先" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="140" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
@@ -2889,6 +2939,13 @@
             <TabItem x:Name="ConnectionsTab" Header="通信状況" DataContext="{Binding Connections}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="TCP / UDP の接続をプロセスごとにまとめて表示します（リソースモニター風）。既定は一時停止で、開いた瞬間の 1 枚だけを出します。外すと 2 秒ごとに追いかけます。通信量（送受信 B/秒）だけは管理者権限が要ります（ETW という OS の仕組みの制限）。非管理者では「—」になり、案内から昇格して起動し直せます。接続一覧そのものは非管理者で見えます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC のどのプロセスがどこと通信しているかを見ます。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <CheckBox Content="一時停止" IsChecked="{Binding IsPaused}"
                                       VerticalAlignment="Center" Margin="0,0,12,0"
@@ -3102,6 +3159,13 @@
             <TabItem Header="サブネット計算" DataContext="{Binding Subnet}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="ネットワークアドレス / ブロードキャスト / ホスト範囲 / 分割案を表示します。/8〜/32 のマスク早見表つき。現場で暗算しないための道具です。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="CIDR やマスク付き IP から、範囲・分割案・マスク早見表を出します。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
                             <TextBlock Text="サブネット" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,6,0" />
@@ -3212,580 +3276,21 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== Meraki(ダッシュボード API からの照会) ===== -->
-            <TabItem x:Name="MerakiTab" Header="Meraki" DataContext="{Binding Meraki}">
-                <DockPanel>
-                    <!-- 操作行はサブタブ共通。API キーは伏せ字(画面を PNG 保存できるため) -->
-                    <StackPanel DockPanel.Dock="Top" Margin="2,2,0,6">
-                        <WrapPanel>
-                            <TextBlock Text="API キー" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <PasswordBox x:Name="MerakiKeyBox" Width="230" Margin="0,0,12,2"
-                                         PasswordChanged="OnMerakiKeyChanged"
-                                         ToolTip="ダッシュボードの [My profile] で発行したキー。保存しません。" />
-
-                            <TextBlock Text="組織" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="180" Margin="0,0,12,2"
-                                      ItemsSource="{Binding Organizations}"
-                                      SelectedItem="{Binding SelectedOrganization}"
-                                      ToolTip="組織が複数あるときに選びます。">
-                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2" />
-                            <Button Content="中断" Command="{Binding CancelCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
-                        </WrapPanel>
-
-                        <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"
-                                   Foreground="{DynamicResource Brush.Warn.Fg}" TextWrapping="Wrap"
-                                   Margin="0,4,0,0"
-                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
-                                   TextWrapping="Wrap" Margin="0,4,0,0" />
-                    </StackPanel>
-
-                    <TabControl x:Name="MerakiSubTabs" ItemContainerStyle="{StaticResource SubTabItem}"
-                                BorderThickness="0" Padding="0">
-
-                        <!-- ネットワーク -->
-                        <TabItem Header="ネットワーク">
-                            <Border Style="{StaticResource Card}">
-                                <DockPanel>
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="CSV で保存" Command="{Binding SaveNetworksCommand}" />
-                                    </StackPanel>
-
-                                    <Border Background="{DynamicResource Brush.Surface}"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mnet" MouseLeftButtonDown="OnTableHeaderSort">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.2]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.3]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.4]}" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="1" Text="ID" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="2" Text="製品" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="3" Text="タイムゾーン" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="4" Text="タグ" Style="{StaticResource Caption}" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.1" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.2" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.3" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.4" DragDelta="OnTableColumnResize" />
-                                            </Grid>
-                                            <Border DockPanel.Dock="Top" Height="1"
-                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-
-                                            <ListBox ItemsSource="{Binding NetworkRows}"
-                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     HorizontalContentAlignment="Stretch"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                     VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid Height="22">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.2]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.3]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.4]}" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Id}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding ProductTypes}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding TimeZone}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="4" Text="{Binding Tags}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
-                                    </Border>
-                                </DockPanel>
-                            </Border>
-                        </TabItem>
-
-                        <!-- 機器 -->
-                        <TabItem Header="機器">
-                            <Border Style="{StaticResource Card}">
-                                <DockPanel>
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="CSV で保存" Command="{Binding SaveDevicesCommand}" />
-                                    </StackPanel>
-
-                                    <Border Background="{DynamicResource Brush.Surface}"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mdev" MouseLeftButtonDown="OnTableHeaderSort">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.2]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.3]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.4]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.5]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.6]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.7]}" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="1" Text="型番" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="2" Text="シリアル" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="3" Text="ファーム" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="4" Text="ネットワーク" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="5" Text="状態" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="7" Text="LAN IP" Style="{StaticResource Caption}" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.1" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.2" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.3" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.4" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.5" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.6" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.7" DragDelta="OnTableColumnResize" />
-                                            </Grid>
-                                            <Border DockPanel.Dock="Top" Height="1"
-                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-
-                                            <ListBox ItemsSource="{Binding DeviceRows}"
-                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     HorizontalContentAlignment="Stretch"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                     VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid Height="22"
-                                                              ContextMenu="{StaticResource RowMenu.Device}">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.2]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.3]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.4]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.5]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.6]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.7]}" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Model}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding Serial}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding Firmware}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="4" Text="{Binding Network}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="5" Text="{Binding State}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Ok">
-                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
-                                                                            </DataTrigger>
-                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Info">
-                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                            <TextBlock Grid.Column="6" Text="{Binding PublicIp}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="7" Text="{Binding LanIp}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
-                                    </Border>
-                                </DockPanel>
-                            </Border>
-                        </TabItem>
-
-                        <!-- アップリンク(MX の WAN1/WAN2) -->
-                        <TabItem Header="アップリンク">
-                            <Border Style="{StaticResource Card}">
-                                <DockPanel>
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="CSV で保存" Command="{Binding SaveUplinksCommand}" Margin="0,0,12,0" />
-                                        <TextBlock Text="グローバル IP" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBlock Text="{Binding GlobalIpText}" Style="{StaticResource Mono}"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-
-                                    <Border Background="{DynamicResource Brush.Surface}"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mup" MouseLeftButtonDown="OnTableHeaderSort">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.2]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.3]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.4]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.5]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.6]}" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="1" Text="シリアル" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="2" Text="回線" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="3" Text="状態" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="4" Text="IP" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="5" Text="ゲートウェイ" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.1" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.2" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.3" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.4" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.5" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.6" DragDelta="OnTableColumnResize" />
-                                            </Grid>
-                                            <Border DockPanel.Dock="Top" Height="1"
-                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-
-                                            <ListBox ItemsSource="{Binding UplinkRows}"
-                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     HorizontalContentAlignment="Stretch"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                     VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid Height="22">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.2]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.3]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.4]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.5]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.6]}" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Network}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Serial}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding Interface}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding State}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Ok">
-                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
-                                                                            </DataTrigger>
-                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Info">
-                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                            <TextBlock Grid.Column="4" Text="{Binding Ip}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="5" Text="{Binding Gateway}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="6" Text="{Binding PublicIp}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
-                                    </Border>
-                                </DockPanel>
-                            </Border>
-                        </TabItem>
-
-                        <!-- クライアント(選んだネットワークだけ) -->
-                        <TabItem Header="クライアント">
-                            <Border Style="{StaticResource Card}">
-                                <DockPanel>
-                                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                        <TextBlock Text="ネットワーク" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <ComboBox Width="180" Margin="0,0,12,2"
-                                                  ItemsSource="{Binding NetworkRows}"
-                                                  SelectedItem="{Binding SelectedNetwork}"
-                                                  ToolTip="クライアントは 1 ネットワークずつ取得します。">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-
-                                        <TextBlock Text="期間" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <ComboBox Width="90" Margin="0,0,12,2"
-                                                  ItemsSource="{Binding Timespans}"
-                                                  SelectedItem="{Binding SelectedTimespan}"
-                                                  ToolTip="どこまでさかのぼるか。長いほど台数が増えます。">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-
-                                        <Button Content="クライアントを取得" Command="{Binding FetchClientsCommand}"
-                                                Margin="0,0,6,2" />
-                                        <Button Content="CSV で保存" Command="{Binding SaveClientsCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
-                                    </WrapPanel>
-
-                                    <Border Background="{DynamicResource Brush.Surface}"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="1" Text="IP" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="2" Text="MAC" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="3" Text="VLAN" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="4" Text="メーカー" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="5" Text="通信量" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="6" Text="最終確認" Style="{StaticResource Caption}" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.1" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.2" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.3" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.4" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.5" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.6" DragDelta="OnTableColumnResize" />
-                                            </Grid>
-                                            <Border DockPanel.Dock="Top" Height="1"
-                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-
-                                            <ListBox ItemsSource="{Binding ClientRows}"
-                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     HorizontalContentAlignment="Stretch"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                     VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid Height="22"
-                                                              ContextMenu="{StaticResource RowMenu.Address}">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Description}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Ip}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding Mac}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding Vlan}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="4" Text="{Binding Manufacturer}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="5" Text="{Binding Usage}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       HorizontalAlignment="Right" />
-                                                            <TextBlock Grid.Column="6" Text="{Binding LastSeen}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
-                                    </Border>
-                                </DockPanel>
-                            </Border>
-                        </TabItem>
-                    </TabControl>
-                </DockPanel>
-            </TabItem>
 
                     </TabControl>
                 </DockPanel>
             </TabItem>
 
             <!-- ===== 機器（Cisco 機器から集める・集めたものを読む） ===== -->
-            <TabItem x:Name="DeviceTab" Header="NW機器　2 ▾">
+            <TabItem x:Name="DeviceTab" Header="NW機器　3 ▾">
                 <DockPanel>
+                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                   ToolTip="ログ採取（Cisco 機器へ入って show を集める）・showコマンド整形（出力を CSV に）・Meraki（ダッシュボード API からの照会）。" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="ネットワーク機器を相手にする道具です。左のメニューから選んでください。" />
+                    </DockPanel>
+
                     <!-- 左の縦メニューで中身を選ぶ。項目が増えても名前を省略せずに置ける -->
                     <TabControl TabStripPlacement="Left"
                                 ItemContainerStyle="{StaticResource MenuTabItem}"
@@ -3802,6 +3307,13 @@
             <TabItem x:Name="CollectTab" Header="ログ採取" DataContext="{Binding Collect}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="作業前後の証跡取りを、機器 1 台ずつ手で打つ代わりに一括で済ませられます。「宛先リストから選ぶ」で Ping / TCP に登録した相手を取り込めます（備考も一緒に入ります）。覚えるのはユーザー名だけです。パスワードと enable パスワードは保存しません。危ないコマンド（reload・configure terminal・write など）は実行前に弾きます。機器が確認を求めてくるため自動では答えられず、投げても止まるだけだからです。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="Cisco 機器へ入って show の出力を自動で集め、1 台 1 ファイルに保存します。" />
+                        </DockPanel>
+
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <Button Content="宛先リストから選ぶ" Command="{Binding ImportFromTargetsCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
@@ -4057,6 +3569,13 @@
             <TabItem Header="showコマンド整形" DataContext="{Binding Converter}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="対応は show ip route / ip interface brief / cdp neighbors / mac address-table / interfaces status / inventory / version / logging の 8 種。種類は自動で判定します。BOM 付き UTF-8 で保存するので、日本語版 Excel でそのまま開けます。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="Cisco コマンドの出力を貼り付けると CSV に変換します。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <TextBlock Text="種別" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <ComboBox Width="180"
@@ -4115,6 +3634,608 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== Meraki(ダッシュボード API からの照会) ===== -->
+            <TabItem x:Name="MerakiTab" Header="Meraki" DataContext="{Binding Meraki}">
+                <DockPanel>
+                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                   ToolTip="ネットワーク / 機器（シリアル・ファーム）/ MX のアップリンクとグローバル IP / クライアント。各一覧は CSV で保存できます。API キーは保存しません（毎回入力・伏せ字）。画面の PNG 保存にも、管理者として再起動するときの引き継ぎにも残しません。このタブを開いただけでは通信しません。キーを入れて押したときだけ取りに行きます。" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="Meraki ダッシュボードの API から、機器やアップリンクの状況を取ります。" />
+                    </DockPanel>
+
+                    <!-- 操作行はサブタブ共通。API キーは伏せ字(画面を PNG 保存できるため) -->
+                    <StackPanel DockPanel.Dock="Top" Margin="2,2,0,6">
+                        <WrapPanel>
+                            <TextBlock Text="API キー" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <PasswordBox x:Name="MerakiKeyBox" Width="230" Margin="0,0,12,2"
+                                         PasswordChanged="OnMerakiKeyChanged"
+                                         ToolTip="ダッシュボードの [My profile] で発行したキー。保存しません。" />
+
+                            <TextBlock Text="組織" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <ComboBox Width="180" Margin="0,0,12,2"
+                                      ItemsSource="{Binding Organizations}"
+                                      SelectedItem="{Binding SelectedOrganization}"
+                                      ToolTip="組織が複数あるときに選びます。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"
+                                   Foreground="{DynamicResource Brush.Warn.Fg}" TextWrapping="Wrap"
+                                   Margin="0,4,0,0"
+                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+
+                    <TabControl x:Name="MerakiSubTabs" ItemContainerStyle="{StaticResource SubTabItem}"
+                                BorderThickness="0" Padding="0">
+
+                        <!-- ネットワーク -->
+                        <TabItem Header="ネットワーク">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="選んだネットワークが、機器・アップリンク・クライアントの照会先になります。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="組織の中のネットワーク一覧です。" />
+                                    </DockPanel>
+
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="CSV で保存" Command="{Binding SaveNetworksCommand}" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mnet" MouseLeftButtonDown="OnTableHeaderSort">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.4]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="ID" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="製品" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="タイムゾーン" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="タグ" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mnet.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mnet.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mnet.3" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mnet.4" DragDelta="OnTableColumnResize" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding NetworkRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.3]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.4]}" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Id}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding ProductTypes}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding TimeZone}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="4" Text="{Binding Tags}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <!-- 機器 -->
+                        <TabItem Header="機器">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="行を右クリックすると、その機器を Ping やログ採取へそのまま渡せます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="そのネットワークにある機器の一覧です（シリアル・ファームウェア）。" />
+                                    </DockPanel>
+
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="CSV で保存" Command="{Binding SaveDevicesCommand}" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mdev" MouseLeftButtonDown="OnTableHeaderSort">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.6]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.7]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="型番" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="シリアル" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="ファーム" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="ネットワーク" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="5" Text="状態" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="7" Text="LAN IP" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.3" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.4" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.5" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.6" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.7" DragDelta="OnTableColumnResize" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding DeviceRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22"
+                                                              ContextMenu="{StaticResource RowMenu.Device}">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.3]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.4]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.5]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.6]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.7]}" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Model}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding Serial}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding Firmware}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="4" Text="{Binding Network}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="5" Text="{Binding State}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Ok">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Info">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Grid.Column="6" Text="{Binding PublicIp}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="7" Text="{Binding LanIp}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <!-- アップリンク(MX の WAN1/WAN2) -->
+                        <TabItem Header="アップリンク">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="回線が生きているか、どちらの回線を使っているかが分かります。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="MX のアップリンクの状態とグローバル IP です。" />
+                                    </DockPanel>
+
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="CSV で保存" Command="{Binding SaveUplinksCommand}" Margin="0,0,12,0" />
+                                        <TextBlock Text="グローバル IP" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="{Binding GlobalIpText}" Style="{StaticResource Mono}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mup" MouseLeftButtonDown="OnTableHeaderSort">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.6]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="シリアル" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="回線" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="状態" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="IP" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="5" Text="ゲートウェイ" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.3" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.4" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.5" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.6" DragDelta="OnTableColumnResize" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding UplinkRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.3]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.4]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.5]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.6]}" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <TextBlock Grid.Column="0" Text="{Binding Network}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Serial}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding Interface}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding State}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Ok">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Info">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Grid.Column="4" Text="{Binding Ip}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="5" Text="{Binding Gateway}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="6" Text="{Binding PublicIp}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <!-- クライアント(選んだネットワークだけ) -->
+                        <TabItem Header="クライアント">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="VLAN や最終確認時刻も出ます。行を右クリックすると Ping や経路調査へ渡せます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="そのネットワークに繋がっている端末の一覧です。" />
+                                    </DockPanel>
+
+                                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock Text="ネットワーク" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <ComboBox Width="180" Margin="0,0,12,2"
+                                                  ItemsSource="{Binding NetworkRows}"
+                                                  SelectedItem="{Binding SelectedNetwork}"
+                                                  ToolTip="クライアントは 1 ネットワークずつ取得します。">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+
+                                        <TextBlock Text="期間" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <ComboBox Width="90" Margin="0,0,12,2"
+                                                  ItemsSource="{Binding Timespans}"
+                                                  SelectedItem="{Binding SelectedTimespan}"
+                                                  ToolTip="どこまでさかのぼるか。長いほど台数が増えます。">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+
+                                        <Button Content="クライアントを取得" Command="{Binding FetchClientsCommand}"
+                                                Margin="0,0,6,2" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveClientsCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                                    </WrapPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="IP" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="MAC" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="VLAN" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="メーカー" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="5" Text="通信量" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="6" Text="最終確認" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.3" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.4" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.5" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.6" DragDelta="OnTableColumnResize" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding ClientRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22"
+                                                              ContextMenu="{StaticResource RowMenu.Address}">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <TextBlock Grid.Column="0" Text="{Binding Description}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Ip}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding Mac}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding Vlan}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="4" Text="{Binding Manufacturer}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="5" Text="{Binding Usage}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Right" />
+                                                            <TextBlock Grid.Column="6" Text="{Binding LastSeen}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+                    </TabControl>
+                </DockPanel>
+            </TabItem>
+
                     </TabControl>
                 </DockPanel>
             </TabItem>
@@ -4122,6 +4243,13 @@
             <!-- ===== 受ける（機器から送られてくるものを受け取る） ===== -->
             <TabItem x:Name="ReceiveTab" Header="受ける　5 ▾">
                 <DockPanel>
+                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                   ToolTip="FTP / TFTP / SFTP / syslog / SNMP Trap。どれも使い捨てで、押したときだけ待ち受けます。FTP と TFTP は平文・認証なしなので、使うときだけ開始してください。初回は Windows ファイアウォールの許可が要ります。" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="機器から送られてくるものを受け取るサーバです。左のメニューから選んでください。" />
+                    </DockPanel>
+
                     <!-- 左の縦メニューで中身を選ぶ。項目が増えても名前を省略せずに置ける -->
                     <TabControl TabStripPlacement="Left"
                                 ItemContainerStyle="{StaticResource MenuTabItem}"
@@ -4137,6 +4265,13 @@
             <TabItem Header="FTP" DataContext="{Binding Ftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="受け取ったファイルは ftp\ フォルダに保存されます。画面にそのまま打てるコマンド例が出ます。平文・認証ありでもパスワードは流れるので、使うときだけ開始してください。PASV / PORT 両対応。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="使い捨ての FTP サーバ。機器の copy running-config ftp: を受け取ります。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
                             <Button Content="停止" Command="{Binding StopCommand}"
@@ -4250,6 +4385,13 @@
             <TabItem Header="TFTP" DataContext="{Binding Tftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="受け取ったファイルは tftp\ フォルダへ。blksize の交渉に対応しています。認証がまったく無いので、使うときだけ開始してください。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="使い捨ての TFTP サーバ（UDP/69）。機器の copy … tftp: を受け取ります。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
                             <Button Content="停止" Command="{Binding StopCommand}"
@@ -4347,6 +4489,13 @@
             <TabItem Header="SFTP" DataContext="{Binding Sftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="WinSCP などから sftp\ フォルダへ読み書きできます。ホスト鍵は初回に生成して保存します。平文で困る場面ではこちらを使ってください。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="使い捨ての SFTP サーバ。SSH 越しなので中身が暗号化されます。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
                             <Button Content="停止" Command="{Binding StopCommand}"
@@ -4456,6 +4605,13 @@
             <TabItem Header="syslog" DataContext="{Binding Syslog}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="機器側に logging &lt;この PC の IP&gt; を入れるだけです。受信内容は logs\ にも残ります。重大度の列があり、err 以下は赤・warning は橙で出ます（色だけでなく文字でも出ます）。「warning 以上」「err 以上」に絞れます。絞っても待受は止まりません。初回は Windows ファイアウォールの許可が要ります。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器からの syslog を受けて一覧にします。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
                             <Button Content="停止" Command="{Binding StopCommand}"
@@ -4589,6 +4745,13 @@
             <TabItem Header="SNMP Trap" DataContext="{Binding SnmpTrap}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="varbind は件数で打ち切りません（肝心の中身が 7 個目以降に来る機器があるため）。長い行は一覧で省略し、全文はマウスを載せると出ます。初回は Windows ファイアウォールの許可が要ります。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器からの SNMP Trap を受けて一覧にします（UDP/162）。" />
+                        </DockPanel>
+
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
                             <Button Content="停止" Command="{Binding StopCommand}"

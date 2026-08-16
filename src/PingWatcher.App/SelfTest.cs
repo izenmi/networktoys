@@ -351,8 +351,8 @@ internal static class SelfTest
             // （無線は位置情報の同意を求め、遮断は WFP を開き、接続は ETW を回す）。
             object? original = window!.MainTabs.SelectedItem;
 
-            // 記録タブを選ぶ = ほかのタブはどれも見えていない状態
-            window.ReportTab.IsSelected = true;
+            // Ping タブを選ぶ = ほかのタブはどれも見えていない状態
+            window.PingTab.IsSelected = true;
             window.UpdateLayout();
 
             // Meraki は入れ子の中。親を開いていないのに「見えている」と誤判定すると、
@@ -364,10 +364,10 @@ internal static class SelfTest
             foreach (System.Windows.Controls.TabItem tab in mustBeHidden)
             {
                 Assert(!Views.MainWindow.IsShowing(tab),
-                       $"記録タブを選んでいるのに「{tab.Header}」が見えている扱いになっている");
+                       $"Ping タブを選んでいるのに「{tab.Header}」が見えている扱いになっている");
             }
 
-            Assert(Views.MainWindow.IsShowing(window.ReportTab), "選んだタブが見えている扱いにならない");
+            Assert(Views.MainWindow.IsShowing(window.PingTab), "選んだタブが見えている扱いにならない");
 
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
@@ -621,6 +621,29 @@ internal static class SelfTest
             window.UpdateLayout();
         });
 
+        Check("タブ: どのタブにも 1 行の説明と ⓘ がある", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // タブ名だけでは何の画面か分からない（WFP がまさにそれだった）。
+            // 足し忘れは黙って進むので、ここで全タブぶん突き合わせる
+            var missing = new List<string>();
+
+            foreach (System.Windows.Controls.TabItem tab in AllTabs(window!.MainTabs))
+            {
+                string header = tab.Header?.ToString() ?? "";
+
+                // ⓘ は Style ごと引くので、Text ではなく ToolTip の有無で見る
+                bool hasMark = FindIn<System.Windows.Controls.TextBlock>(tab.Content)
+                    .Any(t => Equals(t.Text, "ⓘ") && t.ToolTip is string { Length: > 40 });
+
+                if (!hasMark) missing.Add(header);
+            }
+
+            Assert(missing.Count == 0,
+                   $"説明が無いタブ: {string.Join(" / ", missing)}");
+        });
+
         Check("タブ: まとめた先のタブへ移動でき、閉じれば止まる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -716,7 +739,7 @@ internal static class SelfTest
 
                 // 記録タブからも同じ結果が載ること（作業の証跡は 1 つにまとまる）
                 Assert(shell.Report.BuildReportForSelfTest().Checks is { Count: > 0 },
-                       "記録タブの書き出しに試験の結果が載っていない");
+                       "ファイルメニューからの書き出しに試験の結果が載っていない");
             }
             finally
             {
@@ -1517,6 +1540,35 @@ internal static class SelfTest
         window.UpdateLayout();
 
         return visited;
+    }
+
+    /// <summary>最上位から入れ子の先まで、すべてのタブ。論理ツリーなので実体化を待たない。</summary>
+    private static IEnumerable<System.Windows.Controls.TabItem> AllTabs(System.Windows.Controls.TabControl tabs)
+    {
+        foreach (object? item in tabs.Items)
+        {
+            if (item is not System.Windows.Controls.TabItem tab) continue;
+
+            yield return tab;
+
+            foreach (System.Windows.Controls.TabControl inner in FindInnerTabsInContent(tab.Content))
+            foreach (System.Windows.Controls.TabItem child in AllTabs(inner))
+                yield return child;
+        }
+    }
+
+    /// <summary>タブの中身から、その型の要素を論理ツリーで拾う。</summary>
+    private static IEnumerable<T> FindIn<T>(object? content) where T : DependencyObject
+    {
+        if (content is not DependencyObject node) yield break;
+
+        foreach (object? child in LogicalTreeHelper.GetChildren(node))
+        {
+            if (child is T hit) yield return hit;
+
+            foreach (T found in FindIn<T>(child))
+                yield return found;
+        }
     }
 
     /// <summary>
