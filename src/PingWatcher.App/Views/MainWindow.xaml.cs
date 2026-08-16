@@ -159,7 +159,14 @@ public partial class MainWindow : Window
     }
 
     /// <summary>開始したら測定の画面へ移る。押した場所がどのタブでも、見たいのは結果。</summary>
-    private void OnStartClicked(object sender, RoutedEventArgs e) => PingTab.IsSelected = true;
+    private void OnStartClicked(object sender, RoutedEventArgs e)
+    {
+        // TCP 側の開始で Ping タブへ飛ばさない(ユーザー指摘)。
+        // ボタンの DataContext がどちらの画面かで見分ける
+        if (sender is FrameworkElement { DataContext: MonitorViewModel { IsTcpScreen: true } }) return;
+
+        PingTab.IsSelected = true;
+    }
 
     /// <summary>
     /// Ping 一覧の列幅ドラッグ。掴んだ列だけを伸縮させ、余りは可変幅の備考列に

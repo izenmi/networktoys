@@ -32,11 +32,19 @@ public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
         set
         {
             if (SetProperty(ref _useSsh, value))
-                OnPropertyChanged(nameof(MethodText));
+                OnPropertyChanged(nameof(Method));
         }
     }
 
-    public string MethodText => UseSsh ? "SSH" : "Telnet";
+    /// <summary>コンボに出す選択肢。既定は SSH。</summary>
+    public static IReadOnlyList<string> Methods { get; } = ["SSH", "Telnet"];
+
+    /// <summary>コンボの選択。真偽値のチェックより「どちらを選ぶか」が分かりやすい。</summary>
+    public string Method
+    {
+        get => UseSsh ? "SSH" : "Telnet";
+        set => UseSsh = !string.Equals(value, "Telnet", StringComparison.OrdinalIgnoreCase);
+    }
 
     public int Port => UseSsh ? DeviceEntry.SshPort : DeviceEntry.TelnetPort;
 

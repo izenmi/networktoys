@@ -610,29 +610,29 @@
                                 <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag="State"
                                         MouseLeftButtonDown="OnListHeaderSort"
                                         ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                    <TextBlock Text="{Binding HeaderState}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding HeaderState}" Style="{StaticResource Caption}" />
                                 </Border>
                                 <Border Grid.Column="1" Background="Transparent" Cursor="Hand" Tag="Target"
                                         MouseLeftButtonDown="OnListHeaderSort"
                                         ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                    <TextBlock Text="{Binding HeaderTarget}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding HeaderTarget}" Style="{StaticResource Caption}" />
                                 </Border>
                                 <Border Grid.Column="2" Background="Transparent" Cursor="Hand" Tag="Comment"
                                         MouseLeftButtonDown="OnListHeaderSort"
                                         ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                    <TextBlock Text="{Binding HeaderNote}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding HeaderNote}" Style="{StaticResource Caption}" />
                                 </Border>
                                 <Border Grid.Column="3" Background="Transparent" Cursor="Hand" Tag="Rtt"
                                         MouseLeftButtonDown="OnListHeaderSort"
                                         ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                    <TextBlock Text="{Binding HeaderRtt}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding HeaderRtt}" Style="{StaticResource Caption}" />
                                 </Border>
                                 <Border Grid.Column="4" Background="Transparent" Cursor="Hand" Tag="Loss"
                                         MouseLeftButtonDown="OnListHeaderSort"
                                         ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                    <TextBlock Text="{Binding HeaderLoss}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding HeaderLoss}" Style="{StaticResource Caption}" />
                                 </Border>
-                                <TextBlock Grid.Column="5" Text="推移" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                <TextBlock Grid.Column="5" Text="推移" Style="{StaticResource Caption}" />
 
                                 <!-- 列の区切り線(行側と同じ色)。スプリッタの位置の目印にもなる -->
                                 <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
@@ -1051,7 +1051,7 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                        <TextBlock Text="2.4 GHz" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                        <TextBlock Text="2.4 GHz" Style="{StaticResource Caption}" Margin="0,2,0,0" />
                                     </StackPanel>
 
                                     <StackPanel>
@@ -1081,7 +1081,7 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                        <TextBlock Text="5 GHz 以上" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                        <TextBlock Text="5 GHz 以上" Style="{StaticResource Caption}" Margin="0,2,0,0" />
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
@@ -1101,32 +1101,32 @@
                             <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag="Ssid"
                                     MouseLeftButtonDown="OnListHeaderSort"
                                     ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                <TextBlock Text="{Binding HeaderSsid}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding HeaderSsid}" Style="{StaticResource Caption}" />
                             </Border>
                             <Border Grid.Column="1" Background="Transparent" Cursor="Hand" Tag="Bssid"
                                     MouseLeftButtonDown="OnListHeaderSort"
                                     ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                <TextBlock Text="{Binding HeaderBssid}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding HeaderBssid}" Style="{StaticResource Caption}" />
                             </Border>
                             <Border Grid.Column="2" Background="Transparent" Cursor="Hand" Tag="Vendor"
                                     MouseLeftButtonDown="OnListHeaderSort"
                                     ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                <TextBlock Text="{Binding HeaderVendor}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding HeaderVendor}" Style="{StaticResource Caption}" />
                             </Border>
                             <Border Grid.Column="3" Background="Transparent" Cursor="Hand" Tag="Rssi"
                                     MouseLeftButtonDown="OnListHeaderSort"
                                     ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                <TextBlock Text="{Binding HeaderRssi}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding HeaderRssi}" Style="{StaticResource Caption}" />
                             </Border>
                             <Border Grid.Column="4" Background="Transparent" Cursor="Hand" Tag="Channel"
                                     MouseLeftButtonDown="OnListHeaderSort"
                                     ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                <TextBlock Text="{Binding HeaderChannel}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding HeaderChannel}" Style="{StaticResource Caption}" />
                             </Border>
                             <Border Grid.Column="5" Background="Transparent" Cursor="Hand" Tag="Band"
                                     MouseLeftButtonDown="OnListHeaderSort"
                                     ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                <TextBlock Text="{Binding HeaderBand}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding HeaderBand}" Style="{StaticResource Caption}" />
                             </Border>
                             <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
@@ -1307,10 +1307,19 @@
                                                              Margin="0,0,4,0" VerticalAlignment="Center"
                                                              ToolTip="機器の IP かホスト名。" />
 
-                                                    <CheckBox Grid.Column="2" IsChecked="{Binding UseSsh}"
-                                                              Content="{Binding MethodText}"
+                                                    <ComboBox Grid.Column="2"
+                                                              ItemsSource="{Binding Methods}"
+                                                              SelectedItem="{Binding Method}"
+                                                              FontSize="{DynamicResource Size.Caption}"
                                                               VerticalAlignment="Center" Margin="0,0,4,0"
-                                                              ToolTip="チェックで SSH、外すと Telnet。ポートは方式に応じて 22 / 23 を使います。" />
+                                                              ToolTip="つなぎ方。ポートは方式に応じて 22 / 23 を使います。">
+                                                        <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding}" />
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
 
                                                     <TextBox Grid.Column="3" Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
                                                              FontSize="{DynamicResource Size.Caption}"
@@ -2649,32 +2658,32 @@
                                     <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag="Protocol"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                        <TextBlock Text="{Binding HeaderProtocol}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding HeaderProtocol}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="1" Background="Transparent" Cursor="Hand" Tag="Local"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                        <TextBlock Text="{Binding HeaderLocal}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding HeaderLocal}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="2" Background="Transparent" Cursor="Hand" Tag="Remote"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                        <TextBlock Text="{Binding HeaderRemote}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding HeaderRemote}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="3" Background="Transparent" Cursor="Hand" Tag="State"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
-                                        <TextBlock Text="{Binding HeaderState}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding HeaderState}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="4" Background="Transparent" Cursor="Hand" Tag="Sent"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（グループもこの列の合計順になります）">
-                                        <TextBlock Text="{Binding HeaderSent}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding HeaderSent}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="5" Background="Transparent" Cursor="Hand" Tag="Received"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（グループもこの列の合計順になります）">
-                                        <TextBlock Text="{Binding HeaderReceived}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding HeaderReceived}" Style="{StaticResource Caption}" />
                                     </Border>
 
                                     <!-- 列幅のつまみ。星列(1・2)より左は右端、右は左端の境界に置く -->
@@ -2832,37 +2841,37 @@
                                     <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag=""
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding TimeHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding TimeHeader}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="1" Background="Transparent" Cursor="Hand" Tag="Direction"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding DirectionHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding DirectionHeader}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="2" Background="Transparent" Cursor="Hand" Tag="Protocol"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding ProtocolHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding ProtocolHeader}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="3" Background="Transparent" Cursor="Hand" Tag="Local"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding LocalHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding LocalHeader}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="4" Background="Transparent" Cursor="Hand" Tag="Remote"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding RemoteHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding RemoteHeader}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="5" Background="Transparent" Cursor="Hand" Tag="Process"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding ProcessHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding ProcessHeader}" Style="{StaticResource Caption}" />
                                     </Border>
                                     <Border Grid.Column="6" Background="Transparent" Cursor="Hand" Tag="Count"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding CountHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding CountHeader}" Style="{StaticResource Caption}" />
                                     </Border>
 
                                     <!-- 列幅のつまみ。星列(3・4)より左は右端、右は左端の境界に置く -->

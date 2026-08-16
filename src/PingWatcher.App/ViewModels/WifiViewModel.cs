@@ -298,10 +298,23 @@ public sealed class WifiViewModel : ObservableObject
         // 14ch まで並べる(国内の 11b 専用 AP が使う。13 までだと一覧から消える)
         AddBars(Channels24, Enumerable.Range(1, 14), counts24, myChannel);
 
-        // 5GHz は使われうるチャンネルだけを並べる（全部出すと横に長くなりすぎる）
-        int[] used5 = [.. counts5.Keys.Order()];
-        AddBars(Channels5, used5, counts5, myChannel);
+        // 5GHz は AP が 0 台のチャンネルも並べる(ユーザー指示)。
+        // 「空いているチャンネル」を探すのが目的なので、0 台こそ見たい情報になる。
+        // 見たことのないチャンネルが実際に使われていたら足す
+        int[] all5 = [.. Channels5Ghz.Union(counts5.Keys).Order()];
+        AddBars(Channels5, all5, counts5, myChannel);
     }
+
+    /// <summary>
+    /// 国内で使える 5GHz のチャンネル（W52 / W53 / W56）。20MHz 幅の中心チャンネル。
+    /// AP が 0 台でも並べて「空いている場所」を見せるために持つ。
+    /// </summary>
+    private static readonly int[] Channels5Ghz =
+    [
+        36, 40, 44, 48,                          // W52
+        52, 56, 60, 64,                          // W53
+        100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144,   // W56
+    ];
 
     private static void AddBars(
         ObservableCollection<ChannelBarViewModel> target,
