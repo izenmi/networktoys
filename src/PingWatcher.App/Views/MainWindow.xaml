@@ -1254,15 +1254,9 @@
                         <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
                                    Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="360" />
-                            </Grid.ColumnDefinitions>
-
-                            <!-- 左: 機器（1 台 1 行の表。書式を人に覚えてもらわない） -->
-                            <Border Grid.Column="0"
+                        <DockPanel>
+                            <!-- 上: 機器（1 台 1 行の表。書式を人に覚えてもらわない） -->
+                            <Border DockPanel.Dock="Top" MaxHeight="300"
                                     Background="{DynamicResource Brush.Surface}"
                                     BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                     CornerRadius="{DynamicResource Radius.Card}" Padding="6">
@@ -1270,16 +1264,16 @@
                                     <!-- 見出し。どの欄に何を入れるかはここで示す -->
                                     <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="26" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="90" />
-                                            <ColumnDefinition Width="90" />
-                                            <ColumnDefinition Width="90" />
-                                            <ColumnDefinition Width="130" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.2]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.3]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.4]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.5]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.6]}" />
                                         </Grid.ColumnDefinitions>
                                         <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                        <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border DockPanel.Dock="Top" MaxHeight="300" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                         <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                         <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                         <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
@@ -1293,6 +1287,20 @@
                                         <TextBlock Grid.Column="5" Text="enable" Style="{StaticResource Caption}"
                                                    ToolTip="特権モードに入るためのパスワード。要らない機器は空のままで構いません。" />
                                         <TextBlock Grid.Column="6" Text="状態" Style="{StaticResource Caption}" />
+
+                                        <!-- 列幅のつまみ。星列(1)より左は右端、右は左端の境界に置く -->
+                                        <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                               Tag="collect.0" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.2" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.3" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.4" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.5" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.6" DragDelta="OnTableColumnResize" />
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1"
                                             Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -1317,16 +1325,16 @@
                                             <DataTemplate>
                                                 <Grid Height="26">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="26" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
                                                         <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="80" />
-                                                        <ColumnDefinition Width="90" />
-                                                        <ColumnDefinition Width="90" />
-                                                        <ColumnDefinition Width="90" />
-                                                        <ColumnDefinition Width="130" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.2]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.3]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.4]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.5]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.6]}" />
                                                     </Grid.ColumnDefinitions>
                                                     <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border DockPanel.Dock="Top" MaxHeight="300" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                     <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                     <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                     <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
@@ -1388,11 +1396,18 @@
                                         </ListBox.ItemTemplate>
                                     </ListBox>
 
+                                    <!-- 最後の行のすぐ下。DockPanel の最後の子なので残りの余白も受け持つ -->
+                                    <Button Content="＋ 行を追加"
+                                            Command="{Binding AddDeviceCommand}"
+                                            Style="{StaticResource Button.Subtle}"
+                                            HorizontalAlignment="Left" VerticalAlignment="Top"
+                                            Margin="4,4,0,0" />
+
                                 </DockPanel>
                             </Border>
 
-                            <!-- 右: コマンド -->
-                            <DockPanel Grid.Column="2">
+                            <!-- 下: コマンド。窓が狭いと横並びでは入りきらないので縦に積む -->
+                            <DockPanel Margin="0,6,0,0">
                                 <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,3">
                                     <TextBlock Text="機種" Style="{StaticResource Caption}"
                                                VerticalAlignment="Center" Margin="0,0,5,2" />
@@ -1430,7 +1445,7 @@
                                          VerticalContentAlignment="Top"
                                          ToolTip="1 行 1 コマンド。打つ順に並べます。" />
                             </DockPanel>
-                        </Grid>
+                        </DockPanel>
                     </DockPanel>
                 </Border>
             </TabItem>
@@ -2741,7 +2756,7 @@
                                 <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.0]}" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.1]}" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.3]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.4]}" />
@@ -2788,6 +2803,8 @@
                                     <!-- 列幅のつまみ。星列(1・2)より左は右端、右は左端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
                                            Tag="conn.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="conn.1" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
                                            Tag="conn.3" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
@@ -2813,7 +2830,7 @@
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.0]}" />
-                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.1]}" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.3]}" />
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.4]}" />
@@ -2846,7 +2863,7 @@
                                             <Grid Height="{DynamicResource Size.RowHeight}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.0]}" />
-                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.1]}" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.3]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.4]}" />
@@ -2944,7 +2961,7 @@
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.1]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.2]}" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.3]}" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.5]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.6]}" />
@@ -2999,6 +3016,8 @@
                                            Tag="wfp.1" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
                                            Tag="wfp.2" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="wfp.3" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
                                            Tag="wfp.5" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
@@ -3023,7 +3042,7 @@
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.1]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.2]}" />
-                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.3]}" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.5]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.6]}" />
