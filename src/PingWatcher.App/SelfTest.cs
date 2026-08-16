@@ -641,7 +641,8 @@ internal static class SelfTest
                 tab.IsSelected = true;
                 window.UpdateLayout();
 
-                System.Windows.Controls.TabControl[] inner = [.. FindInnerTabs(tab)];
+                // 中身は TabItem ではなく親 TabControl の下に実体化する
+                System.Windows.Controls.TabControl[] inner = [.. FindInnerTabs(window.MainTabs)];
 
                 Assert(inner.Length > 0, $"「{header}」は ▾ が付いているのに中身が無い");
 
@@ -1474,8 +1475,11 @@ internal static class SelfTest
             visited++;
             onShown(tab);
 
-            // 中身が実体化した後でないと内側の TabControl は見つからない
-            foreach (System.Windows.Controls.TabControl inner in FindInnerTabs(tab))
+            // 内側の TabControl は「選ばれているタブ」の中身として、
+            // TabItem ではなく親 TabControl の ContentPresenter の下にぶら下がる。
+            // TabItem を起点に探すと何も見つからない（見つからないことに気づけず、
+            // 束ねたタブの中身が丸ごと検査から漏れていた）
+            foreach (System.Windows.Controls.TabControl inner in FindInnerTabs(tabs))
                 visited += VisitTabs(window, inner, onShown);
         }
 
