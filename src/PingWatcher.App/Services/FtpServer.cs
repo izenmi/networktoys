@@ -148,6 +148,9 @@ internal sealed class FtpSession : IDisposable
     private bool _authenticated;
     private string _pendingUser = string.Empty;
 
+    // RNFR で覚えた元の場所。RNTO で 1 回だけ使う
+    private string? _renameFrom;
+
     // データ接続の準備。PASV はこちらが待受、PORT は相手が指定
     private TcpListener? _passiveListener;
     private IPEndPoint? _activeEndpoint;
@@ -264,6 +267,76 @@ internal sealed class FtpSession : IDisposable
                     {
                         await Reply("550 ありません。").ConfigureAwait(false);
                     }
+                    return true;
+                }
+
+            case "MKD":
+            case "XMKD":
+                {
+                    string? local = _path.Resolve(command.Argument);
+                    if (local is null || Directory.Exists(local) || File.Exists(local))
+                    {
+                        await Reply("550 作れません。").ConfigureAwait(false);
+                        return true;
+                    }
+
+                    Directory.CreateDirectory(local);
+                    _log(_remote, $"フォルダ作成 {command.Argument}");
+                    await Reply($"257 {FtpFormats.QuotedPath(command.Argument)} を作りました。").ConfigureAwait(false);
+                    return true;
+                }
+
+            case "RMD":
+            case "XRMD":
+                {
+                    string? local = _path.Resolve(command.Argument);
+                    if (local is null || !Directory.Exists(local))
+                    {
+                        await Reply("550 ありません。").ConfigureAwait(false);
+                        return true;
+                    }
+
+                    // 中身ごとは消さない。空でなければ断る（取り消せない操作なので慎重に）
+                    if (Directory.EnumerateFileSystemEntries(local).Any())
+                    {
+                        await Reply("550 空ではありません。").ConfigureAwait(false);
+                        return true;
+                    }
+
+                    Directory.Delete(local);
+                    _log(_remote, $"フォルダ削除 {command.Argument}");
+                    await Reply("250 削除しました。").ConfigureAwait(false);
+                    return true;
+                }
+
+            case "RNFR":
+                {
+                    // 名前の変更は 2 段階。ここでは覚えるだけで、動かすのは RNTO
+                    string? local = _path.Resolve(command.Argument);
+                    _renameFrom = local is not null && (File.Exists(local) || Directory.Exists(local)) ? local : null;
+
+                    await Reply(_renameFrom is null ? "550 ありません。" : "350 新しい名前をどうぞ。").ConfigureAwait(false);
+                    return true;
+                }
+
+            case "RNTO":
+                {
+                    string? from = _renameFrom;
+                    _renameFrom = null;   // 1 回きり。続けて RNTO を投げても効かない
+
+                    string? to = _path.Resolve(command.Argument);
+
+                    if (from is null || to is null || File.Exists(to) || Directory.Exists(to))
+                    {
+                        await Reply("550 変更できません。").ConfigureAwait(false);
+                        return true;
+                    }
+
+                    if (Directory.Exists(from)) Directory.Move(from, to);
+                    else File.Move(from, to);
+
+                    _log(_remote, $"名前変更 {command.Argument}");
+                    await Reply("250 変更しました。").ConfigureAwait(false);
                     return true;
                 }
 

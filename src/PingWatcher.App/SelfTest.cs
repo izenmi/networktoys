@@ -1492,6 +1492,113 @@ internal static class SelfTest
             Assert(!server.IsRunning, "SFTP サーバが停止していない");
         });
 
+        Check("FTP: 自分のサーバへ自分のクライアントで往復できる", () =>
+        {
+            // FTP のクライアントは自前なので、ここが唯一の実経路の検査になる。
+            // 一覧・取得・送信・フォルダ作成・改名・削除を 1 往復。外へは出ない
+            string root = Path.Combine(Path.GetTempPath(), $"pingwatcher-ftpc-{Guid.NewGuid():N}");
+            string work = Path.Combine(Path.GetTempPath(), $"pingwatcher-ftpc-work-{Guid.NewGuid():N}");
+
+            Directory.CreateDirectory(root);
+            Directory.CreateDirectory(work);
+
+            const string body = "hostname RT01\nこんにちは\n";
+            File.WriteAllText(Path.Combine(root, "startup-config"), body);
+
+            int port = FreePort();
+
+            try
+            {
+                using var server = new Services.FtpServer(root, "watcher", "pw");
+                server.Start(port);
+
+                using var client = new Services.FtpFileClient();
+                using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+                Task.Run(async () =>
+                {
+                    await client.ConnectAsync("127.0.0.1", port, "watcher", "pw", stop.Token);
+
+                    // 一覧（サーバは MLSD を持たないので LIST 経路が通る）
+                    IReadOnlyList<Core.Files.RemoteEntry> listed = await client.ListAsync("/", stop.Token);
+                    Core.Files.RemoteEntry found = listed.FirstOrDefault(e => e.Name == "startup-config");
+                    Assert(found.Name == "startup-config", $"一覧に見つからない: {listed.Count} 件");
+                    Assert(!found.IsDirectory, "ファイルがフォルダ扱いになっている");
+                    Assert(found.Size > 0, "サイズが 0 のまま");
+
+                    // 取得（中身まで一致すること）
+                    string got = Path.Combine(work, "got.txt");
+                    var seen = new List<Services.TransferProgress>();
+                    await client.DownloadAsync("/startup-config", got,
+                                               new Progress<Services.TransferProgress>(seen.Add), stop.Token);
+                    Assert(File.ReadAllText(got) == body, "取得した中身が違う");
+
+                    // 送信 → サーバ側の実体で確かめる
+                    string put = Path.Combine(work, "put.txt");
+                    File.WriteAllText(put, "interface Gi0/1\n");
+                    await client.UploadAsync(put, "/uploaded.txt", null, stop.Token);
+                    Assert(File.ReadAllText(Path.Combine(root, "uploaded.txt")) == "interface Gi0/1\n",
+                           "送ったファイルの中身が違う");
+
+                    // フォルダを作る → 改名 → 消す
+                    await client.MakeDirectoryAsync("/backup", stop.Token);
+                    Assert(Directory.Exists(Path.Combine(root, "backup")), "フォルダが作られていない");
+
+                    await client.RenameAsync("/uploaded.txt", "/renamed.txt", stop.Token);
+                    Assert(File.Exists(Path.Combine(root, "renamed.txt")), "改名されていない");
+
+                    await client.DeleteAsync("/renamed.txt", isDirectory: false, stop.Token);
+                    Assert(!File.Exists(Path.Combine(root, "renamed.txt")), "ファイルが消えていない");
+
+                    await client.DeleteAsync("/backup", isDirectory: true, stop.Token);
+                    Assert(!Directory.Exists(Path.Combine(root, "backup")), "フォルダが消えていない");
+
+                    log.AppendLine($"        一覧 {listed.Count} 件 / 進捗 {seen.Count} 回");
+                }).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                TryDelete(root);
+                TryDelete(work);
+            }
+        });
+
+        Check("FTP: 誤ったパスワードは断られる", () =>
+        {
+            // 認証を通さずに一覧が見えてしまう作りになっていないこと
+            string root = Path.Combine(Path.GetTempPath(), $"pingwatcher-ftpc-auth-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(root);
+
+            int port = FreePort();
+
+            try
+            {
+                using var server = new Services.FtpServer(root, "watcher", "pw");
+                server.Start(port);
+
+                using var client = new Services.FtpFileClient();
+                using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+
+                bool refused = false;
+
+                try
+                {
+                    client.ConnectAsync("127.0.0.1", port, "watcher", "ちがう", stop.Token)
+                          .GetAwaiter().GetResult();
+                }
+                catch (InvalidOperationException)
+                {
+                    refused = true;
+                }
+
+                Assert(refused, "誤ったパスワードで繋がってしまった");
+            }
+            finally
+            {
+                TryDelete(root);
+            }
+        });
+
         Check("SFTP: 自分のサーバへ自分のクライアントで往復できる", () =>
         {
             // 偽の Cisco 機器・偽の STUN サーバと同じ手。アプリの中に SFTP サーバが
