@@ -818,17 +818,26 @@
 
                         <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="34" />
-                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.0]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.1]}" />
                                 <ColumnDefinition Width="*" MinWidth="140" />
-                                <ColumnDefinition Width="70" />
-                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.3]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.4]}" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="#"      Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="1" Text="IP"     Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="2" Text="ホスト名" Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="3" Text="RTT"    Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                             <TextBlock Grid.Column="4" Text="状態"   Style="{StaticResource Caption}" Margin="10,0,0,0" />
+                            <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                            <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                   Tag="trace.0" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                   Tag="trace.1" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="trace.3" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="trace.4" DragDelta="OnTableColumnResize" />
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -840,11 +849,11 @@
                                         <Border x:Name="Row" CornerRadius="{DynamicResource Radius.Badge}" Padding="4,0">
                                             <Grid Height="{DynamicResource Size.RowHeight}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="34" />
-                                                    <ColumnDefinition Width="140" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.1]}" />
                                                     <ColumnDefinition Width="*" MinWidth="140" />
-                                                    <ColumnDefinition Width="70" />
-                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.4]}" />
                                                 </Grid.ColumnDefinitions>
 
                                                 <TextBlock x:Name="TtlText" Grid.Column="0" Text="{Binding Ttl}"
@@ -1066,11 +1075,11 @@
                         <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" MinWidth="140" />
-                                <ColumnDefinition Width="132" />
-                                <ColumnDefinition Width="150" />
-                                <ColumnDefinition Width="76" />
-                                <ColumnDefinition Width="56" />
-                                <ColumnDefinition Width="72" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.1]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.2]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.3]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.4]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.5]}" />
                             </Grid.ColumnDefinitions>
                             <!-- クリックでソート(昇順→降順→強い順)。透明 Border で列幅いっぱいに受ける -->
                             <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag="Ssid"
@@ -1103,6 +1112,17 @@
                                     ToolTip="クリックで並べ替え（もう一度で逆順、三度目で元の並び）">
                                 <TextBlock Text="{Binding HeaderBand}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
                             </Border>
+                            <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="wifi.1" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="wifi.2" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="wifi.3" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="wifi.4" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="wifi.5" DragDelta="OnTableColumnResize" />
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -1120,11 +1140,11 @@
                                     <Grid Height="{DynamicResource Size.RowHeight}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" MinWidth="140" />
-                                            <ColumnDefinition Width="132" />
-                                            <ColumnDefinition Width="150" />
-                                            <ColumnDefinition Width="76" />
-                                            <ColumnDefinition Width="56" />
-                                            <ColumnDefinition Width="72" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.1]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.2]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.3]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.4]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.5]}" />
                                         </Grid.ColumnDefinitions>
 
                                         <TextBlock x:Name="SsidText" Grid.Column="0" Text="{Binding Ssid}"
@@ -1513,12 +1533,12 @@
                         <!-- 一覧のヘッダ -->
                         <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="116" />
-                                <ColumnDefinition Width="62" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.0]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.1]}" />
                                 <ColumnDefinition Width="*" MinWidth="140" />
-                                <ColumnDefinition Width="132" />
-                                <ColumnDefinition Width="160" />
-                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.3]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.4]}" />
+                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.5]}" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="IP"       Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="1" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
@@ -1526,6 +1546,17 @@
                             <TextBlock Grid.Column="3" Text="MAC"      Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="4" Text="ベンダー" Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="5" Text="開放ポート" Style="{StaticResource Caption}" />
+                            <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                            <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                   Tag="scan.0" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                   Tag="scan.1" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="scan.3" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="scan.4" DragDelta="OnTableColumnResize" />
+                            <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                   Tag="scan.5" DragDelta="OnTableColumnResize" />
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -1542,12 +1573,12 @@
                                 <DataTemplate>
                                     <Grid Height="{DynamicResource Size.RowHeight}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="116" />
-                                            <ColumnDefinition Width="62" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.0]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.1]}" />
                                             <ColumnDefinition Width="*" MinWidth="140" />
-                                            <ColumnDefinition Width="132" />
-                                            <ColumnDefinition Width="160" />
-                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.3]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.4]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.5]}" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Address}"
                                                    Style="{StaticResource Mono}" VerticalAlignment="Center" />
@@ -1757,8 +1788,8 @@
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="72" />
-                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.1]}" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
@@ -1767,6 +1798,11 @@
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="ftplog.0" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="ftplog.1" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -1825,8 +1861,8 @@
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="72" />
-                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.1]}" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
@@ -1835,6 +1871,11 @@
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="tftplog.0" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="tftplog.1" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -1900,8 +1941,8 @@
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="72" />
-                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.1]}" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
@@ -1910,6 +1951,11 @@
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="sftplog.0" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="sftplog.1" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -2079,8 +2125,8 @@
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="72" />
-                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
@@ -2090,6 +2136,11 @@
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                            ToolTip="{Binding Text}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="syslog.0" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="syslog.1" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -2149,15 +2200,22 @@
                                         <DockPanel>
                                             <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="220" />
-                                                    <ColumnDefinition Width="130" />
-                                                    <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.2]}" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="OID" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="1" Text="名前" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="2" Text="型" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="3" Text="値" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="snmpget.0" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="snmpget.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="snmpget.2" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                             <ListBox ItemsSource="{Binding Rows}"
@@ -2169,9 +2227,9 @@
                                                     <DataTemplate>
                                                         <Grid Height="{DynamicResource Size.RowHeight}">
                                                             <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="220" />
-                                                                <ColumnDefinition Width="130" />
-                                                                <ColumnDefinition Width="90" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.0]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.2]}" />
                                                                 <ColumnDefinition Width="*" />
                                                             </Grid.ColumnDefinitions>
                                                             <TextBlock Grid.Column="0" Text="{Binding Oid}" Style="{StaticResource Mono}"
@@ -2239,8 +2297,8 @@
                                                     <DataTemplate>
                                                         <Grid Height="{DynamicResource Size.RowHeight}">
                                                             <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="72" />
-                                                                <ColumnDefinition Width="130" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
                                                                 <ColumnDefinition Width="*" />
                                                             </Grid.ColumnDefinitions>
                                                             <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
@@ -2250,6 +2308,11 @@
                                                             <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                                        ToolTip="{Binding Text}" />
+                                                            <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                            <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                                   Tag="snmptrap.0" DragDelta="OnTableColumnResize" />
+                                                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                                   Tag="snmptrap.1" DragDelta="OnTableColumnResize" />
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
@@ -3002,16 +3065,25 @@
                                             <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="150" />
-                                                    <ColumnDefinition Width="150" />
-                                                    <ColumnDefinition Width="110" />
-                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.4]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="1" Text="ID" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="2" Text="製品" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="3" Text="タイムゾーン" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="4" Text="タグ" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mnet.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mnet.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mnet.3" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mnet.4" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -3027,10 +3099,10 @@
                                                         <Grid Height="22">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="150" />
-                                                                <ColumnDefinition Width="150" />
-                                                                <ColumnDefinition Width="110" />
-                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.3]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.4]}" />
                                                             </Grid.ColumnDefinitions>
                                                             <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                                        FontSize="{DynamicResource Size.Caption}"
@@ -3077,13 +3149,13 @@
                                             <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="70" />
-                                                    <ColumnDefinition Width="130" />
-                                                    <ColumnDefinition Width="110" />
-                                                    <ColumnDefinition Width="120" />
-                                                    <ColumnDefinition Width="76" />
-                                                    <ColumnDefinition Width="120" />
-                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.6]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.7]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="1" Text="型番" Style="{StaticResource Caption}" />
@@ -3093,6 +3165,21 @@
                                                 <TextBlock Grid.Column="5" Text="状態" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="7" Text="LAN IP" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.3" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.4" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.5" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.6" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mdev.7" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -3108,13 +3195,13 @@
                                                         <Grid Height="22">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="70" />
-                                                                <ColumnDefinition Width="130" />
-                                                                <ColumnDefinition Width="110" />
-                                                                <ColumnDefinition Width="120" />
-                                                                <ColumnDefinition Width="76" />
-                                                                <ColumnDefinition Width="120" />
-                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.3]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.4]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.5]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.6]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.7]}" />
                                                             </Grid.ColumnDefinitions>
                                                             <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                                        FontSize="{DynamicResource Size.Caption}"
@@ -3190,12 +3277,12 @@
                                             <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="130" />
-                                                    <ColumnDefinition Width="60" />
-                                                    <ColumnDefinition Width="80" />
-                                                    <ColumnDefinition Width="120" />
-                                                    <ColumnDefinition Width="120" />
-                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.6]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="1" Text="シリアル" Style="{StaticResource Caption}" />
@@ -3204,6 +3291,19 @@
                                                 <TextBlock Grid.Column="4" Text="IP" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="5" Text="ゲートウェイ" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.3" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.4" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.5" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mup.6" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -3219,12 +3319,12 @@
                                                         <Grid Height="22">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="130" />
-                                                                <ColumnDefinition Width="60" />
-                                                                <ColumnDefinition Width="80" />
-                                                                <ColumnDefinition Width="120" />
-                                                                <ColumnDefinition Width="120" />
-                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.3]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.4]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.5]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.6]}" />
                                                             </Grid.ColumnDefinitions>
                                                             <TextBlock Grid.Column="0" Text="{Binding Network}"
                                                                        FontSize="{DynamicResource Size.Caption}"
@@ -3321,12 +3421,12 @@
                                             <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="120" />
-                                                    <ColumnDefinition Width="130" />
-                                                    <ColumnDefinition Width="55" />
-                                                    <ColumnDefinition Width="110" />
-                                                    <ColumnDefinition Width="90" />
-                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="1" Text="IP" Style="{StaticResource Caption}" />
@@ -3335,6 +3435,19 @@
                                                 <TextBlock Grid.Column="4" Text="メーカー" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="5" Text="通信量" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="6" Text="最終確認" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.3" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.4" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.5" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mcli.6" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -3350,12 +3463,12 @@
                                                         <Grid Height="22">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="120" />
-                                                                <ColumnDefinition Width="130" />
-                                                                <ColumnDefinition Width="55" />
-                                                                <ColumnDefinition Width="110" />
-                                                                <ColumnDefinition Width="90" />
-                                                                <ColumnDefinition Width="150" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
                                                             </Grid.ColumnDefinitions>
                                                             <TextBlock Grid.Column="0" Text="{Binding Description}"
                                                                        FontSize="{DynamicResource Size.Caption}"
