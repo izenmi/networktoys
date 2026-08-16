@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Media;
@@ -452,6 +453,104 @@ internal static class SelfTest
             // UAC なしで本当に適用され、ランナーのネットワークが壊れる
             IReadOnlyList<Services.NetworkAdapterInfo> adapters = Services.NetworkEnvironment.ListAdapters();
             log.AppendLine($"        アダプタ: {adapters.Count} 枚");
+        });
+
+        Check("WFP: 合成したイベントを 1 フィールドずつ読み出せる", () =>
+        {
+            // レイアウト誤りに対する主対策。実イベントが 1 件も無い環境でも必ず走る。
+            // オフセット表どおりに自前で組み立てたバッファをパーサに食わせ、
+            // 読み出した値が書いた値と一致することを確かめる
+            const string appPath = @"\device\harddiskvolume1\windows\system32\svchost.exe";
+            var written = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+
+            byte[] appBytes = System.Text.Encoding.Unicode.GetBytes(appPath + "\0");
+
+            IntPtr item = Marshal.AllocHGlobal(120);
+            IntPtr drop = Marshal.AllocHGlobal(56);
+            IntPtr app = Marshal.AllocHGlobal(appBytes.Length);
+
+            try
+            {
+                for (int i = 0; i < 120; i += 8) Marshal.WriteInt64(item, i, 0);
+                for (int i = 0; i < 56; i += 8) Marshal.WriteInt64(drop, i, 0);
+                Marshal.Copy(appBytes, 0, app, appBytes.Length);
+
+                Marshal.WriteInt64(item, 0, written.ToFileTimeUtc());   // timeStamp
+                Marshal.WriteInt32(item, 8, 0x0001 | 0x0002 | 0x0004 | 0x0008 | 0x0010 | 0x0020 | 0x0100);
+                Marshal.WriteInt32(item, 12, 0);                        // ipVersion = v4
+                Marshal.WriteByte(item, 16, 6);                         // ipProtocol = TCP
+                Marshal.WriteInt32(item, 20, unchecked((int)0xC0A8010A)); // local  192.168.1.10
+                Marshal.WriteInt32(item, 36, unchecked((int)0xCB007109)); // remote 203.0.113.9
+                Marshal.WriteInt16(item, 52, unchecked((short)51234));
+                Marshal.WriteInt16(item, 54, 443);
+                Marshal.WriteInt32(item, 64, appBytes.Length);          // appId.size
+                Marshal.WriteIntPtr(item, 72, app);                     // appId.data
+                Marshal.WriteInt32(item, 104, 3);                       // type = CLASSIFY_DROP
+                Marshal.WriteIntPtr(item, 112, drop);                   // union
+
+                Marshal.WriteInt64(drop, 0, 0x1122334455667788);        // filterId
+                Marshal.WriteInt16(drop, 8, 44);                        // layerId
+                Marshal.WriteInt32(drop, 24, 0);                        // msFwpDirection = 送信
+                Marshal.WriteInt32(drop, 28, 0);                        // isLoopback
+
+                Core.Net.WfpBlockedEvent? parsed = Interop.WfpNativeMethods.ParseDropEvent(item);
+                Assert(parsed is not null, "合成したイベントを読み出せない");
+
+                Assert(parsed!.TimeUtc == written, $"時刻が違う: {parsed.TimeUtc:O}");
+                Assert(parsed.Protocol == 6, $"プロトコルが違う: {parsed.Protocol}");
+                Assert(parsed.Local?.ToString() == "192.168.1.10", $"送信元が違う: {parsed.Local}");
+                Assert(parsed.Remote?.ToString() == "203.0.113.9", $"宛先が違う: {parsed.Remote}");
+                Assert(parsed.LocalPort == 51234, $"送信元ポートが違う: {parsed.LocalPort}");
+                Assert(parsed.RemotePort == 443, $"宛先ポートが違う: {parsed.RemotePort}");
+                Assert(parsed.AppIdRaw == appPath, $"パスが違う: {parsed.AppIdRaw}");
+                Assert(parsed.FilterId == 0x1122334455667788UL, $"フィルタ ID が違う: {parsed.FilterId}");
+                Assert(parsed.LayerId == 44, $"レイヤ ID が違う: {parsed.LayerId}");
+                Assert(parsed.Direction == Core.Net.WfpDirection.Outbound, "向きが違う");
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(app);
+                Marshal.FreeHGlobal(drop);
+                Marshal.FreeHGlobal(item);
+            }
+        });
+
+        Check("WFP: エンジンを開いて記録設定を読める(管理者のときのみ)", () =>
+        {
+            // ここで FwpmEngineSetOption0 を呼んではいけない。CI ランナーは管理者なので
+            // 本当にランナーのシステム設定が変わり、途中で落ちれば戻らない
+            if (!Services.NetTraceSession.IsAdministrator)
+            {
+                log.AppendLine("        管理者ではないため省略");
+                return;
+            }
+
+            (bool opened, int valueType, uint collect) = Interop.WfpNativeMethods.InspectOption();
+            Assert(opened, "WFP エンジンを開けない");
+
+            // FWP_VALUE0 の先頭は FWP_DATA_TYPE。UINT32(3) 以外ならこの構造体の理解が違う
+            Assert(valueType == 3, $"FWP_VALUE0 の型が UINT32(3) でない: {valueType}");
+            log.AppendLine($"        記録: {(collect != 0 ? "有効" : "無効")}");
+        });
+
+        Check("WFP: 遮断イベントを列挙できる(管理者のときのみ・件数は問わない)", () =>
+        {
+            if (!Services.NetTraceSession.IsAdministrator)
+            {
+                log.AppendLine("        管理者ではないため省略");
+                return;
+            }
+
+            // 件数は合否に含めない(記録が無効なら 0 件が正常)。ここを通ること自体が、
+            // レイアウト誤りによる AccessViolation が起きていない証拠になる
+            Interop.WfpReadResult result = Interop.WfpNativeMethods.Read(200);
+
+            Assert(result.Error is null, $"列挙に失敗: {result.Error}");
+            log.AppendLine($"        全 {result.TotalSeen} 件中 遮断 {result.Events.Count} 件"
+                         + $" / 記録: {(result.CollectOption != 0 ? "有効" : "無効")}");
+
+            foreach (Core.Net.WfpBlockedEvent e in result.Events.Take(3))
+                log.AppendLine($"        {e.TimeUtc:HH:mm:ss} {e.Protocol} {e.Remote}:{e.RemotePort} {e.AppIdRaw}");
         });
 
         Check("ETW 通信量セッションを開始して停止できる(管理者のときのみ)", () =>
