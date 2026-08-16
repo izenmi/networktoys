@@ -11,8 +11,21 @@ using PingWatcher.Core.Work;
 
 namespace PingWatcher.App.ViewModels;
 
-/// <summary>転送履歴の 1 行。</summary>
-public sealed record FileServerLogRow(string Time, string Remote, string Text);
+/// <summary>
+/// 転送履歴の 1 行。
+/// </summary>
+/// <param name="Severity">syslog のシビリティ。持たない画面（FTP など）は -1。</param>
+public sealed record FileServerLogRow(string Time, string Remote, string Text, int Severity = -1)
+{
+    /// <summary>画面に出す重大度。<b>色だけで表さない</b>ので文字でも出す。</summary>
+    public string SeverityText => Severity >= 0 ? SyslogParser.NameOf(Severity) : string.Empty;
+
+    /// <summary>err(3) 以下。</summary>
+    public bool IsSevere => Severity >= 0 && SyslogParser.IsSevere(Severity);
+
+    /// <summary>warning(4)。</summary>
+    public bool IsWarning => Severity >= 0 && SyslogParser.IsWarning(Severity);
+}
 
 /// <summary>
 /// ファイル配布サーバ（FTP / TFTP / SFTP）画面の共通土台。
@@ -29,9 +42,14 @@ public abstract class FileServerViewModel : ObservableObject
     private IFileServer? _server;
     private SessionLogService? _log;
 
+    /// <summary>受け取った全行。画面の <see cref="Log"/> は絞り込みを通した写し。</summary>
+    private readonly List<FileServerLogRow> _all = [];
+
     private string _port;
     private bool _isRunning;
     private string _status = string.Empty;
+    private string _filter = string.Empty;
+    private int _minSeverity = -1;
 
     /// <param name="logPrefix">ログファイルの接頭辞（"ftp" など）。</param>
     /// <param name="defaultPort">既定の待受ポート。</param>
@@ -89,6 +107,45 @@ public abstract class FileServerViewModel : ObservableObject
     public string RunLabel => IsRunning ? "待受中" : "開始";
 
     public string Status { get => _status; protected set => SetProperty(ref _status, value); }
+
+    /// <summary>本文・送信元の部分一致で絞る。待受は止めない。</summary>
+    public string Filter
+    {
+        get => _filter;
+        set { if (SetProperty(ref _filter, value)) RebuildLog(); }
+    }
+
+    /// <summary>
+    /// この値以下のシビリティだけ残す（0=emerg 〜 7=debug で、<b>小さいほど重い</b>）。
+    /// -1 は絞らない。重大度を持たない画面では使わない。
+    /// </summary>
+    protected int MinSeverity
+    {
+        get => _minSeverity;
+        set { if (SetProperty(ref _minSeverity, value)) RebuildLog(); }
+    }
+
+    /// <summary>絞り込みを通して画面の一覧を作り直す。</summary>
+    private void RebuildLog()
+    {
+        string needle = _filter.Trim();
+
+        Log.Clear();
+        foreach (FileServerLogRow row in _all)
+        {
+            if (_minSeverity >= 0 && (row.Severity < 0 || row.Severity > _minSeverity)) continue;
+
+            if (needle.Length > 0
+                && !row.Text.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                && !row.Remote.Contains(needle, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            Log.Add(row);
+        }
+
+        SaveCommand.RaiseCanExecuteChanged();
+        ClearCommand.RaiseCanExecuteChanged();
+    }
 
     /// <summary>指定ポートでサーバを作る。ポート番号は検証済み。</summary>
     private protected abstract IFileServer CreateServer(int port);
@@ -149,10 +206,19 @@ public abstract class FileServerViewModel : ObservableObject
         _dispatcher.BeginInvoke(() =>
         {
             string time = e.At.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-            Log.Insert(0, new FileServerLogRow(time, e.RemoteAddress, e.Text));
+            var row = new FileServerLogRow(time, e.RemoteAddress, e.Text, e.Severity);
 
-            while (Log.Count > MaxRows)
-                Log.RemoveAt(Log.Count - 1);
+            _all.Insert(0, row);
+            while (_all.Count > MaxRows)
+                _all.RemoveAt(_all.Count - 1);
+
+            // 絞り込みに合う行だけ画面へ。全体の作り直しは重いので届いた 1 行だけ足す
+            if (Matches(row))
+            {
+                Log.Insert(0, row);
+                while (Log.Count > MaxRows)
+                    Log.RemoveAt(Log.Count - 1);
+            }
 
             SaveCommand.RaiseCanExecuteChanged();
             ClearCommand.RaiseCanExecuteChanged();
@@ -168,16 +234,27 @@ public abstract class FileServerViewModel : ObservableObject
     private void Save()
     {
         var table = new CsvTable(
-            ["時刻", "送信元", "内容"],
-            [.. Log.Select(r => new[] { r.Time, r.Remote, r.Text })]);
+            ["時刻", "送信元", "重大度", "内容"],
+            [.. Log.Select(r => new[] { r.Time, r.Remote, r.SeverityText, r.Text })]);
 
         if (Services.CsvExport.Save(_logPrefix, table) is { } message)
             Status = message;
     }
 
     /// <summary>一覧だけ消す。待受は止めないし、ファイルのログにも触らない。</summary>
+    private bool Matches(FileServerLogRow row)
+    {
+        if (_minSeverity >= 0 && (row.Severity < 0 || row.Severity > _minSeverity)) return false;
+
+        string needle = _filter.Trim();
+        return needle.Length == 0
+            || row.Text.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || row.Remote.Contains(needle, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void ClearLog()
     {
+        _all.Clear();
         Log.Clear();
         SaveCommand.RaiseCanExecuteChanged();
         ClearCommand.RaiseCanExecuteChanged();

@@ -46,6 +46,10 @@ public static class SyslogParser
         return new SyslogMessage(1, 5, SeverityNames[5], text, false);
     }
 
+    /// <summary>シビリティの短い名前。範囲外は空文字。</summary>
+    public static string NameOf(int severity)
+        => severity is >= 0 and < 8 ? SeverityNames[severity] : string.Empty;
+
     /// <summary>err(3) 以下は「重い」。行の色分けに使う。</summary>
     public static bool IsSevere(int severity) => severity <= 3;
 

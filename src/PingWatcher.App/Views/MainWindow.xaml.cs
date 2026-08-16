@@ -226,7 +226,7 @@ public partial class MainWindow : Window
         ["ftplog"] = ["Time", "Remote", "Text"],
         ["tftplog"] = ["Time", "Remote", "Text"],
         ["sftplog"] = ["Time", "Remote", "Text"],
-        ["syslog"] = ["Time", "Remote", "Text"],
+        ["syslog"] = ["Time", "Remote", "Severity", "Text"],
         ["snmptrap"] = ["Time", "Remote", "Text"],
         ["snmpget"] = ["Oid", "Name", "Type", "Value"],
         ["mnet"] = ["Name", "Id", "ProductTypes", "TimeZone", "Tags"],

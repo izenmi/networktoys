@@ -63,8 +63,12 @@ internal sealed class SyslogReceiver : IFileServer
             foreach (string line in payload.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
                 SyslogMessage message = SyslogParser.Parse(line);
-                string label = message.HasPriority ? $"[{message.SeverityName}] " : string.Empty;
-                Event?.Invoke(new FileServerEvent(DateTime.Now, remote, label + message.Message));
+
+                // 重大度は文字列に混ぜず、そのまま数値で渡す。
+                // PRI が無い機器は -1 にして「重大度なし」と区別する
+                Event?.Invoke(new FileServerEvent(
+                    DateTime.Now, remote, message.Message,
+                    message.HasPriority ? message.Severity : -1));
             }
         }
     }

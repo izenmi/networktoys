@@ -64,9 +64,11 @@ internal sealed class SnmpTrapReceiver : IFileServer
         // v2c Trap は snmpTrapOID、v1 Trap は enterprise OID を TrapOid に入れてある
         string what = trap.TrapOid is { } oid ? oid.DisplayName : "trap";
 
-        // varbind を「名前=値」で数個だけ添える（先頭の sysUpTime/trapOID は除く）
+        // varbind を「名前=値」で添える（先頭の sysUpTime/trapOID は除く）。
+        // 先頭 6 件で打ち切っていたが、機器によっては肝心の中身が 7 個目以降に来る。
+        // 行が長くなるぶんは画面側で省略し、全文は ToolTip に出す
         var parts = new List<string>();
-        foreach (VarBind vb in trap.VarBinds.Take(6))
+        foreach (VarBind vb in trap.VarBinds)
         {
             if (vb.Oid.DisplayName is "sysUpTime" or "snmpTrapOID") continue;
             parts.Add($"{vb.Oid.DisplayName}={vb.Value.Display}");

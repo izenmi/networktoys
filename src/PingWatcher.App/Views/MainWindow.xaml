@@ -2470,7 +2470,21 @@
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
                                     ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
                             <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
-                                    Style="{StaticResource Button.Subtle}" />
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <ComboBox Width="120" Margin="0,0,6,0"
+                                      ItemsSource="{Binding SeverityFilters}"
+                                      SelectedItem="{Binding SelectedSeverity}"
+                                      ToolTip="重大度で絞り込みます。0=emerg 〜 7=debug で、小さいほど重い扱いです。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBox Width="160" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     ToolTip="本文と送信元の部分一致で絞り込みます。待受は止まりません。" />
                         </StackPanel>
 
                         <Border DockPanel.Dock="Top"
@@ -2496,21 +2510,26 @@
                                 <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
                                       Tag="syslog" MouseLeftButtonDown="OnTableHeaderSort">
                                     <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.2]}" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
                                     <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                     <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                     <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
                                     <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="2" Text="本文" Style="{StaticResource Caption}" />
-                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <TextBlock Grid.Column="2" Text="重大度" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="本文" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(3)より左なので右端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
                                            Tag="syslog.0" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
                                            Tag="syslog.1" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="syslog.2" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
@@ -2524,19 +2543,36 @@
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.2]}" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
                                                 <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
+                                                <!-- 重大度は文字で出す。色は補助でしかない(色覚多様性下で潰れる) -->
+                                                <TextBlock x:Name="SeverityText" Grid.Column="2" Text="{Binding SeverityText}"
+                                                           Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock x:Name="BodyText" Grid.Column="3" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                            ToolTip="{Binding Text}" />
                                             </Grid>
+
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsSevere}" Value="True">
+                                                    <Setter TargetName="SeverityText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                    <Setter TargetName="BodyText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                    <Setter TargetName="SeverityText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                    <Setter TargetName="BodyText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>

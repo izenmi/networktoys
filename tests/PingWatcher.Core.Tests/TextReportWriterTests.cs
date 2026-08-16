@@ -43,7 +43,6 @@ public class TextReportWriterTests
             Environment: [("IP", "192.168.1.20/24")],
             Rows: rows ?? [Row("gw-01")],
             IpConfig: ipConfig,
-            Work: null,
             Wireless: wireless,
             Outages: outages,
             WirelessNote: wirelessNote);

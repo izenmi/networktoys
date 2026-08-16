@@ -45,8 +45,8 @@ public sealed class TableColumns : ObservableObject
         new("tftplog", 2, [(0, 72), (1, 130)]),
         new("sftplog", 2, [(0, 72), (1, 130)]),
 
-        // syslog: 0 時刻 / 1 送信元 / 2 本文(星)
-        new("syslog", 2, [(0, 72), (1, 130)]),
+        // syslog: 0 時刻 / 1 送信元 / 2 重大度 / 3 本文(星)
+        new("syslog", 3, [(0, 72), (1, 130), (2, 64)]),
 
         // SNMP GET: 0 OID / 1 名前 / 2 型 / 3 値(星)
         new("snmpget", 3, [(0, 220), (1, 130), (2, 90)]),
