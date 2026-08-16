@@ -48,7 +48,6 @@ public sealed class ShellViewModel
 
         // 記録には無線の情報も載せるので、無線画面が持っている内容を参照させる
         Report = new ReportViewModel(Monitor, Wifi);
-        Work = new WorkViewModel(Monitor);
         DeviceCompare = new DeviceCompareViewModel();
         Converter = new ConvertViewModel();
 
@@ -99,7 +98,6 @@ public sealed class ShellViewModel
     public ReportViewModel Report { get; }
 
     /// <summary>変更作業の前後確認。このツールの主な使い道。</summary>
-    public WorkViewModel Work { get; }
 
     /// <summary>機器の出力（show ip route / show run）を作業前後で見比べる。</summary>
     public DeviceCompareViewModel DeviceCompare { get; }
@@ -129,7 +127,6 @@ public sealed class ShellViewModel
     {
         await Monitor.ResetAsync();
         await Tcp.ResetAsync();
-        Work.Reset();
         DeviceCompare.Reset();
         Scan.Reset();
         Subnet.Reset();

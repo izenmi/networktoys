@@ -39,7 +39,6 @@ public sealed record ReportRow(
 /// <c>ipconfig /all</c> の出力そのまま。現場のレポートには見慣れた形で
 /// 載っている方が読み手に伝わるので、整形せずに載せる。
 /// </param>
-/// <param name="Work">変更作業の記録。作業前後の比較を伴わない測定では null。</param>
 /// <param name="Wireless">
 /// 無線 LAN の情報（項目名と値の並び）。有線環境や、無線画面を一度も開いて
 /// いない場合は null。位置情報の同意が要るため、こちらから勝手には取りに行かない。
@@ -61,7 +60,6 @@ public sealed record ReportData(
     IReadOnlyList<(string Label, string Value)> Environment,
     IReadOnlyList<ReportRow> Rows,
     string? IpConfig = null,
-    WorkSection? Work = null,
     IReadOnlyList<(string Label, string Value)>? Wireless = null,
     IReadOnlyList<OutageRecord>? Outages = null,
     string? WirelessNote = null,
@@ -76,31 +74,6 @@ public sealed record ReportData(
     /// <summary>一度も失敗していない宛先の数。</summary>
     public int HealthyCount => Rows.Count - DownRows.Count - LossyRows.Count;
 }
-
-/// <summary>
-/// 変更作業の前後で確認した内容。
-/// レポートの引数を増やしすぎないよう、ひとまとめにして省略可能な引数として渡す。
-/// </summary>
-/// <param name="SessionName">作業の名前。</param>
-/// <param name="Summary">合否。</param>
-/// <param name="Comparisons">宛先ごとの前後比較。</param>
-/// <param name="Timeline">マーカーと不通を時刻順に混ぜたもの。</param>
-/// <param name="IpConfigDiff">ipconfig の差分。</param>
-/// <param name="RouteDiff">経路表の差分。</param>
-/// <param name="NeighborChanges">近隣キャッシュの変化。</param>
-public sealed record WorkSection(
-    string SessionName,
-    WorkSummary? Summary,
-    IReadOnlyList<WorkComparison> Comparisons,
-    IReadOnlyList<WorkTimelineItem> Timeline,
-    TextDiffResult? IpConfigDiff,
-    TextDiffResult? RouteDiff,
-    IReadOnlyList<NeighborChange> NeighborChanges);
-
-/// <param name="At">時刻。</param>
-/// <param name="Label">種別（作業／不通）。</param>
-/// <param name="Text">内容。</param>
-public sealed record WorkTimelineItem(DateTimeOffset At, string Label, string Text);
 
 /// <summary>
 /// 周辺で見えていたアクセスポイント 1 台。値は画面表示と同じ整形済み文字列で持つ

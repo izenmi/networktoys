@@ -217,29 +217,4 @@ public class ReportWriterTests
         Assert.Contains("無線 LAN", html, StringComparison.Ordinal);
         Assert.Contains("office-wifi", html, StringComparison.Ordinal);
     }
-
-    [Fact]
-    public void Html_renders_the_work_verdict_and_comparison()
-    {
-        // 作業レポートの経路はこれまで 1 行もテストが通っていなかった
-        var comparison = new WorkComparison(
-            "k", "192.168.1.1", "備考", null, null,
-            WorkVerdict.Unchanged, "作業前と同じ状態です。");
-
-        var work = new WorkSection(
-            "配線替え",
-            new WorkSummary(Total: 1, Failures: 0, Warnings: 0, Unknowns: 0, Outages: 0),
-            [comparison],
-            Timeline: [],
-            IpConfigDiff: null,
-            RouteDiff: null,
-            NeighborChanges: []);
-
-        string html = HtmlReportWriter.Render(Sample() with { Work = work });
-
-        Assert.Contains("問題なし", html, StringComparison.Ordinal);
-        Assert.Contains("配線替え", html, StringComparison.Ordinal);
-        Assert.Contains("作業前後の比較", html, StringComparison.Ordinal);
-        Assert.Contains("作業前と同じ状態です。", html, StringComparison.Ordinal);
-    }
 }

@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text;
 using PingWatcher.Core.Metrics;
 using PingWatcher.Core.Models;
-using PingWatcher.Core.Work;
 
 namespace PingWatcher.Core.Reporting;
 
@@ -35,7 +34,6 @@ public static class TextReportWriter
         WriteRows(text, data);
         WriteEnvironment(text, data);
         WriteWireless(text, data);
-        WriteWork(text, data);
         WriteIpConfig(text, data);
 
         return text.ToString();
@@ -255,53 +253,6 @@ public static class TextReportWriter
                 .Append(TextWidth.Cell(ap.Band, 8)).Append(' ')
                 .AppendLine(ap.Vendor);
         }
-    }
-
-    private static void WriteWork(StringBuilder text, ReportData data)
-    {
-        if (data.Work is not { } work) return;
-
-        text.AppendLine("[変更作業の記録]");
-        text.AppendLine(ThinRule);
-
-        if (work.SessionName.Length > 0)
-            text.AppendLine($"  作業名 : {work.SessionName}");
-
-        if (work.Summary is { } summary)
-        {
-            text.AppendLine($"  判定   : {summary.Verdict}");
-            text.AppendLine($"  内訳   : 異常 {summary.Failures} / 警告 {summary.Warnings} / 不明 {summary.Unknowns}");
-        }
-
-        if (work.Comparisons.Count > 0)
-        {
-            text.AppendLine();
-            text.AppendLine("  作業前後の比較");
-
-            foreach (WorkComparison comparison in work.Comparisons)
-            {
-                text.Append("    ")
-                    .Append(TextWidth.Cell(comparison.Host, 24)).Append(' ')
-                    .Append(TextWidth.Cell(comparison.Label, 14)).Append(' ')
-                    .AppendLine(comparison.Detail);
-            }
-        }
-
-        if (work.Timeline.Count > 0)
-        {
-            text.AppendLine();
-            text.AppendLine("  時系列");
-
-            foreach (WorkTimelineItem item in work.Timeline)
-            {
-                text.Append("    ")
-                    .Append(item.At.ToString("HH:mm:ss", Culture)).Append(' ')
-                    .Append(TextWidth.Cell(item.Label, 8)).Append(' ')
-                    .AppendLine(item.Text);
-            }
-        }
-
-        text.AppendLine();
     }
 
     /// <summary>

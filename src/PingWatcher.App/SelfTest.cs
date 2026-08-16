@@ -861,34 +861,7 @@ internal static class SelfTest
             log.AppendLine($"        route の出力: {capture.Text.Split('\n').Length} 行");
         });
 
-        Check("作業セッションを保存して読み戻せる", () =>
-        {
-            // ソースジェネレータへの登録漏れはコンパイルを通り抜けて実行時に落ちる
-            string path = Path.Combine(Path.GetTempPath(), $"pingwatcher-worksession-{Guid.NewGuid():N}.json");
-            try
-            {
-                var session = new Core.Work.WorkSession
-                {
-                    Name = "自己診断",
-                    Before = new Core.Work.WorkSnapshot(
-                        DateTimeOffset.Now, "作業前", 1000,
-                        [new Core.Work.WorkEntry("127.0.0.1|Icmp|0", "127.0.0.1", "ICMP", "127.0.0.1", "備考", true, 30, 0, 1, 2, 0)]),
-                };
-
-                Core.Work.WorkSessionStore.Save(path, session);
-                Core.Work.WorkSession? loaded = Core.Work.WorkSessionStore.Load(path, out string? storeError);
-
-                Assert(storeError is null, $"読み込みに失敗: {storeError}");
-                Assert(loaded is not null, "セッションを読み戻せません");
-                Assert(loaded!.Before!.Entries.Count == 1, "宛先の件数が合わない");
-                Assert(loaded.Before.Entries[0].Comment == "備考", "日本語が壊れている");
-            }
-            finally
-            {
-                if (File.Exists(path)) File.Delete(path);
-            }
-        });
-
+        
         Check("宛先リストを保存して読み戻せる", () =>
         {
             string path = Path.Combine(Path.GetTempPath(), $"pingwatcher-selftest-{Guid.NewGuid():N}.json");
