@@ -5,7 +5,9 @@
         xmlns:vm="clr-namespace:PingWatcher.App.ViewModels"
         xmlns:net="clr-namespace:PingWatcher.Core.Net;assembly=PingWatcher.Core"
         Title="PingWatcher"
-        Width="740" Height="720"
+        <!-- タブが 18 枚あるので、既定幅は一列で収まるところまで広げてある。
+             狭めたい人は縮められるよう MinWidth は据え置き -->
+        Width="1280" Height="800"
         MinWidth="700" MinHeight="480"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.Window.Backdrop}"
@@ -387,11 +389,12 @@
     </Window.Resources>
 
     <Grid Margin="6,5,6,4">
+        <!-- メニュー / ヘッダ / 本体。接続情報のフッターは廃止(本体を広く取るため。
+             同じ内容は IP設定タブの現在値で見られる) -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!--
@@ -2528,7 +2531,7 @@
                                          VirtualizingPanel.VirtualizationMode="Recycling">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Height="22" ToolTip="{Binding ProcessPath}">
+                                            <Grid Height="{DynamicResource Size.RowHeight}" ToolTip="{Binding ProcessPath}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="96" />
                                                     <ColumnDefinition Width="66" />
@@ -3408,26 +3411,5 @@
         </TabControl>
 
         <!-- ===== ステータスバー ===== -->
-        <Border Grid.Row="3" Margin="0,5,0,0" Padding="10,4"
-                DataContext="{Binding Monitor}"
-                Background="{DynamicResource Brush.Surface}"
-                BorderBrush="{DynamicResource Brush.Border}"
-                BorderThickness="1"
-                CornerRadius="{DynamicResource Radius.Card}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="接続: " Style="{StaticResource Caption}" />
-                <TextBlock Text="{Binding InterfaceText}" TextTrimming="CharacterEllipsis" MaxWidth="200" />
-                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="8,0" />
-                <TextBlock Text="IP: " Style="{StaticResource Caption}" />
-                <TextBlock Text="{Binding LocalAddressText}" Style="{StaticResource Mono}" />
-                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="8,0" />
-                <TextBlock Text="GW: " Style="{StaticResource Caption}" />
-                <TextBlock Text="{Binding GatewayText}" Style="{StaticResource Mono}" />
-                <TextBlock Text="／" Style="{StaticResource Caption}" Margin="8,0" />
-                <TextBlock Text="DNS: " Style="{StaticResource Caption}" />
-                <TextBlock Text="{Binding DnsText}" Style="{StaticResource Mono}"
-                           TextTrimming="CharacterEllipsis" MaxWidth="240" />
-            </StackPanel>
-        </Border>
     </Grid>
 </Window>

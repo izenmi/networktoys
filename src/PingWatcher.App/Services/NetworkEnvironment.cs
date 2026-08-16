@@ -82,7 +82,7 @@ internal static class NetworkEnvironment
         {
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
-                if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+                if (!IsPhysical(nic)) continue;
 
                 IPInterfaceProperties properties = nic.GetIPProperties();
 
@@ -136,6 +136,49 @@ internal static class NetworkEnvironment
 
         return [.. adapters.OrderByDescending(a => a.IsUp).ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)];
     }
+
+    /// <summary>
+    /// IP を設定する対象になりうる<b>物理アダプタ</b>か。
+    ///
+    /// 仮想アダプタ(VPN・Hyper-V・WSL・VirtualBox・Bluetooth PAN など)を並べると
+    /// 実機の一覧が埋もれ、設定先を取り違える事故につながる。
+    /// 種別だけでは仮想を見分けられない(Hyper-V の仮想 NIC も Ethernet を名乗る)ので、
+    /// <b>説明文の目印</b>も併せて見る。表示言語に左右されない英語の製品名で判定する。
+    /// </summary>
+    private static bool IsPhysical(NetworkInterface nic)
+    {
+        if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
+            or NetworkInterfaceType.Tunnel
+            or NetworkInterfaceType.Ppp)
+            return false;
+
+        // 有線・無線以外(Bluetooth PAN など)は設定対象にしない
+        if (nic.NetworkInterfaceType is not (NetworkInterfaceType.Ethernet
+            or NetworkInterfaceType.GigabitEthernet
+            or NetworkInterfaceType.FastEthernetT
+            or NetworkInterfaceType.FastEthernetFx
+            or NetworkInterfaceType.Wireless80211))
+            return false;
+
+        string description = nic.Description;
+
+        foreach (string mark in VirtualMarks)
+        {
+            if (description.Contains(mark, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>仮想アダプタの説明文に出る目印。製品名なので表示言語では変わらない。</summary>
+    private static readonly string[] VirtualMarks =
+    [
+        "Virtual", "VMware", "VirtualBox", "Hyper-V", "Loopback", "TAP-", "TAP Windows",
+        "WAN Miniport", "Bluetooth", "WSL", "Npcap", "WinPcap", "Pseudo", "Teredo",
+        "ZeroTier", "Tailscale", "OpenVPN", "WireGuard", "Cisco AnyConnect", "Juniper",
+        "Fortinet", "SoftEther", "Docker", "Radmin", "Hamachi",
+    ];
 
     /// <summary>
     /// 既定ゲートウェイを持つ、稼働中のインターフェースを 1 つ選んで情報を返す。

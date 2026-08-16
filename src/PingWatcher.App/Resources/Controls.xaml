@@ -544,9 +544,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
+                    <!-- 押せる場所だと分かるよう枠を持たせる。文字だけだとただの見出しに見える -->
                     <Border x:Name="Bd" Background="Transparent"
+                            BorderBrush="{DynamicResource Brush.Border}"
+                            BorderThickness="1"
                             CornerRadius="{DynamicResource Radius.Control}"
-                            Padding="9,3" Margin="0,0,2,0">
+                            Padding="9,3" Margin="0,0,3,0">
                         <Grid>
                             <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
                                               RecognizesAccessKey="True" />
@@ -570,9 +573,11 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                         </Trigger>
                         <Trigger Property="IsSubmenuOpen" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
