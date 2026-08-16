@@ -37,6 +37,9 @@ public sealed class ShellViewModel
         // 遮断一覧も同じ寿命。記録設定は押されたときだけ立てる
         Wfp = new WfpViewModel();
 
+        // 機器へ入って出力を集める。パスワードは覚えない
+        Collect = new CollectViewModel();
+
         // IP 設定。列挙はタブを開いたときだけ
         IpConfig = new IpConfigViewModel();
 
@@ -110,6 +113,9 @@ public sealed class ShellViewModel
     /// <summary>WFP が落とした通信の一覧。管理者のときだけ中身が出る。</summary>
     public WfpViewModel Wfp { get; }
 
+    /// <summary>Cisco 機器へ入ってコマンド出力を集める。</summary>
+    public CollectViewModel Collect { get; }
+
     /// <summary>
     /// 測った結果をすべて捨てて、起動直後の状態へ戻す。
     ///
@@ -140,6 +146,7 @@ public sealed class ShellViewModel
         IpConfig.Reset();
         Wifi.Reset();
         Converter.Reset();
+        Collect.Reset();
         Meraki.Reset();
         Report.Reset();
     }

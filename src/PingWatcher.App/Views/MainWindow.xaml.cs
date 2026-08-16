@@ -49,6 +49,10 @@ public partial class MainWindow : Window
         // (PasswordBox は中身をバインドできないので VM から知らせてもらう)
         _shell.Meraki.ApiKeyCleared += (_, _) => MerakiKeyBox.Clear();
 
+        // 収集タブ: 宛先リストからの取り込みと、収集後の伏せ字欄の後始末
+        _shell.Collect.RequestImport += (_, _) => ImportTargetsIntoCollect();
+        _shell.Collect.SecretsCleared += (_, _) => ClearCollectPasswordBoxes();
+
         // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
         _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
             this,
@@ -680,6 +684,63 @@ public partial class MainWindow : Window
         TcpTab.IsSelected = true;
     }
 
+    /// <summary>
+    /// 収集タブのパスワードを行の VM へ渡す。
+    /// <see cref="PasswordBox.Password"/> はバインドできないので、変更のたびに手で押し込む。
+    /// 行は <c>DataTemplate</c> の中にあるので、<c>Style</c> の <c>Setter</c> に
+    /// イベント付き要素を置いたときの事故（起動時 XamlParseException）には当たらない。
+    /// </summary>
+    private void OnCollectPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox { DataContext: CollectRowViewModel row } box) return;
+
+        if (Equals(box.Tag, "enable"))
+            row.EnablePassword = box.Password;
+        else
+            row.Password = box.Password;
+    }
+
+    /// <summary>Ping と TCP の宛先を収集タブへ取り込む。</summary>
+    private void ImportTargetsIntoCollect()
+    {
+        List<(string Host, string Memo)> targets =
+        [
+            .. _shell.Monitor.Rows.Select(r => (r.Host, r.Comment)),
+            .. _shell.Tcp.Rows.Select(r => (r.Host, r.Comment)),
+        ];
+
+        _shell.Collect.Import(targets);
+    }
+
+    /// <summary>
+    /// 収集が終わったら画面の伏せ字欄も空にする
+    /// （VM 側の値を消しても <see cref="PasswordBox"/> の中身は残るため）。
+    /// </summary>
+    private void ClearCollectPasswordBoxes()
+    {
+        foreach (PasswordBox box in FindPasswordBoxes(CollectTab))
+            box.Clear();
+    }
+
+    private static IEnumerable<PasswordBox> FindPasswordBoxes(DependencyObject node)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(node);
+
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(node, i);
+
+            if (child is PasswordBox box)
+            {
+                yield return box;
+                continue;
+            }
+
+            foreach (PasswordBox found in FindPasswordBoxes(child))
+                yield return found;
+        }
+    }
+
     /// <summary>右クリックした宛先へ Tera Term で SSH 接続する。</summary>
     private void OnSshFromRow(object sender, RoutedEventArgs e) => ConnectWithTeraTerm(sender, ssh: true);
 
@@ -860,6 +921,9 @@ public partial class MainWindow : Window
             _shell.SnmpTrap.Reset();
             ColumnLayout.Instance.Save();
             TableColumns.Instance.Save();
+
+            // 収集タブは機器の一覧とコマンドだけ覚える(パスワードは覚えない)
+            _shell.Collect.Save();
         }
         catch (Exception ex)
         {

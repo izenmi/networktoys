@@ -455,6 +455,84 @@ internal static class SelfTest
             log.AppendLine($"        アダプタ: {adapters.Count} 枚");
         });
 
+        Check("収集: 機器の行テンプレートを実体化できる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 機器が 0 台だと PasswordBox を含むテンプレートが一度も作られず、
+            // リソースキーの誤りを素通りしてしまう。1 行流し込んで実体化させる
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+            object? original = window.MainTabs.SelectedItem;
+
+            window.CollectTab.IsSelected = true;
+            shell.Collect.DeviceListText = "192.0.2.1,admin,自己診断用\n";
+            window.UpdateLayout();
+
+            Assert(shell.Collect.Rows.Count == 1, $"機器の行が作られない: {shell.Collect.Rows.Count}");
+
+            shell.Collect.DeviceListText = "";
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
+        Check("収集: 偽の Cisco 機器から Telnet で集められる", () =>
+        {
+            // 実機も外部通信も要らずに、TCP → Telnet の制御除去 → 状態機械 →
+            // 保存テキストの組み立て、までの実経路を丸ごと通す。この機能の防波堤
+            using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            _ = Task.Run(() => ServeFakeCisco(listener));
+
+            var options = new Core.Terminal.CiscoSessionOptions
+            {
+                SettleTime = TimeSpan.FromMilliseconds(80),
+                IdleTimeout = TimeSpan.FromSeconds(2),
+                LoginTimeout = TimeSpan.FromSeconds(5),
+                CommandTimeout = TimeSpan.FromSeconds(5),
+            };
+
+            var request = new Services.CollectRequest(
+                "127.0.0.1", port, UseSsh: false,
+                new Core.Terminal.DeviceCredentials("admin", "pass", "enable"), "");
+
+            Core.Terminal.DeviceCollectionResult result = Services.DeviceCollector.CollectAsync(
+                request, ["show version"], options, TimeSpan.FromSeconds(5), null, CancellationToken.None)
+                .GetAwaiter().GetResult();
+
+            Assert(result.FailureMessage is null, $"収集に失敗: {result.FailureMessage}");
+            Assert(result.LearnedHostname == "R1", $"ホスト名を学習できない: {result.LearnedHostname}");
+
+            Core.Terminal.CommandResult command = result.Commands.Single();
+            Assert(command.Output.Contains("Cisco IOS Software", StringComparison.Ordinal),
+                   $"出力が取れていない: {command.Output}");
+
+            // 保存テキストに認証情報が混ざらないこと
+            string report = Core.Terminal.DeviceReport.Render(result);
+            Assert(!report.Contains("pass", StringComparison.OrdinalIgnoreCase), "保存テキストにパスワードが混ざっている");
+
+            log.AppendLine($"        {command.Output.Split('\n').Length} 行を取得");
+        });
+
+        Check("収集: 引き継ぎファイルにパスワードの入れ物が無い", () =>
+        {
+            // 保存しないと決めたものは、置き場所を用意した時点で誰かが入れてしまう
+            System.Reflection.PropertyInfo[] properties = typeof(Core.Storage.HandoverPanels).GetProperties();
+
+            foreach (System.Reflection.PropertyInfo property in properties)
+            {
+                Assert(!property.Name.Contains("Password", StringComparison.OrdinalIgnoreCase),
+                       $"引き継ぎに {property.Name} がある");
+            }
+
+            foreach (System.Reflection.PropertyInfo property in typeof(Core.Storage.AppSettingsDocument).GetProperties())
+            {
+                Assert(!property.Name.Contains("Password", StringComparison.OrdinalIgnoreCase),
+                       $"設定に {property.Name} がある");
+            }
+        });
+
         Check("昇格の引き継ぎで画面の内容が往復する", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -900,6 +978,90 @@ internal static class SelfTest
     /// マージ済みの Application.Resources 越しでは、どちらのテーマが
     /// そのキーを持っているのか分からないため、直接読む。
     /// </summary>
+    /// <summary>
+    /// 自己診断用の偽 Cisco 機器。ログインを求め、enable を通し、
+    /// ページャ無効化に 1 本だけ応じ、show version に固定の出力を返す。
+    ///
+    /// <b>Telnet の制御(IAC)もわざと混ぜる</b> — 除去できていなければ
+    /// プロンプトの判定が狂って収集が失敗するので、実経路の検査になる。
+    /// </summary>
+    private static void ServeFakeCisco(System.Net.Sockets.TcpListener listener)
+    {
+        try
+        {
+            using System.Net.Sockets.TcpClient client = listener.AcceptTcpClient();
+            using System.Net.Sockets.NetworkStream stream = client.GetStream();
+
+            void Send(string text)
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(text);
+                stream.Write(bytes, 0, bytes.Length);
+                stream.Flush();
+            }
+
+            // IAC DO ECHO / IAC WILL SGA を先に投げる(こちらは断るはず)
+            stream.Write([255, 253, 1, 255, 251, 3], 0, 6);
+            Send("\r\nUser Access Verification\r\n\r\nUsername: ");
+
+            var line = new StringBuilder();
+            byte[] buffer = new byte[1024];
+            bool loggedIn = false;
+            bool enabled = false;
+            bool askedEnable = false;
+
+            while (true)
+            {
+                int read = stream.Read(buffer, 0, buffer.Length);
+                if (read <= 0) return;
+
+                for (int i = 0; i < read; i++)
+                {
+                    char c = (char)buffer[i];
+
+                    if (c != '\n')
+                    {
+                        if (c != '\r') line.Append(c);
+                        continue;
+                    }
+
+                    string text = line.ToString().Trim();
+                    line.Clear();
+
+                    if (!loggedIn)
+                    {
+                        if (text == "admin") Send("\r\nPassword: ");
+                        else if (text == "pass") { loggedIn = true; Send("\r\nR1>"); }
+                        else Send("\r\nUsername: ");
+                        continue;
+                    }
+
+                    if (!enabled)
+                    {
+                        if (text == "enable") { askedEnable = true; Send("\r\nPassword: "); continue; }
+
+                        if (askedEnable) { enabled = true; Send("\r\nR1#"); continue; }
+                    }
+
+                    string prompt = enabled ? "\r\nR1#" : "\r\nR1>";
+
+                    if (text.StartsWith("terminal ", StringComparison.Ordinal))
+                    {
+                        Send(text == "terminal length 0" ? prompt : "\r\n% Invalid input detected" + prompt);
+                        continue;
+                    }
+
+                    Send(text == "show version"
+                        ? "\r\nCisco IOS Software, Version 15.2(4)E\r\nuptime is 1 day" + prompt
+                        : prompt);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // 自己診断の相手役なので、切れたら黙って終わる
+        }
+    }
+
     private static HashSet<string> KeysOf(string relativeSource)
     {
         var dictionary = new ResourceDictionary { Source = new Uri(relativeSource, UriKind.Relative) };

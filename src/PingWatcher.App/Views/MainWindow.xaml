@@ -1193,6 +1193,167 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== 収集（Cisco 機器へ入って show の出力を集める） ===== -->
+            <TabItem x:Name="CollectTab" Header="収集" DataContext="{Binding Collect}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Button Content="宛先リストから取り込む" Command="{Binding ImportFromTargetsCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
+                                    ToolTip="Ping と TCP のタブに登録してある宛先を機器一覧へ足します。" />
+
+                            <TextBlock Text="接続" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,4,2" />
+                            <TextBox Width="44" Text="{Binding ConnectSeconds}" Margin="0,0,2,2" />
+                            <TextBlock Text="秒　無音" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,4,2" />
+                            <TextBox Width="44" Text="{Binding IdleSeconds}" Margin="0,0,12,2"
+                                     ToolTip="コマンドの応答が途切れてから諦めるまでの時間です。" />
+
+                            <Button Content="収集を開始" Command="{Binding StartCommand}" Margin="0,0,6,2" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                            <Button Content="保存先を開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Notice}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource Brush.Warn.Fg}"
+                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 左: 機器 -->
+                            <DockPanel Grid.Column="0">
+                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Margin="0,0,0,3"
+                                           Text="機器（ホスト[:ポート],ユーザー名[,メモ]　! で始まる行は注釈）" />
+                                <TextBox DockPanel.Dock="Top" Height="80"
+                                         Text="{Binding DeviceListText, UpdateSourceTrigger=LostFocus}"
+                                         FontFamily="{DynamicResource Font.Mono}"
+                                         FontSize="{DynamicResource Size.Caption}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalContentAlignment="Top" Margin="0,0,0,6" />
+
+                                <Border Background="{DynamicResource Brush.Surface}"
+                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                    <!--
+                                        この一覧だけ仮想化を切る。行コンテナを使い回すと、
+                                        PasswordBox はバインドを持たないので DataContext が変わっても
+                                        中身が入れ替わらず、スクロールしただけで別の機器の欄に
+                                        前の機器のパスワードが載る(そのまま送信されうる)。
+                                        機器は多くても数十台なので実害は無い。
+                                    -->
+                                    <ListBox ItemsSource="{Binding Rows}"
+                                             Background="Transparent" BorderThickness="0"
+                                             HorizontalContentAlignment="Stretch"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             VirtualizingPanel.IsVirtualizing="False">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,4">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="110" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <CheckBox Grid.Row="0" Grid.Column="0"
+                                                              IsChecked="{Binding Selected}"
+                                                              VerticalAlignment="Center" Margin="0,0,6,0"
+                                                              ToolTip="外すとこの機器は飛ばします。" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="1"
+                                                               Text="{Binding Host}" Style="{StaticResource Mono}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Memo}" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="2"
+                                                               Text="{Binding Status}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Status}" />
+
+                                                    <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                                               Margin="0,2,0,0">
+                                                        <TextBox Width="90" Text="{Binding UserName}"
+                                                                 FontSize="{DynamicResource Size.Caption}"
+                                                                 Margin="0,0,4,0"
+                                                                 ToolTip="ユーザー名だけは次回も覚えています。" />
+                                                        <PasswordBox Width="90" Margin="0,0,4,0" Tag="login"
+                                                                     PasswordChanged="OnCollectPasswordChanged"
+                                                                     ToolTip="ログインパスワード。保存しません。" />
+                                                        <PasswordBox Width="90" Tag="enable"
+                                                                     PasswordChanged="OnCollectPasswordChanged"
+                                                                     ToolTip="enable パスワード。無ければ空のままで構いません。" />
+                                                    </WrapPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Border>
+                            </DockPanel>
+
+                            <!-- 右: コマンド -->
+                            <DockPanel Grid.Column="2">
+                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,3">
+                                    <TextBlock Text="機種" Style="{StaticResource Caption}"
+                                               VerticalAlignment="Center" Margin="0,0,5,2" />
+                                    <ComboBox Width="130" Margin="0,0,12,2"
+                                              ItemsSource="{Binding Presets}"
+                                              SelectedItem="{Binding SelectedPreset}"
+                                              ToolTip="選ぶとコマンド欄をその機種のおすすめで置き換えます。">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBlock Text="{Binding CommandSummary}" Style="{StaticResource Caption}"
+                                               VerticalAlignment="Center" />
+                                </WrapPanel>
+
+                                <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding BlockedCommands}"
+                                              Margin="0,4,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" Style="{StaticResource Caption}"
+                                                       Foreground="{DynamicResource Brush.Warn.Fg}"
+                                                       TextWrapping="Wrap" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBox Text="{Binding CommandText, UpdateSourceTrigger=LostFocus}"
+                                         FontFamily="{DynamicResource Font.Mono}"
+                                         FontSize="{DynamicResource Size.Caption}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalContentAlignment="Top"
+                                         ToolTip="1 行 1 コマンド。! で始まる行は注釈です（行の途中の ! は解釈しません）。" />
+                            </DockPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== 差分比較（show ip route / show run を作業前後で見比べる） ===== -->
             <TabItem Header="差分比較" DataContext="{Binding DeviceCompare}">
                 <Border Style="{StaticResource Card}">

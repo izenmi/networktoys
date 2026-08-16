@@ -39,4 +39,18 @@ public sealed class AppSettingsDocument
     /// 見つからないときに選んでもらった場所をここに覚える。
     /// </summary>
     public string TeraTermPath { get; set; } = "";
+
+    /// <summary>収集タブの機器一覧（<c>ホスト[:ポート],ユーザー名[,メモ]</c>）。</summary>
+    public string CollectDevices { get; set; } = "";
+
+    /// <summary>収集タブのコマンド一覧。空なら機種プリセットの初期値を使う。</summary>
+    public string CollectCommands { get; set; } = "";
+
+    /// <summary>
+    /// 収集タブで前に使ったユーザー名（ホスト名がキー）。
+    ///
+    /// <b>パスワードはここに入れない。</b>入れ物も作らない — 保存しないと決めたものは、
+    /// 置き場所を用意した時点で誰かが入れてしまう。
+    /// </summary>
+    public Dictionary<string, string> CollectUserNames { get; set; } = [];
 }
