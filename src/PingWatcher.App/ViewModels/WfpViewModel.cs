@@ -296,6 +296,11 @@ public sealed class WfpViewModel : ObservableObject
 
         int outbound = result.Events.Count(e => e.Direction == WfpDirection.Outbound);
 
+        // 持ち主が居るとすれば「送信」かつ「ソケットを使う通信」だけ。
+        // ICMP は送信でもソケットに紐づかないので、そもそもアプリが存在しない
+        int expected = result.Events.Count(e => e.Direction == WfpDirection.Outbound
+                                             && WfpFormat.CanHaveApplication(e.Protocol));
+
         string cause;
 
         if ((result.FlagsSeen & AppIdSet) != 0)
@@ -303,18 +308,25 @@ public sealed class WfpViewModel : ObservableObject
             // 付いているのに 1 件も読めていない。これだけはこちら側の疑い
             cause = "アプリの情報は付いているのに読み出せていません。読み取りの誤りの可能性があります。";
         }
-        else if (outbound == 0)
+        else if (expected > 0)
         {
-            // 実測で踏んだ形（フラグ 0x011F＝パケットの情報だけ）。
-            // 受信の遮断は届く前に落ちているので、持ち主のアプリが存在しない
-            cause = "遮断がすべて受信だからです。受信の遮断は通信が届く前に落ちているため、"
-                  + "持ち主のアプリが存在せず、Windows も情報を付けません。"
-                  + "送信の遮断が起きるとプロセス名が出ます。";
+            // TCP/UDP の送信が落ちているならプロセスが分かるはず。分からないのはおかしい
+            cause = $"TCP/UDP の送信が {expected:N0} 件遮断されているのにアプリの情報が付いていません。"
+                  + "この Windows が付けていない可能性があります。";
+        }
+        else if (outbound > 0)
+        {
+            // 実測で踏んだ形。送信はあるが全部 ICMP だった
+            cause = "持ち主のアプリがある遮断がまだ無いからです。"
+                  + "受信の遮断は通信が届く前に落ちているため持ち主が存在せず、"
+                  + "送信の遮断も ICMP などソケットを使わない通信は同じです。"
+                  + "TCP や UDP の送信が遮断されるとプロセス名が出ます。";
         }
         else
         {
-            cause = $"送信の遮断が {outbound:N0} 件あるのにアプリの情報が付いていません。"
-                  + "この Windows が付けていない可能性があります。";
+            cause = "遮断がすべて受信だからです。受信の遮断は通信が届く前に落ちているため、"
+                  + "持ち主のアプリが存在せず、Windows も情報を付けません。"
+                  + "TCP や UDP の送信が遮断されるとプロセス名が出ます。";
         }
 
         string skipped = result.SkippedByFlags > 0
@@ -323,6 +335,7 @@ public sealed class WfpViewModel : ObservableObject
 
         return $"ℹ プロセス欄が「—」なのは{cause}"
              + $"（遮断 {result.Events.Count:N0} 件のうち送信 {outbound:N0} 件"
+             + $"・うち TCP/UDP {expected:N0} 件"
              + $" / 見たフラグ 0x{result.FlagsSeen:X4}{skipped}）";
     }
 

@@ -168,6 +168,28 @@ public class WfpBlockedEventsTests
         Assert.Contains("届く前に落ちている", row.ProcessNote, StringComparison.Ordinal);
     }
 
+    [Theory]
+    // ソケットを使う通信だけが持ち主のアプリを持ちうる
+    [InlineData((byte)6, true)]     // TCP
+    [InlineData((byte)17, true)]    // UDP
+    [InlineData((byte)1, false)]    // ICMP
+    [InlineData((byte)58, false)]   // ICMPv6
+    [InlineData((byte)50, false)]   // ESP
+    public void Only_socket_protocols_can_name_an_application(byte protocol, bool expected)
+        => Assert.Equal(expected, WfpFormat.CanHaveApplication(protocol));
+
+    [Fact]
+    public void An_outbound_icmp_block_explains_that_it_has_no_socket()
+    {
+        // 実機で踏んだ形。送信でもアプリ名が出ないのは、ICMP がソケットを
+        // 使わないため。方向だけ見ると「送信なのに出ない、おかしい」と読めてしまう
+        WfpBlockedRow row = Assert.Single(WfpEventView.Group(
+            [Event(app: "", protocol: 1, direction: WfpDirection.Outbound)]));
+
+        Assert.Equal("—", row.ProcessName);
+        Assert.Contains("ICMP はソケットに紐づかない", row.ProcessNote, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_known_process_shows_its_full_path()
     {

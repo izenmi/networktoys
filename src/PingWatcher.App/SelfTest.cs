@@ -867,11 +867,13 @@ internal static class SelfTest
                 LayerId: 2,
                 IsLoopback: true);
 
-            string Notice(uint flagsSeen, bool inbound)
+            string Notice(uint flagsSeen, bool inbound, byte protocol = 6)
             {
-                Core.Net.WfpBlockedEvent e = inbound
-                    ? one with { Direction = Core.Net.WfpDirection.Inbound }
-                    : one;
+                Core.Net.WfpBlockedEvent e = one with
+                {
+                    Direction = inbound ? Core.Net.WfpDirection.Inbound : Core.Net.WfpDirection.Outbound,
+                    Protocol = protocol,
+                };
 
                 // アプリ情報あり 0 件の場合だけを見る（1 件でもあれば案内は出ない）
                 return ViewModels.WfpViewModel.DescribeAppIdGapForTest(
@@ -888,9 +890,15 @@ internal static class SelfTest
             Assert(Notice(0x011F, inbound: true).Contains("すべて受信", StringComparison.Ordinal),
                    "受信だけなのに別の理由を出している");
 
-            // 送信の遮断があるのにアプリ情報が無いなら、それは環境の話
-            Assert(Notice(0x011F, inbound: false).Contains("送信の遮断が", StringComparison.Ordinal),
-                   "送信があるのに受信のせいにしている");
+            // 送信でも ICMP はソケットを使わないので、アプリが存在しない（実機で踏んだ形）
+            Assert(Notice(0x011F, inbound: false, protocol: 1)
+                       .Contains("ソケットを使わない", StringComparison.Ordinal),
+                   "ICMP の送信を「おかしい」と言っている");
+
+            // TCP/UDP の送信が落ちているのに分からないなら、それは環境の話
+            Assert(Notice(0x011F, inbound: false, protocol: 6)
+                       .Contains("TCP/UDP の送信が", StringComparison.Ordinal),
+                   "TCP の送信が落ちているのに理由を濁している");
 
             // フラグが立っているのに 1 件も読めない = こちらの読み方が悪い
             Assert(Notice(0x013F, inbound: true).Contains("読み出せていません", StringComparison.Ordinal),

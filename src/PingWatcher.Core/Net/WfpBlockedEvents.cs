@@ -51,7 +51,8 @@ public sealed record WfpBlockedRow(
     string FilterId,
     string LayerId,
     string SortKey,
-    WfpDirection Direction = WfpDirection.Unknown)
+    WfpDirection Direction = WfpDirection.Unknown,
+    byte ProtocolNumber = 0)
 {
     /// <summary>
     /// プロセス欄にかざす説明。<b>「—」だけでは壊れて見える</b>ので理由を添える。
@@ -59,6 +60,8 @@ public sealed record WfpBlockedRow(
     /// </summary>
     public string ProcessNote => ProcessName switch
     {
+        "—" when !WfpFormat.CanHaveApplication(ProtocolNumber)
+            => $"{Protocol} はソケットに紐づかないため、持ち主のアプリがありません。",
         "—" when Direction == WfpDirection.Inbound
             => "受信の遮断です。通信が届く前に落ちているため、持ち主のアプリがありません。",
         "—" => "この遮断にアプリの情報は付いていません。",
@@ -76,6 +79,16 @@ public sealed record WfpBlockedRow(
 /// <summary>WFP のイベントを人が読める文字列にする。</summary>
 public static class WfpFormat
 {
+    /// <summary>
+    /// その通信に<b>持ち主のアプリがあり得るか</b>。TCP と UDP だけが真。
+    ///
+    /// アプリの情報はソケットを開いた主に紐づく。ICMP・IGMP・ESP などは
+    /// ソケットを持たないので、遮断されても持ち主が存在せず、
+    /// Windows はアプリの情報を付けない（付けられない）。
+    /// プロセス欄が「—」になる理由の切り分けに使う。
+    /// </summary>
+    public static bool CanHaveApplication(byte protocol) => protocol is 6 or 17;
+
     /// <summary>
     /// WFP の IPv4 アドレスは<b>ホストバイトオーダー</b>で入っている。
     ///
@@ -243,6 +256,7 @@ public static class WfpEventView
                 DirectionText: WfpFormat.Direction(latest.Direction, latest.DirectionRaw),
                 Direction: latest.Direction,
                 Protocol: WfpFormat.Protocol(latest.Protocol),
+                ProtocolNumber: latest.Protocol,
                 Local: WfpFormat.Endpoint(latest.Local, latest.LocalPort, latest.ScopeId),
                 Remote: WfpFormat.Endpoint(latest.Remote, latest.RemotePort, latest.ScopeId),
                 ProcessName: path.Length == 0 ? "—"
