@@ -64,13 +64,18 @@ public class CheckPlanTests
     }
 
     [Fact]
-    public void Only_http_is_affected_by_the_proxy()
+    public void Only_http_based_checks_are_affected_by_the_proxy()
     {
-        // ここを間違えると「プロキシを変えたのに結果が同じ」の説明が付かなくなる
-        Assert.True(new CheckItem("a", CheckKind.Http, "http://a/").UsesProxy);
+        // ここを間違えると「プロキシを変えたのに結果が同じ」の説明が付かなくなる。
+        // 速度もプロキシ経由で測る（どちらがボトルネックかを見るのが要）
+        CheckKind[] throughProxy =
+            [CheckKind.Http, CheckKind.Download, CheckKind.Upload, CheckKind.FastCom];
 
-        foreach (CheckKind kind in Enum.GetValues<CheckKind>().Where(k => k != CheckKind.Http))
-            Assert.False(new CheckItem("a", kind, "a").UsesProxy);
+        foreach (CheckKind kind in throughProxy)
+            Assert.True(new CheckItem("a", kind, "a").UsesProxy, $"{kind} がプロキシを通らない");
+
+        foreach (CheckKind kind in Enum.GetValues<CheckKind>().Except(throughProxy))
+            Assert.False(new CheckItem("a", kind, "a").UsesProxy, $"{kind} がプロキシを通ってしまう");
     }
 
     // ===== 宛先の分解 =====
