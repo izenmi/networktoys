@@ -2634,7 +2634,6 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.5]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.6]}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.7]}" />
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag=""
                                             MouseLeftButtonDown="OnListHeaderSort"
@@ -2663,7 +2662,6 @@
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
                                         <TextBlock Text="{Binding CountHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
                                     </Border>
-                                    <TextBlock Grid.Column="7" Text="フィルタ / 層" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
 
                                     <!-- 列幅のつまみ。星列(3・4)より左は右端、右は左端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
@@ -2676,8 +2674,6 @@
                                            Tag="wfp.5" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
                                            Tag="wfp.6" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                           Tag="wfp.7" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1"
                                         Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -2699,7 +2695,6 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.5]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.6]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.7]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding TimeText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
@@ -2719,14 +2714,6 @@
                                                 <TextBlock Grid.Column="6" Text="{Binding CountText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
                                                            HorizontalAlignment="Right" />
-                                                <TextBlock Grid.Column="7"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource Brush.TextMuted}"
-                                                           HorizontalAlignment="Right">
-                                                    <Run Text="{Binding FilterId, Mode=OneWay}" />
-                                                    <Run Text="/" />
-                                                    <Run Text="{Binding LayerId, Mode=OneWay}" />
-                                                </TextBlock>
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
