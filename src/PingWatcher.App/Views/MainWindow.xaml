@@ -2227,13 +2227,11 @@
             <!-- ===== その他（たまにしか使わない道具。押すとメニューが出る） ===== -->
             <TabItem x:Name="OtherTab" Header="その他　15 ▾">
                 <DockPanel>
-                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                   ToolTip="{x:Static help:TabHelp.Other}" />
-                        <TextBlock Style="{StaticResource TabIntro}" Text="たまにしか使わない道具をまとめてあります。" />
-                    </DockPanel>
-
+                    <!--
+                        このタブには 1 行の説明も ⓘ も置かない（2026-08-16 ユーザー指示）。
+                        中身を選ぶだけの入れ物で、説明する内容が無い。
+                        自己診断の「どのタブにも説明がある」検査からも外してある。
+                    -->
                     <!--
                         中身は 15 枚あるので、帯には「いま開いているもの」だけを出す。
                         全部並べると名前が読めなくなる。切り替えはタブの見出しを押して
@@ -3132,6 +3130,590 @@
                                 </DockPanel>
                             </Border>
                         </Grid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- FTP: 機器の config バックアップ受け・平文 -->
+            <TabItem Tag="受ける" Header="FTP" DataContext="{Binding Ftp}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="{x:Static help:TabHelp.Ftp}" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に FTP サーバにして、設定を受け取ります。" />
+                        </DockPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="標準は 21。使えないときは 2121 などを試してください。" />
+                            <TextBlock Text="ユーザー" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="90" Text="{Binding User, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,8,0"
+                                     ToolTip="空欄なら誰でも接続できます（anonymous）。" />
+                            <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <!-- 伏せ字にする。TextBox にすると画面にも F12 の画面保存にも平文で残る
+                                 (Meraki の API キーや収集タブのパスワードと同じ理由)。
+                                 PasswordBox は中身をバインドできないので、変更のたびに VM へ手で押し込む -->
+                            <PasswordBox Width="90" Tag="ftp"
+                                         PasswordChanged="OnFileServerPasswordChanged"
+                                         Margin="0,0,12,0"
+                                         ToolTip="空欄なら誰でも接続できます。保存しません（毎回入力）。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
+                            <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Text="機器から受け取ったファイルは、exe と同じ場所の ftp フォルダに入ります。機器側では次のように打ちます。" />
+                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
+                                         Margin="0,4,0,0" TextWrapping="Wrap" />
+                                <Button Content="コマンドをコピー" Command="{Binding CopyCommandCommand}"
+                                        Style="{StaticResource Button.Subtle}"
+                                        HorizontalAlignment="Left" Margin="0,4,0,0"
+                                        ToolTip="上の案内はパスワードを伏せてあります。こちらは実物（パスワード入り）を写します。" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}"
+                                           Text="⚠ 通信は暗号化されません（平文）。使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールでこのPCの通信を許可する必要があります。" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
+                                      Tag="ftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="ftplog.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="ftplog.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                <ListBox ItemsSource="{Binding Log}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.1]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- TFTP: 認証なし・UDP -->
+            <TabItem Tag="受ける" Header="TFTP" DataContext="{Binding Tftp}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="{x:Static help:TabHelp.Tftp}" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に TFTP サーバにして、設定を受け取ります。" />
+                        </DockPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="標準は 69。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
+                            <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Text="機器とやり取りしたファイルは、exe と同じ場所の tftp フォルダに入ります。機器側では次のように打ちます。" />
+                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
+                                         Margin="0,4,0,0" TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}"
+                                           Text="⚠ TFTP は認証も暗号化もありません。使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールで許可が必要です。" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
+                                      Tag="tftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="tftplog.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="tftplog.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                <ListBox ItemsSource="{Binding Log}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.1]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- SFTP: SSH 越しで暗号化 -->
+            <TabItem Tag="受ける" Header="SFTP" DataContext="{Binding Sftp}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="{x:Static help:TabHelp.Sftp}" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に SFTP サーバにします（暗号化されます）。" />
+                        </DockPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="標準は 22。" />
+                            <TextBlock Text="ユーザー" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="90" Text="{Binding User, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,8,0"
+                                     ToolTip="空欄なら認証なしで接続できます。" />
+                            <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <!-- 伏せ字にする。TextBox にすると画面にも F12 の画面保存にも平文で残る
+                                 (Meraki の API キーや収集タブのパスワードと同じ理由)。
+                                 PasswordBox は中身をバインドできないので、変更のたびに VM へ手で押し込む -->
+                            <PasswordBox Width="90" Tag="sftp"
+                                         PasswordChanged="OnFileServerPasswordChanged"
+                                         Margin="0,0,12,0"
+                                         ToolTip="空欄なら認証なしです。保存しません（毎回入力）。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
+                            <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Text="やり取りしたファイルは、exe と同じ場所の sftp フォルダに入ります。SSH 越しなので通信は暗号化されます。" />
+                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
+                                         Margin="0,4,0,0" TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}"
+                                           Text="⚠ 使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールで許可が必要です。ホスト鍵は初回に作られ、以後は同じものを使います。" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="接続の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
+                                      Tag="sftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="sftplog.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="sftplog.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                <ListBox ItemsSource="{Binding Log}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.1]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ===== syslog（機器からの syslog を受ける） ===== -->
+            <TabItem Tag="受ける" Header="syslog" DataContext="{Binding Syslog}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="{x:Static help:TabHelp.Syslog}" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器が送ってくる syslog を受けて一覧にします。" />
+                        </DockPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="標準は 514。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
+                            <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <ComboBox Width="120" Margin="0,0,6,0"
+                                      ItemsSource="{Binding SeverityFilters}"
+                                      SelectedItem="{Binding SelectedSeverity}"
+                                      ToolTip="重大度で絞り込みます。0=emerg 〜 7=debug で、小さいほど重い扱いです。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBox Width="160" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     ToolTip="本文と送信元の部分一致で絞り込みます。待受は止まりません。" />
+                        </StackPanel>
+
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
+                                         TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}"
+                                           Text="⚠ 受信内容は logs\syslog-日時.log にも残ります。初回はWindowsのファイアウォールで許可が必要です。" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="受信したメッセージ" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
+                                      Tag="syslog" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.2]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="重大度" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="本文" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(3)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="syslog.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="syslog.1" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="syslog.2" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                <ListBox ItemsSource="{Binding Log}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}"
+                                                  ContextMenu="{StaticResource RowMenu.Device}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.2]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <!-- 重大度は文字で出す。色は補助でしかない(色覚多様性下で潰れる) -->
+                                                <TextBlock x:Name="SeverityText" Grid.Column="2" Text="{Binding SeverityText}"
+                                                           Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock x:Name="BodyText" Grid.Column="3" Text="{Binding Text}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding Text}" />
+                                            </Grid>
+
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsSevere}" Value="True">
+                                                    <Setter TargetName="SeverityText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                    <Setter TargetName="BodyText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                    <Setter TargetName="SeverityText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                    <Setter TargetName="BodyText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- Trap 受信 -->
+            <TabItem Tag="受ける" Header="SNMP Trap" DataContext="{Binding SnmpTrap}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="{x:Static help:TabHelp.SnmpTrap}" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器が送ってくる SNMP Trap を受けて一覧にします。" />
+                        </DockPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="標準は 162。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
+                            <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
+                                         TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}"
+                                           Text="⚠ 受信内容は logs\snmptrap-日時.log にも残ります。初回はWindowsのファイアウォールで許可が必要です。" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="受信した Trap" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
+                                      Tag="snmptrap" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="snmptrap.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="snmptrap.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                <ListBox ItemsSource="{Binding Log}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                             ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}"
+                                                  ContextMenu="{StaticResource RowMenu.Device}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding Text}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
                     </DockPanel>
                 </Border>
             </TabItem>
@@ -4173,590 +4755,6 @@
                                                 <TextBlock Grid.Column="3" Text="{Binding Value}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                            ToolTip="{Binding Value}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </DockPanel>
-                        </Border>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
-            <!-- FTP: 機器の config バックアップ受け・平文 -->
-            <TabItem Tag="受ける" Header="FTP" DataContext="{Binding Ftp}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                       ToolTip="{x:Static help:TabHelp.Ftp}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に FTP サーバにして、設定を受け取ります。" />
-                        </DockPanel>
-
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
-                            <Button Content="停止" Command="{Binding StopCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
-                                     ToolTip="標準は 21。使えないときは 2121 などを試してください。" />
-                            <TextBlock Text="ユーザー" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="90" Text="{Binding User, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,8,0"
-                                     ToolTip="空欄なら誰でも接続できます（anonymous）。" />
-                            <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <!-- 伏せ字にする。TextBox にすると画面にも F12 の画面保存にも平文で残る
-                                 (Meraki の API キーや収集タブのパスワードと同じ理由)。
-                                 PasswordBox は中身をバインドできないので、変更のたびに VM へ手で押し込む -->
-                            <PasswordBox Width="90" Tag="ftp"
-                                         PasswordChanged="OnFileServerPasswordChanged"
-                                         Margin="0,0,12,0"
-                                         ToolTip="空欄なら誰でも接続できます。保存しません（毎回入力）。" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
-                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
-                            <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
-                                    Style="{StaticResource Button.Subtle}" />
-                        </StackPanel>
-
-                        <Border DockPanel.Dock="Top"
-                                Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                           Text="機器から受け取ったファイルは、exe と同じ場所の ftp フォルダに入ります。機器側では次のように打ちます。" />
-                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
-                                         Margin="0,4,0,0" TextWrapping="Wrap" />
-                                <Button Content="コマンドをコピー" Command="{Binding CopyCommandCommand}"
-                                        Style="{StaticResource Button.Subtle}"
-                                        HorizontalAlignment="Left" Margin="0,4,0,0"
-                                        ToolTip="上の案内はパスワードを伏せてあります。こちらは実物（パスワード入り）を写します。" />
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                           Foreground="{DynamicResource Brush.Warn.Fg}"
-                                           Text="⚠ 通信は暗号化されません（平文）。使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールでこのPCの通信を許可する必要があります。" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <Border Background="{DynamicResource Brush.Surface}"
-                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="ftplog" MouseLeftButtonDown="OnTableHeaderSort">
-                                    <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.0]}" />
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.1]}" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
-                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
-                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="ftplog.0" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="ftplog.1" DragDelta="OnTableColumnResize" />
-                                </Grid>
-                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
-                                         Style="{StaticResource TargetListBox}"
-                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                         VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Height="{DynamicResource Size.RowHeight}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.0]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.1]}" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </DockPanel>
-                        </Border>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
-            <!-- TFTP: 認証なし・UDP -->
-            <TabItem Tag="受ける" Header="TFTP" DataContext="{Binding Tftp}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                       ToolTip="{x:Static help:TabHelp.Tftp}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に TFTP サーバにして、設定を受け取ります。" />
-                        </DockPanel>
-
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
-                            <Button Content="停止" Command="{Binding StopCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
-                                     ToolTip="標準は 69。" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
-                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
-                            <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
-                                    Style="{StaticResource Button.Subtle}" />
-                        </StackPanel>
-
-                        <Border DockPanel.Dock="Top"
-                                Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                           Text="機器とやり取りしたファイルは、exe と同じ場所の tftp フォルダに入ります。機器側では次のように打ちます。" />
-                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
-                                         Margin="0,4,0,0" TextWrapping="Wrap" />
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                           Foreground="{DynamicResource Brush.Warn.Fg}"
-                                           Text="⚠ TFTP は認証も暗号化もありません。使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールで許可が必要です。" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <Border Background="{DynamicResource Brush.Surface}"
-                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="tftplog" MouseLeftButtonDown="OnTableHeaderSort">
-                                    <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.0]}" />
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.1]}" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
-                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
-                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="tftplog.0" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="tftplog.1" DragDelta="OnTableColumnResize" />
-                                </Grid>
-                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
-                                         Style="{StaticResource TargetListBox}"
-                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                         VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Height="{DynamicResource Size.RowHeight}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.0]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.1]}" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </DockPanel>
-                        </Border>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
-            <!-- SFTP: SSH 越しで暗号化 -->
-            <TabItem Tag="受ける" Header="SFTP" DataContext="{Binding Sftp}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                       ToolTip="{x:Static help:TabHelp.Sftp}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="この PC を一時的に SFTP サーバにします（暗号化されます）。" />
-                        </DockPanel>
-
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
-                            <Button Content="停止" Command="{Binding StopCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
-                                     ToolTip="標準は 22。" />
-                            <TextBlock Text="ユーザー" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="90" Text="{Binding User, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,8,0"
-                                     ToolTip="空欄なら認証なしで接続できます。" />
-                            <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <!-- 伏せ字にする。TextBox にすると画面にも F12 の画面保存にも平文で残る
-                                 (Meraki の API キーや収集タブのパスワードと同じ理由)。
-                                 PasswordBox は中身をバインドできないので、変更のたびに VM へ手で押し込む -->
-                            <PasswordBox Width="90" Tag="sftp"
-                                         PasswordChanged="OnFileServerPasswordChanged"
-                                         Margin="0,0,12,0"
-                                         ToolTip="空欄なら認証なしです。保存しません（毎回入力）。" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
-                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
-                            <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
-                                    Style="{StaticResource Button.Subtle}" />
-                        </StackPanel>
-
-                        <Border DockPanel.Dock="Top"
-                                Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                           Text="やり取りしたファイルは、exe と同じ場所の sftp フォルダに入ります。SSH 越しなので通信は暗号化されます。" />
-                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
-                                         Margin="0,4,0,0" TextWrapping="Wrap" />
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                           Foreground="{DynamicResource Brush.Warn.Fg}"
-                                           Text="⚠ 使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールで許可が必要です。ホスト鍵は初回に作られ、以後は同じものを使います。" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <Border Background="{DynamicResource Brush.Surface}"
-                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="接続の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="sftplog" MouseLeftButtonDown="OnTableHeaderSort">
-                                    <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.0]}" />
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.1]}" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
-                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
-                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="sftplog.0" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="sftplog.1" DragDelta="OnTableColumnResize" />
-                                </Grid>
-                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
-                                         Style="{StaticResource TargetListBox}"
-                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                         VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Height="{DynamicResource Size.RowHeight}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.0]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.1]}" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </DockPanel>
-                        </Border>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
-            <!-- ===== syslog（機器からの syslog を受ける） ===== -->
-            <TabItem Tag="受ける" Header="syslog" DataContext="{Binding Syslog}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                       ToolTip="{x:Static help:TabHelp.Syslog}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="機器が送ってくる syslog を受けて一覧にします。" />
-                        </DockPanel>
-
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
-                            <Button Content="停止" Command="{Binding StopCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
-                                     ToolTip="標準は 514。" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
-                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
-                            <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                            <ComboBox Width="120" Margin="0,0,6,0"
-                                      ItemsSource="{Binding SeverityFilters}"
-                                      SelectedItem="{Binding SelectedSeverity}"
-                                      ToolTip="重大度で絞り込みます。0=emerg 〜 7=debug で、小さいほど重い扱いです。">
-                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Label}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <TextBox Width="160" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     ToolTip="本文と送信元の部分一致で絞り込みます。待受は止まりません。" />
-                        </StackPanel>
-
-                        <Border DockPanel.Dock="Top"
-                                Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
-                            <StackPanel>
-                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
-                                         TextWrapping="Wrap" />
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                           Foreground="{DynamicResource Brush.Warn.Fg}"
-                                           Text="⚠ 受信内容は logs\syslog-日時.log にも残ります。初回はWindowsのファイアウォールで許可が必要です。" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <Border Background="{DynamicResource Brush.Surface}"
-                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="受信したメッセージ" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="syslog" MouseLeftButtonDown="OnTableHeaderSort">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.2]}" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="2" Text="重大度" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="3" Text="本文" Style="{StaticResource Caption}" />
-                                    <!-- 列幅のつまみ。星列(3)より左なので右端の境界に置く -->
-                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="syslog.0" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="syslog.1" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="syslog.2" DragDelta="OnTableColumnResize" />
-                                </Grid>
-                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
-                                         Style="{StaticResource TargetListBox}"
-                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                         VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Height="{DynamicResource Size.RowHeight}"
-                                                  ContextMenu="{StaticResource RowMenu.Device}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.2]}" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <!-- 重大度は文字で出す。色は補助でしかない(色覚多様性下で潰れる) -->
-                                                <TextBlock x:Name="SeverityText" Grid.Column="2" Text="{Binding SeverityText}"
-                                                           Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock x:Name="BodyText" Grid.Column="3" Text="{Binding Text}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                           ToolTip="{Binding Text}" />
-                                            </Grid>
-
-                                            <DataTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding IsSevere}" Value="True">
-                                                    <Setter TargetName="SeverityText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                                                    <Setter TargetName="BodyText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsWarning}" Value="True">
-                                                    <Setter TargetName="SeverityText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                                                    <Setter TargetName="BodyText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
-                                                </DataTrigger>
-                                            </DataTemplate.Triggers>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </DockPanel>
-                        </Border>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
-            <!-- Trap 受信 -->
-            <TabItem Tag="受ける" Header="SNMP Trap" DataContext="{Binding SnmpTrap}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                       ToolTip="{x:Static help:TabHelp.SnmpTrap}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="機器が送ってくる SNMP Trap を受けて一覧にします。" />
-                        </DockPanel>
-
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
-                            <Button Content="停止" Command="{Binding StopCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
-                                     ToolTip="標準は 162。" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
-                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
-                            <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
-                                    Style="{StaticResource Button.Subtle}" />
-                        </StackPanel>
-
-                        <Border DockPanel.Dock="Top"
-                                Background="{DynamicResource Brush.SurfaceAlt}"
-                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
-                            <StackPanel>
-                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
-                                         TextWrapping="Wrap" />
-                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                           Foreground="{DynamicResource Brush.Warn.Fg}"
-                                           Text="⚠ 受信内容は logs\snmptrap-日時.log にも残ります。初回はWindowsのファイアウォールで許可が必要です。" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <Border Background="{DynamicResource Brush.Surface}"
-                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="受信した Trap" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="snmptrap" MouseLeftButtonDown="OnTableHeaderSort">
-                                    <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
-                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
-                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
-                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="snmptrap.0" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="snmptrap.1" DragDelta="OnTableColumnResize" />
-                                </Grid>
-                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
-                                         Style="{StaticResource TargetListBox}"
-                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                         VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
-                             ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Height="{DynamicResource Size.RowHeight}"
-                                                  ContextMenu="{StaticResource RowMenu.Device}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                           ToolTip="{Binding Text}" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>

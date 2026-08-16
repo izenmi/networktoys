@@ -20,27 +20,6 @@ namespace PingWatcher.App.Help;
 /// </summary>
 internal static class TabHelp
 {
-    /// <summary>その他</summary>
-    public const string Other =
-        """
-        その他
-
-        中にあるもの
-        ・調べる … TCP Ping ／ Traceroute ／ スキャン ／ DNS ／ 通信状況 ／ サブネット計算
-        ・NW機器 … ログ採取 ／ showコマンド整形 ／ Meraki ／ SNMP Get
-        ・受ける … FTP ／ TFTP ／ SFTP ／ syslog ／ SNMP Trap
-
-        使い方
-        ・タブの見出しを押すと、分類ごとに並んだメニューが降りてくる
-        ・選ぶと、その画面に切り替わる
-        ・帯には「いま開いているもの」だけを出す（15 枚を並べると読めないため）
-
-        知っておくとよいこと
-        ・どれも単発で使う道具なので、1 つにまとめて畳んである
-        ・「受ける」の 5 つは使い捨てのサーバで、押したときだけ待ち受ける
-        ・初回は Windows ファイアウォールの許可が要る（受ける側）
-        """;
-
     /// <summary>Ping</summary>
     public const string Ping =
         """

@@ -685,8 +685,12 @@ internal static class SelfTest
 
             foreach (System.Windows.Controls.TabItem tab in AllTabs(window!.MainTabs))
             {
+                // 「その他」は中身を選ぶだけの入れ物で、説明する内容が無い
+                // （2026-08-16 ユーザー指示で説明と ⓘ を外した）
+                if (ReferenceEquals(tab, window.OtherTab)) continue;
+
                 string header = tab.Header?.ToString() ?? "";
-                string name = header.Split('　')[0];   // 「調べる　6 ▾」→「調べる」
+                string name = header.Split('　')[0];   // 「その他　15 ▾」→「その他」
 
                 // ⓘ は Style ごと引くので、Text ではなく ToolTip の有無で見る
                 System.Windows.Controls.TextBlock[] blocks =
