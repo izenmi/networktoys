@@ -46,8 +46,13 @@ public static class WinHttpProxyScript
     /// 引用符と改行を落とす。
     ///
     /// この文字列は<b>昇格して実行されるスクリプトに入る</b>ので、引用符を閉じられると
-    /// 後ろに別のコマンドを継ぎ足せてしまう。入力欄はユーザーのものだが、
-    /// 配られた手順書からの貼り付けもありうる。ここで確実に落とす。
+    /// 後ろに別のコマンドを継ぎ足せてしまう。改行も同じ理由で落とす。
+    /// 入力欄はユーザーのものだが、配られた手順書からの貼り付けもありうる。
+    ///
+    /// <b><c>&lt;</c> <c>&gt;</c> <c>&amp;</c> の類は落とさない。</b>
+    /// netsh はスクリプトファイルを自分で読むのでコマンドプロンプトを経由せず、
+    /// これらに特別な意味は無い。むしろ除外リストの <c>&lt;local&gt;</c> は
+    /// <b>いちばんよく使う値</b>で、落とすと機能そのものが壊れる。
     /// </summary>
     internal static string Sanitize(string? value)
     {
@@ -57,7 +62,7 @@ public static class WinHttpProxyScript
 
         foreach (char c in value)
         {
-            if (c is '"' or '\r' or '\n' or '&' or '|' or '<' or '>' or '^') continue;
+            if (c is '"' or '\r' or '\n') continue;
 
             text.Append(c);
         }

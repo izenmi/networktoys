@@ -44,23 +44,31 @@ public class WinHttpProxyScriptTests
     // ===== 組み立ての安全 =====
 
     [Theory]
-    [InlineData("""proxy:8080" & calc""", "proxy:8080  calc")]
+    [InlineData("""proxy:8080" bypass-list="x""", "proxy:8080 bypass-list=x")]
     [InlineData("proxy:8080\r\nwinhttp reset proxy", "proxy:8080winhttp reset proxy")]
-    [InlineData("a|b", "ab")]
-    [InlineData("a>b<c^d", "abcd")]
-    public void Quotes_and_shell_characters_cannot_break_out(string given, string expected)
+    public void Quotes_and_newlines_cannot_break_out(string given, string expected)
         => Assert.Equal(expected, WinHttpProxyScript.Sanitize(given));
+
+    [Theory]
+    [InlineData("<local>")]
+    [InlineData("<local>;*.example.jp")]
+    [InlineData("a&b|c^d")]
+    public void Everything_else_is_left_alone(string given)
+    {
+        // netsh はスクリプトを自分で読む(コマンドプロンプトを経由しない)ので
+        // これらに特別な意味は無い。<local> は除外リストで最もよく使う値
+        Assert.Equal(given, WinHttpProxyScript.Sanitize(given));
+    }
 
     [Fact]
     public void The_built_line_never_contains_a_stray_quote()
     {
-        var plan = new ProxyPlan(ProxyMode.Fixed, "", """evil:8080" & shutdown /r""", "");
+        var plan = new ProxyPlan(ProxyMode.Fixed, "", """evil:8080" bypass-list="all""", "");
 
         string line = WinHttpProxyScript.Build(plan)[0];
 
         // 引用符は自分で足した 2 つだけ。入力側の分が残っていたら閉じられている
         Assert.Equal(2, line.Count(c => c == '"'));
-        Assert.DoesNotContain("&", line, StringComparison.Ordinal);
     }
 
     [Fact]
