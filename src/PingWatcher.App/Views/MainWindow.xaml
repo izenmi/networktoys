@@ -3194,7 +3194,8 @@
                                          余白を持つので、指定しないと 1 行ぶん背が高くなる -->
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Height="{DynamicResource Size.RowHeight}" ToolTip="{Binding ProcessPath}"
+                                            <!-- 説明はプロセス欄に付ける。行全体に付けるとパスが空のとき空の枠が出る -->
+                                            <Grid Height="{DynamicResource Size.RowHeight}"
                                                   ContextMenu="{StaticResource RowMenu.Address}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
@@ -3226,7 +3227,8 @@
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="5" Text="{Binding ProcessName}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding ProcessNote}" />
                                                 <TextBlock Grid.Column="6" Text="{Binding CountText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
                                                            HorizontalAlignment="Right" />

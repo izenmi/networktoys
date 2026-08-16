@@ -867,24 +867,34 @@ internal static class SelfTest
                 LayerId: 2,
                 IsLoopback: true);
 
-            string Notice(int withAppId, uint flagsSeen)
+            string Notice(uint flagsSeen, bool inbound)
             {
-                var vm = new ViewModels.WfpViewModel();
-                var result = new Interop.WfpReadResult([one], 1, 1, null, withAppId, flagsSeen, 0);
+                Core.Net.WfpBlockedEvent e = inbound
+                    ? one with { Direction = Core.Net.WfpDirection.Inbound }
+                    : one;
 
-                return ViewModels.WfpViewModel.DescribeAppIdGapForTest(result);
+                // アプリ情報あり 0 件の場合だけを見る（1 件でもあれば案内は出ない）
+                return ViewModels.WfpViewModel.DescribeAppIdGapForTest(
+                    new Interop.WfpReadResult([e], 1, 1, null, WithAppId: 0, flagsSeen, 0));
             }
 
-            // フラグが一度も立たない = Windows が付けていない
-            Assert(Notice(0, 0x019F).Contains("付けていません", StringComparison.Ordinal),
-                   "フラグが無いのに読み取りの誤りだと言っている");
-
-            // 立っているのに 0 件 = こちらの読み方が悪い
-            Assert(Notice(0, 0x01BF).Contains("読み出せていません", StringComparison.Ordinal),
-                   "フラグが立っているのに Windows のせいにしている");
-
             // 1 件でも取れていれば案内は出さない
-            Assert(Notice(1, 0x01BF).Length == 0, "取れている環境で案内が出ている");
+            Assert(ViewModels.WfpViewModel.DescribeAppIdGapForTest(
+                       new Interop.WfpReadResult([one], 1, 1, null, WithAppId: 1, 0x013F, 0)).Length == 0,
+                   "取れている環境で案内が出ている");
+
+            // 実機で踏んだ形。0x011F はパケットの情報だけで、アプリ(0x20)もユーザー(0x40)も無い。
+            // 遮断がすべて受信なら、持ち主のアプリが存在しないので当然
+            Assert(Notice(0x011F, inbound: true).Contains("すべて受信", StringComparison.Ordinal),
+                   "受信だけなのに別の理由を出している");
+
+            // 送信の遮断があるのにアプリ情報が無いなら、それは環境の話
+            Assert(Notice(0x011F, inbound: false).Contains("送信の遮断が", StringComparison.Ordinal),
+                   "送信があるのに受信のせいにしている");
+
+            // フラグが立っているのに 1 件も読めない = こちらの読み方が悪い
+            Assert(Notice(0x013F, inbound: true).Contains("読み出せていません", StringComparison.Ordinal),
+                   "フラグが立っているのに Windows のせいにしている");
         });
 
         Check("ETW 通信量セッションを開始して停止できる(管理者のときのみ)", () =>

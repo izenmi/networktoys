@@ -156,6 +156,27 @@ public class WfpBlockedEventsTests
         Assert.False(row.IsInbound);
     }
 
+    [Fact]
+    public void An_inbound_block_explains_why_it_has_no_process()
+    {
+        // 受信の遮断は通信が届く前に落ちているので、持ち主のアプリが存在しない。
+        // 「—」だけだと壊れて見えるので、理由を添える
+        WfpBlockedRow row = Assert.Single(
+            WfpEventView.Group([Event(app: "", direction: WfpDirection.Inbound)]));
+
+        Assert.Equal("—", row.ProcessName);
+        Assert.Contains("届く前に落ちている", row.ProcessNote, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_known_process_shows_its_full_path()
+    {
+        WfpBlockedRow row = Assert.Single(WfpEventView.Group([Event()]));
+
+        Assert.Equal("svchost.exe", row.ProcessName);
+        Assert.Contains(@"\windows\system32\svchost.exe", row.ProcessNote, StringComparison.Ordinal);
+    }
+
     // ===== 畳み込み =====
 
     [Fact]

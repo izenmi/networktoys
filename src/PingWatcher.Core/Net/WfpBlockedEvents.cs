@@ -53,6 +53,19 @@ public sealed record WfpBlockedRow(
     string SortKey,
     WfpDirection Direction = WfpDirection.Unknown)
 {
+    /// <summary>
+    /// プロセス欄にかざす説明。<b>「—」だけでは壊れて見える</b>ので理由を添える。
+    /// 受信の遮断は通信が届く前に落ちているため、持ち主のアプリが存在しない。
+    /// </summary>
+    public string ProcessNote => ProcessName switch
+    {
+        "—" when Direction == WfpDirection.Inbound
+            => "受信の遮断です。通信が届く前に落ちているため、持ち主のアプリがありません。",
+        "—" => "この遮断にアプリの情報は付いていません。",
+        "⚠ 読み取れず" => "アプリの情報は付いていますが、パスを読み出せませんでした。",
+        _ => ProcessPath.Length > 0 ? ProcessPath : ProcessName,
+    };
+
     /// <summary>外へ出ようとして落ちた。画面の色分けに使う。</summary>
     public bool IsOutbound => Direction == WfpDirection.Outbound;
 

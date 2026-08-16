@@ -294,16 +294,35 @@ public sealed class WfpViewModel : ObservableObject
 
         const uint AppIdSet = 0x0020;
 
-        string cause = (result.FlagsSeen & AppIdSet) == 0
-            ? "この Windows は遮断イベントにアプリの情報を付けていません（こちらの読み取りの誤りではありません）。"
-            : "アプリの情報は付いているのに読み出せていません。読み取りの誤りの可能性があります。";
+        int outbound = result.Events.Count(e => e.Direction == WfpDirection.Outbound);
+
+        string cause;
+
+        if ((result.FlagsSeen & AppIdSet) != 0)
+        {
+            // 付いているのに 1 件も読めていない。これだけはこちら側の疑い
+            cause = "アプリの情報は付いているのに読み出せていません。読み取りの誤りの可能性があります。";
+        }
+        else if (outbound == 0)
+        {
+            // 実測で踏んだ形（フラグ 0x011F＝パケットの情報だけ）。
+            // 受信の遮断は届く前に落ちているので、持ち主のアプリが存在しない
+            cause = "遮断がすべて受信だからです。受信の遮断は通信が届く前に落ちているため、"
+                  + "持ち主のアプリが存在せず、Windows も情報を付けません。"
+                  + "送信の遮断が起きるとプロセス名が出ます。";
+        }
+        else
+        {
+            cause = $"送信の遮断が {outbound:N0} 件あるのにアプリの情報が付いていません。"
+                  + "この Windows が付けていない可能性があります。";
+        }
 
         string skipped = result.SkippedByFlags > 0
             ? $" / 未知のフラグで捨てた {result.SkippedByFlags:N0} 件"
             : "";
 
-        return $"ℹ プロセス欄が「—」なのは {cause}"
-             + $"（アプリ情報あり {result.WithAppId:N0} / 遮断 {result.Events.Count:N0} 件"
+        return $"ℹ プロセス欄が「—」なのは{cause}"
+             + $"（遮断 {result.Events.Count:N0} 件のうち送信 {outbound:N0} 件"
              + $" / 見たフラグ 0x{result.FlagsSeen:X4}{skipped}）";
     }
 
