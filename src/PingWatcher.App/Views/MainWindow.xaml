@@ -2224,26 +2224,39 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== 調べる（相手や自分の状態を確かめる道具） ===== -->
-            <TabItem x:Name="ProbeTab" Header="調べる　6 ▾">
+            <!-- ===== その他（たまにしか使わない道具。押すとメニューが出る） ===== -->
+            <TabItem x:Name="OtherTab" Header="その他　15 ▾">
                 <DockPanel>
                     <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                   ToolTip="{x:Static help:TabHelp.Probe}" />
-                        <TextBlock Style="{StaticResource TabIntro}" Text="相手や自分の状態を調べる道具をまとめてあります。" />
+                                   ToolTip="{x:Static help:TabHelp.Other}" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="たまにしか使わない道具をまとめてあります。" />
                     </DockPanel>
 
                     <!--
-                        中身の切り替え。見た目は主タブと同じにする（2026-08-16 ユーザー指示）。
-                        暗黙の TabItem スタイルに任せるので、ここでは何も当てない。
-                        タブの見出しを押すと縦並びのメニューも降りてくる
-                        （MainWindow.OnMainTabsMouseDown。遠くの項目へ一息で飛ぶための道）。
+                        中身は 15 枚あるので、帯には「いま開いているもの」だけを出す。
+                        全部並べると名前が読めなくなる。切り替えはタブの見出しを押して
+                        出るメニューから（MainWindow.OnMainTabsMouseDown が Tag で分類する）。
+
+                        この Style は ItemContainerStyle として当てる。TabControl.Resources に
+                        暗黙スタイルとして置くと、Meraki の中のサブタブまで巻き添えで隠れる。
                     -->
                     <TabControl BorderThickness="0" Padding="0" Margin="0,0,0,4">
+                        <TabControl.ItemContainerStyle>
+                            <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TabControl.ItemContainerStyle>
+
 
             <!-- ===== TCP（接続できるかで測る。ICMP が塞がれている相手向け） ===== -->
-            <TabItem x:Name="TcpTab" Header="TCP Ping" DataContext="{Binding Tcp}">
+            <TabItem Tag="調べる" x:Name="TcpTab" Header="TCP Ping" DataContext="{Binding Tcp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -2368,7 +2381,7 @@
             </TabItem>
 
             <!-- ===== 経路 ===== -->
-            <TabItem x:Name="TraceTab" Header="Traceroute" DataContext="{Binding Trace}">
+            <TabItem Tag="調べる" x:Name="TraceTab" Header="Traceroute" DataContext="{Binding Trace}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -2528,7 +2541,7 @@
             </TabItem>
 
             <!-- ===== スキャン ===== -->
-            <TabItem Header="スキャン" DataContext="{Binding Scan}">
+            <TabItem Tag="調べる" Header="スキャン" DataContext="{Binding Scan}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -2662,7 +2675,7 @@
             </TabItem>
 
             <!-- ===== DNS ===== -->
-            <TabItem x:Name="DnsTab" Header="DNS" DataContext="{Binding Dns}">
+            <TabItem Tag="調べる" x:Name="DnsTab" Header="DNS" DataContext="{Binding Dns}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -2782,9 +2795,8 @@
                 </Border>
             </TabItem>
 
-
             <!-- ===== 接続（この PC の TCP/UDP 通信をプロセスごとに見る） ===== -->
-            <TabItem x:Name="ConnectionsTab" Header="通信状況" DataContext="{Binding Connections}">
+            <TabItem Tag="調べる" x:Name="ConnectionsTab" Header="通信状況" DataContext="{Binding Connections}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -3004,7 +3016,7 @@
             </TabItem>
 
             <!-- ===== 電卓（サブネット計算と早見表） ===== -->
-            <TabItem Header="サブネット計算" DataContext="{Binding Subnet}">
+            <TabItem Tag="調べる" Header="サブネット計算" DataContext="{Binding Subnet}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -3124,31 +3136,8 @@
                 </Border>
             </TabItem>
 
-
-                    </TabControl>
-                </DockPanel>
-            </TabItem>
-
-            <!-- ===== 機器（Cisco 機器から集める・集めたものを読む） ===== -->
-            <TabItem x:Name="DeviceTab" Header="NW機器　4 ▾">
-                <DockPanel>
-                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                   ToolTip="{x:Static help:TabHelp.Devices}" />
-                        <TextBlock Style="{StaticResource TabIntro}" Text="ネットワーク機器を相手にする道具をまとめてあります。" />
-                    </DockPanel>
-
-                    <!--
-                        中身の切り替え。見た目は主タブと同じにする（2026-08-16 ユーザー指示）。
-                        暗黙の TabItem スタイルに任せるので、ここでは何も当てない。
-                        タブの見出しを押すと縦並びのメニューも降りてくる
-                        （MainWindow.OnMainTabsMouseDown。遠くの項目へ一息で飛ぶための道）。
-                    -->
-                    <TabControl BorderThickness="0" Padding="0" Margin="0,0,0,4">
-
             <!-- ===== 収集（Cisco 機器へ入って show の出力を集める） ===== -->
-            <TabItem x:Name="CollectTab" Header="ログ採取" DataContext="{Binding Collect}">
+            <TabItem Tag="NW機器" x:Name="CollectTab" Header="ログ採取" DataContext="{Binding Collect}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -3410,7 +3399,7 @@
             </TabItem>
 
             <!-- ===== パース(Cisco コマンド出力 → CSV) ===== -->
-            <TabItem Header="showコマンド整形" DataContext="{Binding Converter}">
+            <TabItem Tag="NW機器" Header="showコマンド整形" DataContext="{Binding Converter}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -3481,7 +3470,7 @@
             </TabItem>
 
             <!-- ===== Meraki(ダッシュボード API からの照会) ===== -->
-            <TabItem x:Name="MerakiTab" Header="Meraki" DataContext="{Binding Meraki}">
+            <TabItem Tag="NW機器" x:Name="MerakiTab" Header="Meraki" DataContext="{Binding Meraki}">
                 <DockPanel>
                     <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
@@ -4084,7 +4073,7 @@
             </TabItem>
 
             <!-- ===== SNMP（GET / ウォーク） ===== -->
-            <TabItem x:Name="SnmpTab" Header="SNMP Get" DataContext="{Binding SnmpGet}">
+            <TabItem Tag="NW機器" x:Name="SnmpTab" Header="SNMP Get" DataContext="{Binding SnmpGet}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -4194,29 +4183,8 @@
                 </Border>
             </TabItem>
 
-                    </TabControl>
-                </DockPanel>
-            </TabItem>
-
-            <!-- ===== 受ける（機器から送られてくるものを受け取る） ===== -->
-            <TabItem x:Name="ReceiveTab" Header="受ける　5 ▾">
-                <DockPanel>
-                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                   ToolTip="{x:Static help:TabHelp.Receive}" />
-                        <TextBlock Style="{StaticResource TabIntro}" Text="機器から送られてくるものを受け取るサーバです。" />
-                    </DockPanel>
-
-                    <!--
-                        中身の切り替え。見た目は主タブと同じにする（2026-08-16 ユーザー指示）。
-                        暗黙の TabItem スタイルに任せるので、ここでは何も当てない。
-                        タブの見出しを押すと縦並びのメニューも降りてくる
-                        （MainWindow.OnMainTabsMouseDown。遠くの項目へ一息で飛ぶための道）。
-                    -->
-                    <TabControl BorderThickness="0" Padding="0" Margin="0,0,0,4">
             <!-- FTP: 機器の config バックアップ受け・平文 -->
-            <TabItem Header="FTP" DataContext="{Binding Ftp}">
+            <TabItem Tag="受ける" Header="FTP" DataContext="{Binding Ftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -4336,7 +4304,7 @@
             </TabItem>
 
             <!-- TFTP: 認証なし・UDP -->
-            <TabItem Header="TFTP" DataContext="{Binding Tftp}">
+            <TabItem Tag="受ける" Header="TFTP" DataContext="{Binding Tftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -4440,7 +4408,7 @@
             </TabItem>
 
             <!-- SFTP: SSH 越しで暗号化 -->
-            <TabItem Header="SFTP" DataContext="{Binding Sftp}">
+            <TabItem Tag="受ける" Header="SFTP" DataContext="{Binding Sftp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -4556,7 +4524,7 @@
             </TabItem>
 
             <!-- ===== syslog（機器からの syslog を受ける） ===== -->
-            <TabItem Header="syslog" DataContext="{Binding Syslog}">
+            <TabItem Tag="受ける" Header="syslog" DataContext="{Binding Syslog}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
@@ -4696,7 +4664,7 @@
             </TabItem>
 
             <!-- Trap 受信 -->
-            <TabItem Header="SNMP Trap" DataContext="{Binding SnmpTrap}">
+            <TabItem Tag="受ける" Header="SNMP Trap" DataContext="{Binding SnmpTrap}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->

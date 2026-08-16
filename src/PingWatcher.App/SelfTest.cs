@@ -723,6 +723,29 @@ internal static class SelfTest
                    $"説明が無いタブ: {string.Join(" / ", missing)}");
         });
 
+        Check("タブ: まとめた中身は分類されている", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // メニューは Tag で分類を作る。付け忘れると見出しの無い 15 連になる
+            System.Windows.Controls.TabControl[] inner =
+                [.. FindInnerTabsInContent(window!.OtherTab.Content)];
+
+            Assert(inner.Length == 1, "その他タブの中身が見つからない");
+
+            string[] tags =
+                [.. inner[0].Items.OfType<System.Windows.Controls.TabItem>()
+                     .Select(t => t.Tag as string ?? "")];
+
+            Assert(tags.All(t => t.Length > 0), "分類（Tag）の無い項目がある");
+
+            // 同じ分類が離れて出てくると、メニューに同じ見出しが 2 度出る
+            string[] order = [.. tags.Distinct()];
+
+            Assert(order.Length == tags.Distinct().Count() && IsGrouped(tags),
+                   $"同じ分類が離れて並んでいる: {string.Join(" / ", tags)}");
+        });
+
         Check("タブ: まとめた先のタブへ移動でき、閉じれば止まる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -776,10 +799,17 @@ internal static class SelfTest
                     Assert(header.Contains(want + " ▾", StringComparison.Ordinal),
                            $"「{header}」の見出しの件数が中身({actual} 本)と合っていない");
 
-                    // 中身の切り替えは主タブと同じ見た目にする決まり（ユーザー指示）。
-                    // 専用のスタイルを当てると、そこだけ別物に見える
-                    Assert(inner[0].ItemContainerStyle is null,
-                           $"「{header}」の切り替えに専用のスタイルが当たっている");
+                    // 帯には「いま開いているもの」だけを出す決まり。
+                    // 15 枚を素で並べると名前が読めない（ユーザー指示）
+                    Assert(inner[0].ItemContainerStyle is { } style
+                           && style.Setters.OfType<Setter>().Any(x =>
+                                  x.Property == UIElement.VisibilityProperty
+                                  && Equals(x.Value, Visibility.Collapsed)),
+                           $"「{header}」の帯が、選んでいないものまで出す作りになっている");
+
+                    // 見た目は主タブと揃える。BasedOn を外すとそこだけ別物に見える
+                    Assert(inner[0].ItemContainerStyle.BasedOn is not null,
+                           $"「{header}」の帯が主タブと同じ見た目になっていない");
 
                     grouped++;
                 }
@@ -791,7 +821,7 @@ internal static class SelfTest
                 }
             }
 
-            Assert(grouped == 3, $"まとめたタブが 3 枚のはずが {grouped} 枚になっている");
+            Assert(grouped == 1, $"まとめたタブが 1 枚のはずが {grouped} 枚になっている");
         });
 
         Check("試験: ひな型を自分で作って残せる", () =>
@@ -1719,6 +1749,23 @@ internal static class SelfTest
             if (width > 136)
                 yield return $"{name}（{width / 2} 字で折り返す: 「{line}」）";
         }
+    }
+
+    /// <summary>同じ分類がひと続きに並んでいるか。飛び飛びだとメニューの見出しが重複する。</summary>
+    private static bool IsGrouped(IReadOnlyList<string> tags)
+    {
+        var seen = new HashSet<string>();
+        string current = "";
+
+        foreach (string tag in tags)
+        {
+            if (tag == current) continue;
+            if (!seen.Add(tag)) return false;
+
+            current = tag;
+        }
+
+        return true;
     }
 
     /// <summary>最上位から入れ子の先まで、すべてのタブ。論理ツリーなので実体化を待たない。</summary>

@@ -1327,9 +1327,23 @@ public partial class MainWindow : Window
             Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
         };
 
+        // 中身は Tag で分類してある（調べる / NW機器 / 受ける）。
+        // 15 枚を素で並べると探せないので、変わり目に見出しを挟む
+        string group = "";
+
         foreach (object? item in inner.Items)
         {
             if (item is not TabItem child) continue;
+
+            if (child.Tag is string tagged && tagged != group)
+            {
+                group = tagged;
+
+                if (menu.Items.Count > 0) menu.Items.Add(new Separator());
+
+                // 押せない見出し。分類そのものは画面ではないので選ばせない
+                menu.Items.Add(new MenuItem { Header = group, IsEnabled = false });
+            }
 
             var entry = new MenuItem
             {

@@ -20,6 +20,27 @@ namespace PingWatcher.App.Help;
 /// </summary>
 internal static class TabHelp
 {
+    /// <summary>その他</summary>
+    public const string Other =
+        """
+        その他
+
+        中にあるもの
+        ・調べる … TCP Ping ／ Traceroute ／ スキャン ／ DNS ／ 通信状況 ／ サブネット計算
+        ・NW機器 … ログ採取 ／ showコマンド整形 ／ Meraki ／ SNMP Get
+        ・受ける … FTP ／ TFTP ／ SFTP ／ syslog ／ SNMP Trap
+
+        使い方
+        ・タブの見出しを押すと、分類ごとに並んだメニューが降りてくる
+        ・選ぶと、その画面に切り替わる
+        ・帯には「いま開いているもの」だけを出す（15 枚を並べると読めないため）
+
+        知っておくとよいこと
+        ・どれも単発で使う道具なので、1 つにまとめて畳んである
+        ・「受ける」の 5 つは使い捨てのサーバで、押したときだけ待ち受ける
+        ・初回は Windows ファイアウォールの許可が要る（受ける側）
+        """;
+
     /// <summary>Ping</summary>
     public const string Ping =
         """
@@ -153,19 +174,6 @@ internal static class TabHelp
         ・項目の一覧にファイルを放り込んで読み込む
         """;
 
-    /// <summary>調べる</summary>
-    public const string Probe =
-        """
-        調べる
-
-        中にあるもの
-        ・TCP Ping ／ Traceroute ／ スキャン ／ DNS ／ 通信状況 ／ サブネット計算
-
-        知っておくとよいこと
-        ・どれも単発で使う道具なので、1 つにまとめて畳んである
-        ・タブを押すとメニューも出る。離れた項目へ一息で飛びたいときに
-        """;
-
     /// <summary>TCP Ping</summary>
     public const string Tcp =
         """
@@ -281,21 +289,6 @@ internal static class TabHelp
 
         こんなときに
         ・設計や切り分けの場で、暗算しないために
-        """;
-
-    /// <summary>NW機器</summary>
-    public const string Devices =
-        """
-        NW機器
-
-        中にあるもの
-        ・ログ採取（機器へ入って show を集める）
-        ・showコマンド整形（出力を CSV に変換する）
-        ・SNMP Get（機器の値を問い合わせる）
-        ・Meraki（ダッシュボード API からの照会）
-
-        知っておくとよいこと
-        ・タブを押すとメニューも出る。離れた項目へ一息で飛びたいときに
         """;
 
     /// <summary>ログ採取</summary>
@@ -443,20 +436,6 @@ internal static class TabHelp
         知っておくとよいこと
         ・sysDescr など、よく使う OID のプリセットがある
         ・Trap の受信は「受ける」の中にある
-        """;
-
-    /// <summary>受ける</summary>
-    public const string Receive =
-        """
-        受ける
-
-        中にあるもの
-        ・FTP ／ TFTP ／ SFTP ／ syslog ／ SNMP Trap
-
-        気をつけること
-        ・どれも使い捨てで、押したときだけ待ち受ける
-        ・FTP と TFTP は平文・認証なしなので、使うときだけ開始する
-        ・初回は Windows ファイアウォールの許可が要る
         """;
 
     /// <summary>FTP</summary>
