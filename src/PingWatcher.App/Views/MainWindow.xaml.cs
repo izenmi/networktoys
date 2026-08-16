@@ -574,14 +574,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// メニューには「切り替えた先」を出す。いまの状態を出すと、
+    /// ボタンにもメニューにも「切り替えた先」を出す。いまの状態を出すと、
     /// 押すとどうなるのかが読み取れない。
-    /// （ヘッダのボタンは 2026-08-16 に廃止した。入り口はメニューだけ）
     /// </summary>
     private void UpdateThemeToggle()
-        => ThemeMenuItem.Header = ThemeManager.Current == AppTheme.Dark
-            ? "☀ ライトモードにする"
-            : "☾ ダークモードにする";
+    {
+        bool dark = ThemeManager.Current == AppTheme.Dark;
+
+        ThemeToggle.Content = dark ? "☀ ライト" : "☾ ダーク";
+        ThemeMenuItem.Header = dark ? "☀ ライトモードにする" : "☾ ダークモードにする";
+    }
 
     /// <summary>最前面固定。<b>次回起動でも覚える</b>（以前は毎回外れていた）。</summary>
     private void OnTopmostMenu(object sender, RoutedEventArgs e)

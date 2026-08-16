@@ -487,7 +487,15 @@
 
             <!-- 操作の結果を短く知らせる場所(画面保存・ファイルの読み込みなど)。数秒で消える -->
             <TextBlock x:Name="HeaderNotice" Style="{StaticResource Caption}"
-                       VerticalAlignment="Center" />
+                       VerticalAlignment="Center" Margin="0,0,10,0" />
+
+            <!-- 配色の切り替え。メニューにもあるが、押す頻度が高いので右上にも置く
+                 (2026-08-16 ユーザー指示)。記号だけでは意味が伝わらないので文字も添える -->
+            <Button x:Name="ThemeToggle" Click="OnThemeToggle"
+                    Style="{StaticResource Button.Icon}"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="配色の切り替え"
+                    ToolTip="ライトモードとダークモードを切り替えます。次回起動にも残ります。" />
         </StackPanel>
 
         <!-- メニューの帯と本体を分ける罫線。行の下端に置き、上下に余白を取る
@@ -1865,68 +1873,6 @@
                                     ToolTip="そのままメールに添付できる報告書にします。1 ファイル完結なのでオフラインでも開けます。" />
                         </WrapPanel>
 
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Notice}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <!--
-                            試験の進み具合。項目数 × プロキシの本数だけ逐次に回すので、
-                            まとめて実行すると何分もかかる。押したあと何も起きないように見せない。
-                            結果は 1 件終わるごとに下の一覧へ足していく。
-                        -->
-                        <Border DockPanel.Dock="Top" Margin="0,0,0,6"
-                                Background="{DynamicResource Brush.Surface}"
-                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                CornerRadius="{DynamicResource Radius.Card}" Padding="8,6"
-                                Visibility="{Binding HasProgress, Converter={StaticResource BoolToVisibility}}">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText}"
-                                           Style="{StaticResource Caption}" VerticalAlignment="Center"
-                                           Margin="10,0,0,0" MinWidth="56" TextAlignment="Right" />
-
-                                <!-- RangeBase.Value は既定が TwoWay。読み取り専用なので OneWay を明示する -->
-                                <ProgressBar DockPanel.Dock="Top" Height="6" Margin="0,0,0,6"
-                                             Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100" />
-
-                                <StackPanel Orientation="Horizontal">
-                                    <Border Style="{StaticResource Badge}" Margin="0,0,6,0"
-                                            Background="{DynamicResource Brush.Ok.Bg}">
-                                        <TextBlock Style="{StaticResource Badge.Text}"
-                                                   Foreground="{DynamicResource Brush.Ok.Fg}">
-                                            <Run Text="○ 合格 " /><Run Text="{Binding PassCount, Mode=OneWay}" />
-                                        </TextBlock>
-                                    </Border>
-                                    <Border Style="{StaticResource Badge}" Margin="0,0,6,0"
-                                            Background="{DynamicResource Brush.Error.Bg}">
-                                        <TextBlock Style="{StaticResource Badge.Text}"
-                                                   Foreground="{DynamicResource Brush.Error.Fg}">
-                                            <Run Text="✕ 不合格 " /><Run Text="{Binding FailCount, Mode=OneWay}" />
-                                        </TextBlock>
-                                    </Border>
-                                    <Border Style="{StaticResource Badge}" Margin="0,0,6,0"
-                                            Background="{DynamicResource Brush.Warn.Bg}">
-                                        <TextBlock Style="{StaticResource Badge.Text}"
-                                                   Foreground="{DynamicResource Brush.Warn.Fg}">
-                                            <Run Text="△ 注意 " /><Run Text="{Binding WarnCount, Mode=OneWay}" />
-                                        </TextBlock>
-                                    </Border>
-                                    <Border Style="{StaticResource Badge}" Margin="0,0,6,0"
-                                            Background="{DynamicResource Brush.Info.Bg}">
-                                        <TextBlock Style="{StaticResource Badge.Text}"
-                                                   Foreground="{DynamicResource Brush.Info.Fg}">
-                                            <Run Text="◍ 目視 " /><Run Text="{Binding PersonCount, Mode=OneWay}" />
-                                        </TextBlock>
-                                    </Border>
-                                    <!-- いま試している項目。終わると消える -->
-                                    <TextBlock Text="{Binding RunningName}" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center" Margin="4,0,0,0"
-                                               TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-
                         <!-- プロキシ。定義（左）と、そのうちどれで試すか（右） -->
                         <Border DockPanel.Dock="Top" MaxHeight="96" Margin="0,0,0,6"
                                 Background="{DynamicResource Brush.Surface}"
@@ -2101,8 +2047,64 @@
                                 BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="結果（1 行 = 1 項目 × 1 プロキシ）"
-                                           Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <!--
+                                    見出し・進み具合・合否の内訳・状態を 1 行に詰める。
+                                    この画面は情報が多いので、独立した進捗カードは置かない
+                                    （2026-08-16 ユーザー指示。以前は上に 60px ほど占めていた）。
+                                -->
+                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,3">
+                                    <TextBlock DockPanel.Dock="Left" Text="結果"
+                                               Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                               Margin="0,0,10,0"
+                                               ToolTip="1 行 = 1 項目 × 1 プロキシ" />
+
+                                    <!-- 何件まで済んだか。実行していないときは空 -->
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText}"
+                                               Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                               Margin="10,0,0,0" TextAlignment="Right" />
+
+                                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal"
+                                                Visibility="{Binding HasProgress, Converter={StaticResource BoolToVisibility}}">
+                                        <Border Style="{StaticResource Badge}" Margin="0,0,4,0"
+                                                Background="{DynamicResource Brush.Ok.Bg}">
+                                            <TextBlock Style="{StaticResource Badge.Text}"
+                                                       Foreground="{DynamicResource Brush.Ok.Fg}">
+                                                <Run Text="○ " /><Run Text="{Binding PassCount, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Border>
+                                        <Border Style="{StaticResource Badge}" Margin="0,0,4,0"
+                                                Background="{DynamicResource Brush.Error.Bg}">
+                                            <TextBlock Style="{StaticResource Badge.Text}"
+                                                       Foreground="{DynamicResource Brush.Error.Fg}">
+                                                <Run Text="✕ " /><Run Text="{Binding FailCount, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Border>
+                                        <Border Style="{StaticResource Badge}" Margin="0,0,4,0"
+                                                Background="{DynamicResource Brush.Warn.Bg}">
+                                            <TextBlock Style="{StaticResource Badge.Text}"
+                                                       Foreground="{DynamicResource Brush.Warn.Fg}">
+                                                <Run Text="△ " /><Run Text="{Binding WarnCount, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Border>
+                                        <Border Style="{StaticResource Badge}" Margin="0,0,10,0"
+                                                Background="{DynamicResource Brush.Info.Bg}">
+                                            <TextBlock Style="{StaticResource Badge.Text}"
+                                                       Foreground="{DynamicResource Brush.Info.Fg}">
+                                                <Run Text="◍ " /><Run Text="{Binding PersonCount, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- 実行中は「試験中… 5/12 項目名」、終わると要約や保存の結果 -->
+                                    <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}" />
+                                </DockPanel>
+
+                                <!-- 進み具合。細く 1 本引くだけで、押したあと動いていることは伝わる -->
+                                <ProgressBar DockPanel.Dock="Top" Height="3" Margin="0,0,0,4"
+                                             Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100"
+                                             Visibility="{Binding HasProgress, Converter={StaticResource BoolToVisibility}}" />
                                 <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
                                       Tag="vres" MouseLeftButtonDown="OnTableHeaderSort">
                                     <Grid.ColumnDefinitions>

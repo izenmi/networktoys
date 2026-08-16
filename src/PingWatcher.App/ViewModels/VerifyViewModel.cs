@@ -103,14 +103,8 @@ public sealed class ProxyChoiceViewModel : ObservableObject
 /// </summary>
 public sealed class VerifyViewModel : ObservableObject
 {
-    private const string ProxyNotice =
-        "ℹ プロキシを通るのは HTTP・速度・Teams の項目です（選んだプロキシごとに試験します）。"
-        + "TCP・メール・DNS は直接出るため、何本選んでも 1 回だけです。"
-        + "Teams は署名とチャットがプロキシを通り、音声の UDP だけ直接出ます。";
-
     private string _proxyText = "";
     private string _status = "ひな型を入れるか項目を書いて「まとめて実行」を押します。";
-    private string _runningName = "";
     private bool _isBusy;
     private int _done;
     private int _total;
@@ -203,8 +197,6 @@ public sealed class VerifyViewModel : ObservableObject
     /// <summary>目視の項目に不合格を付ける。</summary>
     public RelayCommand<CheckResult> MarkFailCommand { get; }
 
-    public string Notice => ProxyNotice;
-
     /// <summary>
     /// 1 行 1 件で <c>名前,種類,アドレス</c>。種類は <c>pac</c> / <c>proxy</c>。
     /// 「直接」と「いまの設定」は常にあるので書かない。
@@ -248,9 +240,6 @@ public sealed class VerifyViewModel : ObservableObject
     public double ProgressPercent => _total > 0 ? _done * 100.0 / _total : 0;
 
     public string ProgressText => _total > 0 ? $"{_done} / {_total}" : "";
-
-    /// <summary>いま試している項目。終わったら空。</summary>
-    public string RunningName { get => _runningName; private set => SetProperty(ref _runningName, value); }
 
     public int PassCount => Results.Count(r => r.IsPass);
     public int FailCount => Results.Count(r => r.IsFail);
@@ -437,7 +426,6 @@ public sealed class VerifyViewModel : ObservableObject
         Results.Clear();
         _done = 0;
         _total = 0;
-        RunningName = "";
         SaveCommand.RaiseCanExecuteChanged();
         SaveHtmlCommand.RaiseCanExecuteChanged();
         RaiseProgress();
@@ -453,7 +441,6 @@ public sealed class VerifyViewModel : ObservableObject
         {
             _done = p.Done;
             _total = p.Total;
-            RunningName = p.Name;
 
             MarkRunning(p.Name);
             RaiseProgress();
@@ -477,12 +464,10 @@ public sealed class VerifyViewModel : ObservableObject
             await CheckRunner.RunAsync(
                 items, proxies, TeamsEndpoints.Default, progress, _cts.Token, finished);
 
-            RunningName = "";
             Status = CheckReport.Summarize([.. Results]);
         }
         catch (OperationCanceledException)
         {
-            RunningName = "";
 
             // 中断しても、そこまでの結果は残す（消すと試験をやり直すことになる）
             foreach (VerifyRowViewModel row in Rows)
@@ -502,7 +487,6 @@ public sealed class VerifyViewModel : ObservableObject
             _cts?.Dispose();
             _cts = null;
             IsBusy = false;
-            RunningName = "";
             SaveCommand.RaiseCanExecuteChanged();
             SaveHtmlCommand.RaiseCanExecuteChanged();
             RaiseProgress();
@@ -757,7 +741,6 @@ public sealed class VerifyViewModel : ObservableObject
         Results.Clear();
         _done = 0;
         _total = 0;
-        RunningName = "";
         SaveCommand.RaiseCanExecuteChanged();
         SaveHtmlCommand.RaiseCanExecuteChanged();
         RaiseProgress();
