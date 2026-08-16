@@ -632,16 +632,23 @@ internal static class SelfTest
             foreach (System.Windows.Controls.TabItem tab in AllTabs(window!.MainTabs))
             {
                 string header = tab.Header?.ToString() ?? "";
+                string name = header.Split('　')[0];   // 「調べる　6 ▾」→「調べる」
 
                 // ⓘ は Style ごと引くので、Text ではなく ToolTip の有無で見る
                 System.Windows.Controls.TextBlock[] blocks =
                     [.. FindIn<System.Windows.Controls.TextBlock>(tab.Content)];
 
-                if (!blocks.Any(t => Equals(t.Text, "ⓘ") && t.ToolTip is string { Length: > 30 }))
+                if (blocks.FirstOrDefault(t => Equals(t.Text, "ⓘ"))?.ToolTip
+                    is not string { Length: > 30 } help)
                 {
                     missing.Add(header);
                     continue;
                 }
+
+                // 地の文に戻っていないこと。145 文字の 1 段落は、
+                // ホバーしている間に読み切れないというのが出発点だった
+                foreach (string problem in CheckHelpShape(name, help))
+                    missing.Add(problem);
 
                 // 1 行の説明は短すぎると意味がない（「〜の一覧です」だけでは何も伝わらない）。
                 // 何をする画面かに加えて、いつ使うものかまで書けばこの長さは自然に超える
@@ -1618,6 +1625,38 @@ internal static class SelfTest
         window.UpdateLayout();
 
         return visited;
+    }
+
+    /// <summary>
+    /// ⓘ の説明の書き方を確かめる。<b>読みやすさは黙って劣化する</b>ので、
+    /// 形だけでも機械で守る（中身の良し悪しは人にしか見られない）。
+    ///
+    /// 守るのは 3 つ。①1 行目がタブ名 ②節と箇条書きで書かれている
+    /// ③どの行も折り返さない幅に収まっている。
+    /// </summary>
+    private static IEnumerable<string> CheckHelpShape(string name, string help)
+    {
+        string[] lines = help.ReplaceLineEndings("\n").Split('\n');
+
+        if (lines.Length < 3)
+            yield return $"{name}（1 段落のまま。節と箇条書きに分けること）";
+
+        if (!help.Contains('・', StringComparison.Ordinal))
+            yield return $"{name}（箇条書きが無い）";
+
+        // 浮いた箱だけ見えている状態で、何の説明か分かるように
+        if (!lines[0].StartsWith(name, StringComparison.Ordinal))
+            yield return $"{name}（1 行目がタブ名でない: 「{lines[0]}」）";
+
+        // 幅は ToolTip の MaxWidth 420px = 全角 34 字ぶん。
+        // 文字数ではなく表示幅で数える（日本語と URL で基準が変わるため）
+        foreach (string line in lines)
+        {
+            int width = Core.Reporting.TextWidth.Of(line);
+
+            if (width > 68)
+                yield return $"{name}（{width / 2} 字で折り返す: 「{line}」）";
+        }
     }
 
     /// <summary>最上位から入れ子の先まで、すべてのタブ。論理ツリーなので実体化を待たない。</summary>
