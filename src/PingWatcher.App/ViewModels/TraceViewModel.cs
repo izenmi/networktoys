@@ -102,6 +102,7 @@ public sealed class TraceViewModel : ObservableObject
     private bool _isWatching;
     private CancellationTokenSource? _cts;
     private DispatcherTimer? _watchTimer;
+    private bool _isActive;
 
     // ECMP で経路が揺れるだけのことがあるので、1 回違っただけでは変化とみなさない
     private string[]? _lastPath;
@@ -131,18 +132,43 @@ public sealed class TraceViewModel : ObservableObject
             if (!SetProperty(ref _isWatching, value)) return;
 
             if (value)
-            {
-                _watchTimer ??= new DispatcherTimer(DispatcherPriority.Background) { Interval = WatchInterval };
-                _watchTimer.Tick -= OnWatchTick;
-                _watchTimer.Tick += OnWatchTick;
-                _watchTimer.Start();
                 Status = $"{WatchInterval.TotalSeconds:0} 秒ごとに経路を調べ直します。";
-            }
-            else
-            {
-                _watchTimer?.Stop();
-            }
+
+            SyncWatchTimer();
         }
+    }
+
+    /// <summary>
+    /// 見張りは<b>タブが見えている間だけ</b>回す（無線・接続・遮断と同じ）。
+    /// 別のタブで作業している最中に 60 秒ごとの traceroute が裏で走り続けると、
+    /// 測定と帯域を取り合ううえ、止めたつもりでも止まっていない。
+    /// チェックは外さないので、戻ってくれば続きから回る。
+    /// </summary>
+    private void SyncWatchTimer()
+    {
+        if (_isWatching && _isActive)
+        {
+            _watchTimer ??= new DispatcherTimer(DispatcherPriority.Background) { Interval = WatchInterval };
+            _watchTimer.Tick -= OnWatchTick;
+            _watchTimer.Tick += OnWatchTick;
+            _watchTimer.Start();
+        }
+        else
+        {
+            _watchTimer?.Stop();
+        }
+    }
+
+    public void OnActivated()
+    {
+        _isActive = true;
+        SyncWatchTimer();
+    }
+
+    public void OnDeactivated()
+    {
+        _isActive = false;
+        SyncWatchTimer();
     }
 
     public RelayCommand TraceCommand { get; }

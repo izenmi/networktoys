@@ -221,7 +221,7 @@ public partial class MainWindow : Window
     /// </summary>
     private static readonly Dictionary<string, string[]> SortPaths = new()
     {
-        ["trace"] = ["Ttl", "Address", "HostName", "Rtt", "Note", ""],
+        ["trace"] = ["Ttl", "Address", "HostName", "Rtt", "Note"],
         ["scan"] = ["Address", "Rtt", "HostName", "Mac", "Vendor", "Ports", ""],
         ["ftplog"] = ["Time", "Remote", "Text"],
         ["tftplog"] = ["Time", "Remote", "Text"],
@@ -252,7 +252,7 @@ public partial class MainWindow : Window
         int column = ColumnAt(header, e.GetPosition(header).X);
         if (column < 0 || column >= paths.Length || paths[column].Length == 0) return;
 
-        if (FindList(header) is not { ItemsSource: { } source }) return;
+        if (FindList(header, table) is not { ItemsSource: { } source }) return;
 
         ICollectionView view = CollectionViewSource.GetDefaultView(source);
         string path = paths[column];
@@ -293,13 +293,24 @@ public partial class MainWindow : Window
         return -1;
     }
 
-    /// <summary>見出しと同じ入れ物にいる一覧を探す。</summary>
-    private static ItemsControl? FindList(DependencyObject header)
+    /// <summary>
+    /// 見出しと同じ入れ物にいる一覧を探す。
+    ///
+    /// <b>見出しと同じ <c>Tag</c> を持つ一覧を優先する。</b>ほとんどの一覧は
+    /// <see cref="ListBox"/> なのでそれで足りるが、経路のホップ一覧だけは
+    /// <see cref="ItemsControl"/> で、ListBox しか見ていなかったころは
+    /// 並べ替えが無反応だった。かといって「最初の ItemsControl」にはできない —
+    /// 経路タブには手前に「何が変わったか」の ItemsControl があり、
+    /// <see cref="ComboBox"/> も ItemsControl なので、別の一覧を掴んでしまう。
+    /// </summary>
+    private static ItemsControl? FindList(DependencyObject header, string table)
     {
         DependencyObject? parent = VisualTreeHelper.GetParent(header);
-        return parent is null ? null : FindDescendant(parent);
+        if (parent is null) return null;
 
-        static ItemsControl? FindDescendant(DependencyObject node)
+        return FindDescendant(parent, tagged: true) ?? FindDescendant(parent, tagged: false);
+
+        ItemsControl? FindDescendant(DependencyObject node, bool tagged)
         {
             int count = VisualTreeHelper.GetChildrenCount(node);
 
@@ -308,8 +319,16 @@ public partial class MainWindow : Window
                 DependencyObject child = VisualTreeHelper.GetChild(node, i);
 
                 // 見出しの Grid 自身や中の TextBlock を拾わないよう、一覧だけを見る
-                if (child is ListBox list) return list;
-                if (FindDescendant(child) is { } found) return found;
+                if (tagged)
+                {
+                    if (child is ItemsControl { Tag: string tag } list && tag == table) return list;
+                }
+                else if (child is ListBox list)
+                {
+                    return list;
+                }
+
+                if (FindDescendant(child, tagged) is { } found) return found;
             }
 
             return null;
@@ -911,6 +930,12 @@ public partial class MainWindow : Window
             _shell.Wfp.OnActivated();
         else
             _shell.Wfp.OnDeactivated();
+
+        // 経路の見張り(60 秒ごと)も、見えていないタブで裏を走らせない
+        if (TraceTab.IsSelected)
+            _shell.Trace.OnActivated();
+        else
+            _shell.Trace.OnDeactivated();
 
         // IP設定はタブを開いたときにアダプタを列挙し直す
         if (IpConfigTab.IsSelected)

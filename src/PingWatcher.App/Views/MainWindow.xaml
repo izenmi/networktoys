@@ -864,7 +864,7 @@
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Hops}">
+                            <ItemsControl ItemsSource="{Binding Hops}" Tag="trace">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border x:Name="Row" CornerRadius="{DynamicResource Radius.Badge}" Padding="4,0">

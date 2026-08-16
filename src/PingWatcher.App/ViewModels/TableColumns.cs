@@ -31,8 +31,8 @@ public sealed class TableColumns : ObservableObject
     // 列を足し引きしたらここも直すこと。番号は XAML の Grid.Column と 1 対 1
     private static readonly TableSpec[] Tables =
     [
-        // 経路: 0 ホップ / 1 応答元 / 2 ホスト名(星) / 3 RTT / 4 損失 / 5 備考
-        new("trace", 2, [(0, 34), (1, 140), (3, 140), (4, 70), (5, 120)]),
+        // 経路: 0 ホップ / 1 応答元 / 2 ホスト名(星) / 3 RTT / 4 状態
+        new("trace", 2, [(0, 34), (1, 140), (3, 140), (4, 70)]),
 
         // 無線: 0 SSID(星) / 1 BSSID / 2 信号 / 3 ch / 4 規格 / 5 機器 / 6 暗号
         new("wifi", 0, [(1, 140), (2, 132), (3, 150), (4, 76), (5, 56), (6, 72)]),
