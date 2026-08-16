@@ -621,6 +621,31 @@ internal static class SelfTest
             window.UpdateLayout();
         });
 
+        Check("タブ: まとめた先のタブへ移動でき、閉じれば止まる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            object? original = window!.MainTabs.SelectedItem;
+
+            // 右クリックからの遷移と同じ道。まとめたタブの中にある画面を名指しで開く
+            Views.MainWindow.Show(window.TraceTab);
+            window.UpdateLayout();
+
+            Assert(Views.MainWindow.IsShowing(window.TraceTab),
+                   "まとめた先のタブへ Show しても、親タブが開かず画面が変わらない");
+
+            // 開いたまま別のタブへ移ったら、もう「見えている」ことにしない。
+            // ここが崩れると、見えていないタブが 60 秒ごとに traceroute を打ち続ける
+            window.PingTab.IsSelected = true;
+            window.UpdateLayout();
+
+            Assert(!Views.MainWindow.IsShowing(window.TraceTab),
+                   "まとめたタブを閉じたのに、中のタブが見えている扱いのままになっている");
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
         Check("タブ: まとめたタブの見出しの件数が中身と合っている", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

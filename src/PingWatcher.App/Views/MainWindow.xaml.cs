@@ -1124,13 +1124,36 @@ public partial class MainWindow : Window
     {
         ArgumentNullException.ThrowIfNull(tab);
 
-        for (DependencyObject? node = tab; node is not null; node = VisualTreeHelper.GetParent(node))
+        foreach (TabItem item in SelfAndAncestorTabs(tab))
         {
-            if (node is TabItem item && !item.IsSelected) return false;
+            if (!item.IsSelected) return false;
         }
 
         return true;
     }
+
+    /// <summary>
+    /// そのタブ自身と、それを包んでいるタブを内側から順に返す。
+    ///
+    /// <b>視覚ツリーでは遡れない。</b>タブの中身は <see cref="TabItem"/> の下ではなく、
+    /// 親 <see cref="TabControl"/> の <c>ContentPresenter</c> の下に置かれるので、
+    /// 内側のタブから視覚的な親をたどっても外側の <see cref="TabItem"/> を素通りする。
+    /// 論理ツリー（XAML に書いたとおりの入れ子）でたどること。
+    ///
+    /// これを間違えると、<b>右クリックからの遷移で親タブが開かず画面が変わらない</b>し、
+    /// <b>見えていないタブが「見えている」ことになって OS を叩き始める</b>。
+    /// </summary>
+    private static IEnumerable<TabItem> SelfAndAncestorTabs(TabItem tab)
+    {
+        for (DependencyObject? node = tab; node is not null; node = ParentOf(node))
+        {
+            if (node is TabItem item) yield return item;
+        }
+    }
+
+    /// <summary>論理の親。テンプレートの中の要素では切れるので、そのときだけ視覚の親を使う。</summary>
+    private static DependencyObject? ParentOf(DependencyObject node)
+        => LogicalTreeHelper.GetParent(node) ?? VisualTreeHelper.GetParent(node);
 
     /// <summary>
     /// そのタブを開く。<b>束ねられていれば先祖もたどって開く</b>。
@@ -1141,14 +1164,9 @@ public partial class MainWindow : Window
         ArgumentNullException.ThrowIfNull(tab);
 
         // 外側から順に選ぶ。先に内側を選んでも親の切り替えで戻されることがある
-        var chain = new List<TabItem>();
+        TabItem[] chain = [.. SelfAndAncestorTabs(tab)];
 
-        for (DependencyObject? node = tab; node is not null; node = VisualTreeHelper.GetParent(node))
-        {
-            if (node is TabItem item) chain.Add(item);
-        }
-
-        for (int i = chain.Count - 1; i >= 0; i--)
+        for (int i = chain.Length - 1; i >= 0; i--)
             chain[i].IsSelected = true;
     }
 
