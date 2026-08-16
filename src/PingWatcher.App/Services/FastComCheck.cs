@@ -33,14 +33,18 @@ internal static class FastComCheck
 
     private const int ChunkBytes = 64 * 1024;
 
-    public static async Task<(SpeedSample Sample, string UsedProxy)> RunAsync(
+    /// <summary>上りで送る量（1 本あたり）。下りと違い、こちらが作って送るので上限を決める。</summary>
+    private const int UploadBytesPerStream = 4 * 1024 * 1024;
+
+    /// <returns>下りと上りの測定。上りは測れなければ理由が入る。</returns>
+    public static async Task<(SpeedSample Down, SpeedSample Up, string UsedProxy)> RunAsync(
         ProxyChoice proxy, CancellationToken token)
     {
         var pageUri = new Uri(PageUrl);
 
         (string resolved, string? pacError) = HttpCheck.ResolveProxy(proxy, pageUri);
         if (pacError is not null)
-            return (new SpeedSample(0, 0, pacError), "");
+            return (new SpeedSample(0, 0, pacError), NotMeasured, "");
 
         using HttpClientHandler handler = HttpCheck.CreateHandler(proxy, resolved);
         using var client = new HttpClient(handler) { Timeout = Timeout };
@@ -51,29 +55,35 @@ internal static class FastComCheck
         {
             string? html = await GetStringOrNullAsync(client, PageUrl, token).ConfigureAwait(false);
             if (html is null)
-                return (Failure(FastComStep.Page), usedProxy);
+                return (Failure(FastComStep.Page), NotMeasured, usedProxy);
 
             if (FastComPlan.FindScriptPath(html) is not { } scriptPath)
-                return (Failure(FastComStep.Script), usedProxy);
+                return (Failure(FastComStep.Script), NotMeasured, usedProxy);
 
             string? script = await GetStringOrNullAsync(client, PageUrl.TrimEnd('/') + scriptPath, token)
                 .ConfigureAwait(false);
             if (script is null)
-                return (Failure(FastComStep.Script), usedProxy);
+                return (Failure(FastComStep.Script), NotMeasured, usedProxy);
 
             if (FastComPlan.FindToken(script) is not { } tokenValue)
-                return (Failure(FastComStep.Token), usedProxy);
+                return (Failure(FastComStep.Token), NotMeasured, usedProxy);
 
             string? json = await GetStringOrNullAsync(
                 client, FastComPlan.BuildApiUrl(tokenValue, UrlCount), token).ConfigureAwait(false);
             if (json is null)
-                return (Failure(FastComStep.Api), usedProxy);
+                return (Failure(FastComStep.Api), NotMeasured, usedProxy);
 
             IReadOnlyList<string> targets = FastComPlan.ParseTargets(json);
             if (targets.Count == 0)
-                return (Failure(FastComStep.Targets), usedProxy);
+                return (Failure(FastComStep.Targets), NotMeasured, usedProxy);
 
-            return (await MeasureAsync(client, targets, token).ConfigureAwait(false), usedProxy);
+            SpeedSample down = await MeasureDownAsync(client, targets, token).ConfigureAwait(false);
+
+            // 上りは同じ測定先へ送り返す。塞がれていても下りの結果は残したいので、
+            // ここで失敗しても理由を持たせて返すだけにする
+            SpeedSample up = await MeasureUpAsync(client, targets, token).ConfigureAwait(false);
+
+            return (down, up, usedProxy);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -81,16 +91,19 @@ internal static class FastComCheck
         }
         catch (OperationCanceledException)
         {
-            return (new SpeedSample(0, 0, $"{Timeout.TotalSeconds:0} 秒で終わりませんでした"), usedProxy);
+            return (new SpeedSample(0, 0, $"{Timeout.TotalSeconds:0} 秒で終わりませんでした"), NotMeasured, usedProxy);
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException)
         {
-            return (new SpeedSample(0, 0, $"fast.com と通信できませんでした: {ex.Message}"), usedProxy);
+            return (new SpeedSample(0, 0, $"fast.com と通信できませんでした: {ex.Message}"), NotMeasured, usedProxy);
         }
     }
 
+    /// <summary>測っていないことを表す印。下りだけ取れた場合に上りへ入れる。</summary>
+    private static SpeedSample NotMeasured => new(0, 0, "測っていません");
+
     /// <summary>もらった URL から<b>同時に</b>流して、合計のバイト数と時間で割る。</summary>
-    private static async Task<SpeedSample> MeasureAsync(
+    private static async Task<SpeedSample> MeasureDownAsync(
         HttpClient client, IReadOnlyList<string> targets, CancellationToken token)
     {
         long started = Stopwatch.GetTimestamp();
@@ -99,6 +112,49 @@ internal static class FastComCheck
             targets.Select(url => DrainAsync(client, url, token))).ConfigureAwait(false);
 
         return new SpeedSample(counts.Sum(), Elapsed(started));
+    }
+
+    /// <summary>
+    /// 同じ測定先へ<b>送り返して</b>上りを測る。fast.com のブラウザ版も同じ相手を使う。
+    /// 1 本も通らなければ、その旨を理由として返す（上りだけ絞られている経路がある）。
+    /// </summary>
+    private static async Task<SpeedSample> MeasureUpAsync(
+        HttpClient client, IReadOnlyList<string> targets, CancellationToken token)
+    {
+        long started = Stopwatch.GetTimestamp();
+
+        long[] counts = await Task.WhenAll(
+            targets.Select(url => PushAsync(client, url, token))).ConfigureAwait(false);
+
+        long total = counts.Sum();
+
+        return total > 0
+            ? new SpeedSample(total, Elapsed(started))
+            : new SpeedSample(0, Elapsed(started), "送信を受け付けてもらえませんでした");
+    }
+
+    /// <summary>0 で埋めた作り物を送る。受け付けられなければ 0 として続ける。</summary>
+    private static async Task<long> PushAsync(HttpClient client, string url, CancellationToken token)
+    {
+        try
+        {
+            using var content = new ByteArrayContent(new byte[UploadBytesPerStream]);
+            content.Headers.ContentType =
+                new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+
+            using HttpResponseMessage response = await client
+                .PostAsync(url, content, token).ConfigureAwait(false);
+
+            return response.IsSuccessStatusCode ? UploadBytesPerStream : 0;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
+        {
+            return 0;
+        }
     }
 
     /// <summary>読み捨てながらバイト数だけ数える。1 本が失敗しても 0 として続ける。</summary>

@@ -36,16 +36,15 @@ public static class RecommendedChecks
         ファイルサーバに繋がる,TCP,fs01.example.jp:445
         プリンタに繋がる,TCP,printer01.example.jp:9100
 
-        # 速度（宛先は社内のファイルサーバか、許可されている大きめのファイルに書き換えてください）
-        # 「期待」欄に MB/s で目安を書くと、下回ったとき「△ 注意」になります
-        回線速度（下り）,速度,https://example.jp/large.bin,20
+        # 速度
+        # 「期待」欄に Mbps で目安を書くと、下回ったとき「△ 注意」になります
+        回線速度,fast.com,,20
+
+        # 宛先を決めて測りたいときはこちら（社内のファイルサーバなど）
+        # 回線速度（下り）,速度,https://example.jp/large.bin,20
 
         # 上りは受け取ってくれる相手が要ります。用意できたら行頭の # を外してください
         # 回線速度（上り）,速度上り,https://example.jp/upload|20
-
-        # fast.com は非公式なので先方の変更で壊れます。また遮断対象になっている
-        # 現場もあります。使うときだけ行頭の # を外してください
-        # 回線速度（fast.com）,fast.com
         """;
 
     /// <summary>Microsoft 365 を使う現場向け。宛先が公開されているので書き換え不要。</summary>
@@ -60,7 +59,7 @@ public static class RecommendedChecks
         名前が引ける,DNS,teams.microsoft.com
 
         # 帯域。クラウドは速度がそのまま体感になるので一緒に測ります
-        回線速度（下り）,速度,https://speed.cloudflare.com/__down?bytes=25000000,20
+        回線速度,fast.com,,20
         """;
 
     /// <summary>画面のコンボに出す選択肢。</summary>

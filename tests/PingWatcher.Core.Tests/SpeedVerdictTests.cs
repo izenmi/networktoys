@@ -18,9 +18,9 @@ public class SpeedVerdictTests
         CheckResult result = SpeedVerdict.Judge(Plain, "直接", Mb(100, 2));
 
         Assert.True(result.IsPass);
-        // 測った値は必ず残す
-        Assert.Contains("MB/s", result.Detail, StringComparison.Ordinal);
-        Assert.Contains("100 MB", result.Detail, StringComparison.Ordinal);
+        // 測った値は必ず残す。単位は bps（契約書も測定サイトもこちら）
+        Assert.Contains("Mbps", result.Detail, StringComparison.Ordinal);
+        Assert.Contains("下り", result.Detail, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -28,27 +28,81 @@ public class SpeedVerdictTests
     {
         var item = Plain with { Expect = "20" };
 
-        // 100MB を 2 秒 = 50 MB/s
+        // 100MB を 2 秒 = 50 MB/s ≒ 419 Mbps
         Assert.True(SpeedVerdict.Judge(item, "Zscaler", Mb(100, 2)).IsPass);
     }
 
     [Fact]
     public void Falling_short_is_a_warning_not_a_failure()
     {
-        // 遅くても繋がってはいる。不合格にすると疎通の可否と混ざる
+        // 遅くても繋がってはいる。不合格にすると疎通の可否と混ざる。
+        // 1MB を 2 秒 = 0.5 MB/s ≒ 4.2 Mbps
         var item = Plain with { Expect = "20" };
 
-        CheckResult result = SpeedVerdict.Judge(item, "Zscaler", Mb(10, 2));
+        CheckResult result = SpeedVerdict.Judge(item, "Zscaler", Mb(1, 2));
 
         Assert.True(result.IsWarn);
         Assert.False(result.IsFail);
-        Assert.Contains("目安 20 MB/s を下回っています", result.Detail, StringComparison.Ordinal);
+        Assert.Contains("目安 20 Mbps を下回っています", result.Detail, StringComparison.Ordinal);
+    }
+
+    // ===== 上り下りの両方 =====
+
+    [Fact]
+    public void Fast_com_reports_both_directions()
+    {
+        CheckResult result = SpeedVerdict.Judge(
+            Plain with { Kind = CheckKind.FastCom }, "直接", Mb(100, 2), Mb(20, 2));
+
+        Assert.Contains("下り", result.Detail, StringComparison.Ordinal);
+        Assert.Contains("上り", result.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_unmeasurable_upload_is_said_out_loud()
+    {
+        // 上りだけ絞られている経路がある。黙って落とすと気づけない
+        CheckResult result = SpeedVerdict.Judge(
+            Plain with { Kind = CheckKind.FastCom }, "直接",
+            Mb(100, 2), new SpeedSample(0, 500, "送信を受け付けてもらえませんでした"));
+
+        // 下りは取れているので合格のまま
+        Assert.True(result.IsPass);
+        Assert.Contains("上りは測れませんでした", result.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_guideline_is_judged_on_the_download()
+    {
+        // 業務アプリの体感はほぼ下りで決まる。上りは参考として出すだけ
+        var item = Plain with { Kind = CheckKind.FastCom, Expect = "20" };
+
+        Assert.True(SpeedVerdict.Judge(item, "直接", Mb(100, 2), Mb(1, 10)).IsPass);
+    }
+
+    // ===== 単位 =====
+
+    [Theory]
+    [InlineData(125_000, "1.0 Mbps")]          // 125 KB/s = 1 Mbps
+    [InlineData(12_500_000, "100 Mbps")]
+    [InlineData(125_000_000, "1.0 Gbps")]
+    [InlineData(100, "800 bps")]
+    [InlineData(0, "0 bps")]
+    [InlineData(-1, "0 bps")]
+    public void Speeds_are_shown_in_bits_per_second(double bytesPerSecond, string expected)
+        => Assert.Equal(expected, PingWatcher.Core.Net.BitRateFormat.Format(bytesPerSecond));
+
+    [Fact]
+    public void Bits_use_1000_as_the_base_unlike_bytes()
+    {
+        // 回線は 1000 基数、転送量は 1024 基数。混ぜると数字が合わない
+        Assert.Equal(8, PingWatcher.Core.Net.BitRateFormat.ToMbps(1_000_000));
     }
 
     [Theory]
     [InlineData("20", 20.0)]
-    [InlineData("20MB/s", 20.0)]
-    [InlineData("20 MB", 20.0)]
+    [InlineData("20Mbps", 20.0)]
+    [InlineData("20 M", 20.0)]
     [InlineData("2.5", 2.5)]
     [InlineData("", null)]
     [InlineData("   ", null)]

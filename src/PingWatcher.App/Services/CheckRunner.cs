@@ -137,12 +137,18 @@ internal static class CheckRunner
     private static async Task<CheckResult> RunSpeedAsync(
         CheckItem item, ProxyChoice proxy, CancellationToken token)
     {
-        (SpeedSample sample, string used) = item.Kind switch
+        // fast.com だけは 1 回で上りも測れる。ほかは指定された向きだけ
+        if (item.Kind == CheckKind.FastCom)
         {
-            CheckKind.Upload => await SpeedCheck.UploadAsync(item.Target, proxy, token).ConfigureAwait(false),
-            CheckKind.FastCom => await FastComCheck.RunAsync(proxy, token).ConfigureAwait(false),
-            _ => await SpeedCheck.DownloadAsync(item.Target, proxy, token).ConfigureAwait(false),
-        };
+            (SpeedSample down, SpeedSample up, string via) =
+                await FastComCheck.RunAsync(proxy, token).ConfigureAwait(false);
+
+            return SpeedVerdict.Judge(item, via.Length > 0 ? via : proxy.Name, down, up);
+        }
+
+        (SpeedSample sample, string used) = item.Kind == CheckKind.Upload
+            ? await SpeedCheck.UploadAsync(item.Target, proxy, token).ConfigureAwait(false)
+            : await SpeedCheck.DownloadAsync(item.Target, proxy, token).ConfigureAwait(false);
 
         return SpeedVerdict.Judge(item, used.Length > 0 ? used : proxy.Name, sample);
     }

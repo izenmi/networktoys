@@ -60,7 +60,7 @@ public sealed class VerifyRowViewModel : ObservableObject
         CheckKind.Teams => "空でかまいません（Teams の既定の宛先を使います）",
         CheckKind.Download => "測る URL（大きめのファイル）",
         CheckKind.Upload => "送り先の URL（末尾に |20 と書くと 20MB 送ります）",
-        CheckKind.FastCom => "空でかまいません（fast.com へ行きます）",
+        CheckKind.FastCom => "空でかまいません（fast.com で上り下りを測ります）",
         CheckKind.Smtp => "host:port（省略すると 587）",
         CheckKind.Imap => "host:port（省略すると 993）",
         CheckKind.Pop3 => "host:port（省略すると 995）",

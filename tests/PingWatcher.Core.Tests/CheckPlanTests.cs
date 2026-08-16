@@ -134,18 +134,31 @@ public class CheckPlanTests
     }
 
     [Fact]
-    public void The_fragile_and_the_unprepared_items_stay_commented_out()
+    public void The_items_that_need_preparation_stay_commented_out()
     {
-        // fast.com は先方の変更で壊れるうえ遮断対象のこともある。
-        // 上りは受け取る相手が要る。どちらも既定で走らせない
+        // 上りは受け取ってくれる相手が要る。宛先を決めた下りも書き換えが要る。
+        // 用意ができるまで走らせない（不合格が並ぶと本当の異常が埋もれる）
         IReadOnlyList<CheckItem> items = CheckListParser.Parse(RecommendedChecks.Standard);
 
-        Assert.DoesNotContain(items, i => i.Kind == CheckKind.FastCom);
         Assert.DoesNotContain(items, i => i.Kind == CheckKind.Upload);
+        Assert.DoesNotContain(items, i => i.Kind == CheckKind.Download);
 
         // ただし書き方は残しておく（# を外せば使える）
-        Assert.Contains("fast.com", RecommendedChecks.Standard, StringComparison.Ordinal);
         Assert.Contains("速度上り", RecommendedChecks.Standard, StringComparison.Ordinal);
+        Assert.Contains(",速度,", RecommendedChecks.Standard, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Speed_is_measured_with_fast_com_by_default()
+    {
+        // 宛先を用意しなくてもすぐ測れるのが利点。壊れたときは
+        // どこで躓いたかが出るので、そのとき別の手に切り替えられる
+        foreach ((string name, string text) in RecommendedChecks.Templates)
+        {
+            IReadOnlyList<CheckItem> items = CheckListParser.Parse(text);
+
+            Assert.Contains(items, i => i.Kind == CheckKind.FastCom);
+        }
     }
 
     // ===== PAC の解決結果 =====
