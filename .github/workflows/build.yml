@@ -80,16 +80,14 @@ jobs:
         run: |
           Copy-Item tools/launcher/PingWatcher.cmd publish/${{ matrix.name }}/PingWatcher.cmd
 
-          # ランタイムがある環境なので、素通りして exe を起動できることだけ確かめる。
-          # (無い環境の分岐は CI では踏めない。ランナーには必ず入っている)
-          $out = & cmd /c "publish/${{ matrix.name }}/PingWatcher.cmd" --selftest 2>&1
+          # ランナーにはランタイムが入っているので、見つけられることを確かめる。
+          # --check は判定だけしてアプリを起動しない口。
+          # (入っていない側の分岐は CI では踏めない)
+          $launcher = (Resolve-Path "publish/${{ matrix.name }}/PingWatcher.cmd").Path
+          $out = & $launcher --check 2>&1
           if ($LASTEXITCODE -ne 0) {
-            throw "起動用スクリプトがランタイムを見つけられなかった: $out"
+            throw "起動用スクリプトがランタイムを見つけられなかった (終了コード $LASTEXITCODE): $out"
           }
-
-          # 起動しっぱなしにしない（--selftest は自分で終わるが、念のため待つ）
-          Get-Process PingWatcher -ErrorAction SilentlyContinue |
-            ForEach-Object { $_.WaitForExit(30000) | Out-Null }
 
       # ウィンドウを実際に開いてレイアウトまで通す検査。XAML の誤りやフォント初期化の
       # 不具合はコンパイルを通り抜けるので、ここが実質唯一の防波堤になる。

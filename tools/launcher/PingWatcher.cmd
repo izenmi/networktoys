@@ -32,6 +32,12 @@ set "FOUND="
 if defined ProgramW6432 call :probe "%ProgramW6432%"
 if not defined FOUND call :probe "%ProgramFiles%"
 
+rem CI から判定だけ試せるようにしておく（アプリを起動させない）。
+rem ランタイムが「ある」側の分岐は、これが無いと確かめようがない
+if /i "%~1"=="--check" (
+    if defined FOUND ( exit /b 0 ) else ( exit /b 1 )
+)
+
 if defined FOUND goto run
 
 rem 見つからないとき。案内して、望むなら入手ページを開く。
