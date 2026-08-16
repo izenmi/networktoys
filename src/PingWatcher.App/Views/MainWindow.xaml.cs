@@ -878,6 +878,125 @@ public partial class MainWindow : Window
             CopyText(row.Host);
     }
 
+    // ===== 一覧から次の道具へ送る（スキャン・接続・遮断・Meraki・syslog・Trap） =====
+    //
+    // 橋が架かっていたのは Ping/TCP の一覧だけで、他のタブで見つけた IP は
+    // 手で打ち直すしかなかった。行の型ごとに「どこがアドレスか」を
+    // AddressOf 1 か所で決め、送り先は既存の 3 本と同じ形で書く。
+
+    /// <summary>
+    /// 右クリックされた行からアドレスを取り出す。
+    ///
+    /// 行の型は一覧ごとに違うので、ここでだけ振り分ける。<b>新しい一覧に
+    /// メニューを付けたらここに 1 行足す</b>（足し忘れると黙って何も起きない）。
+    /// </summary>
+    internal static string AddressOf(object sender)
+    {
+        object? context = (sender as FrameworkElement)?.DataContext;
+
+        string raw = context switch
+        {
+            ScanRowViewModel scan => scan.Address,
+            PingWatcher.Core.Net.ConnectionDetailRow conn => conn.Remote,
+            PingWatcher.Core.Net.WfpBlockedRow wfp => wfp.Remote,
+            PingWatcher.Core.Cloud.MerakiDeviceRow device =>
+                device.LanIp.Length > 0 ? device.LanIp : device.PublicIp,
+            PingWatcher.Core.Cloud.MerakiClientRow client => client.Ip,
+            FileServerLogRow log => log.Remote,
+            _ => string.Empty,
+        };
+
+        return HostOnly(raw);
+    }
+
+    /// <summary>
+    /// <c>1.2.3.4:443</c> や <c>[::1]:443</c> からホストだけ取り出す。
+    ///
+    /// 素の IPv6 を切らないよう、<b>コロンが 1 つのときだけ</b>後ろを落とす
+    /// （<see cref="PingWatcher.Core.Storage.TargetListParser"/> と同じ規則）。
+    /// 角かっこ付きは中身をそのまま使う。
+    /// </summary>
+    internal static string HostOnly(string value)
+    {
+        string text = value.Trim();
+
+        // 「—」はリモートが無い行（LISTEN など）。宛先にはできない
+        if (text.Length == 0 || text == "—") return string.Empty;
+
+        if (text.StartsWith('['))
+        {
+            int close = text.IndexOf(']');
+            return close > 1 ? text[1..close] : string.Empty;
+        }
+
+        int colon = text.LastIndexOf(':');
+        return colon > 0 && text.IndexOf(':') == colon ? text[..colon] : text;
+    }
+
+    private void OnSendToPing(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.Monitor.AppendToTargetList([address]);
+        PingTab.IsSelected = true;
+    }
+
+    private void OnSendToTcp(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        // ポートは TCP タブの既定値を使う（後から書き換えられる）
+        string port = _shell.Tcp.TcpPort.Trim();
+
+        _shell.Tcp.AppendToTargetList([port.Length > 0 ? $"{address}:{port}" : address]);
+        TcpTab.IsSelected = true;
+    }
+
+    private void OnSendToCollect(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.Collect.Import([(address, string.Empty)]);
+        CollectTab.IsSelected = true;
+    }
+
+    private void OnSendToTrace(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.Trace.Host = address;
+        TraceTab.IsSelected = true;
+
+        if (_shell.Trace.TraceCommand.CanExecute(null))
+            _shell.Trace.TraceCommand.Execute(null);
+    }
+
+    private void OnSendToDns(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.Dns.Name = address;
+        _shell.Dns.SelectedType = "PTR";   // IP を渡すので、名前を知りたいなら逆引き
+        DnsTab.IsSelected = true;
+
+        if (_shell.Dns.QueryCommand.CanExecute(null))
+            _shell.Dns.QueryCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// SNMP は<b>実行まではしない</b>。コミュニティ名を入れてもらう必要があるので、
+    /// 宛先だけ入れて画面を出す（勝手に投げると public で外れ続ける）。
+    /// </summary>
+    private void OnSendToSnmp(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.SnmpGet.Host = address;
+        SnmpTab.IsSelected = true;
+    }
+
+    private void OnCopyRowAddress(object sender, RoutedEventArgs e) => CopyText(AddressOf(sender));
+
     /// <summary>
     /// クリップボードは他のプロセスが掴んでいると失敗する。
     /// 写せなかったからといって落ちる操作ではないので、記録して黙って諦める。

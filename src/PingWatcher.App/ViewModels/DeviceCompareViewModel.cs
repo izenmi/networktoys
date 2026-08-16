@@ -529,11 +529,12 @@ public sealed class DeviceCompareViewModel : ObservableObject
             OnPropertyChanged(nameof(HasNote));
         }
 
-        SaveChangesCommand.RaiseCanExecuteChanged();
         else
         {
             Headline = result.HasChanges ? $"{result.ChangedCount} 行に違いがあります。" : "違いはありません。";
         }
+
+        SaveChangesCommand.RaiseCanExecuteChanged();
 
         string ignored = result.IgnoredLines > 0 ? $"（毎回変わる {result.IgnoredLines} 行は除いています）" : string.Empty;
         Status = Rows.Count == 0 && result.Rows.Count > 0

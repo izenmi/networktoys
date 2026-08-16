@@ -479,6 +479,56 @@ internal static class SelfTest
             log.AppendLine($"        アダプタ: {adapters.Count} 枚");
         });
 
+        Check("一覧から次の道具へ送れる（行の型からアドレスが取れる）", () =>
+        {
+            // メニューは 6 つの一覧で 1 つの定義を使い回すので、
+            // 行の型を 1 つでも取りこぼすと「右クリックしても何も起きない」になる。
+            // ここは黙って失敗する側なので、型ごとに実際に取り出して確かめる。
+            (object Row, string Expected)[] cases =
+            [
+                (new Core.Net.ConnectionDetailRow(
+                    "TCP", "192.168.1.5:50000", "93.184.216.34:443", "ESTABLISHED",
+                    Core.Net.ConnectionStateKind.Ok, "0", "0", "k"), "93.184.216.34"),
+
+                // 角かっこ付きの IPv6。中身だけ取り出す
+                (new Core.Net.ConnectionDetailRow(
+                    "TCPv6", "[::1]:50000", "[2001:db8::1]:443", "ESTABLISHED",
+                    Core.Net.ConnectionStateKind.Ok, "0", "0", "k"), "2001:db8::1"),
+
+                // LISTEN の行はリモートが無い。宛先にはできない
+                (new Core.Net.ConnectionDetailRow(
+                    "TCP", "0.0.0.0:445", "—", "LISTEN",
+                    Core.Net.ConnectionStateKind.Ok, "0", "0", "k"), ""),
+
+                (new Core.Net.WfpBlockedRow(
+                    "10:00:00", DateTime.UtcNow, "送信", "TCP", "192.168.1.5:50000",
+                    "203.0.113.9:445", "app.exe", @"C:\app.exe", 1, "1", "0", "0", "k"), "203.0.113.9"),
+
+                (new Core.Cloud.MerakiDeviceRow(
+                    "MX-01", "MX68", "Q2QN", "18.1", "本社", "オンライン",
+                    Core.Net.ConnectionStateKind.Ok, "203.0.113.1", "192.168.128.1"), "192.168.128.1"),
+
+                (new Core.Cloud.MerakiClientRow(
+                    "pc-01", "192.168.128.50", "aa:bb:cc:dd:ee:ff", "10", "Dell", "1 MB", "10:00"), "192.168.128.50"),
+
+                (new ViewModels.FileServerLogRow("10:00:00", "10.1.1.1", "%LINK-3-UPDOWN", 3), "10.1.1.1"),
+
+                // 見覚えのない型は空。落ちてはいけない
+                (new object(), ""),
+            ];
+
+            foreach ((object row, string expected) in cases)
+            {
+                var probe = new System.Windows.Controls.MenuItem { DataContext = row };
+                string actual = Views.MainWindow.AddressOf(probe);
+
+                Assert(actual == expected,
+                       $"{row.GetType().Name} から取れたのは「{actual}」（期待は「{expected}」）");
+            }
+
+            log.AppendLine($"        行の型: {cases.Length} 通り");
+        });
+
         Check("収集: 機器の行テンプレートを実体化できる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

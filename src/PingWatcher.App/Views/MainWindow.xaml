@@ -22,6 +22,43 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
         <!--
+            一覧から次の道具へ送るメニュー。スキャン・接続・遮断・Meraki・syslog・Trap で
+            使い回す。これまで橋が架かっていたのは Ping/TCP の一覧だけで、他のタブで
+            見つけた IP は手で打ち直すしかなかった。
+
+            x:Shared="False" を付けて、使う一覧ごとに別の実体を作らせる。
+            1 つの実体を複数の要素で共有すると PlacementTarget が取り合いになる。
+
+            アドレスの取り出しはコードビハインドの AddressOf に集約してあるので、
+            ここは Click の名前を揃えるだけでよい。
+        -->
+        <ContextMenu x:Key="RowMenu.Device" x:Shared="False"
+                     DataContext="{Binding PlacementTarget.DataContext,
+                                   RelativeSource={RelativeSource Self}}">
+            <MenuItem Header="Ping の宛先に追加" Click="OnSendToPing" />
+            <MenuItem Header="TCP Ping に追加" Click="OnSendToTcp" />
+            <MenuItem Header="収集の機器に追加" Click="OnSendToCollect" />
+            <Separator />
+            <MenuItem Header="経路を調べる" Click="OnSendToTrace" />
+            <MenuItem Header="名前を引く" Click="OnSendToDns" />
+            <MenuItem Header="SNMP で問い合わせる" Click="OnSendToSnmp" />
+            <Separator />
+            <MenuItem Header="アドレスをコピー" Click="OnCopyRowAddress" />
+        </ContextMenu>
+
+        <!-- 通信の相手（接続・遮断・Meraki のクライアント）。機器として扱う項目は出さない -->
+        <ContextMenu x:Key="RowMenu.Address" x:Shared="False"
+                     DataContext="{Binding PlacementTarget.DataContext,
+                                   RelativeSource={RelativeSource Self}}">
+            <MenuItem Header="Ping の宛先に追加" Click="OnSendToPing" />
+            <Separator />
+            <MenuItem Header="経路を調べる" Click="OnSendToTrace" />
+            <MenuItem Header="名前を引く" Click="OnSendToDns" />
+            <Separator />
+            <MenuItem Header="アドレスをコピー" Click="OnCopyRowAddress" />
+        </ContextMenu>
+
+        <!--
             タブの中のサブタブ用（FTP タブの FTP/TFTP/SFTP など）。
             主タブと明確に見分けられるよう、小さめのセグメント（連結ボタン）風にする。
             選択中はアクセント地、非選択はくすませて「これは中の切り替え」と分かる形に。
@@ -1863,7 +1900,8 @@
                                  VirtualizingStackPanel.VirtualizationMode="Recycling">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Height="{DynamicResource Size.RowHeight}">
+                                    <Grid Height="{DynamicResource Size.RowHeight}"
+                                          ContextMenu="{StaticResource RowMenu.Device}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.0]}" />
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.1]}" />
@@ -2539,7 +2577,8 @@
                                          VirtualizingStackPanel.VirtualizationMode="Recycling">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                            <Grid Height="{DynamicResource Size.RowHeight}"
+                                                  ContextMenu="{StaticResource RowMenu.Device}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
@@ -2583,7 +2622,7 @@
             </TabItem>
 
             <!-- ===== SNMP（GET / Trap 受信） ===== -->
-            <TabItem Header="SNMP">
+            <TabItem x:Name="SnmpTab" Header="SNMP">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,2,0,6">
                         <TextBlock Text="種類" Style="{StaticResource Caption}"
@@ -2764,7 +2803,8 @@
                                                      VirtualizingStackPanel.VirtualizationMode="Recycling">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Height="{DynamicResource Size.RowHeight}">
+                                                        <Grid Height="{DynamicResource Size.RowHeight}"
+                                                              ContextMenu="{StaticResource RowMenu.Device}">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
@@ -2947,7 +2987,8 @@
                                             </Border>
                                         </DataTemplate>
                                         <DataTemplate DataType="{x:Type net:ConnectionDetailRow}">
-                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                            <Grid Height="{DynamicResource Size.RowHeight}"
+                                                  ContextMenu="{StaticResource RowMenu.Address}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.1]}" />
@@ -3124,7 +3165,8 @@
                                          余白を持つので、指定しないと 1 行ぶん背が高くなる -->
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Height="{DynamicResource Size.RowHeight}" ToolTip="{Binding ProcessPath}">
+                                            <Grid Height="{DynamicResource Size.RowHeight}" ToolTip="{Binding ProcessPath}"
+                                                  ContextMenu="{StaticResource RowMenu.Address}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.1]}" />
@@ -3714,7 +3756,8 @@
                                                      VirtualizingPanel.VirtualizationMode="Recycling">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Height="22">
+                                                        <Grid Height="22"
+                                                              ContextMenu="{StaticResource RowMenu.Device}">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
@@ -4011,7 +4054,8 @@
                                                      VirtualizingPanel.VirtualizationMode="Recycling">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Height="22">
+                                                        <Grid Height="22"
+                                                              ContextMenu="{StaticResource RowMenu.Address}">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
