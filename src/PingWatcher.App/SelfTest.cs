@@ -1644,9 +1644,11 @@ internal static class SelfTest
         if (!help.Contains('・', StringComparison.Ordinal))
             yield return $"{name}（箇条書きが無い）";
 
-        // 浮いた箱だけ見えている状態で、何の説明か分かるように
-        if (!lines[0].StartsWith(name, StringComparison.Ordinal))
-            yield return $"{name}（1 行目がタブ名でない: 「{lines[0]}」）";
+        // 浮いた箱だけ見えている状態で、何の説明か分かるように。
+        // 親を添える書き方（「Meraki ─ ネットワーク」）の方が親切なので、
+        // 前方一致ではなく「含まれていること」で見る
+        if (!lines[0].Contains(name, StringComparison.Ordinal))
+            yield return $"{name}（1 行目にタブ名が無い: 「{lines[0]}」）";
 
         // 幅は ToolTip の MaxWidth 420px = 全角 34 字ぶん。
         // 文字数ではなく表示幅で数える（日本語と URL で基準が変わるため）
