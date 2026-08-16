@@ -4447,6 +4447,29 @@
                                                            TextTrimming="CharacterEllipsis" ToolTip="{Binding ProxyText}" />
                                                 <TextBlock x:Name="VerdictText" Grid.Column="2" Text="{Binding VerdictText}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+
+                                                <!-- 目視の項目だけ、その場で合否を付けられるようにする。
+                                                     アプリからは判定できないページがあるため -->
+                                                <StackPanel x:Name="MarkButtons" Grid.Column="2" Orientation="Horizontal"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                            Visibility="Collapsed">
+                                                    <Button Content="○" Margin="0,0,2,0"
+                                                            Width="18" Height="16" Padding="0" MinWidth="0" MinHeight="0"
+                                                            FontSize="{DynamicResource Size.Micro}"
+                                                            Style="{StaticResource Button.Subtle}"
+                                                            Command="{Binding DataContext.MarkPassCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip="目視で確認できたので合格にします。" />
+                                                    <Button Content="✕"
+                                                            Width="18" Height="16" Padding="0" MinWidth="0" MinHeight="0"
+                                                            FontSize="{DynamicResource Size.Micro}"
+                                                            Style="{StaticResource Button.Subtle}"
+                                                            Command="{Binding DataContext.MarkFailCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip="目視で問題があったので不合格にします。" />
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="3" Text="{Binding ElapsedText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
                                                            HorizontalAlignment="Right" />
@@ -4462,6 +4485,10 @@
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsWarn}" Value="True">
                                                     <Setter TargetName="VerdictText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding NeedsPerson}" Value="True">
+                                                    <Setter TargetName="VerdictText" Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                    <Setter TargetName="MarkButtons" Property="Visibility" Value="Visible" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsPass}" Value="True">
                                                     <Setter TargetName="VerdictText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />

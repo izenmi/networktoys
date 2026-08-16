@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using PingWatcher.Core.Metrics;
 using PingWatcher.Core.Verify;
 
@@ -79,8 +80,9 @@ internal static class CheckRunner
     {
         // 種類ごとに要るものが揃っていなければ、試験せずにそう言う。
         // 空欄のまま「不合格」にすると、設定漏れと本当の異常が混ざる
-        // fast.com と Teams は宛先を持たない（決まった相手へ行く）
-        if (item.Kind is not (CheckKind.Teams or CheckKind.FastCom)
+        // 宛先が要らない種類。fast.com と Teams は決まった相手へ行き、
+        // DNS は空なら自分のホスト名を引く
+        if (item.Kind is not (CheckKind.Teams or CheckKind.FastCom or CheckKind.Dns)
             && item.Target.Trim().Length == 0)
             return Skip(item, "宛先が空です");
 
@@ -91,6 +93,7 @@ internal static class CheckRunner
             CheckKind.Teams => await RunTeamsAsync(item, teams, token).ConfigureAwait(false),
             CheckKind.Download or CheckKind.Upload or CheckKind.FastCom
                 => await RunSpeedAsync(item, proxy, token).ConfigureAwait(false),
+            CheckKind.Manual => OpenForPerson(item),
             _ => await RunConnectAsync(item, token).ConfigureAwait(false),
         };
     }
@@ -153,22 +156,72 @@ internal static class CheckRunner
         return SpeedVerdict.Judge(item, used.Length > 0 ? used : proxy.Name, sample);
     }
 
+    /// <summary>
+    /// 名前が引けるか。<b>宛先が空なら自分のホスト名を引く。</b>
+    ///
+    /// 自分の名前が引けるかは、DNS への動的登録が効いているか・逆に古い登録が
+    /// 残っていないかを見るのに要る。IP を変えた直後は特に外しやすい。
+    /// </summary>
     private static async Task<CheckResult> RunDnsAsync(CheckItem item, CancellationToken token)
     {
+        string name = item.Target.Trim();
+        bool self = name.Length == 0;
+
+        if (self) name = Environment.MachineName;
+
         // 端末のアプリが実際に体験する解決を見たいので、システム既定のリゾルバを使う
         DnsLookupResult result = await DnsProbe
-            .QueryAsync(DnsProbe.SystemResolver, item.Target, "A", ConnectTimeoutMs, token)
+            .QueryAsync(DnsProbe.SystemResolver, name, "A", ConnectTimeoutMs, token)
             .ConfigureAwait(false);
 
+        string what = self ? $"自分（{name}）" : name;
+
         if (!result.Success)
-            return Fail(item, result.Message ?? "名前を解決できませんでした", result.ElapsedMs);
+            return Fail(item, $"{what} を解決できませんでした（{result.Message}）", result.ElapsedMs);
 
         if (result.Records.Count == 0)
-            return Fail(item, "応答はありましたが答えが 0 件でした", result.ElapsedMs);
+            return Fail(item, $"{what} の応答はありましたが答えが 0 件でした", result.ElapsedMs);
 
         string addresses = string.Join(", ", result.Records.Take(3).Select(r => r.Value));
 
-        return Pass(item, $"{result.Records.Count} 件: {addresses}", result.ElapsedMs);
+        return Pass(item, $"{what} → {addresses}", result.ElapsedMs);
+    }
+
+    /// <summary>
+    /// ブラウザで開いて、人の判定を待つ。
+    ///
+    /// ログインが要る・証明書を選ぶ・JavaScript で描画される、といったページは
+    /// HTTP で叩いても意味のある答えが返らない。<b>開くところまでを肩代わりして、
+    /// 合否は人に付けてもらう。</b>
+    ///
+    /// 既定のブラウザで開くので、<b>Windows のプロキシ設定が効く</b>。
+    /// 試験タブで選んだプロキシとは別物なので、その断りも書いておく。
+    /// </summary>
+    private static CheckResult OpenForPerson(CheckItem item)
+    {
+        string url = item.Target.Trim();
+
+        if (url.Length == 0)
+            return Skip(item, "開く URL が空です");
+
+        if (!url.Contains("://", StringComparison.Ordinal))
+            url = "https://" + url;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            return Fail(item, $"ブラウザで開けませんでした: {ex.Message}", 0);
+        }
+
+        string what = item.Expect.Length > 0 ? $"「{item.Expect}」を確認してください。" : "";
+
+        return new CheckResult(item.Name, item.Kind, item.Target, "",
+                               CheckVerdict.AwaitingPerson,
+                               $"ブラウザで開きました。{what}"
+                               + "（既定のブラウザなので Windows のプロキシ設定に従います）");
     }
 
     /// <summary>

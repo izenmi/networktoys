@@ -56,11 +56,12 @@ public sealed class VerifyRowViewModel : ObservableObject
     public string TargetHint => CurrentKind switch
     {
         CheckKind.Http => "URL（例 https://portal.example.jp/）",
-        CheckKind.Dns => "引きたい名前（例 www.example.jp）",
+        CheckKind.Dns => "引きたい名前。空なら自分のホスト名を引きます",
         CheckKind.Teams => "空でかまいません（Teams の既定の宛先を使います）",
         CheckKind.Download => "測る URL（大きめのファイル）",
         CheckKind.Upload => "送り先の URL（末尾に |20 と書くと 20MB 送ります）",
         CheckKind.FastCom => "空でかまいません（fast.com で上り下りを測ります）",
+        CheckKind.Manual => "ブラウザで開く URL",
         CheckKind.Smtp => "host:port（省略すると 587）",
         CheckKind.Imap => "host:port（省略すると 993）",
         CheckKind.Pop3 => "host:port（省略すると 995）",
@@ -125,6 +126,8 @@ public sealed class VerifyViewModel : ObservableObject
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         SaveCommand = new RelayCommand(Save, () => Results.Count > 0);
         LoadItemsCommand = new RelayCommand(LoadItems, () => !IsBusy);
+        MarkPassCommand = new RelayCommand<CheckResult>(r => Mark(r, CheckVerdict.Pass));
+        MarkFailCommand = new RelayCommand<CheckResult>(r => Mark(r, CheckVerdict.Fail));
         SaveItemsCommand = new RelayCommand(SaveItems, () => Rows.Count > 0);
 
         _proxyText = Settings.Current.VerifyProxies;
@@ -163,6 +166,12 @@ public sealed class VerifyViewModel : ObservableObject
 
     /// <summary>試験項目をファイルへ保存する。</summary>
     public RelayCommand SaveItemsCommand { get; }
+
+    /// <summary>目視の項目に合格を付ける。</summary>
+    public RelayCommand<CheckResult> MarkPassCommand { get; }
+
+    /// <summary>目視の項目に不合格を付ける。</summary>
+    public RelayCommand<CheckResult> MarkFailCommand { get; }
 
     public string Notice => ProxyNotice;
 
@@ -325,6 +334,12 @@ public sealed class VerifyViewModel : ObservableObject
                 continue;
             }
 
+            if (mine.Any(r => r.NeedsPerson))
+            {
+                row.Status = "◍ 目視で確認";
+                continue;
+            }
+
             CheckResult[] failed = [.. mine.Where(r => r.IsFail)];
 
             if (failed.Length == 0)
@@ -337,6 +352,25 @@ public sealed class VerifyViewModel : ObservableObject
                 ? $"✕ {string.Join("・", failed.Select(f => f.ProxyText))} で不合格"
                 : "✕ 不合格";
         }
+    }
+
+    /// <summary>
+    /// ブラウザで開いた項目に、人が合否を付ける。
+    /// <b>結果の行を差し替える</b>ので、CSV にもそのまま反映される。
+    /// </summary>
+    private void Mark(CheckResult? result, CheckVerdict verdict)
+    {
+        if (result is null) return;
+
+        int at = Results.IndexOf(result);
+        if (at < 0) return;
+
+        string mark = verdict == CheckVerdict.Pass ? "目視で確認しました" : "目視で問題を確認しました";
+
+        Results[at] = result with { Verdict = verdict, Detail = $"{mark}（{result.Detail}）" };
+
+        ApplyToRows([.. Results]);
+        Status = CheckReport.Summarize([.. Results]);
     }
 
     private void Save()

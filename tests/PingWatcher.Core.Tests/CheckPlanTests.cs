@@ -161,6 +161,32 @@ public class CheckPlanTests
         }
     }
 
+    [Fact]
+    public void Every_template_checks_the_machines_own_name()
+    {
+        // 自分の名前が引けるかは、DNS への動的登録が効いているかを見るのに要る。
+        // IP を変えた直後は特に外しやすい。宛先を空にすると自分を引く
+        foreach ((string name, string text) in RecommendedChecks.Templates)
+        {
+            IReadOnlyList<CheckItem> items = CheckListParser.Parse(text);
+
+            Assert.Contains(items, i => i.Kind == CheckKind.Dns && i.Target.Length == 0);
+        }
+    }
+
+    [Fact]
+    public void Every_template_has_something_for_a_person_to_look_at()
+    {
+        // ログインが要る・証明書を選ぶ・JS で描画される、といったページは
+        // アプリからは判定できない。開くところまでを肩代わりして人に委ねる
+        foreach ((string name, string text) in RecommendedChecks.Templates)
+        {
+            IReadOnlyList<CheckItem> items = CheckListParser.Parse(text);
+
+            Assert.Contains(items, i => i.Kind == CheckKind.Manual);
+        }
+    }
+
     // ===== PAC の解決結果 =====
 
     [Theory]

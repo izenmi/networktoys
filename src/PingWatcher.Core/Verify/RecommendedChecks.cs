@@ -18,12 +18,18 @@ public static class RecommendedChecks
         # 書式: 項目名,種類,宛先,期待するもの(任意)
 
         # 基本
+        自分のホスト名が引ける,DNS
         名前が引ける,DNS,www.example.jp
         インターネットが見られる,HTTP,https://www.example.jp/
 
         # 社内 Web
         社内ポータルが開く,HTTP,http://portal.example.jp/
         業務システムのログイン画面が出る,HTTP,http://app.example.jp/login,ログイン
+
+        # ブラウザでないと開けないページ（ログインが要る・証明書を選ぶ・JS で描画される）。
+        # 実行するとブラウザで開くので、見て ○ か ✕ を押してください
+        勤怠システムにログインできる,手動,https://kintai.example.jp/,ログイン後のトップ画面
+        経費精算が開く,手動,https://keihi.example.jp/
 
         # Teams（音声の道まで確かめます）
         Teams が使える,Teams
@@ -57,6 +63,10 @@ public static class RecommendedChecks
         Exchange Online に繋がる,TCP,outlook.office365.com:443
         SharePoint が開く,HTTP,https://www.office.com/
         名前が引ける,DNS,teams.microsoft.com
+        自分のホスト名が引ける,DNS
+
+        # ブラウザで開いて目視で確認します
+        Teams を開いてサインインできる,手動,https://teams.microsoft.com/,自分の名前が出ること
 
         # 帯域。クラウドは速度がそのまま体感になるので一緒に測ります
         回線速度,fast.com,,20

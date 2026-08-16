@@ -22,6 +22,9 @@ public enum CheckVerdict
 
     /// <summary>試験できなかった（宛先が空、種類に対して指定が足りない など）。</summary>
     Skipped,
+
+    /// <summary>ブラウザで開いたので、人が見て合否を付ける番。</summary>
+    AwaitingPerson,
 }
 
 /// <summary>
@@ -52,12 +55,16 @@ public sealed record CheckResult(
         CheckVerdict.Fail => "✕ 不合格",
         CheckVerdict.Warn => "△ 注意",
         CheckVerdict.Skipped => "— 試験せず",
+        CheckVerdict.AwaitingPerson => "◍ 目視で確認",
         _ => "◌ 未実行",
     };
 
     public bool IsPass => Verdict == CheckVerdict.Pass;
     public bool IsFail => Verdict == CheckVerdict.Fail;
     public bool IsWarn => Verdict == CheckVerdict.Warn;
+
+    /// <summary>人の判定を待っている。<b>合否が付くまで試験は終わっていない。</b></summary>
+    public bool NeedsPerson => Verdict == CheckVerdict.AwaitingPerson;
 
     /// <summary>プロキシを使わない種類は「—」。空欄だと抜けに見える。</summary>
     public string ProxyText => ProxyName.Length > 0 ? ProxyName : "—";
@@ -99,17 +106,22 @@ public static class CheckReport
         int warn = results.Count(r => r.IsWarn);
         int skipped = results.Count(r => r.Verdict == CheckVerdict.Skipped);
 
+        int waiting = results.Count(r => r.NeedsPerson);
+
         var tail = new List<string>();
         if (warn > 0) tail.Add($"注意 {warn}");
         if (skipped > 0) tail.Add($"試験せず {skipped}");
 
         string extra = tail.Count > 0 ? " / " + string.Join(" / ", tail) : "";
 
+        // 人の判定待ちが残っているうちは「終わった」と言わない
+        string pending = waiting > 0 ? $"　ブラウザで開いた {waiting} 件に合否を付けてください。" : "";
+
         if (fail > 0)
-            return $"✕ 不合格が {fail} 件あります（合格 {pass}{extra}）。";
+            return $"✕ 不合格が {fail} 件あります（合格 {pass}{extra}）。{pending}";
 
         return warn > 0
-            ? $"△ 不合格はありませんが注意が {warn} 件あります（合格 {pass}{extra}）。"
-            : $"すべて合格しました（{pass} 件{extra}）。";
+            ? $"△ 不合格はありませんが注意が {warn} 件あります（合格 {pass}{extra}）。{pending}"
+            : $"自動の判定はすべて合格しました（{pass} 件{extra}）。{pending}";
     }
 }

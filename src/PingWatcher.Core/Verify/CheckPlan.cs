@@ -21,7 +21,7 @@ public enum CheckKind
     /// <summary>接続してバナーが +OK で始まるか。</summary>
     Pop3,
 
-    /// <summary>名前を引けるか。</summary>
+    /// <summary>名前を引けるか。<b>宛先が空なら自分のホスト名を引く。</b></summary>
     Dns,
 
     /// <summary>Teams 一式（名前解決・TCP 443・UDP の STUN）。</summary>
@@ -35,6 +35,15 @@ public enum CheckKind
 
     /// <summary>fast.com で測る。<b>非公式なので先方の変更で壊れうる。</b></summary>
     FastCom,
+
+    /// <summary>
+    /// ブラウザで開いて、人が見て合否を付ける。
+    ///
+    /// <b>アプリからは判定できないページがある</b>。ログインが要る、証明書を選ぶ、
+    /// JavaScript で描画される、といったものは HTTP で叩いても意味のある答えが返らない。
+    /// そこは人が見るしかないので、<b>開くところまでを肩代わりして判定は人に委ねる</b>。
+    /// </summary>
+    Manual,
 }
 
 /// <summary>
@@ -146,6 +155,7 @@ public static class CheckListParser
         CheckKind.Download => "速度",
         CheckKind.Upload => "速度上り",
         CheckKind.FastCom => "fast.com",
+        CheckKind.Manual => "手動",
         _ => "Teams",
     };
 
@@ -167,6 +177,7 @@ public static class CheckListParser
             case "速度": case "SPEED": case "DOWNLOAD": kind = CheckKind.Download; return true;
             case "速度上り": case "UPLOAD": kind = CheckKind.Upload; return true;
             case "FAST.COM": case "FASTCOM": case "FAST": kind = CheckKind.FastCom; return true;
+            case "手動": case "MANUAL": case "BROWSER": kind = CheckKind.Manual; return true;
             default: return false;
         }
     }
