@@ -220,6 +220,43 @@
         </Setter>
     </Style>
 
+    <!--
+        伏せ字の入力欄(Meraki の API キー)。
+        PasswordBox も既定スタイルがシステム色を入れてくるので、TextBox と同じ枠を
+        自前で持つ(暗い配色でここだけ白い箱になるのを避ける)。
+        中身の入れ物の名前 PART_ContentHost は TextBox と同じ契約。
+    -->
+    <Style TargetType="PasswordBox">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
+        <Setter Property="Padding" Value="5,2" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{DynamicResource Radius.Control}">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ===== ドロップダウン ===== -->
     <Style x:Key="ComboBox.Toggle" TargetType="ToggleButton">
         <Setter Property="IsTabStop" Value="False" />

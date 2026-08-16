@@ -35,6 +35,20 @@ public partial class MainWindow : Window
             new KeyGesture(Key.F12)));
 
         _shell.DeviceCompare.RequestScrollIntoView += OnScrollDiffIntoView;
+
+        // 「すべて消す」でキーを捨てたら、画面の伏せ字欄も空にする
+        // (PasswordBox は中身をバインドできないので VM から知らせてもらう)
+        _shell.Meraki.ApiKeyCleared += (_, _) => MerakiKeyBox.Clear();
+    }
+
+    /// <summary>
+    /// API キーを VM へ渡す。<see cref="PasswordBox.Password"/> はバインドできない
+    /// (平文を依存関係プロパティに置かない設計)ので、変更のたびに手で押し込む。
+    /// </summary>
+    private void OnMerakiKeyChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox box)
+            _shell.Meraki.ApiKey = box.Password;
     }
 
     /// <summary>F5 での開始。ボタンと同じく、開始できたら Ping タブへ移る。</summary>

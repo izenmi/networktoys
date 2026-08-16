@@ -134,6 +134,7 @@ internal static class SelfTest
                 typeof(System.Windows.Controls.TabItem),
                 typeof(System.Windows.Controls.Button),
                 typeof(System.Windows.Controls.TextBox),
+                typeof(System.Windows.Controls.PasswordBox),
             ];
             foreach (Type type in types)
                 Assert(Application.Current.TryFindResource(type) is Style, $"{type.Name} の暗黙スタイルが無い");
@@ -279,6 +280,53 @@ internal static class SelfTest
 
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
+        });
+
+        Check("Meraki タブのサブタブをすべて表示できる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // サブタブの中身も選ばないと実体化しない(親タブを開くだけでは 1 枚目しか作られない)
+            object? original = window!.MainTabs.SelectedItem;
+            window.MerakiTab.IsSelected = true;
+
+            foreach (object? item in window.MerakiSubTabs.Items)
+            {
+                ((System.Windows.Controls.TabItem)item).IsSelected = true;
+                window.UpdateLayout();
+            }
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
+        Check("Meraki: キー未入力では取得できない(CI から API を叩かない)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+
+            // タブを開くだけでは通信しない作りなので、上のタブ巡回でも API は叩かれない。
+            // 念のため、キーが空の間はコマンドが動かないことも確かめておく
+            Assert(shell.Meraki.ApiKey.Length == 0, "起動直後に API キーが入っている");
+            Assert(!shell.Meraki.FetchCommand.CanExecute(null), "キー未入力でも取得できてしまう");
+            Assert(!shell.Meraki.FetchClientsCommand.CanExecute(null), "キー未入力でもクライアントを取得できてしまう");
+        });
+
+        Check("Core: Meraki の応答を一覧の行に変換できる", () =>
+        {
+            const string uplinks = """
+                [ { "networkId": "N_1", "serial": "Q2AA-1111-AAAA", "uplinks": [
+                    { "interface": "wan1", "status": "active", "publicIp": "203.0.113.5" },
+                    { "interface": "wan2", "status": "ready", "publicIp": "203.0.113.9" } ] } ]
+                """;
+
+            IReadOnlyList<Core.Cloud.MerakiUplinkRow> rows = Core.Cloud.MerakiCatalog.ParseUplinks([uplinks], []);
+
+            Assert(rows.Count == 2, $"WAN1/WAN2 の 2 行になるはずが {rows.Count} 行");
+            Assert(rows[0].State.StartsWith('●'), $"active が記号付きにならない: {rows[0].State}");
+            Assert(Core.Cloud.MerakiCatalog.GlobalIpSummary(rows) == "203.0.113.5 / 203.0.113.9",
+                   "グローバル IP の要約が期待どおりでない");
         });
 
         Check("メニューを開ける(ポップアップの実体化検査)", () =>

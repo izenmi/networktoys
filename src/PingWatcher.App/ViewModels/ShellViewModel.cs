@@ -45,6 +45,9 @@ public sealed class ShellViewModel
         Work = new WorkViewModel(Monitor);
         DeviceCompare = new DeviceCompareViewModel();
         Converter = new ConvertViewModel();
+
+        // Meraki もタブを開いただけでは何もしない（API キーを入れて押されて初めて通信する）
+        Meraki = new MerakiViewModel();
     }
 
     public MonitorViewModel Monitor { get; }
@@ -98,6 +101,9 @@ public sealed class ShellViewModel
     /// <summary>Cisco コマンド出力の CSV 変換。Convert は System.Convert と紛れるので Converter。</summary>
     public ConvertViewModel Converter { get; }
 
+    /// <summary>Meraki ダッシュボードからの照会。API キーは保存しない。</summary>
+    public MerakiViewModel Meraki { get; }
+
     /// <summary>
     /// 測った結果をすべて捨てて、起動直後の状態へ戻す。
     ///
@@ -127,6 +133,7 @@ public sealed class ShellViewModel
         IpConfig.Reset();
         Wifi.Reset();
         Converter.Reset();
+        Meraki.Reset();
         Report.Reset();
     }
 }

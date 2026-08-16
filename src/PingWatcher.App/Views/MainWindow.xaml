@@ -2780,6 +2780,459 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== Meraki(ダッシュボード API からの照会) ===== -->
+            <TabItem x:Name="MerakiTab" Header="Meraki" DataContext="{Binding Meraki}">
+                <DockPanel>
+                    <!-- 操作行はサブタブ共通。API キーは伏せ字(画面を PNG 保存できるため) -->
+                    <StackPanel DockPanel.Dock="Top" Margin="2,2,0,6">
+                        <WrapPanel>
+                            <TextBlock Text="API キー" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <PasswordBox x:Name="MerakiKeyBox" Width="230" Margin="0,0,12,2"
+                                         PasswordChanged="OnMerakiKeyChanged"
+                                         ToolTip="ダッシュボードの [My profile] で発行したキー。保存しません。" />
+
+                            <TextBlock Text="組織" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <ComboBox Width="180" Margin="0,0,12,2"
+                                      ItemsSource="{Binding Organizations}"
+                                      SelectedItem="{Binding SelectedOrganization}"
+                                      ToolTip="組織が複数あるときに選びます。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"
+                                   Foreground="{DynamicResource Brush.Warn.Fg}" TextWrapping="Wrap"
+                                   Margin="0,4,0,0"
+                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+
+                    <TabControl x:Name="MerakiSubTabs" ItemContainerStyle="{StaticResource SubTabItem}"
+                                BorderThickness="0" Padding="0">
+
+                        <!-- ネットワーク -->
+                        <TabItem Header="ネットワーク">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="CSV で保存" Command="{Binding SaveNetworksCommand}" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="110" />
+                                                    <ColumnDefinition Width="120" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="ID" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="製品" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="タイムゾーン" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="タグ" Style="{StaticResource Caption}" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding NetworkRows}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="150" />
+                                                                <ColumnDefinition Width="150" />
+                                                                <ColumnDefinition Width="110" />
+                                                                <ColumnDefinition Width="120" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Id}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding ProductTypes}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding TimeZone}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="4" Text="{Binding Tags}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <!-- 機器 -->
+                        <TabItem Header="機器">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="CSV で保存" Command="{Binding SaveDevicesCommand}" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="70" />
+                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="110" />
+                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="76" />
+                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="120" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="型番" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="シリアル" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="ファーム" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="ネットワーク" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="5" Text="状態" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="7" Text="LAN IP" Style="{StaticResource Caption}" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding DeviceRows}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="70" />
+                                                                <ColumnDefinition Width="130" />
+                                                                <ColumnDefinition Width="110" />
+                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="76" />
+                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="120" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Model}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding Serial}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding Firmware}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="4" Text="{Binding Network}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="5" Text="{Binding State}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Ok">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Info">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Grid.Column="6" Text="{Binding PublicIp}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="7" Text="{Binding LanIp}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <!-- アップリンク(MX の WAN1/WAN2) -->
+                        <TabItem Header="アップリンク">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="CSV で保存" Command="{Binding SaveUplinksCommand}" Margin="0,0,12,0" />
+                                        <TextBlock Text="グローバル IP" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="{Binding GlobalIpText}" Style="{StaticResource Mono}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="60" />
+                                                    <ColumnDefinition Width="80" />
+                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="120" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="シリアル" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="回線" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="状態" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="IP" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="5" Text="ゲートウェイ" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding UplinkRows}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="130" />
+                                                                <ColumnDefinition Width="60" />
+                                                                <ColumnDefinition Width="80" />
+                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="120" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Network}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Serial}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding Interface}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding State}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Ok">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Info">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Grid.Column="4" Text="{Binding Ip}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="5" Text="{Binding Gateway}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="6" Text="{Binding PublicIp}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <!-- クライアント(選んだネットワークだけ) -->
+                        <TabItem Header="クライアント">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock Text="ネットワーク" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <ComboBox Width="180" Margin="0,0,12,2"
+                                                  ItemsSource="{Binding NetworkRows}"
+                                                  SelectedItem="{Binding SelectedNetwork}"
+                                                  ToolTip="クライアントは 1 ネットワークずつ取得します。">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+
+                                        <TextBlock Text="期間" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <ComboBox Width="90" Margin="0,0,12,2"
+                                                  ItemsSource="{Binding Timespans}"
+                                                  SelectedItem="{Binding SelectedTimespan}"
+                                                  ToolTip="どこまでさかのぼるか。長いほど台数が増えます。">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+
+                                        <Button Content="クライアントを取得" Command="{Binding FetchClientsCommand}"
+                                                Margin="0,0,6,2" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveClientsCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                                    </WrapPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="55" />
+                                                    <ColumnDefinition Width="110" />
+                                                    <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="150" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="IP" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="MAC" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="VLAN" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="メーカー" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="5" Text="通信量" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="6" Text="最終確認" Style="{StaticResource Caption}" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding ClientRows}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="130" />
+                                                                <ColumnDefinition Width="55" />
+                                                                <ColumnDefinition Width="110" />
+                                                                <ColumnDefinition Width="90" />
+                                                                <ColumnDefinition Width="150" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Description}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Ip}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding Mac}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding Vlan}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="4" Text="{Binding Manufacturer}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="5" Text="{Binding Usage}"
+                                                                       Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Right" />
+                                                            <TextBlock Grid.Column="6" Text="{Binding LastSeen}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+                    </TabControl>
+                </DockPanel>
+            </TabItem>
+
             <!-- ===== 記録 ===== -->
             <TabItem x:Name="ReportTab" Header="記録" DataContext="{Binding Report}">
                 <Border Style="{StaticResource Card}">
