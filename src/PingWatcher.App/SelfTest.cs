@@ -634,10 +634,22 @@ internal static class SelfTest
                 string header = tab.Header?.ToString() ?? "";
 
                 // ⓘ は Style ごと引くので、Text ではなく ToolTip の有無で見る
-                bool hasMark = FindIn<System.Windows.Controls.TextBlock>(tab.Content)
-                    .Any(t => Equals(t.Text, "ⓘ") && t.ToolTip is string { Length: > 30 });
+                System.Windows.Controls.TextBlock[] blocks =
+                    [.. FindIn<System.Windows.Controls.TextBlock>(tab.Content)];
 
-                if (!hasMark) missing.Add(header);
+                if (!blocks.Any(t => Equals(t.Text, "ⓘ") && t.ToolTip is string { Length: > 30 }))
+                {
+                    missing.Add(header);
+                    continue;
+                }
+
+                // 1 行の説明は短すぎると意味がない（「〜の一覧です」だけでは何も伝わらない）。
+                // 何をする画面かに加えて、いつ使うものかまで書けばこの長さは自然に超える
+                if (!blocks.Any(t => t.Style == tab.TryFindResource("TabIntro") as Style
+                                     && t.Text is { Length: >= 40 }))
+                {
+                    missing.Add($"{header}（説明が短い）");
+                }
             }
 
             Assert(missing.Count == 0,

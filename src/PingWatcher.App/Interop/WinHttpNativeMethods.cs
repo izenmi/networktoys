@@ -71,6 +71,10 @@ internal static class WinHttpNativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool WinHttpCloseHandle(IntPtr handle);
 
+    [DllImport("winhttp.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool WinHttpGetDefaultProxyConfiguration(ref ProxyInfo info);
+
     [DllImport("kernel32.dll")]
     private static extern IntPtr GlobalFree(IntPtr memory);
 
@@ -140,4 +144,44 @@ internal static class WinHttpNativeMethods
         ErrorWinHttpLoginFailure => $"PAC の取得で認証に失敗しました（{pacUrl}）。",
         _ => $"PAC を評価できません（{pacUrl} / エラー {error}）。",
     };
+
+    /// <summary>
+    /// <b>PC 全体の</b> WinHTTP プロキシ設定を読む（<c>netsh winhttp show proxy</c> と同じ中身）。
+    ///
+    /// netsh の出力は<b>表示言語で変わる</b>ので読まない。API から直に取る。
+    /// 読むだけなら管理者権限は要らない。
+    /// </summary>
+    /// <returns>直接接続なら (true, "", "")。読めなければ null。</returns>
+    internal static (bool Direct, string Server, string Bypass)? ReadDefaultProxy()
+    {
+        var info = new ProxyInfo();
+
+        try
+        {
+            if (!WinHttpGetDefaultProxyConfiguration(ref info)) return null;
+        }
+        catch (DllNotFoundException)
+        {
+            return null;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return null;
+        }
+
+        try
+        {
+            // 1 = NO_PROXY（直接）。3 = NAMED_PROXY（固定）
+            string server = info.Proxy != IntPtr.Zero ? Marshal.PtrToStringUni(info.Proxy) ?? "" : "";
+            string bypass = info.ProxyBypass != IntPtr.Zero ? Marshal.PtrToStringUni(info.ProxyBypass) ?? "" : "";
+
+            return (info.AccessType == 1 || server.Length == 0, server, bypass);
+        }
+        finally
+        {
+            // 文字列は WinHTTP が確保したもの。呼んだ側が返す
+            if (info.Proxy != IntPtr.Zero) GlobalFree(info.Proxy);
+            if (info.ProxyBypass != IntPtr.Zero) GlobalFree(info.ProxyBypass);
+        }
+    }
 }

@@ -131,8 +131,11 @@ public sealed class ReportViewModel : ObservableObject
         SaveTextCommand.RaiseCanExecuteChanged();
     }
 
-    /// <summary>自己診断から中身を確かめるための口。ipconfig は取りに行かない。</summary>
-    internal ReportData BuildReportForSelfTest() => BuildData(ipConfig: null);
+    /// <summary>
+    /// 自己診断から中身を確かめるための口。
+    /// <b>ipconfig も無線 API も触らない</b>（CI から OS を叩かない決まり）。
+    /// </summary>
+    internal ReportData BuildReportForSelfTest() => Build(ipConfig: null);
 
     /// <summary>起動時の状態へ戻す。</summary>
     public void Reset() => Status = string.Empty;
@@ -143,7 +146,16 @@ public sealed class ReportViewModel : ObservableObject
     /// <b>Ping と TCP の両方を載せる。</b>種別の言い表し方は画面ごとに違うので、
     /// 組にして渡す。不通の記録も両方から集める。
     /// </summary>
-    private ReportData BuildData(string? ipConfig) => ReportService.Build(
+    private ReportData BuildData(string? ipConfig)
+    {
+        // 無線タブを開いていなくても記録に載せる。スキャンはせず、
+        // OS がすでに持っている内容を 1 度だけ読む（2026-08-16 ユーザー指示）
+        _wifi.EnsureLoadedForReport();
+
+        return Build(ipConfig);
+    }
+
+    private ReportData Build(string? ipConfig) => ReportService.Build(
         "",   // 空なら既定の表題になる
         "",
         [

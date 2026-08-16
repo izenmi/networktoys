@@ -179,6 +179,32 @@ public sealed class WifiViewModel : ObservableObject
 
     public void OnDeactivated() => _rssiTimer.Stop();
 
+    /// <summary>
+    /// 記録を書き出す直前に呼ぶ。<b>まだ何も読んでいなければ、ここで 1 度だけ読む。</b>
+    ///
+    /// 以前は「無線タブを開いたときだけ」にしていたが、それだと
+    /// <b>開き忘れた日の記録から無線の情報が丸ごと抜ける</b>（2026-08-16 ユーザー指示で変更）。
+    ///
+    /// <b>スキャンはしない。</b>OS がすでに持っている一覧を読むだけなので数十ミリ秒で終わり、
+    /// スキャンに伴う通信の途切れも起きない。位置情報の同意が無ければ読めないが、
+    /// そのときは <see cref="ReportNote"/> が理由を記録に残す。
+    /// </summary>
+    public void EnsureLoadedForReport()
+    {
+        if (_hasLoaded) return;
+        _hasLoaded = true;
+
+        try
+        {
+            Apply(WifiService.Collect());
+        }
+        catch (Exception ex)
+        {
+            // 読めなくても記録の書き出しは続ける（無線が無い PC の方が多い）
+            CrashLog.Write(ex, "WifiViewModel.EnsureLoadedForReport");
+        }
+    }
+
     private async Task RefreshAsync(bool force)
     {
         if (IsBusy) return;
@@ -422,7 +448,8 @@ public sealed class WifiViewModel : ObservableObject
 
     /// <summary>情報が無いときに記録へ書く理由。空欄のまま出すと不親切。</summary>
     public string? ReportNote => DescribeForReport() is null
-        ? "無線 LAN の情報は取得していません（「無線」タブを開くと取得します）。"
+        ? "無線 LAN の情報を読めませんでした（無線アダプタが無いか、"
+          + "Windows 11 24H2 以降で位置情報の許可がありません。「Wi-Fi」タブの案内から許可できます）。"
         : null;
 
     // 周辺 AP 一覧の見出しクリックの並べ替え。空文字は既定(電波の強い順=取得順)

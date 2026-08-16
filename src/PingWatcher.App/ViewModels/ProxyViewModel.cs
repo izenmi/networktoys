@@ -18,7 +18,9 @@ public sealed class ProxyViewModel : ObservableObject
     private string _server = "";
     private string _bypass = "<local>";
     private string _currentSummary = "";
+    private string _winHttpSummary = "";
     private string _resultText = "";
+    private bool _isBusy;
 
     public ProxyViewModel()
     {
@@ -31,11 +33,22 @@ public sealed class ProxyViewModel : ObservableObject
         _selectedMode = Modes[0];
 
         ApplyCommand = new RelayCommand(Apply);
+        ApplyWinHttpCommand = new RelayCommand(() => _ = ApplyWinHttpAsync(), () => !_isBusy);
+        ImportWinHttpCommand = new RelayCommand(() => _ = ImportWinHttpAsync(), () => !_isBusy);
     }
 
     public ProxyModeChoice[] Modes { get; }
 
     public RelayCommand ApplyCommand { get; }
+
+    /// <summary>
+    /// いまの入力を <b>WinHTTP（PC 全体）</b>にも適用する。
+    /// 管理者権限が要るので、適用の瞬間だけ昇格する（IP設定の適用と同じ作り）。
+    /// </summary>
+    public RelayCommand ApplyWinHttpCommand { get; }
+
+    /// <summary>WinINET（上段の設定）を WinHTTP へそのまま取り込む。</summary>
+    public RelayCommand ImportWinHttpCommand { get; }
 
     public ProxyModeChoice SelectedMode
     {
@@ -70,6 +83,13 @@ public sealed class ProxyViewModel : ObservableObject
         private set => SetProperty(ref _resultText, value);
     }
 
+    /// <summary>いまの WinHTTP（PC 全体）の設定。読むだけなら管理者権限は要らない。</summary>
+    public string WinHttpSummary
+    {
+        get => _winHttpSummary;
+        private set => SetProperty(ref _winHttpSummary, value);
+    }
+
     /// <summary>タブを開いたときに現在値を読み込み、入力欄へ取り込む。</summary>
     public void Refresh()
     {
@@ -83,6 +103,64 @@ public sealed class ProxyViewModel : ObservableObject
             Server = state.Server;
         if (state.Bypass.Length > 0)
             Bypass = state.Bypass;
+
+        RefreshWinHttp();
+    }
+
+    private void RefreshWinHttp()
+        => WinHttpSummary = Interop.WinHttpNativeMethods.ReadDefaultProxy() is { } winHttp
+            ? WinHttpProxyScript.Describe(winHttp.Direct, winHttp.Server, winHttp.Bypass)
+            : "読み取れませんでした";
+
+    /// <summary>
+    /// WinHTTP へ適用する。
+    ///
+    /// <b>PAC は指定できない。</b>WinHTTP の既定設定は「直接」か「固定」しか持てないので、
+    /// PAC を選んでいるときは、その旨を伝えて何もしない（黙って別の設定を入れない）。
+    /// </summary>
+    private async Task ApplyWinHttpAsync()
+    {
+        if (SelectedMode.Mode == ProxyMode.Pac)
+        {
+            ResultText = "WinHTTP は PAC を扱えません。PAC が返すプロキシを「固定」で入れてください。";
+            return;
+        }
+
+        ProxyPlan? plan = ProxyPlan.Parse(SelectedMode.Mode, PacUrl, Server, Bypass, out string? error);
+        if (plan is null)
+        {
+            ResultText = error ?? "入力内容を確かめてください。";
+            return;
+        }
+
+        await RunNetshAsync(WinHttpProxyScript.Build(plan),
+                            plan.Mode == ProxyMode.Fixed
+                                ? "✓ WinHTTP（PC 全体）に適用しました。"
+                                : "✓ WinHTTP（PC 全体）のプロキシを解除しました。");
+    }
+
+    private async Task ImportWinHttpAsync()
+        => await RunNetshAsync(WinHttpProxyScript.BuildImportFromUser(),
+                               "✓ 上段の設定を WinHTTP（PC 全体）へ取り込みました。");
+
+    private async Task RunNetshAsync(IReadOnlyList<string> script, string done)
+    {
+        _isBusy = true;
+        ApplyWinHttpCommand.RaiseCanExecuteChanged();
+        ImportWinHttpCommand.RaiseCanExecuteChanged();
+        ResultText = "管理者権限で適用しています…";
+
+        try
+        {
+            ResultText = await ElevatedNetsh.ApplyAsync(script) ?? done;
+        }
+        finally
+        {
+            _isBusy = false;
+            ApplyWinHttpCommand.RaiseCanExecuteChanged();
+            ImportWinHttpCommand.RaiseCanExecuteChanged();
+            RefreshWinHttp();
+        }
     }
 
     public void Reset()
