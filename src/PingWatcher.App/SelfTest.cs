@@ -627,38 +627,43 @@ internal static class SelfTest
 
             // 見出しの「8 ▾」は XAML に直書きなので、中身を増減すると黙ってずれる。
             // 数字が嘘をつくくらいなら書かない方がましなので、ここで突き合わせる。
-            // 中身は選ばないと実体化しないため、1 枚ずつ開いて数える
-            object? original = window!.MainTabs.SelectedItem;
+            //
+            // 数えるのは論理ツリー。視覚ツリーだと「選ばれているタブの中身」しか
+            // 実体化していないので、1 枚ずつ開いて回らないと数えられない
             int grouped = 0;
 
-            foreach (object? item in window.MainTabs.Items)
+            foreach (object? item in window!.MainTabs.Items)
             {
                 if (item is not System.Windows.Controls.TabItem tab) continue;
 
                 string header = tab.Header?.ToString() ?? "";
-                if (!header.Contains('▾', StringComparison.Ordinal)) continue;
+                System.Windows.Controls.TabControl[] inner = [.. FindInnerTabsInContent(tab.Content)];
 
-                tab.IsSelected = true;
-                window.UpdateLayout();
+                if (header.Contains('▾', StringComparison.Ordinal))
+                {
+                    Assert(inner.Length > 0, $"「{header}」は ▾ が付いているのに中身が無い");
 
-                // 中身は TabItem ではなく親 TabControl の下に実体化する
-                System.Windows.Controls.TabControl[] inner = [.. FindInnerTabs(window.MainTabs)];
+                    int actual = inner[0].Items.Count;
+                    string want = actual.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-                Assert(inner.Length > 0, $"「{header}」は ▾ が付いているのに中身が無い");
+                    Assert(header.Contains(want + " ▾", StringComparison.Ordinal),
+                           $"「{header}」の見出しの件数が中身({actual} 本)と合っていない");
 
-                int actual = inner[0].Items.Count;
-                string want = actual.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    // 帯ではなく縦メニューで選ばせる決まり
+                    Assert(inner[0].TabStripPlacement == System.Windows.Controls.Dock.Left,
+                           $"「{header}」の中身がメニュー(左)ではなく帯になっている");
 
-                Assert(header.Contains(want + " ▾", StringComparison.Ordinal),
-                       $"「{header}」の見出しの件数が中身({actual} 本)と合っていない");
-
-                grouped++;
+                    grouped++;
+                }
+                else
+                {
+                    // 逆も守る。中に切り替えを持つのに ▾ が無いと、まとめていることに気づけない
+                    Assert(inner.Length == 0,
+                           $"「{header}」は中に切り替えを持つのに ▾ が付いていない");
+                }
             }
 
             Assert(grouped == 3, $"まとめたタブが 3 枚のはずが {grouped} 枚になっている");
-
-            window.MainTabs.SelectedItem = original;
-            window.UpdateLayout();
         });
 
         Check("試験: 結果を HTML の報告書にできる", () =>
@@ -1487,6 +1492,29 @@ internal static class SelfTest
         window.UpdateLayout();
 
         return visited;
+    }
+
+    /// <summary>
+    /// タブの中身にある内側の TabControl を<b>論理ツリーで</b>探す。
+    ///
+    /// 視覚ツリー版(<see cref="FindInnerTabs"/>)は「いま選ばれているタブの中身」しか
+    /// 見つけられない。数を数えるだけなら、実体化を待たずに済むこちらが確実。
+    /// </summary>
+    private static IEnumerable<System.Windows.Controls.TabControl> FindInnerTabsInContent(object? content)
+    {
+        if (content is not DependencyObject node) yield break;
+
+        foreach (object? child in LogicalTreeHelper.GetChildren(node))
+        {
+            if (child is System.Windows.Controls.TabControl inner)
+            {
+                yield return inner;
+                continue;   // その中は数えない(入れ子は 2 段までの決まり)
+            }
+
+            foreach (System.Windows.Controls.TabControl found in FindInnerTabsInContent(child))
+                yield return found;
+        }
     }
 
     private static IEnumerable<System.Windows.Controls.TabControl> FindInnerTabs(DependencyObject node)
