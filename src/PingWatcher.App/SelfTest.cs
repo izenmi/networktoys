@@ -261,6 +261,30 @@ internal static class SelfTest
             Assert(stream.Length > 1000, $"PNG が小さすぎる ({stream.Length} バイト)");
         });
 
+        Check("タブが 1 列に収まる既定のウィンドウ幅", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // タブを足すと黙って 2 列になり、既定幅の妥当性が誰にも分からなくなる。
+            // 実測して既定幅と突き合わせる(ローカルで実行できないので、ここが唯一の目)
+            double tabs = 0;
+
+            foreach (object? item in window!.MainTabs.Items)
+            {
+                if (item is not System.Windows.Controls.TabItem tab) continue;
+
+                tabs += tab.ActualWidth + tab.Margin.Left + tab.Margin.Right;
+            }
+
+            // 本体の左右余白(Grid の Margin)と、ウィンドウの枠ぶん
+            double needed = tabs + 12 + SystemParameters.ResizeFrameVerticalBorderWidth * 2 + 4;
+
+            log.AppendLine($"        タブの実寸 {tabs:F0}px / 必要 {needed:F0}px / 既定 {window.Width:F0}px");
+
+            Assert(window.Width >= needed,
+                   $"既定幅 {window.Width:F0}px ではタブが 2 列になる(必要 {needed:F0}px)");
+        });
+
         Check("すべてのタブを表示できる(遅延生成される中身の検査)", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
