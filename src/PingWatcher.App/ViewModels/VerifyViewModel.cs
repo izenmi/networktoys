@@ -394,19 +394,12 @@ public sealed class VerifyViewModel : ObservableObject
     {
         HashSet<string> selected = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Name)];
 
-        // 初回は「いまの設定」を選んでおく。まず現状が通ることを確かめるのが自然な順番
-        bool first = Proxies.Count == 0;
-
         Proxies.Clear();
 
+        // 初回は 1 つも選ばない（2026-08-16 ユーザー指示）。
+        // 選ばれていなければ「直接」だけで 1 周するので、押せば必ず何かは動く
         foreach (ProxyChoice choice in ProxyListParser.Parse(_proxyText))
-        {
-            bool on = first
-                ? choice.Mode == ProxyMode.System
-                : selected.Contains(choice.Name);
-
-            Proxies.Add(new ProxyChoiceViewModel(choice, on));
-        }
+            Proxies.Add(new ProxyChoiceViewModel(choice, selected.Contains(choice.Name)));
     }
 
     private async Task RunAsync()
