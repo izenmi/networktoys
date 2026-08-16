@@ -683,18 +683,30 @@
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Padding" Value="7,4" />
-        <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
+        <Setter Property="Padding" Value="12,9" />
+        <!--
+            読ませる文章が入るので、本文と同じ大きさにする。
+            Caption(11px) だと、数行を超えたところで一気に読みづらくなる。
+        -->
+        <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
         <!--
             長い説明は折り返す。既定では 1 行に伸びて画面からはみ出す。
+            幅は全角 34 字ぶん — これより広げると目が行頭へ戻れなくなる。
+
             ContentTemplate は「文字列を渡されたとき」だけに当てる
             （中に要素を組んだ ToolTip まで文字列として描き直してしまわないように）。
         -->
-        <Setter Property="MaxWidth" Value="440" />
+        <Setter Property="MaxWidth" Value="420" />
         <Setter Property="ContentTemplate">
             <Setter.Value>
                 <DataTemplate DataType="{x:Type sys:String}">
-                    <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                    <!--
+                        行間を空ける。既定はフォント任せで詰まっており、
+                        日本語の数行がひと塊に見えてしまう。
+                        LineStackingStrategy を明示しないと LineHeight が効かないことがある。
+                    -->
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap"
+                               LineHeight="19" LineStackingStrategy="BlockLineHeight" />
                 </DataTemplate>
             </Setter.Value>
         </Setter>

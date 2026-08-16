@@ -70,6 +70,8 @@
 
         <Style x:Key="TabInfoMark" TargetType="TextBlock">
             <Setter Property="Text" Value="ⓘ" />
+            <!-- 本文と同じ大きさだと、目印としても当たり判定としても小さい -->
+            <Setter Property="FontSize" Value="{DynamicResource Size.Heading}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
             <Setter Property="Cursor" Value="Help" />
             <Setter Property="VerticalAlignment" Value="Center" />
