@@ -456,9 +456,16 @@
                 <MenuItem x:Name="ThemeMenuItem" Click="OnThemeToggle" />
                 <MenuItem x:Name="TopmostMenuItem" Header="最前面に固定" IsCheckable="True"
                           Click="OnTopmostMenu" />
+                <Separator />
+                <!-- 列幅はドラッグで変えられて設定に残るが、戻す手段が無かった -->
+                <MenuItem Header="列幅を既定に戻す" Click="OnResetColumns" />
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)" Style="{StaticResource MenuBarItem}">
                 <MenuItem Header="使い方を開く" Click="OnOpenUsage" />
+                <MenuItem Header="最新版を確認" Click="OnOpenReleases" />
+                <MenuItem Header="問題を報告" Click="OnOpenIssues" />
+                <Separator />
+                <MenuItem Header="ライセンス情報" Click="OnShowLicenses" />
                 <MenuItem Header="バージョン情報" Click="OnAbout" />
             </MenuItem>
         </Menu>

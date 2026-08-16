@@ -621,6 +621,60 @@ internal static class SelfTest
             window.UpdateLayout();
         });
 
+        Check("ライセンス表示が exe に埋め込まれている", () =>
+        {
+            // 配布物からテキストが落ちても読めるように、exe にも入れてある。
+            // MIT / Apache-2.0 / OFL 1.1 は再配布時の添付を条件にしている
+            string? notices = Views.MainWindow.ReadNotices();
+
+            Assert(notices is { Length: > 2000 },
+                   $"ライセンス表示を読めない（{notices?.Length ?? -1} 文字）");
+            Assert(notices!.Contains("Noto Sans JP", StringComparison.Ordinal),
+                   "同梱フォントの表示が入っていない");
+            Assert(notices.Contains("Permission is hereby granted", StringComparison.Ordinal),
+                   "MIT の本文が入っていない");
+        });
+
+        Check("列幅を既定に戻せる", () =>
+        {
+            // ドラッグで崩したときの逃げ道。これが無いと settings.json を直接編集するしかない
+            ViewModels.ColumnLayout layout = ViewModels.ColumnLayout.Instance;
+            ViewModels.TableColumns tables = ViewModels.TableColumns.Instance;
+
+            double stateWidth = layout.State.Value;
+            double connWidth = tables["conn.0"].Value;
+
+            layout.State = new System.Windows.GridLength(stateWidth + 40);
+            tables.Drag("conn.0", 30);
+
+            Assert(layout.State.Value != stateWidth, "列幅を変えられていない（検査が成立しない）");
+            Assert(tables["conn.0"].Value != connWidth, "表の列幅を変えられていない（検査が成立しない）");
+
+            layout.Reset();
+            tables.Reset();
+
+            Assert(layout.State.Value == 84, $"Ping の列幅が既定に戻らない: {layout.State.Value}");
+            Assert(tables["conn.0"].Value == 56, $"接続の列幅が既定に戻らない: {tables["conn.0"].Value}");
+        });
+
+        Check("最前面固定を覚えている", () =>
+        {
+            // メニューにチェック項目があるのに保存しておらず、毎回外れていた
+            bool original = Settings.Current.Topmost;
+
+            try
+            {
+                Settings.Current.Topmost = true;
+
+                Assert(Settings.Current.Topmost,
+                       "設定に最前面固定の入れ物が無い");
+            }
+            finally
+            {
+                Settings.Current.Topmost = original;
+            }
+        });
+
         Check("タブ: どのタブにも 1 行の説明と ⓘ がある", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

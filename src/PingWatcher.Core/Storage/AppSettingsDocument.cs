@@ -54,6 +54,14 @@ public sealed class AppSettingsDocument
     /// </summary>
     public Dictionary<string, string> CollectUserNames { get; set; } = [];
 
+    /// <summary>
+    /// ウィンドウを最前面に固定するか。
+    ///
+    /// メニューにチェック項目があるのに保存していなかったため、
+    /// 毎回外れていた（2026-08-16 に気づいて足した）。
+    /// </summary>
+    public bool Topmost { get; set; }
+
     /// <summary>業務確認試験の項目（1 行 1 件のテキスト）。</summary>
     public string VerifyChecks { get; set; } = "";
 

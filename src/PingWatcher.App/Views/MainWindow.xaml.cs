@@ -33,6 +33,10 @@ public partial class MainWindow : Window
         DataContext = _shell;
         UpdateThemeToggle();
 
+        // 最前面固定を覚えている場合は復元する
+        TopmostMenuItem.IsChecked = Settings.Current.Topmost;
+        Topmost = Settings.Current.Topmost;
+
         // メニューに表記したショートカットの実体。表記(InputGestureText)は飾りなので、
         // ここに足したらメニューの表記も揃えること
         InputBindings.Add(new KeyBinding(
@@ -579,8 +583,21 @@ public partial class MainWindow : Window
             ? "☀ ライトモードにする"
             : "☾ ダークモードにする";
 
+    /// <summary>最前面固定。<b>次回起動でも覚える</b>（以前は毎回外れていた）。</summary>
     private void OnTopmostMenu(object sender, RoutedEventArgs e)
-        => Topmost = TopmostMenuItem.IsChecked;
+    {
+        Topmost = TopmostMenuItem.IsChecked;
+
+        try
+        {
+            Settings.Current.Topmost = Topmost;
+            Settings.Save();
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            // 覚えられなくても、いまの固定は効いている
+        }
+    }
 
     private void OnExit(object sender, RoutedEventArgs e) => Close();
 
@@ -601,19 +618,93 @@ public partial class MainWindow : Window
     }
 
     private void OnOpenUsage(object sender, RoutedEventArgs e)
+        => OpenInBrowser("https://github.com/izenmi/pingwatcher/blob/main/docs/USAGE.md");
+
+    /// <summary>
+    /// 最新版を確かめる。<b>アプリからは通信しない</b> — 既定のブラウザで
+    /// Releases のページを開くだけ。署名が無くて警告が出る以上、
+    /// 手元の版が古くないかを確かめる導線はあった方がよい。
+    /// </summary>
+    private void OnOpenReleases(object sender, RoutedEventArgs e)
+        => OpenInBrowser("https://github.com/izenmi/pingwatcher/releases");
+
+    private void OnOpenIssues(object sender, RoutedEventArgs e)
+        => OpenInBrowser("https://github.com/izenmi/pingwatcher/issues");
+
+    private void OpenInBrowser(string url)
     {
         try
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = "https://github.com/izenmi/pingwatcher/blob/main/docs/USAGE.md",
+                FileName = url,
                 UseShellExecute = true,
             });
         }
         catch (Exception ex)
         {
-            CrashLog.Write(ex, "MainWindow.OnOpenUsage");
+            CrashLog.Write(ex, "MainWindow.OpenInBrowser");
         }
+    }
+
+    /// <summary>
+    /// 同梱物の著作権表示とライセンス本文を出す。
+    ///
+    /// <b>exe に埋め込んである</b>ので、zip から exe だけ取り出されていても読める
+    /// （MIT / Apache-2.0 / OFL 1.1 はいずれも再配布時の添付を求めている）。
+    /// </summary>
+    private void OnShowLicenses(object sender, RoutedEventArgs e)
+    {
+        string text = ReadNotices()
+            ?? "ライセンス情報を読み込めませんでした。\n"
+             + "リポジトリの THIRD-PARTY-NOTICES.txt をご覧ください。\n"
+             + "https://github.com/izenmi/pingwatcher/blob/main/THIRD-PARTY-NOTICES.txt";
+
+        TextViewDialog.Show(this, "ライセンス情報", text);
+    }
+
+    /// <summary>埋め込んだライセンス本文。読めなければ null。</summary>
+    internal static string? ReadNotices()
+    {
+        try
+        {
+            using System.IO.Stream? stream = typeof(MainWindow).Assembly
+                .GetManifestResourceStream("THIRD-PARTY-NOTICES.txt");
+
+            if (stream is null) return null;
+
+            using var reader = new System.IO.StreamReader(stream);
+
+            return reader.ReadToEnd();
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or NotSupportedException)
+        {
+            CrashLog.Write(ex, "MainWindow.ReadNotices");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 列幅を既定に戻す。<b>2 系統あるので両方まとめて</b>戻す
+    /// （Ping / TCP 一覧の <see cref="ViewModels.ColumnLayout"/> と、
+    /// それ以外の表の <see cref="ViewModels.TableColumns"/>）。
+    /// </summary>
+    private void OnResetColumns(object sender, RoutedEventArgs e)
+    {
+        if (!ConfirmDialog.Confirm(
+                this,
+                "列幅を既定に戻す",
+                "すべての一覧の列幅を、はじめの状態に戻します。\n"
+                + "測定の結果や宛先リストには触りません。",
+                "戻す"))
+        {
+            return;
+        }
+
+        ViewModels.ColumnLayout.Instance.Reset();
+        ViewModels.TableColumns.Instance.Reset();
+
+        ShowNotice("✓ 列幅を戻しました");
     }
 
     private void OnAbout(object sender, RoutedEventArgs e)
@@ -624,12 +715,19 @@ public partial class MainWindow : Window
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
             ?? "不明").Split('+')[0];
 
+        // 設定と記録の置き場所も出す。持ち出して使う前提のアプリなので、
+        // 「どこに残るのか」が見えないと困る（exe の横に書けないときは退避している）
+        string where = AppData.IsBesideExecutable
+            ? "設定と記録の場所（exe と同じフォルダ）:"
+            : "設定と記録の場所（exe の横に書けないため退避しています）:";
+
         ConfirmDialog.Show(
             this,
             "バージョン情報",
             $"PingWatcher {version}\n\n" +
             "色々できるネットワーク診断ツール\n" +
-            "https://github.com/izenmi/pingwatcher");
+            "https://github.com/izenmi/pingwatcher\n\n" +
+            $"{where}\n{AppData.Directory()}");
     }
 
     /// <summary>

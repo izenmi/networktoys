@@ -71,6 +71,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "publish が失敗しました" }
 
       # 軽量版は .NET デスクトップランタイムが別途要る。入っていないと exe は
+      # 同梱物の著作権表示。exe にも埋め込んである（ヘルプ → ライセンス情報）が、
+      # 配布物としてテキストでも添える。MIT / Apache-2.0 / OFL 1.1 はいずれも
+      # 再配布時にライセンス本文を添えることを求めている。
+      - name: ライセンス表示を同梱
+        shell: pwsh
+        run: |
+          Copy-Item THIRD-PARTY-NOTICES.txt publish/${{ matrix.name }}/THIRD-PARTY-NOTICES.txt
+          Copy-Item LICENSE publish/${{ matrix.name }}/LICENSE.txt
+
       # Windows 側の起動処理で止まり、アプリのコードは 1 行も動かないので、
       # 「入っていないときの案内」はアプリの中には書けない。exe の隣に置く
       # このスクリプトが、起動前に確かめて日本語で案内する。

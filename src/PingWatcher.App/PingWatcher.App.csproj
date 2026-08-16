@@ -58,6 +58,11 @@
          更新は tools/oui/build_oui.py を手で実行する。 -->
     <EmbeddedResource Include="Resources/oui.tsv.gz" />
 
+    <!-- 同梱物の著作権表示とライセンス本文。exe に埋め込む。
+         zip から exe だけ取り出されても「ヘルプ → ライセンス情報」で読めるように。
+         MIT / Apache-2.0 / OFL 1.1 はいずれも再配布時の添付を求めている。 -->
+    <EmbeddedResource Include="../../THIRD-PARTY-NOTICES.txt" LogicalName="THIRD-PARTY-NOTICES.txt" />
+
     <!-- 埋め込みフォント。Noto Sans JP(サブセット OTF, family="Noto Sans JP")。
          端末に入っていなくても同じ字面になるよう exe に同梱する。
          Resource ビルドアクションが必須(Content だと FontFamily から引けない)。 -->

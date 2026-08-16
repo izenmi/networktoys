@@ -114,6 +114,23 @@ public sealed class TableColumns : ObservableObject
         OnPropertyChanged("Item[]");
     }
 
+    /// <summary>
+    /// 既定に戻す。ドラッグで崩したときの逃げ道
+    /// （これが無いと settings.json を直接編集するしかない）。
+    /// 既定値は <see cref="Tables"/> の宣言が持っているので、そこから引き直す。
+    /// </summary>
+    public void Reset()
+    {
+        foreach (TableSpec spec in Tables)
+        {
+            foreach ((int column, double width) in spec.Columns)
+                _widths[$"{spec.Name}.{column}"] = width;
+        }
+
+        OnPropertyChanged("Item[]");
+        Save();
+    }
+
     /// <summary>アプリを閉じるときに呼ぶ。書けなくても落とさない。</summary>
     public void Save()
     {

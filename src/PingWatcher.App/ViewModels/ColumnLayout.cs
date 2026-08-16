@@ -33,6 +33,21 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength Loss { get => _loss; set => SetProperty(ref _loss, value); }
     public GridLength Spark { get => _spark; set => SetProperty(ref _spark, value); }
 
+    /// <summary>
+    /// 既定に戻す。ドラッグで崩したときの逃げ道
+    /// （これが無いと settings.json を直接編集するしかない）。
+    /// </summary>
+    public void Reset()
+    {
+        State = new GridLength(84);
+        Target = new GridLength(128);
+        Rtt = new GridLength(60);
+        Loss = new GridLength(70);
+        Spark = new GridLength(92);
+
+        Save();
+    }
+
     /// <summary>アプリを閉じるときに呼ぶ。書けなくても落とさない。</summary>
     public void Save()
     {
