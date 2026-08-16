@@ -872,7 +872,7 @@
                                    Style="{StaticResource Caption}"
                                    TextWrapping="Wrap" Margin="4,6,0,0" />
 
-                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="trace" MouseLeftButtonDown="OnTableHeaderSort">
+                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="trace" MouseLeftButtonDown="OnTableHeaderSort">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.0]}" />
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.1]}" />
@@ -903,7 +903,9 @@
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <!-- 見出しは一覧の外にあるので、スクロールバーの場所は常に空けておく。
+                             出たり消えたりすると、そのぶん行だけ狭くなって見出しとずれる -->
+                        <ScrollViewer VerticalScrollBarVisibility="Visible">
                             <ItemsControl ItemsSource="{Binding Hops}" Tag="trace">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -1139,7 +1141,7 @@
                         </Border>
 
                         <!-- 周辺 AP 一覧 -->
-                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" MinWidth="140" />
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wifi.1]}" />
@@ -1207,7 +1209,8 @@
                                  HorizontalContentAlignment="Stretch"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  VirtualizingStackPanel.IsVirtualizing="True"
-                                 VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                 VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Height="{DynamicResource Size.RowHeight}">
@@ -1318,7 +1321,7 @@
                                     CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                 <DockPanel>
                                     <!-- 見出し。どの欄に何を入れるかはここで示す -->
-                                    <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
                                             <ColumnDefinition Width="*" />
@@ -1386,7 +1389,8 @@
                                              HorizontalContentAlignment="Stretch"
                                              ItemContainerStyle="{StaticResource PlainRowContainer}"
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                             VirtualizingPanel.IsVirtualizing="False">
+                                             VirtualizingPanel.IsVirtualizing="False"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Height="26">
@@ -1854,7 +1858,7 @@
                         </StackPanel>
 
                         <!-- 一覧のヘッダ -->
-                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="scan" MouseLeftButtonDown="OnTableHeaderSort">
+                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="scan" MouseLeftButtonDown="OnTableHeaderSort">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.0]}" />
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.1]}" />
@@ -1897,7 +1901,8 @@
                                  HorizontalContentAlignment="Stretch"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  VirtualizingStackPanel.IsVirtualizing="True"
-                                 VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                 VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Height="{DynamicResource Size.RowHeight}"
@@ -2120,7 +2125,7 @@
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
                                       Tag="ftplog" MouseLeftButtonDown="OnTableHeaderSort">
                                     <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.0]}" />
@@ -2144,7 +2149,8 @@
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}">
@@ -2216,7 +2222,7 @@
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
                                       Tag="tftplog" MouseLeftButtonDown="OnTableHeaderSort">
                                     <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.0]}" />
@@ -2240,7 +2246,8 @@
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}">
@@ -2319,7 +2326,7 @@
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="接続の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
                                       Tag="sftplog" MouseLeftButtonDown="OnTableHeaderSort">
                                     <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.0]}" />
@@ -2343,7 +2350,8 @@
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}">
@@ -2545,7 +2553,7 @@
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="受信したメッセージ" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
                                       Tag="syslog" MouseLeftButtonDown="OnTableHeaderSort">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
@@ -2574,7 +2582,8 @@
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}"
@@ -2673,7 +2682,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="snmpget" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="snmpget" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.1]}" />
@@ -2701,7 +2710,8 @@
                                                      Style="{StaticResource TargetListBox}"
                                                      ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                      VirtualizingStackPanel.IsVirtualizing="True"
-                                                     VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Height="{DynamicResource Size.RowHeight}">
@@ -2776,7 +2786,7 @@
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Top" Text="受信した Trap" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
                                                   Tag="snmptrap" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
@@ -2800,7 +2810,8 @@
                                                      Style="{StaticResource TargetListBox}"
                                                      ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                      VirtualizingStackPanel.IsVirtualizing="True"
-                                                     VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Height="{DynamicResource Size.RowHeight}"
@@ -2880,7 +2891,7 @@
                                 BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
-                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.0]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.1]}" />
@@ -2948,12 +2959,15 @@
                                          ItemTemplate="{x:Null}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                     <ListBox.Resources>
                                         <!-- 見出し行(プロセス)と接続行を型で出し分ける -->
                                         <DataTemplate DataType="{x:Type net:ConnectionGroupRow}">
+                                            <!-- 行の左右 4px は PlainRowContainer が持っている。
+                                                 ここで足すと二重になり、接続行と見出しから 4px ずれる -->
                                             <Border Height="{DynamicResource Size.RowHeight}"
-                                                    Background="{DynamicResource Brush.SurfaceAlt}" Padding="4,0">
+                                                    Background="{DynamicResource Brush.SurfaceAlt}">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[conn.0]}" />
@@ -3084,7 +3098,7 @@
                                 BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
-                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.1]}" />
@@ -3160,7 +3174,8 @@
                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                          VirtualizingPanel.IsVirtualizing="True"
                                          VirtualizingPanel.VirtualizationMode="Recycling"
-                                         ItemContainerStyle="{StaticResource PlainRowContainer}">
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                     <!-- 行の詰め方は接続タブと同じ。既定の ListBoxItem は
                                          余白を持つので、指定しないと 1 行ぶん背が高くなる -->
                                     <ListBox.ItemTemplate>
@@ -3608,7 +3623,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="mnet" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mnet" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
@@ -3640,11 +3655,13 @@
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
                                             <ListBox ItemsSource="{Binding NetworkRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                      Background="Transparent" BorderThickness="0"
                                                      HorizontalContentAlignment="Stretch"
                                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                      VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Height="22">
@@ -3702,7 +3719,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="mdev" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mdev" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
@@ -3749,11 +3766,13 @@
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
                                             <ListBox ItemsSource="{Binding DeviceRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                      Background="Transparent" BorderThickness="0"
                                                      HorizontalContentAlignment="Stretch"
                                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                      VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Height="22"
@@ -3847,7 +3866,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="mup" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mup" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
@@ -3889,11 +3908,13 @@
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
                                             <ListBox ItemsSource="{Binding UplinkRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                      Background="Transparent" BorderThickness="0"
                                                      HorizontalContentAlignment="Stretch"
                                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                      VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Height="22">
@@ -4005,7 +4026,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
@@ -4047,11 +4068,13 @@
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
                                             <ListBox ItemsSource="{Binding ClientRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                      Background="Transparent" BorderThickness="0"
                                                      HorizontalContentAlignment="Stretch"
                                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                      VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Height="22"

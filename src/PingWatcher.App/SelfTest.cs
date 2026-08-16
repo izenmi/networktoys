@@ -3,6 +3,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls.Primitives;   // Thumb（列幅のつまみ）
 using System.Windows.Media;
 using PingWatcher.Core.Addressing;
 
@@ -305,6 +306,50 @@ internal static class SelfTest
 
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
+        });
+
+        Check("表の見出しと行の左右が揃っている", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 見出しは一覧の外にある別の Grid なので、余白がずれると列が噛み合わなくなる。
+            // 実際に 3 通りのずれ方をしていた:
+            //   ・接続のプロセス見出し行だけ枠に Padding があり二重に 4px 入っていた
+            //   ・Meraki の 4 一覧が行コンテナを指定しておらず、既定の余白で描かれていた
+            //   ・スクロールバーが出た瞬間に行だけ 14px 狭くなり、可変幅列より右がずれていた
+            //
+            // 見た目のずれは画面を出すだけの検査を素通りするので、規約として突き合わせる。
+            //   見出しの余白 = 4,0,18,3（右の 18 は 行の 4 + スクロールバーの 14）
+            //   行の一覧      = 縦スクロールバーを常に確保する
+            const double ScrollBarWidth = 14;   // Controls.xaml の ScrollBar スタイルで固定
+            var expected = new Thickness(4, 0, 4 + ScrollBarWidth, 3);
+
+            object? original = window!.MainTabs.SelectedItem;
+            var problems = new List<string>();
+            int headers = 0;
+
+            foreach (object? item in window.MainTabs.Items)
+            {
+                // 無線タブは選ぶと WLAN API に触れるので、ここでも選ばない
+                if (ReferenceEquals(item, window.WifiTab)) continue;
+
+                window.MainTabs.SelectedItem = item;
+                window.UpdateLayout();
+
+                foreach (System.Windows.Controls.Grid header in FindTableHeaders(window))
+                {
+                    headers++;
+
+                    if (header.Margin != expected)
+                        problems.Add($"見出しの余白が {header.Margin}（期待は {expected}）");
+                }
+            }
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+
+            Assert(problems.Count == 0, string.Join(" / ", problems.Distinct()));
+            log.AppendLine($"        見合わせた見出し: {headers} 個");
         });
 
         Check("Meraki タブのサブタブをすべて表示できる", () =>
@@ -1136,6 +1181,37 @@ internal static class SelfTest
         catch (Exception)
         {
             // 自己診断の相手役なので、切れたら黙って終わる
+        }
+    }
+
+    /// <summary>
+    /// 表の見出しの <see cref="System.Windows.Controls.Grid"/> をすべて拾う。
+    ///
+    /// <b>目印は列幅のつまみ（<c>Tag="テーブル名.列番号"</c> の <see cref="Thumb"/>）。</b>
+    /// つまみは見出しにだけ置く決まり（行テンプレートに入れると全行に付く）なので、
+    /// これを持つ Grid＝見出し、で一意に見分けられる。
+    /// </summary>
+    private static IEnumerable<System.Windows.Controls.Grid> FindTableHeaders(DependencyObject root)
+    {
+        if (root is System.Windows.Controls.Grid grid && HasColumnGrip(grid))
+            yield return grid;
+
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            foreach (System.Windows.Controls.Grid found in FindTableHeaders(VisualTreeHelper.GetChild(root, i)))
+                yield return found;
+        }
+
+        static bool HasColumnGrip(System.Windows.Controls.Grid grid)
+        {
+            foreach (UIElement child in grid.Children)
+            {
+                if (child is Thumb { Tag: string tag } && tag.Contains('.'))
+                    return true;
+            }
+
+            return false;
         }
     }
 
