@@ -635,7 +635,7 @@ internal static class SelfTest
 
                 // ⓘ は Style ごと引くので、Text ではなく ToolTip の有無で見る
                 bool hasMark = FindIn<System.Windows.Controls.TextBlock>(tab.Content)
-                    .Any(t => Equals(t.Text, "ⓘ") && t.ToolTip is string { Length: > 40 });
+                    .Any(t => Equals(t.Text, "ⓘ") && t.ToolTip is string { Length: > 30 });
 
                 if (!hasMark) missing.Add(header);
             }

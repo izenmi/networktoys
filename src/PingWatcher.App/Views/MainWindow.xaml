@@ -3690,7 +3690,7 @@
                                     <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                                   ToolTip="選んだネットワークが、機器・アップリンク・クライアントの照会先になります。" />
+                                                   ToolTip="組織の中のネットワーク（拠点）を一覧にします。ここで選んだネットワークが、機器・アップリンク・クライアントの照会先になります。まずここから選んでください。20 ページで打ち切り、打ち切ったときはその旨を画面に出します（黙って切ると「その拠点は無い」と誤読されるため）。" />
                                         <TextBlock Style="{StaticResource TabIntro}" Text="組織の中のネットワーク一覧です。" />
                                     </DockPanel>
 
@@ -3793,7 +3793,7 @@
                                     <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                                   ToolTip="行を右クリックすると、その機器を Ping やログ採取へそのまま渡せます。" />
+                                                   ToolTip="そのネットワークにある機器の一覧です。型番・シリアル・ファームウェアの版・稼働状態が分かるので、版ずれの洗い出しや棚卸しに使えます。行を右クリックすると、その機器を Ping やログ採取へ打ち直しなしで渡せます。" />
                                         <TextBlock Style="{StaticResource TabIntro}" Text="そのネットワークにある機器の一覧です（シリアル・ファームウェア）。" />
                                     </DockPanel>
 
@@ -3943,7 +3943,7 @@
                                     <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                                   ToolTip="回線が生きているか、どちらの回線を使っているかが分かります。" />
+                                                   ToolTip="MX のアップリンク（WAN 側）の状態と、外から見えるグローバル IP です。回線が生きているか、いまどちらの回線を使っているか、切り替わっていないかが分かります。拠点から外へ出られないという申告の切り分けは、まずここを見ます。" />
                                         <TextBlock Style="{StaticResource TabIntro}" Text="MX のアップリンクの状態とグローバル IP です。" />
                                     </DockPanel>
 
@@ -4085,7 +4085,7 @@
                                     <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                                   ToolTip="VLAN や最終確認時刻も出ます。行を右クリックすると Ping や経路調査へ渡せます。" />
+                                                   ToolTip="そのネットワークに繋がっている端末の一覧です。VLAN と最終確認時刻も出るので、「その端末はいまどこに居るか」「本当に繋がっているか」を確かめられます。VLAN は機器によって数値と文字列が混ざるため、そのまま文字として出しています。行を右クリックすると Ping や経路調査へ渡せます。" />
                                         <TextBlock Style="{StaticResource TabIntro}" Text="そのネットワークに繋がっている端末の一覧です。" />
                                     </DockPanel>
 
