@@ -150,7 +150,8 @@ internal static class SpeedCheck
             : (text, DefaultUploadBytes);
     }
 
-    private static bool TryBuildUri(string url, out Uri? uri)
+    private static bool TryBuildUri(
+        string url, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Uri? uri)
     {
         string target = (url ?? "").Trim();
 
