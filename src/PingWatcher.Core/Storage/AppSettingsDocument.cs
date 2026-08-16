@@ -33,4 +33,10 @@ public sealed class AppSettingsDocument
 
     /// <summary>IP 設定タブの名前付きプリセット。</summary>
     public List<IpPreset> IpPresets { get; set; } = [];
+
+    /// <summary>
+    /// Tera Term (ttermpro.exe) の場所。空なら既定の導入先から探す。
+    /// 見つからないときに選んでもらった場所をここに覚える。
+    /// </summary>
+    public string TeraTermPath { get; set; } = "";
 }

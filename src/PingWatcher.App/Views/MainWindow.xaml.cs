@@ -659,56 +659,55 @@ public partial class MainWindow : Window
     /// 落ちている宛先を見つけたとき、そのまま経路を追えるようにする。
     /// 打ち直しの手間と打ち間違いを無くすのが目的。
     /// </summary>
+    /// <summary>右クリックした宛先へ Tera Term で SSH 接続する。</summary>
+    private void OnSshFromRow(object sender, RoutedEventArgs e) => ConnectWithTeraTerm(sender, ssh: true);
+
+    /// <summary>右クリックした宛先へ Tera Term で Telnet 接続する。</summary>
+    private void OnTelnetFromRow(object sender, RoutedEventArgs e) => ConnectWithTeraTerm(sender, ssh: false);
+
     /// <summary>
-    /// 右クリックした宛先へ SSH でつなぐ。
+    /// Tera Term でつなぐ（ユーザー指示。現場で使い慣れているものを開く）。
     ///
-    /// 端末は同梱しない。Windows 10 以降に標準で入っている OpenSSH クライアントを
-    /// コンソールウィンドウで開く（PuTTY などを既定にしている環境もあるが、
-    /// 何が入っているかを当てにいくより、標準のものを確実に使う方が壊れない）。
+    /// 場所は既定の導入先から探し、見つからなければ 1 度だけ選んでもらって覚える。
+    /// TCP 画面の宛先はポートを持っているので、それがあれば優先する。
     /// </summary>
-    private void OnSshFromRow(object sender, RoutedEventArgs e)
+    private void ConnectWithTeraTerm(object sender, bool ssh)
     {
-        if (RowOf(sender) is not { } row) return;
+        if (RowOf(sender) is not { } row || row.Host.Length == 0) return;
 
-        LaunchTerminal("ssh", row.Host, $"{row.Host}");
+        string? exePath = TeraTerm.Locate() ?? AskForTeraTerm();
+        if (exePath is null) return;
+
+        int port = row.Target.Kind == PingWatcher.Core.Models.ProbeKind.Tcp ? row.Target.Port : 0;
+
+        if (TeraTerm.Connect(exePath, row.Host, port, ssh) is { } error)
+        {
+            CrashLog.Write(new InvalidOperationException(error), "MainWindow.ConnectWithTeraTerm");
+            ConfirmDialog.Show(this, "Tera Term を起動できません", error);
+        }
     }
 
-    /// <summary>右クリックした宛先へ Telnet でつなぐ。</summary>
-    private void OnTelnetFromRow(object sender, RoutedEventArgs e)
+    /// <summary>見つからないときに場所を選んでもらう。選ばれたら次回から覚えている。</summary>
+    private string? AskForTeraTerm()
     {
-        if (RowOf(sender) is not { } row) return;
+        ConfirmDialog.Show(
+            this,
+            "Tera Term が見つかりません",
+            "Tera Term (ttermpro.exe) を自動で見つけられませんでした。\n" +
+            "次の画面で ttermpro.exe を選んでください（次回からは覚えています）。");
 
-        // telnet クライアントは既定では無効。入っていなければ入れ方を案内する
-        LaunchTerminal("telnet", row.Host, row.Host);
-    }
-
-    private void LaunchTerminal(string command, string host, string arguments)
-    {
-        if (host.Length == 0) return;
-
-        try
+        var dialog = new OpenFileDialog
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "cmd.exe",
+            Title = "ttermpro.exe を選ぶ",
+            FileName = "ttermpro.exe",
+            Filter = "Tera Term (ttermpro.exe)|ttermpro.exe|プログラム (*.exe)|*.exe",
+            CheckFileExists = true,
+        };
 
-                // /k で接続後もウィンドウを残す。切れた理由が読めないと切り分けにならない
-                Arguments = $"/k {command} {arguments}",
-                UseShellExecute = true,
-            });
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
-            CrashLog.Write(ex, $"MainWindow.LaunchTerminal({command})");
+        if (dialog.ShowDialog(this) != true) return null;
 
-            ConfirmDialog.Show(
-                this,
-                $"{command} を起動できません",
-                $"{command} クライアントが見つかりませんでした。\n\n" +
-                (command == "telnet"
-                    ? "「Windows の機能の有効化または無効化」で「Telnet クライアント」を有効にしてください。"
-                    : "「設定 → アプリ → オプション機能」で「OpenSSH クライアント」を追加してください。"));
-        }
+        TeraTerm.Remember(dialog.FileName);
+        return dialog.FileName;
     }
 
     private void OnTraceFromRow(object sender, RoutedEventArgs e)
