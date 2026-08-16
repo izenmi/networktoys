@@ -2063,17 +2063,16 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== TFP（FTP / TFTP / SFTP をまとめたファイル配布サーバ） ===== -->
-            <TabItem Header="FTP">
+            <!-- ===== 受ける（機器から送られてくるものを受け取る） ===== -->
+            <TabItem x:Name="ReceiveTab" Header="受ける">
                 <DockPanel>
                     <!-- 中の切り替えであることを見出しで明示する -->
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,2,0,6">
-                        <TextBlock Text="プロトコル" Style="{StaticResource Caption}"
+                        <TextBlock Text="種類" Style="{StaticResource Caption}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                     </StackPanel>
 
                     <TabControl ItemContainerStyle="{StaticResource SubTabItem}" BorderThickness="0" Padding="0">
-
             <!-- FTP: 機器の config バックアップ受け・平文 -->
             <TabItem Header="FTP" DataContext="{Binding Ftp}">
                 <Border Style="{StaticResource Card}">
@@ -2393,124 +2392,6 @@
                 </Border>
             </TabItem>
 
-                    </TabControl>
-                </DockPanel>
-            </TabItem>
-
-            <!-- ===== DNS ===== -->
-            <TabItem x:Name="DnsTab" Header="DNS" DataContext="{Binding Dns}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-
-                        <!-- 入力 -->
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="名前" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,6,0" />
-                            <TextBox Width="240"
-                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,6,0" />
-                            <ComboBox Width="86"
-                                      ItemsSource="{Binding RecordTypes}"
-                                      SelectedItem="{Binding SelectedType}"
-                                      Margin="0,0,6,0" />
-                            <Button Content="問い合わせ" Command="{Binding QueryCommand}" Margin="0,0,6,0" />
-                            <Button Content="中断" Command="{Binding CancelCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,0"
-                                    ToolTip="サーバごとの回答を 1 枚の表にします。回答が無かったサーバも 1 行残します。" />
-                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-
-                        <!-- 問い合わせ先 -->
-                        <DockPanel DockPanel.Dock="Left" Width="164" Margin="0,0,10,0">
-                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
-                                       TextWrapping="Wrap" Margin="0,0,0,4"
-                                       Text="問い合わせ先（1 行に 1 台）。「システム既定」と書くと OS のリゾルバを使います。" />
-                            <TextBox Text="{Binding ServersText, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     AcceptsReturn="True"
-                                     TextWrapping="NoWrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     VerticalContentAlignment="Top" />
-                        </DockPanel>
-
-                        <!-- 結果を横並びで比較する -->
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding Results}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border x:Name="Card"
-                                                Background="{DynamicResource Brush.SurfaceAlt}"
-                                                BorderBrush="{DynamicResource Brush.Border}"
-                                                BorderThickness="1"
-                                                CornerRadius="{DynamicResource Radius.Card}"
-                                                Padding="7,5"
-                                                Margin="0,0,8,8"
-                                                Width="278">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding ServerLabel}"
-
-                                                           FontFamily="{DynamicResource Font.Mono}" />
-                                                <TextBlock x:Name="SummaryText"
-                                                           Text="{Binding Summary}"
-                                                           Style="{StaticResource Caption}"
-                                                           TextWrapping="Wrap"
-                                                           Margin="0,2,0,6" />
-
-                                                <ItemsControl ItemsSource="{Binding Records}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Grid Margin="0,0,0,3">
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="44" />
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <Border Grid.Column="0"
-                                                                        Style="{StaticResource Badge}"
-                                                                        Background="{DynamicResource Brush.Info.Bg}"
-                                                                        VerticalAlignment="Top">
-                                                                    <TextBlock Text="{Binding Type}"
-                                                                               Style="{StaticResource Badge.Text}"
-                                                                               Foreground="{DynamicResource Brush.Info.Fg}" />
-                                                                </Border>
-                                                                <TextBlock Grid.Column="1"
-                                                                           Text="{Binding Value}"
-                                                                           Style="{StaticResource Mono}"
-                                                                           TextWrapping="Wrap"
-                                                                           Margin="6,0,6,0" />
-                                                                <TextBlock Grid.Column="2"
-                                                                           Text="{Binding TtlText}"
-                                                                           Style="{StaticResource Caption}"
-                                                                           VerticalAlignment="Top" />
-                                                            </Grid>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding HasError}" Value="True">
-                                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
-                                                <Setter TargetName="SummaryText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
             <!-- ===== syslog（機器からの syslog を受ける） ===== -->
             <TabItem Header="syslog" DataContext="{Binding Syslog}">
                 <Border Style="{StaticResource Card}">
@@ -2644,59 +2525,296 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== SNMP（GET / Trap 受信） ===== -->
-            <TabItem x:Name="SnmpTab" Header="SNMP">
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,2,0,6">
-                        <TextBlock Text="種類" Style="{StaticResource Caption}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0" />
-                    </StackPanel>
+            <!-- Trap 受信 -->
+            <TabItem Header="Trap" DataContext="{Binding SnmpTrap}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
+                            <Button Content="停止" Command="{Binding StopCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     HorizontalContentAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="標準は 162。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
+                            <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
 
-                    <TabControl ItemContainerStyle="{StaticResource SubTabItem}" BorderThickness="0" Padding="0">
+                        <Border DockPanel.Dock="Top"
+                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
+                                         TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}"
+                                           Text="⚠ 受信内容は logs\snmptrap-日時.log にも残ります。初回はWindowsのファイアウォールで許可が必要です。" />
+                            </StackPanel>
+                        </Border>
 
-                        <!-- GET / ウォーク -->
-                        <TabItem Header="GET" DataContext="{Binding SnmpGet}">
-                            <Border Style="{StaticResource Card}">
-                                <DockPanel>
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <TextBlock Text="宛先" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBox Width="140" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                                 FontFamily="{DynamicResource Font.Mono}" Margin="0,0,12,0"
-                                                 ToolTip="機器の IP。" />
-                                        <TextBlock Text="コミュニティ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBox Width="90" Text="{Binding Community, UpdateSourceTrigger=PropertyChanged}"
-                                                 Margin="0,0,12,0" />
-                                        <CheckBox Content="v2c" IsChecked="{Binding IsV2c}"
-                                                  VerticalAlignment="Center" Margin="0,0,12,0"
-                                                  ToolTip="外すと v1 で問い合わせます。" />
-                                        <Button Content="取得" Command="{Binding GetCommand}" Margin="0,0,6,0" />
-                                        <Button Content="ウォーク" Command="{Binding WalkCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                                        <Button Content="中断" Command="{Binding CancelCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
-                                                ToolTip="ウォークは最大 5000 行まで走ります。" />
-                                        <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                                Style="{StaticResource Button.Subtle}" />
-                                    </StackPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
 
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <TextBlock Text="OID" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBox Width="240" Text="{Binding OidText, UpdateSourceTrigger=PropertyChanged}"
-                                                 FontFamily="{DynamicResource Font.Mono}" Margin="0,0,8,0" />
-                                        <ComboBox Width="220"
-                                                  ItemsSource="{Binding Presets}"
-                                                  SelectedItem="{Binding SelectedPreset}"
-                                                  ToolTip="よく使う OID を選ぶと上の欄に入ります。" />
-                                    </StackPanel>
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="受信した Trap" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
+                                      Tag="snmptrap" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="snmptrap.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="snmptrap.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                <ListBox ItemsSource="{Binding Log}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                             ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}"
+                                                  ContextMenu="{StaticResource RowMenu.Device}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding Text}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
 
-                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                               Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                    </TabControl>
+                </DockPanel>
+            </TabItem>
 
-                                    <Border Background="{DynamicResource Brush.Surface}"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="snmpget" MouseLeftButtonDown="OnTableHeaderSort">
+            <!-- ===== DNS ===== -->
+            <TabItem x:Name="DnsTab" Header="DNS" DataContext="{Binding Dns}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+
+                        <!-- 入力 -->
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
+                            <TextBlock Text="名前" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBox Width="240"
+                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,6,0" />
+                            <ComboBox Width="86"
+                                      ItemsSource="{Binding RecordTypes}"
+                                      SelectedItem="{Binding SelectedType}"
+                                      Margin="0,0,6,0" />
+                            <Button Content="問い合わせ" Command="{Binding QueryCommand}" Margin="0,0,6,0" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,0"
+                                    ToolTip="サーバごとの回答を 1 枚の表にします。回答が無かったサーバも 1 行残します。" />
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <!-- 問い合わせ先 -->
+                        <DockPanel DockPanel.Dock="Left" Width="164" Margin="0,0,10,0">
+                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" Margin="0,0,0,4"
+                                       Text="問い合わせ先（1 行に 1 台）。「システム既定」と書くと OS のリゾルバを使います。" />
+                            <TextBox Text="{Binding ServersText, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     VerticalContentAlignment="Top" />
+                        </DockPanel>
+
+                        <!-- 結果を横並びで比較する -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding Results}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Card"
+                                                Background="{DynamicResource Brush.SurfaceAlt}"
+                                                BorderBrush="{DynamicResource Brush.Border}"
+                                                BorderThickness="1"
+                                                CornerRadius="{DynamicResource Radius.Card}"
+                                                Padding="7,5"
+                                                Margin="0,0,8,8"
+                                                Width="278">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding ServerLabel}"
+
+                                                           FontFamily="{DynamicResource Font.Mono}" />
+                                                <TextBlock x:Name="SummaryText"
+                                                           Text="{Binding Summary}"
+                                                           Style="{StaticResource Caption}"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,2,0,6" />
+
+                                                <ItemsControl ItemsSource="{Binding Records}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,0,0,3">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="44" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <Border Grid.Column="0"
+                                                                        Style="{StaticResource Badge}"
+                                                                        Background="{DynamicResource Brush.Info.Bg}"
+                                                                        VerticalAlignment="Top">
+                                                                    <TextBlock Text="{Binding Type}"
+                                                                               Style="{StaticResource Badge.Text}"
+                                                                               Foreground="{DynamicResource Brush.Info.Fg}" />
+                                                                </Border>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Value}"
+                                                                           Style="{StaticResource Mono}"
+                                                                           TextWrapping="Wrap"
+                                                                           Margin="6,0,6,0" />
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{Binding TtlText}"
+                                                                           Style="{StaticResource Caption}"
+                                                                           VerticalAlignment="Top" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding HasError}" Value="True">
+                                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                                                <Setter TargetName="SummaryText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ===== SNMP（GET / ウォーク） ===== -->
+            <TabItem x:Name="SnmpTab" Header="SNMP" DataContext="{Binding SnmpGet}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="宛先" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="140" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,12,0"
+                                     ToolTip="機器の IP。" />
+                            <TextBlock Text="コミュニティ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="90" Text="{Binding Community, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,12,0" />
+                            <CheckBox Content="v2c" IsChecked="{Binding IsV2c}"
+                                      VerticalAlignment="Center" Margin="0,0,12,0"
+                                      ToolTip="外すと v1 で問い合わせます。" />
+                            <Button Content="取得" Command="{Binding GetCommand}" Margin="0,0,6,0" />
+                            <Button Content="ウォーク" Command="{Binding WalkCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="ウォークは最大 5000 行まで走ります。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="OID" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="240" Text="{Binding OidText, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,8,0" />
+                            <ComboBox Width="220"
+                                      ItemsSource="{Binding Presets}"
+                                      SelectedItem="{Binding SelectedPreset}"
+                                      ToolTip="よく使う OID を選ぶと上の欄に入ります。" />
+                        </StackPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="snmpget" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.0]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.1]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.2]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="OID" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="名前" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="型" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="値" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="snmpget.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="snmpget.1" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="snmpget.2" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                <ListBox ItemsSource="{Binding Rows}"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                             ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.1]}" />
@@ -2707,156 +2825,23 @@
                                                 <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="OID" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="1" Text="名前" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="2" Text="型" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="3" Text="値" Style="{StaticResource Caption}" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="snmpget.0" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="snmpget.1" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="snmpget.2" DragDelta="OnTableColumnResize" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Oid}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Type}" Style="{StaticResource Caption}"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Value}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding Value}" />
                                             </Grid>
-                                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                            <ListBox ItemsSource="{Binding Rows}"
-                                                     Style="{StaticResource TargetListBox}"
-                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                                     VirtualizingStackPanel.IsVirtualizing="True"
-                                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid Height="{DynamicResource Size.RowHeight}">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.0]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.1]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.2]}" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Oid}" Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding Type}" Style="{StaticResource Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding Value}"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                                       ToolTip="{Binding Value}" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
-                                    </Border>
-                                </DockPanel>
-                            </Border>
-                        </TabItem>
-
-                        <!-- Trap 受信 -->
-                        <TabItem Header="Trap" DataContext="{Binding SnmpTrap}">
-                            <Border Style="{StaticResource Card}">
-                                <DockPanel>
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="{Binding RunLabel}" Command="{Binding StartCommand}" Margin="0,0,5,0" />
-                                        <Button Content="停止" Command="{Binding StopCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
-                                        <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBox Width="56" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                                 FontFamily="{DynamicResource Font.Mono}"
-                                                 HorizontalContentAlignment="Center" Margin="0,0,12,0"
-                                                 ToolTip="標準は 162。" />
-                                        <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
-                                        <Button Content="一覧を消す" Command="{Binding ClearCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
-                                                ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
-                                        <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
-                                                Style="{StaticResource Button.Subtle}" />
-                                    </StackPanel>
-
-                                    <Border DockPanel.Dock="Top"
-                                            Background="{DynamicResource Brush.SurfaceAlt}"
-                                            CornerRadius="{DynamicResource Radius.Control}" Padding="9,6" Margin="0,0,0,6">
-                                        <StackPanel>
-                                            <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
-                                                     TextWrapping="Wrap" />
-                                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                                       Foreground="{DynamicResource Brush.Warn.Fg}"
-                                                       Text="⚠ 受信内容は logs\snmptrap-日時.log にも残ります。初回はWindowsのファイアウォールで許可が必要です。" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                               Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                                    <Border Background="{DynamicResource Brush.Surface}"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Top" Text="受信した Trap" Style="{StaticResource Caption}" Margin="0,0,0,4" />
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                                  Tag="snmptrap" MouseLeftButtonDown="OnTableHeaderSort">
-                                                <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
-                                                <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
-                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="snmptrap.0" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="snmptrap.1" DragDelta="OnTableColumnResize" />
-                                            </Grid>
-                                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                            <ListBox ItemsSource="{Binding Log}"
-                                                     Style="{StaticResource TargetListBox}"
-                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                                     VirtualizingStackPanel.IsVirtualizing="True"
-                                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid Height="{DynamicResource Size.RowHeight}"
-                                                              ContextMenu="{StaticResource RowMenu.Device}">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Remote}" Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding Text}"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                                       ToolTip="{Binding Text}" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
-                                    </Border>
-                                </DockPanel>
-                            </Border>
-                        </TabItem>
-
-                    </TabControl>
-                </DockPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
             </TabItem>
 
             <!-- ===== 接続（この PC の TCP/UDP 通信をプロセスごとに見る） ===== -->
