@@ -41,9 +41,13 @@ public sealed record CiscoSessionOptions
 public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
 {
     private readonly StringBuilder _buffer = new();
-    private readonly byte[] _read = new byte[8192];
-    private readonly Decoder _decoder = Encoding.UTF8.GetDecoder();
-    private readonly char[] _chars = new char[8192];
+    private readonly Lock _gate = new();
+
+    /// <summary>読めたことの合図。読み取りは専用タスクが回し、本体はここで待つ。</summary>
+    private readonly SemaphoreSlim _arrived = new(0);
+
+    private Task? _reader;
+    private CancellationTokenSource? _readerStop;
 
     /// <summary>無言の機器へ改行を入れて様子を見る間隔。</summary>
     private static readonly TimeSpan ProbeInterval = TimeSpan.FromSeconds(1);
@@ -101,6 +105,8 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             failure ??= $"接続が切れました: {ex.Message}";
         }
 
+        StopReader();
+
         return new DeviceCollectionResult(
             Host: host,
             Port: port,
@@ -148,14 +154,14 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             {
                 _hostname = match.Hostname;
                 _level = match.Level;
-                _buffer.Clear();
+                ClearBuffer();
                 return null;
             }
 
             if (CiscoPrompt.EndsWithUsernamePrompt(view) && !userSent)
             {
                 userSent = true;
-                _buffer.Clear();
+                ClearBuffer();
                 await SendAsync(credentials.UserName, token).ConfigureAwait(false);
                 continue;
             }
@@ -166,7 +172,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                     return "ユーザー名かパスワードが違います。";
 
                 passwordSent++;
-                _buffer.Clear();
+                ClearBuffer();
                 await SendAsync(credentials.Password, token).ConfigureAwait(false);
                 continue;
             }
@@ -209,13 +215,13 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                 if (passwordSent || credentials.EnablePassword.Length == 0)
                 {
                     // 抜けられないので改行だけ入れてユーザーモードへ戻す
-                    _buffer.Clear();
+                    ClearBuffer();
                     await SendAsync("", token).ConfigureAwait(false);
                     return false;
                 }
 
                 passwordSent = true;
-                _buffer.Clear();
+                ClearBuffer();
                 await SendAsync(credentials.EnablePassword, token).ConfigureAwait(false);
                 continue;
             }
@@ -223,7 +229,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out PromptMatch match))
             {
                 _level = match.Level;
-                _buffer.Clear();
+                ClearBuffer();
                 return match.Level != PromptLevel.User;
             }
         }
@@ -256,7 +262,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     /// <summary>コマンドを 1 本投げて、プロンプトが返るまで読む。</summary>
     private async Task<CommandResult> RunOneAsync(int index, string command, CancellationToken token)
     {
-        _buffer.Clear();
+        ClearBuffer();
         var watch = Stopwatch.StartNew();
 
         await SendAsync(command, token).ConfigureAwait(false);
@@ -278,7 +284,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                 break;
             }
 
-            if (_buffer.Length > options.MaxOutputChars)
+            if (BufferLength > options.MaxOutputChars)
             {
                 problem = "出力が大きすぎたため打ち切りました。";
                 break;
@@ -347,7 +353,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             // 立て直せなければ諦める。呼び出し側が次のコマンドで気づく
         }
 
-        _buffer.Clear();
+        ClearBuffer();
     }
 
     private Task SendAsync(string line, CancellationToken token) => WriteRawAsync(line + "\r\n", token);
@@ -361,33 +367,93 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     }
 
     /// <summary>
-    /// 静穏時間ぶん読む。何か読めたら true。
+    /// 静穏時間ぶん待つ。何か読めていたら true。
     ///
-    /// <b>下位ストリームの読み取りタイムアウトを当てにしない</b>（SSH の実装では
-    /// 版によって挙動が揺れる）。こちらでタイムアウトを被せる。
+    /// <b>読み取り自体はキャンセルしない。</b>ソケットの読み取りを途中で打ち切ると、
+    /// OS がすでに受け取ったバイトを取りこぼすことがある。読み取りは専用タスクに
+    /// 回しっぱなしにして、こちらは「届いた合図」だけを待つ。
+    /// 止めるときは接続を閉じてタスクごと終わらせる。
     /// </summary>
     private async Task<bool> PumpAsync(TimeSpan quiet, CancellationToken token)
     {
-        using var idle = CancellationTokenSource.CreateLinkedTokenSource(token);
-        idle.CancelAfter(quiet);
+        StartReader();
 
         try
         {
-            int read = await io.ReadAsync(_read, idle.Token).ConfigureAwait(false);
-            if (read <= 0) return false;
-
-            // マルチバイト文字は読み取り境界で割れるので Decoder を持ち回す
-            int chars = _decoder.GetChars(_read, 0, read, _chars, 0);
-            _buffer.Append(_chars, 0, chars);
-            return true;
+            return await _arrived.WaitAsync(quiet, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
         {
-            return false;   // 静穏時間ぶん黙っていた
+            return false;
         }
     }
 
-    private string Clean() => TerminalText.Clean(_buffer.ToString());
+    private void StartReader()
+    {
+        if (_reader is not null) return;
+
+        _readerStop = new CancellationTokenSource();
+        CancellationToken stop = _readerStop.Token;
+
+        _reader = Task.Run(async () =>
+        {
+            byte[] raw = new byte[8192];
+            char[] chars = new char[8192];
+
+            // マルチバイト文字は読み取り境界で割れるので Decoder を持ち回す
+            Decoder decoder = Encoding.UTF8.GetDecoder();
+
+            try
+            {
+                while (!stop.IsCancellationRequested)
+                {
+                    int read = await io.ReadAsync(raw, stop).ConfigureAwait(false);
+                    if (read <= 0) return;
+
+                    int count = decoder.GetChars(raw, 0, read, chars, 0);
+                    if (count == 0) continue;
+
+                    lock (_gate)
+                        _buffer.Append(chars, 0, count);
+
+                    _arrived.Release();
+                }
+            }
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException or OperationCanceledException)
+            {
+                // 接続が閉じた。呼び出し側は無音として扱う
+            }
+        }, stop);
+    }
+
+    private void StopReader()
+    {
+        _readerStop?.Cancel();
+        _readerStop?.Dispose();
+        _readerStop = null;
+        _reader = null;
+    }
+
+    private int BufferLength
+    {
+        get { lock (_gate) return _buffer.Length; }
+    }
+
+    private string Clean()
+    {
+        lock (_gate)
+            return TerminalText.Clean(_buffer.ToString());
+    }
+
+    private void ClearBuffer()
+    {
+        lock (_gate)
+            _buffer.Clear();
+
+        // 溜まっていた合図も捨てる(古い合図で次の待ちが素通りするのを防ぐ)
+        while (_arrived.CurrentCount > 0)
+            _arrived.Wait(0);
+    }
 }
 
 /// <summary>1 コマンド分の塊から、エコー行と末尾のプロンプトを剥がす。</summary>

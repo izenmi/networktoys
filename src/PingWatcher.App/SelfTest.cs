@@ -1018,9 +1018,13 @@ internal static class SelfTest
                 {
                     char c = (char)buffer[i];
 
+                    // こちらが返した IAC(こちらは全部断る)は文字として読まない。
+                    // 混ぜたままにするとコマンドの先頭に制御バイトが付いて一致しなくなる
+                    if (buffer[i] >= 0x80) continue;
+
                     if (c != '\n')
                     {
-                        if (c != '\r') line.Append(c);
+                        if (c is not ('\r' or '\0') && !char.IsControl(c)) line.Append(c);
                         continue;
                     }
 
