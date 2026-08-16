@@ -45,16 +45,10 @@ internal static class HttpCheck
             return (new HttpOutcome(0, "", "", "", $"URL として読めません: {url}"), 0, "");
 
         // PAC は宛先ごとに答えが変わる。試験する URL について引き直す
-        string resolved = "";
-        if (proxy.Mode == ProxyMode.Pac)
-        {
-            PacLookup lookup = WinHttpNativeMethods.Resolve(proxy.Address, uri.AbsoluteUri);
+        (string resolved, string? pacError) = ResolveProxy(proxy, uri);
 
-            if (lookup.Error is { } pacError)
-                return (new HttpOutcome(0, "", "", "", pacError), Elapsed(started), "");
-
-            resolved = lookup.Proxy;
-        }
+        if (pacError is not null)
+            return (new HttpOutcome(0, "", "", "", pacError), Elapsed(started), "");
 
         using HttpClientHandler handler = CreateHandler(proxy, resolved);
         using var client = new HttpClient(handler) { Timeout = Timeout };
@@ -95,12 +89,25 @@ internal static class HttpCheck
     }
 
     /// <summary>
+    /// PAC なら宛先について引き直す。ほかの指定では何もしない。
+    /// <b>PAC は宛先ごとに答えが変わる</b>ので、URL が変わるたびに呼ぶ。
+    /// </summary>
+    internal static (string Resolved, string? Error) ResolveProxy(ProxyChoice proxy, Uri uri)
+    {
+        if (proxy.Mode != ProxyMode.Pac) return ("", null);
+
+        PacLookup lookup = WinHttpNativeMethods.Resolve(proxy.Address, uri.AbsoluteUri);
+
+        return lookup.Error is { } error ? ("", error) : (lookup.Proxy, null);
+    }
+
+    /// <summary>
     /// プロキシの指定に応じてハンドラを作る。
     ///
     /// <see cref="ProxyMode.System"/> だけは既定のまま（＝いまの Windows 設定に従う）にして、
     /// 「端末の現状」を比較の基準にできるようにする。
     /// </summary>
-    private static HttpClientHandler CreateHandler(ProxyChoice proxy, string resolved)
+    internal static HttpClientHandler CreateHandler(ProxyChoice proxy, string resolved)
     {
         // リダイレクトは追う。社内サイトはログイン画面へ飛ばす作りが多く、
         // 追わないと 302 のまま「合格」に見えてしまう
@@ -141,7 +148,7 @@ internal static class HttpCheck
     }
 
     /// <summary>証跡に出すプロキシの名前。PAC は解決先まで出す。</summary>
-    private static string DescribeProxy(ProxyChoice proxy, string resolved)
+    internal static string DescribeProxy(ProxyChoice proxy, string resolved)
         => proxy.Mode switch
         {
             ProxyMode.Pac => $"{proxy.Name}（{PacProxy.Describe(resolved)}）",

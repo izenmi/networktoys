@@ -26,6 +26,15 @@ public enum CheckKind
 
     /// <summary>Teams 一式（名前解決・TCP 443・UDP の STUN）。</summary>
     Teams,
+
+    /// <summary>指定した URL からダウンロードして速度を測る。プロキシが効く。</summary>
+    Download,
+
+    /// <summary>指定した URL へアップロードして速度を測る。プロキシが効く。</summary>
+    Upload,
+
+    /// <summary>fast.com で測る。<b>非公式なので先方の変更で壊れうる。</b></summary>
+    FastCom,
 }
 
 /// <summary>
@@ -42,8 +51,12 @@ public enum CheckKind
 /// </param>
 public sealed record CheckItem(string Name, CheckKind Kind, string Target, string Expect = "")
 {
-    /// <summary>プロキシを変えて結果が変わりうるか。HTTP だけが真。</summary>
-    public bool UsesProxy => Kind == CheckKind.Http;
+    /// <summary>
+    /// プロキシを変えて結果が変わりうるか。<b>HTTP でやり取りする種類だけが真。</b>
+    /// 速度はプロキシがボトルネックかを見たい要なので、当然ここに入る。
+    /// </summary>
+    public bool UsesProxy
+        => Kind is CheckKind.Http or CheckKind.Download or CheckKind.Upload or CheckKind.FastCom;
 
     /// <summary>種類ごとの既定ポート。0 なら宛先の指定に従う。</summary>
     public static int DefaultPort(CheckKind kind) => kind switch
@@ -130,6 +143,9 @@ public static class CheckListParser
         CheckKind.Imap => "IMAP",
         CheckKind.Pop3 => "POP3",
         CheckKind.Dns => "DNS",
+        CheckKind.Download => "速度",
+        CheckKind.Upload => "速度上り",
+        CheckKind.FastCom => "fast.com",
         _ => "Teams",
     };
 
@@ -148,6 +164,9 @@ public static class CheckListParser
             case "POP3": case "POP": kind = CheckKind.Pop3; return true;
             case "DNS": kind = CheckKind.Dns; return true;
             case "TEAMS": kind = CheckKind.Teams; return true;
+            case "速度": case "SPEED": case "DOWNLOAD": kind = CheckKind.Download; return true;
+            case "速度上り": case "UPLOAD": kind = CheckKind.Upload; return true;
+            case "FAST.COM": case "FASTCOM": case "FAST": kind = CheckKind.FastCom; return true;
             default: return false;
         }
     }

@@ -79,7 +79,9 @@ internal static class CheckRunner
     {
         // 種類ごとに要るものが揃っていなければ、試験せずにそう言う。
         // 空欄のまま「不合格」にすると、設定漏れと本当の異常が混ざる
-        if (item.Kind != CheckKind.Teams && item.Target.Trim().Length == 0)
+        // fast.com と Teams は宛先を持たない（決まった相手へ行く）
+        if (item.Kind is not (CheckKind.Teams or CheckKind.FastCom)
+            && item.Target.Trim().Length == 0)
             return Skip(item, "宛先が空です");
 
         return item.Kind switch
@@ -87,6 +89,8 @@ internal static class CheckRunner
             CheckKind.Http => await RunHttpAsync(item, proxy, token).ConfigureAwait(false),
             CheckKind.Dns => await RunDnsAsync(item, token).ConfigureAwait(false),
             CheckKind.Teams => await RunTeamsAsync(item, teams, token).ConfigureAwait(false),
+            CheckKind.Download or CheckKind.Upload or CheckKind.FastCom
+                => await RunSpeedAsync(item, proxy, token).ConfigureAwait(false),
             _ => await RunConnectAsync(item, token).ConfigureAwait(false),
         };
     }
@@ -125,6 +129,22 @@ internal static class CheckRunner
             : Fail(item,
                    $"接続はできましたが、応答が「{BannerCheck.ExpectedPrefix(item.Kind)}」で始まりません: {summary}",
                    outcome.ElapsedMs);
+    }
+
+    /// <summary>
+    /// 速度を測る。<b>プロキシ経由で測れる</b>ので、どちらがボトルネックかが分かる。
+    /// </summary>
+    private static async Task<CheckResult> RunSpeedAsync(
+        CheckItem item, ProxyChoice proxy, CancellationToken token)
+    {
+        (SpeedSample sample, string used) = item.Kind switch
+        {
+            CheckKind.Upload => await SpeedCheck.UploadAsync(item.Target, proxy, token).ConfigureAwait(false),
+            CheckKind.FastCom => await FastComCheck.RunAsync(proxy, token).ConfigureAwait(false),
+            _ => await SpeedCheck.DownloadAsync(item.Target, proxy, token).ConfigureAwait(false),
+        };
+
+        return SpeedVerdict.Judge(item, used.Length > 0 ? used : proxy.Name, sample);
     }
 
     private static async Task<CheckResult> RunDnsAsync(CheckItem item, CancellationToken token)
