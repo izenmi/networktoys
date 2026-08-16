@@ -7,7 +7,7 @@
         xmlns:vm="clr-namespace:PingWatcher.App.ViewModels"
         xmlns:net="clr-namespace:PingWatcher.Core.Net;assembly=PingWatcher.Core"
         Title="PingWatcher"
-        Width="1280" Height="800"
+        Width="1060" Height="760"
         MinWidth="700" MinHeight="480"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.Window.Backdrop}"
@@ -249,6 +249,9 @@
                             <Border.ContextMenu>
                                 <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
                                                            RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="SSH で接続" Click="OnSshFromRow" />
+                                    <MenuItem Header="Telnet で接続" Click="OnTelnetFromRow" />
+                                    <Separator />
                                     <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
                                     <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
                                     <Separator />
@@ -299,6 +302,9 @@
                             <Border.ContextMenu>
                                 <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
                                                            RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="SSH で接続" Click="OnSshFromRow" />
+                                    <MenuItem Header="Telnet で接続" Click="OnTelnetFromRow" />
+                                    <Separator />
                                     <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
                                     <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
                                     <Separator />
@@ -561,8 +567,14 @@
                                     Command="{Binding ClearHistoryCommand}"
                                     Style="{StaticResource Button.Subtle}"
                                     Margin="0,0,12,0" />
+                            <TextBlock Text="絞り込み" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="180" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,12,0"
+                                     ToolTip="宛先・備考・グループ・解決したアドレスの部分一致で絞り込みます。測定は続きます。" />
                             <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
-                                       Text="行を右クリックすると、その宛先の経路や名前を調べられます。" />
+                                       TextTrimming="CharacterEllipsis"
+                                       Text="行を右クリックすると、SSH/Telnet 接続や経路調査ができます。" />
                         </StackPanel>
 
                         <!-- 選択行の詳細。一覧に列を増やさずに済ませるための置き場 -->

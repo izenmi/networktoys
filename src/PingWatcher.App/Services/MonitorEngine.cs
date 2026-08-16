@@ -123,9 +123,10 @@ internal sealed class MonitorEngine : IAsyncDisposable
             // タイムアウトするまで付き合う必要はない。
             await Task.WhenAll(stops).WaitAsync(StopTimeout);
         }
-        catch (TimeoutException)
+        catch (Exception)
         {
-            // 待ちきれなかった分は下で選り分ける
+            // 待ちきれなかった分も、1 本が例外で終わった分も、下で選り分ける。
+            // ここで抜けると呼び出し元の「停止しました」表示まで届かない
         }
 
         // ループが終わったものだけ片付ける。生きているループの Ping を先に

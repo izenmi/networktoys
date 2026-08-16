@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.ComponentModel;
+using System.Windows.Data;
 using System.Windows.Threading;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
@@ -103,17 +105,59 @@ public sealed class MonitorViewModel : ObservableObject
     public ObservableCollection<TargetRowViewModel> Rows { get; } = [];
 
     /// <summary>応答が返っている宛先。</summary>
+    private string _filter = "";
+
     public ObservableCollection<TargetRowViewModel> AliveRows { get; } = [];
 
     /// <summary>2 回続けて応答が無かった宛先。目立つ場所へ集めて気づけるようにする。</summary>
     public ObservableCollection<TargetRowViewModel> DownRows { get; } = [];
 
-    public string AliveHeader => $"● 応答あり　{AliveRows.Count} 件";
+    /// <summary>
+    /// 一覧の絞り込み。宛先・備考・グループ・解決したアドレスの部分一致。
+    ///
+    /// 行を collection から抜かずに <see cref="ICollectionView.Filter"/> で隠す。
+    /// 応答あり／なしの振り分けは元の collection を直接触っているので、
+    /// フィルタで中身を出し入れすると振り分けが壊れる。
+    /// </summary>
+    public string Filter
+    {
+        get => _filter;
+        set
+        {
+            if (!SetProperty(ref _filter, value)) return;
 
-    public string DownHeader => $"✕ 応答なし　{DownRows.Count} 件";
+            ApplyFilter(AliveRows);
+            ApplyFilter(DownRows);
+
+            OnPropertyChanged(nameof(AliveHeader));
+            OnPropertyChanged(nameof(DownHeader));
+            OnPropertyChanged(nameof(HasDownRows));
+        }
+    }
+
+    private void ApplyFilter(ObservableCollection<TargetRowViewModel> rows)
+    {
+        ICollectionView view = CollectionViewSource.GetDefaultView(rows);
+
+        // 絞り込みが空のときは述語ごと外す（毎行の判定を走らせない）
+        view.Filter = _filter.Length == 0 ? null : o => Matches((TargetRowViewModel)o);
+    }
+
+    private bool Matches(TargetRowViewModel row)
+        => row.Host.Contains(_filter, StringComparison.OrdinalIgnoreCase)
+           || row.Comment.Contains(_filter, StringComparison.OrdinalIgnoreCase)
+           || row.Group.Contains(_filter, StringComparison.OrdinalIgnoreCase)
+           || row.Address.Contains(_filter, StringComparison.OrdinalIgnoreCase);
+
+    private int VisibleCount(ObservableCollection<TargetRowViewModel> rows)
+        => _filter.Length == 0 ? rows.Count : rows.Count(Matches);
+
+    public string AliveHeader => $"● 応答あり　{VisibleCount(AliveRows)} 件";
+
+    public string DownHeader => $"✕ 応答なし　{VisibleCount(DownRows)} 件";
 
     /// <summary>応答なしが 1 件も無ければ、その欄は場所を取らない。</summary>
-    public bool HasDownRows => DownRows.Count > 0;
+    public bool HasDownRows => VisibleCount(DownRows) > 0;
 
     /// <summary>一覧の見出し。ソート中の列に ▲/▼ を添える。</summary>
     public string HeaderState => HeaderLabel("State", "状態");
@@ -254,10 +298,10 @@ public sealed class MonitorViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 開始ボタンの文字。何を測るかはタブが示しているので、
-    /// ここでは動作（開始／実行中）だけを言う。
+    /// 開始ボタンの文字。ヘッダのボタンはどのタブを見ていても押せるので、
+    /// 何が始まるのかを文字で言う（ユーザー指示）。
     /// </summary>
-    public string RunButtonLabel => IsRunning ? "実行中" : "開始";
+    public string RunButtonLabel => IsRunning ? "実行中" : _alwaysTcp ? "TCP 開始" : "Ping 開始";
 
     /// <summary>TCP 専用の画面か。ポート欄などをこれで出し分ける。</summary>
     public bool IsTcpScreen => _alwaysTcp;
@@ -462,23 +506,41 @@ public sealed class MonitorViewModel : ObservableObject
 
     private async Task StopCoreAsync()
     {
+        // 後片付けの途中で何が起きても「実行中」のまま固まらせない。
+        // 以前は記録の書き出しなどで例外が出ると IsRunning が false にならず、
+        // 停止を押しても開始ボタンが「実行中」から戻らなかった（ユーザー報告）
         try
         {
             _pump.Stop();
-            await _engine.StopAsync();
-            OnPump(this, EventArgs.Empty);   // 残っている結果を取りこぼさない
 
-            // 続いている不通は「復旧した」ではなく「測定を止めた」として閉じる
-            foreach (OutageRecord closed in Tracker.CloseAll(DateTime.Now.Ticks, OutageCloseReason.Stopped))
-                _log.Append(SessionLogFormatter.OutageClosed(DateTime.Now, closed));
+            try
+            {
+                await _engine.StopAsync();
+                OnPump(this, EventArgs.Empty);   // 残っている結果を取りこぼさない
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write(ex, "MonitorViewModel.StopCoreAsync(engine)");
+            }
 
-            _log.Stop(SessionLogFormatter.Footer(DateTime.Now));
+            try
+            {
+                // 続いている不通は「復旧した」ではなく「測定を止めた」として閉じる
+                foreach (OutageRecord closed in Tracker.CloseAll(DateTime.Now.Ticks, OutageCloseReason.Stopped))
+                    _log.Append(SessionLogFormatter.OutageClosed(DateTime.Now, closed));
 
-            IsRunning = false;
-            StatusMessage = "測定を停止しました。";
+                _log.Stop(SessionLogFormatter.Footer(DateTime.Now));
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write(ex, "MonitorViewModel.StopCoreAsync(log)");
+            }
         }
         finally
         {
+            // 測定は確実に止まっているので、表示も必ず戻す
+            IsRunning = false;
+            StatusMessage = "測定を停止しました。";
             _stopTask = null;
         }
     }

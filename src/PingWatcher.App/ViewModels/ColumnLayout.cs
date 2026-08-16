@@ -20,11 +20,12 @@ public sealed class ColumnLayout : ObservableObject
     // 推移は固定幅で持つ。保存先は settings.json の columns
     // (状態・宛先・RTT・ロス・推移の順で 5 つ)
 
+    // 既定幅はユーザーのスクリーンショット実測に合わせてある
     private GridLength _state = new(84);
-    private GridLength _target = new(156);
-    private GridLength _rtt = new(76);
-    private GridLength _loss = new(66);
-    private GridLength _spark = new(110);
+    private GridLength _target = new(128);
+    private GridLength _rtt = new(60);
+    private GridLength _loss = new(70);
+    private GridLength _spark = new(92);
 
     public GridLength State { get => _state; set => SetProperty(ref _state, value); }
     public GridLength Target { get => _target; set => SetProperty(ref _target, value); }

@@ -659,6 +659,58 @@ public partial class MainWindow : Window
     /// 落ちている宛先を見つけたとき、そのまま経路を追えるようにする。
     /// 打ち直しの手間と打ち間違いを無くすのが目的。
     /// </summary>
+    /// <summary>
+    /// 右クリックした宛先へ SSH でつなぐ。
+    ///
+    /// 端末は同梱しない。Windows 10 以降に標準で入っている OpenSSH クライアントを
+    /// コンソールウィンドウで開く（PuTTY などを既定にしている環境もあるが、
+    /// 何が入っているかを当てにいくより、標準のものを確実に使う方が壊れない）。
+    /// </summary>
+    private void OnSshFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row) return;
+
+        LaunchTerminal("ssh", row.Host, $"{row.Host}");
+    }
+
+    /// <summary>右クリックした宛先へ Telnet でつなぐ。</summary>
+    private void OnTelnetFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row) return;
+
+        // telnet クライアントは既定では無効。入っていなければ入れ方を案内する
+        LaunchTerminal("telnet", row.Host, row.Host);
+    }
+
+    private void LaunchTerminal(string command, string host, string arguments)
+    {
+        if (host.Length == 0) return;
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+
+                // /k で接続後もウィンドウを残す。切れた理由が読めないと切り分けにならない
+                Arguments = $"/k {command} {arguments}",
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            CrashLog.Write(ex, $"MainWindow.LaunchTerminal({command})");
+
+            ConfirmDialog.Show(
+                this,
+                $"{command} を起動できません",
+                $"{command} クライアントが見つかりませんでした。\n\n" +
+                (command == "telnet"
+                    ? "「Windows の機能の有効化または無効化」で「Telnet クライアント」を有効にしてください。"
+                    : "「設定 → アプリ → オプション機能」で「OpenSSH クライアント」を追加してください。"));
+        }
+    }
+
     private void OnTraceFromRow(object sender, RoutedEventArgs e)
     {
         if (RowOf(sender) is not { } row) return;
