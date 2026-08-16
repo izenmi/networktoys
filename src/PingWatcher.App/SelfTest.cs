@@ -67,6 +67,24 @@ internal static class SelfTest
             if (!condition) throw new InvalidOperationException(message);
         }
 
+        // ポート 0 では待受先が分からず自分で繋げない。空きを 1 つ借りて番号だけ控える
+        static int FreePort()
+        {
+            using var probe = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            probe.Start();
+
+            return ((IPEndPoint)probe.LocalEndpoint).Port;
+        }
+
+        static void TryDelete(string directory)
+        {
+            try { Directory.Delete(directory, recursive: true); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // 消せなくても検査は済んでいる
+            }
+        }
+
         // 検査でウィンドウを開閉するため、最後の 1 枚を閉じた時点でアプリが終わらないようにする
         Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
@@ -1472,6 +1490,84 @@ internal static class SelfTest
             Assert(server.IsRunning, "SFTP サーバが起動していない");
             server.Stop();
             Assert(!server.IsRunning, "SFTP サーバが停止していない");
+        });
+
+        Check("SFTP: 自分のサーバへ自分のクライアントで往復できる", () =>
+        {
+            // 偽の Cisco 機器・偽の STUN サーバと同じ手。アプリの中に SFTP サーバが
+            // あるので、loopback で立てて自分のクライアントから繋ぐ。
+            // 一覧・取得・送信・作成・改名・削除を 1 往復させて実経路を通す。
+            // 外へは 1 バイトも出さない
+            string root = Path.Combine(Path.GetTempPath(), $"pingwatcher-sftpc-{Guid.NewGuid():N}");
+            string hostKey = Path.Combine(Path.GetTempPath(), $"pingwatcher-sftpc-key-{Guid.NewGuid():N}.txt");
+            string work = Path.Combine(Path.GetTempPath(), $"pingwatcher-sftpc-work-{Guid.NewGuid():N}");
+
+            Directory.CreateDirectory(root);
+            Directory.CreateDirectory(work);
+
+            const string body = "hostname RT01\nこんにちは\n";
+            File.WriteAllText(Path.Combine(root, "startup-config"), body);
+
+            int port = FreePort();
+
+            try
+            {
+                using var server = new Services.SftpServer(root, hostKey, "watcher", "pw");
+                server.Start(port);
+
+                using var client = new Services.SftpFileClient();
+                using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+                Task.Run(async () =>
+                {
+                    await client.ConnectAsync("127.0.0.1", port, "watcher", "pw", stop.Token);
+
+                    // 一覧
+                    IReadOnlyList<Core.Files.RemoteEntry> listed = await client.ListAsync("/", stop.Token);
+                    Core.Files.RemoteEntry found = listed.FirstOrDefault(e => e.Name == "startup-config");
+                    Assert(found.Name == "startup-config", $"一覧に見つからない: {listed.Count} 件");
+                    Assert(!found.IsDirectory, "ファイルがフォルダ扱いになっている");
+                    Assert(found.Size > 0, "サイズが 0 のまま");
+
+                    // 取得（中身まで一致すること。長さだけでは化けを見逃す）
+                    string got = Path.Combine(work, "got.txt");
+                    var seen = new List<Services.TransferProgress>();
+                    await client.DownloadAsync("/startup-config", got,
+                                               new Progress<Services.TransferProgress>(seen.Add), stop.Token);
+                    Assert(File.ReadAllText(got) == body, "取得した中身が違う");
+
+                    // 送信 → サーバ側の実体で確かめる
+                    string put = Path.Combine(work, "put.txt");
+                    File.WriteAllText(put, "interface Gi0/1\n");
+                    await client.UploadAsync(put, "/uploaded.txt", null, stop.Token);
+                    Assert(File.Exists(Path.Combine(root, "uploaded.txt")), "送ったファイルがサーバ側に無い");
+
+                    // フォルダを作る → 改名 → 消す
+                    await client.MakeDirectoryAsync("/backup", stop.Token);
+                    Assert(Directory.Exists(Path.Combine(root, "backup")), "フォルダが作られていない");
+
+                    await client.RenameAsync("/uploaded.txt", "/renamed.txt", stop.Token);
+                    Assert(File.Exists(Path.Combine(root, "renamed.txt")), "改名されていない");
+
+                    await client.DeleteAsync("/renamed.txt", isDirectory: false, stop.Token);
+                    Assert(!File.Exists(Path.Combine(root, "renamed.txt")), "ファイルが消えていない");
+
+                    await client.DeleteAsync("/backup", isDirectory: true, stop.Token);
+                    Assert(!Directory.Exists(Path.Combine(root, "backup")), "フォルダが消えていない");
+
+                    log.AppendLine($"        指紋 {client.Fingerprint} / 進捗 {seen.Count} 回");
+                }).GetAwaiter().GetResult();
+
+                // 指紋を控えていること（画面に出して人が見比べるためのもの）
+                Assert(client.Fingerprint is { Length: > 0 }, "ホスト鍵の指紋を控えていない");
+            }
+            finally
+            {
+                // 使ったものは必ず後始末する
+                TryDelete(root);
+                TryDelete(work);
+                try { File.Delete(hostKey); } catch (IOException) { /* 消せなくても検査は済んでいる */ }
+            }
         });
 
         Check("syslog サーバを起動して停止できる", () =>
