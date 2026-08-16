@@ -445,13 +445,12 @@
                 <Separator />
                 <MenuItem Header="管理者として再起動..." Click="OnRelaunchAsAdmin" />
                 <Separator />
-                <MenuItem Header="終了" Click="OnExit" />
-            </MenuItem>
-            <!-- 開始と停止は Ping タブの中だけに置く（2026-08-16 ユーザー指示）。
-                 F5 / Shift+F5 のショートカットは InputBindings 側に残っている -->
-            <MenuItem Header="測定(_M)" Style="{StaticResource MenuBarItem}">
+                <!-- 消す操作もここに置く（2026-08-16 ユーザー指示で「測定」メニューを畳んだ）。
+                     開始と停止は Ping タブの中だけ。F5 / Shift+F5 は InputBindings 側に残る -->
                 <MenuItem Header="Ping の測定結果だけ消す" Click="OnClearPingResults" />
                 <MenuItem Header="すべて消す（起動直後に戻す）" Click="OnClearAll" />
+                <Separator />
+                <MenuItem Header="終了" Click="OnExit" />
             </MenuItem>
             <MenuItem Header="表示(_V)" Style="{StaticResource MenuBarItem}">
                 <MenuItem x:Name="ThemeMenuItem" Click="OnThemeToggle" />
