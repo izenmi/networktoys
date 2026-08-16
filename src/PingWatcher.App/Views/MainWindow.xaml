@@ -1296,12 +1296,6 @@
                                     <Border DockPanel.Dock="Top" Height="1"
                                             Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
-                                    <!-- 一覧の下に置く。足す場所が末尾にある方が手が迷わない -->
-                                    <Button DockPanel.Dock="Bottom" Content="＋ 行を追加"
-                                            Command="{Binding AddDeviceCommand}"
-                                            Style="{StaticResource Button.Subtle}"
-                                            HorizontalAlignment="Left" Margin="4,4,0,0" />
-
                                     <!--
                                         この一覧だけ仮想化を切る。行コンテナを使い回すと、
                                         PasswordBox はバインドを持たないので DataContext が変わっても
@@ -1309,12 +1303,15 @@
                                         前の機器のパスワードが載る(そのまま送信されうる)。
                                         機器は多くても数十台なので実害は無い。
                                     -->
-                                    <ListBox ItemsSource="{Binding Rows}"
+                                    <!-- 行数ぶんだけ縦に伸ばす。残りの余白は下に空け、
+                                         「行を追加」が最後の行のすぐ下に来るようにする -->
+                                    <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Rows}"
                                              Background="Transparent" BorderThickness="0"
                                              HorizontalContentAlignment="Stretch"
                                              ItemContainerStyle="{StaticResource PlainRowContainer}"
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                             VirtualizingPanel.IsVirtualizing="False">
+                                             VirtualizingPanel.IsVirtualizing="False"
+                                             MaxHeight="420">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Height="26">
