@@ -251,20 +251,21 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 
 | タブ | 内容 |
 |---|---|
-| 宛先リスト | 宛先リストの一括編集(EXPing 書式) |
-| Ping | 並列 ping。開始 / 停止もこの画面。既定画面 |
+| Ping | 並列 ping。開始 / 停止と宛先リストの編集もこの画面。既定画面 |
 | Wi-Fi | 接続中AP詳細 / RSSI時系列 / 周辺APのチャンネル混雑グラフ |
 | 差分比較 | 機器の show 出力を作業前後で突き合わせる |
 | WFP | Windows Filtering Platform が落とした通信の一覧(管理者権限) |
 | IP設定 | IPv4 設定の切替 + プロキシ設定 |
-| 業務確認 | 業務確認試験(プロキシを切り替えて回す) |
-| **調べる　7 ▾** | TCP Ping / Traceroute / スキャン / DNS / SNMP Get / 通信状況 / サブネット計算 |
-| **NW機器　3 ▾** | ログ採取 / showコマンド整形 / Meraki |
+| 業務確認 | 業務確認試験(プロキシを切り替えて回す。ひな型は自作できる) |
+| **調べる　6 ▾** | TCP Ping / Traceroute / スキャン / DNS / 通信状況 / サブネット計算 |
+| **NW機器　4 ▾** | ログ採取 / showコマンド整形 / SNMP Get / Meraki |
 | **受ける　5 ▾** | FTP / TFTP / SFTP / syslog / SNMP Trap |
 
 太字はまとめたタブ。**単独のタブを左、まとめたタブを右**に並べる。まとめたタブは
 見出しに**中身の件数と `▾`** を出し(自己診断が実際の本数と突き合わせる)、
-中身は**左の縦メニュー**(`TabStripPlacement="Left"` + `MenuTabItem`)で選ばせる。
+**押すと縦並びのメニューが降りてくる**(`MainWindow.OnMainTabsMouseDown` が
+内側の TabControl から組み立てる)。切り替えの帯は横にも縦にも出さない —
+帯とメニューの二重の入り口になって迷わせるため。自己診断が帯の非表示を確かめる。
 
 記録の画面は持たない。書き出しはファイルメニューから(2026-08-16 にタブを畳んだ)。
 `RelayCommand` は `CommandManager` に乗っていないので、**メニューを開くたびに
@@ -277,6 +278,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 決まりはそのまま効く — ただし **`TabItem` の中身は視覚ツリーで `TabItem` の下に無い**
 (親 `TabControl` の `ContentPresenter` の下に置かれる)ので、先祖をたどる判定
 (`MainWindow.IsShowing` / `Show`)は**論理ツリー**で行うこと。
+
 
 ### パステル配色(`Resources/Palette.xaml` に定義)
 
