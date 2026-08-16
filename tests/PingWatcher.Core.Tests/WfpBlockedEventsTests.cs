@@ -62,8 +62,22 @@ public class WfpBlockedEventsTests
 
         Assert.Equal(WfpDirection.Outbound, WfpFormat.DirectionOf(0));
         Assert.Equal(WfpDirection.Inbound, WfpFormat.DirectionOf(1));
-        // 知らない値でも例外にせず「不明」に寄せる
-        Assert.Equal(WfpDirection.Unknown, WfpFormat.DirectionOf(7));
+    }
+
+    [Fact]
+    public void Both_direction_encodings_are_understood()
+    {
+        // WFP には向きの定数が 2 系統ある。どちらが入るかは実機任せ
+        Assert.Equal(WfpDirection.Inbound, WfpFormat.DirectionOf(0x3900));
+        Assert.Equal(WfpDirection.Outbound, WfpFormat.DirectionOf(0x3901));
+    }
+
+    [Fact]
+    public void An_unknown_direction_shows_the_raw_value_instead_of_a_dash()
+    {
+        // 「—」で潰すと、対応表が違うのか値が取れていないのか切り分けられない
+        Assert.Equal(WfpDirection.Unknown, WfpFormat.DirectionOf(9999));
+        Assert.Equal("? 9999", WfpFormat.Direction(WfpDirection.Unknown, 9999));
     }
 
     [Fact]

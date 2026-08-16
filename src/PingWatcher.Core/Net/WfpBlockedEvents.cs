@@ -30,7 +30,8 @@ public sealed record WfpBlockedEvent(
     string AppIdRaw,
     ulong FilterId,
     ushort LayerId,
-    bool IsLoopback);
+    bool IsLoopback,
+    uint DirectionRaw = 0);
 
 /// <summary>
 /// 一覧に出す行。同じ遮断が何度も起きるので、まとめた結果を持つ。
@@ -84,18 +85,33 @@ public static class WfpFormat
         _ => protocol.ToString(CultureInfo.InvariantCulture),
     };
 
-    /// <summary>向きは記号と文字を併記する（色だけで状態を表さない決まり）。</summary>
-    public static string Direction(WfpDirection direction) => direction switch
+    /// <summary>
+    /// 向きは記号と文字を併記する（色だけで状態を表さない決まり）。
+    ///
+    /// 知らない値のときは<b>生の数字を出す</b>。「—」で潰すと、
+    /// 対応表が違うのか値が取れていないのかを切り分けられない
+    /// （実機で「方向が出ない」と報告を受けた。原因の値をそのまま見せる）。
+    /// </summary>
+    public static string Direction(WfpDirection direction, uint raw = 0) => direction switch
     {
         WfpDirection.Outbound => "→ 送信",
         WfpDirection.Inbound => "← 受信",
-        _ => "—",
+        _ => raw == 0 ? "—" : $"? {raw}",
     };
 
+    /// <summary>
+    /// msFwpDirection を向きにする。
+    ///
+    /// WFP には向きの定数が 2 系統ある。<c>FWP_DIRECTION</c> の 0/1 と、
+    /// フィルタ条件で使う <c>FWP_DIRECTION_IN/OUT</c>（0x3900 台）で、
+    /// どちらが入るかは実機で確かめるほかない。両方を受ける。
+    /// </summary>
     public static WfpDirection DirectionOf(uint msFwpDirection) => msFwpDirection switch
     {
-        0 => WfpDirection.Outbound,
-        1 => WfpDirection.Inbound,
+        0 => WfpDirection.Outbound,      // FWP_DIRECTION_OUTBOUND
+        1 => WfpDirection.Inbound,       // FWP_DIRECTION_INBOUND
+        0x3900 => WfpDirection.Inbound,  // FWP_DIRECTION_IN
+        0x3901 => WfpDirection.Outbound, // FWP_DIRECTION_OUT
         _ => WfpDirection.Unknown,
     };
 
@@ -196,7 +212,7 @@ public static class WfpEventView
             rows.Add(new WfpBlockedRow(
                 TimeText: latest.TimeUtc.ToLocalTime().ToString("MM/dd HH:mm:ss", CultureInfo.InvariantCulture),
                 LatestUtc: latest.TimeUtc,
-                DirectionText: WfpFormat.Direction(latest.Direction),
+                DirectionText: WfpFormat.Direction(latest.Direction, latest.DirectionRaw),
                 Protocol: WfpFormat.Protocol(latest.Protocol),
                 Local: WfpFormat.Endpoint(latest.Local, latest.LocalPort, latest.ScopeId),
                 Remote: WfpFormat.Endpoint(latest.Remote, latest.RemotePort, latest.ScopeId),

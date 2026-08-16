@@ -264,9 +264,11 @@ internal static class WfpNativeMethods
         ushort localPort = (flags & FlagLocalPortSet) != 0 ? (ushort)Marshal.ReadInt16(item, OffLocalPort) : (ushort)0;
         ushort remotePort = (flags & FlagRemotePortSet) != 0 ? (ushort)Marshal.ReadInt16(item, OffRemotePort) : (ushort)0;
 
+        uint directionRaw = (uint)Marshal.ReadInt32(drop, DropOffDirection);
+
         return new WfpBlockedEvent(
             TimeUtc: timeUtc,
-            Direction: WfpFormat.DirectionOf((uint)Marshal.ReadInt32(drop, DropOffDirection)),
+            Direction: WfpFormat.DirectionOf(directionRaw),
             Protocol: protocol,
             Local: local,
             LocalPort: localPort,
@@ -276,7 +278,10 @@ internal static class WfpNativeMethods
             AppIdRaw: ReadAppId(item, flags),
             FilterId: (ulong)Marshal.ReadInt64(drop, DropOffFilterId),
             LayerId: (ushort)Marshal.ReadInt16(drop, DropOffLayerId),
-            IsLoopback: Marshal.ReadInt32(drop, DropOffIsLoopback) != 0);
+            IsLoopback: Marshal.ReadInt32(drop, DropOffIsLoopback) != 0,
+
+            // 対応表に無い値だったときに何が来ているか画面で分かるよう、生のまま持たせる
+            DirectionRaw: directionRaw);
     }
 
     /// <summary>FILETIME が現実的な範囲にあるか。レイアウト誤りはまずここに出る。</summary>
