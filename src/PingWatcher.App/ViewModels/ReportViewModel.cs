@@ -17,16 +17,22 @@ public sealed class ReportViewModel : ObservableObject
     private readonly MonitorViewModel _monitor;
     private readonly MonitorViewModel _tcp;
     private readonly WifiViewModel _wifi;
+    private readonly VerifyViewModel _verify;
 
     private string _status = string.Empty;
     private string _preview = string.Empty;
 
     /// <param name="tcp">TCP 画面。宛先も結果も Ping とは別に持つので、別に受け取る。</param>
-    public ReportViewModel(MonitorViewModel monitor, MonitorViewModel tcp, WifiViewModel wifi)
+    /// <param name="verify">
+    /// 試験画面。<b>測ったことと試したことは 1 つの証跡</b>なので、同じ記録に載せる。
+    /// </param>
+    public ReportViewModel(
+        MonitorViewModel monitor, MonitorViewModel tcp, WifiViewModel wifi, VerifyViewModel verify)
     {
         _monitor = monitor;
         _tcp = tcp;
         _wifi = wifi;
+        _verify = verify;
 
         SaveHtmlCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Html), CanSave);
         SaveCsvCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Csv), CanSave);
@@ -62,7 +68,8 @@ public sealed class ReportViewModel : ObservableObject
         private set => SetProperty(ref _preview, value);
     }
 
-    private bool CanSave() => _monitor.Rows.Count > 0 || _tcp.Rows.Count > 0;
+    // 試験だけを回した日もある。測定が空でも書き出せるようにする
+    private bool CanSave() => _monitor.Rows.Count > 0 || _tcp.Rows.Count > 0 || _verify.Results.Count > 0;
 
     private async Task SaveAsync(ReportFormat format)
     {
@@ -111,7 +118,8 @@ public sealed class ReportViewModel : ObservableObject
                     break;
             }
 
-            Status = $"{Path.GetFileName(dialog.FileName)} に書き出しました（{data.Rows.Count} 件）。";
+            Status = $"{Path.GetFileName(dialog.FileName)} に書き出しました"
+                     + $"（測定 {data.Rows.Count} 件 / 試験 {data.Checks?.Count ?? 0} 件）。";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -149,7 +157,8 @@ public sealed class ReportViewModel : ObservableObject
         try
         {
             Preview = !CanSave()
-                ? "測定結果がまだありません。Ping か TCP のタブで測定すると、ここに書き出される内容が表示されます。"
+                ? "測定結果も試験結果もまだありません。Ping・TCP で測るか、試験タブで実行すると、"
+                  + "ここに書き出される内容が表示されます。"
                 : TextReportWriter.Render(BuildData(ipConfig: null))
                   + Environment.NewLine
                   + "※ HTML/テキストでの保存時は、ここに [ipconfig /all] の節も加わります。";
@@ -181,7 +190,8 @@ public sealed class ReportViewModel : ObservableObject
         wireless: _wifi.DescribeForReport(),
         outages: [.. _monitor.Tracker.Records, .. _tcp.Tracker.Records],
         wirelessNote: _wifi.ReportNote,
-        wirelessAccessPoints: _wifi.DescribeAccessPointsForReport());
+        wirelessAccessPoints: _wifi.DescribeAccessPointsForReport(),
+        checks: [.. _verify.Results]);
 }
 
 /// <summary>書き出す形。</summary>

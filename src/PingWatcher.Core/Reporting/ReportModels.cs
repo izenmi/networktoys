@@ -1,4 +1,5 @@
 using PingWatcher.Core.Metrics;
+using PingWatcher.Core.Verify;
 using PingWatcher.Core.Work;
 
 namespace PingWatcher.Core.Reporting;
@@ -51,6 +52,10 @@ public sealed record ReportRow(
 /// スキャンで見えていた周辺のアクセスポイント。現場の電波環境の証跡になる。
 /// スキャンしていなければ null。
 /// </param>
+/// <param name="Checks">
+/// 業務確認試験の結果。<b>測定と試験は同じ作業の表と裏</b>なので、1 つの記録に
+/// まとめて載せられるようにする（試験タブ単独で出すときは <see cref="Rows"/> が空になる）。
+/// </param>
 public sealed record ReportData(
     string Title,
     DateTime GeneratedAt,
@@ -63,7 +68,8 @@ public sealed record ReportData(
     IReadOnlyList<(string Label, string Value)>? Wireless = null,
     IReadOnlyList<OutageRecord>? Outages = null,
     string? WirelessNote = null,
-    IReadOnlyList<WirelessAccessPoint>? WirelessAccessPoints = null)
+    IReadOnlyList<WirelessAccessPoint>? WirelessAccessPoints = null,
+    IReadOnlyList<CheckResult>? Checks = null)
 {
     /// <summary>応答が無いままの宛先。記録の先頭に出す。</summary>
     public IReadOnlyList<ReportRow> DownRows => [.. Rows.Where(r => r.IsDown)];
@@ -73,6 +79,16 @@ public sealed record ReportData(
 
     /// <summary>一度も失敗していない宛先の数。</summary>
     public int HealthyCount => Rows.Count - DownRows.Count - LossyRows.Count;
+
+    /// <summary>試験の結果が載っているか。</summary>
+    public bool HasChecks => Checks is { Count: > 0 };
+
+    /// <summary>測定の結果が載っているか。試験だけの記録では false になる。</summary>
+    public bool HasRows => Rows.Count > 0;
+
+    /// <summary>不合格だった試験。<b>記録の先頭に出す</b>ので別に数える。</summary>
+    public IReadOnlyList<CheckResult> FailedChecks
+        => Checks is null ? [] : [.. Checks.Where(c => c.IsFail)];
 }
 
 /// <summary>

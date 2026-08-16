@@ -110,6 +110,7 @@ public sealed class VerifyViewModel : ObservableObject
 
     private string _proxyText = "";
     private string _status = "ひな型を入れるか項目を書いて「まとめて実行」を押します。";
+    private string _runningName = "";
     private bool _isBusy;
     private int _done;
     private int _total;
@@ -126,6 +127,7 @@ public sealed class VerifyViewModel : ObservableObject
         StartCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && Rows.Count > 0);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         SaveCommand = new RelayCommand(Save, () => Results.Count > 0);
+        SaveHtmlCommand = new RelayCommand(SaveHtml, () => Results.Count > 0);
         LoadItemsCommand = new RelayCommand(LoadItems, () => !IsBusy);
         MarkPassCommand = new RelayCommand<CheckResult>(r => Mark(r, CheckVerdict.Pass));
         MarkFailCommand = new RelayCommand<CheckResult>(r => Mark(r, CheckVerdict.Fail));
@@ -161,6 +163,12 @@ public sealed class VerifyViewModel : ObservableObject
     public RelayCommand StartCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand SaveCommand { get; }
+
+    /// <summary>
+    /// 試験結果を HTML の報告書にする。CSV は試験成績書へ貼るためのもので、
+    /// <b>そのまま人に渡す・添付する形</b>は別に要る。
+    /// </summary>
+    public RelayCommand SaveHtmlCommand { get; }
 
     /// <summary>試験項目をファイルから読み込む。現場ごとに使い分けるため。</summary>
     public RelayCommand LoadItemsCommand { get; }
@@ -204,6 +212,41 @@ public sealed class VerifyViewModel : ObservableObject
             StartCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
         }
+    }
+
+    // ===== 進み具合 =====
+    //
+    // 項目数 × プロキシの本数だけ逐次に回すので、まとめて実行すると何分もかかる。
+    // 「押したのに何も起きない」に見えないよう、いま何をしているかと、
+    // 済んだところまでの合否を常に出しておく。
+
+    /// <summary>進捗の帯を出すか。一度でも走らせたら出したままにする（結果の内訳が読める）。</summary>
+    public bool HasProgress => _total > 0;
+
+    /// <summary>0〜100。帯の長さ。</summary>
+    public double ProgressPercent => _total > 0 ? _done * 100.0 / _total : 0;
+
+    public string ProgressText => _total > 0 ? $"{_done} / {_total}" : "";
+
+    /// <summary>いま試している項目。終わったら空。</summary>
+    public string RunningName { get => _runningName; private set => SetProperty(ref _runningName, value); }
+
+    public int PassCount => Results.Count(r => r.IsPass);
+    public int FailCount => Results.Count(r => r.IsFail);
+    public int WarnCount => Results.Count(r => r.IsWarn);
+
+    /// <summary>人の判定を待っている件数。<b>0 になるまで試験は終わっていない。</b></summary>
+    public int PersonCount => Results.Count(r => r.NeedsPerson);
+
+    private void RaiseProgress()
+    {
+        OnPropertyChanged(nameof(HasProgress));
+        OnPropertyChanged(nameof(ProgressPercent));
+        OnPropertyChanged(nameof(ProgressText));
+        OnPropertyChanged(nameof(PassCount));
+        OnPropertyChanged(nameof(FailCount));
+        OnPropertyChanged(nameof(WarnCount));
+        OnPropertyChanged(nameof(PersonCount));
     }
 
     private void AddRow(CheckItem item)
@@ -270,37 +313,62 @@ public sealed class VerifyViewModel : ObservableObject
 
         IsBusy = true;
         Results.Clear();
+        _done = 0;
+        _total = 0;
+        RunningName = "";
         SaveCommand.RaiseCanExecuteChanged();
+        SaveHtmlCommand.RaiseCanExecuteChanged();
+        RaiseProgress();
 
         foreach (VerifyRowViewModel row in Rows)
             row.Status = "◌ 待機";
 
         _cts = new CancellationTokenSource();
 
+        // これから試す項目。Progress は UI スレッドに戻してくれるので、
+        // ここから画面の値を直に触ってよい
         var progress = new Progress<(int Done, int Total, string Name)>(p =>
         {
             _done = p.Done;
             _total = p.Total;
+            RunningName = p.Name;
+
+            MarkRunning(p.Name);
+            RaiseProgress();
 
             Status = p.Name.Length > 0
                 ? $"試験中… {p.Done}/{p.Total}　{p.Name}"
                 : $"試験中… {p.Done}/{p.Total}";
         });
 
+        // 1 件終わるごとに一覧へ足す。全部終わるまで真っ白では、
+        // 長い試験のあいだ「動いているのか」すら分からない
+        var finished = new Progress<CheckResult>(result =>
+        {
+            Results.Add(result);
+            ApplyToRow(result.Name);
+            RaiseProgress();
+        });
+
         try
         {
-            IReadOnlyList<CheckResult> results = await CheckRunner.RunAsync(
-                items, proxies, TeamsEndpoints.Default, progress, _cts.Token);
+            await CheckRunner.RunAsync(
+                items, proxies, TeamsEndpoints.Default, progress, _cts.Token, finished);
 
-            foreach (CheckResult result in results)
-                Results.Add(result);
-
-            ApplyToRows(results);
-            Status = CheckReport.Summarize(results);
+            RunningName = "";
+            Status = CheckReport.Summarize([.. Results]);
         }
         catch (OperationCanceledException)
         {
-            Status = $"⊘ 中断しました（{_done}/{_total} 件まで実行）。";
+            RunningName = "";
+
+            // 中断しても、そこまでの結果は残す（消すと試験をやり直すことになる）
+            foreach (VerifyRowViewModel row in Rows)
+            {
+                if (row.Status is "◌ 待機" or "▶ 試験中") row.Status = "◌ 未実行";
+            }
+
+            Status = $"⊘ 中断しました（{_done}/{_total} 件まで実行）。そこまでの結果は残してあります。";
         }
         catch (Exception ex)
         {
@@ -312,7 +380,27 @@ public sealed class VerifyViewModel : ObservableObject
             _cts?.Dispose();
             _cts = null;
             IsBusy = false;
+            RunningName = "";
             SaveCommand.RaiseCanExecuteChanged();
+            SaveHtmlCommand.RaiseCanExecuteChanged();
+            RaiseProgress();
+        }
+    }
+
+    /// <summary>いま試している行に印を付ける。まだ結果の出ていない行だけに触る。</summary>
+    private void MarkRunning(string name)
+    {
+        foreach (VerifyRowViewModel row in Rows)
+        {
+            if (row.Status == "▶ 試験中") row.Status = "◌ 待機";
+        }
+
+        if (name.Length == 0) return;
+
+        foreach (VerifyRowViewModel row in Rows)
+        {
+            if (row.Name.Trim() == name && row.Status == "◌ 待機")
+                row.Status = "▶ 試験中";
         }
     }
 
@@ -324,35 +412,48 @@ public sealed class VerifyViewModel : ObservableObject
     {
         foreach (VerifyRowViewModel row in Rows)
         {
-            string name = row.Name.Trim();
-            if (name.Length == 0) continue;
+            if (Describe(row.Name.Trim(), results) is { } status)
+                row.Status = status;
+        }
+    }
 
-            CheckResult[] mine = [.. results.Where(r => r.Name == name)];
+    /// <summary>1 項目ぶんだけ結果欄を書き換える。試験中に済んだところから見せるため。</summary>
+    private void ApplyToRow(string name)
+    {
+        if (Describe(name.Trim(), [.. Results]) is not { } status) return;
 
-            if (mine.Length == 0)
-            {
-                row.Status = "◌ 未実行";
-                continue;
-            }
+        foreach (VerifyRowViewModel row in Rows)
+        {
+            if (row.Name.Trim() == name.Trim()) row.Status = status;
+        }
+    }
 
-            if (mine.Any(r => r.NeedsPerson))
-            {
-                row.Status = "◍ 目視で確認";
-                continue;
-            }
+    /// <summary>
+    /// その項目の結果欄に出す文字。<b>まだ結果が 1 件も無いなら null</b>
+    /// （「待機」「試験中」の表示を消してしまわないため）。
+    /// </summary>
+    private static string? Describe(string name, IReadOnlyList<CheckResult> results)
+    {
+        if (name.Length == 0) return null;
 
-            CheckResult[] failed = [.. mine.Where(r => r.IsFail)];
+        CheckResult[] mine = [.. results.Where(r => r.Name == name)];
 
-            if (failed.Length == 0)
-            {
-                row.Status = mine.Length > 1 ? $"○ 合格（{mine.Length} 通り）" : "○ 合格";
-                continue;
-            }
+        if (mine.Length == 0) return null;
 
-            row.Status = mine.Length > 1
+        if (mine.Any(r => r.NeedsPerson)) return "◍ 目視で確認";
+
+        CheckResult[] failed = [.. mine.Where(r => r.IsFail)];
+
+        if (failed.Length > 0)
+        {
+            return mine.Length > 1
                 ? $"✕ {string.Join("・", failed.Select(f => f.ProxyText))} で不合格"
                 : "✕ 不合格";
         }
+
+        if (mine.Any(r => r.IsWarn)) return "△ 注意";
+
+        return mine.Length > 1 ? $"○ 合格（{mine.Length} 通り）" : "○ 合格";
     }
 
     /// <summary>
@@ -371,6 +472,7 @@ public sealed class VerifyViewModel : ObservableObject
         Results[at] = result with { Verdict = verdict, Detail = $"{mark}（{result.Detail}）" };
 
         ApplyToRows([.. Results]);
+        RaiseProgress();
         Status = CheckReport.Summarize([.. Results]);
     }
 
@@ -378,6 +480,62 @@ public sealed class VerifyViewModel : ObservableObject
     {
         if (Services.CsvExport.Save("verify", CheckReport.ToCsv([.. Results])) is { } message)
             Status = message;
+    }
+
+    /// <summary>
+    /// 試験の結果を HTML の報告書にする。
+    ///
+    /// <b>1 ファイル完結</b>なのでそのままメールに添付でき、客先のオフライン環境でも開ける
+    /// （記録タブの書き出しと同じ作り）。試したプロキシの一覧も証跡として載せる。
+    /// </summary>
+    private void SaveHtml()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = "試験結果を HTML で保存する",
+            FileName = $"業務確認試験-{DateTime.Now:yyyyMMdd-HHmm}.html",
+            DefaultExt = "html",
+            Filter = "HTML レポート (*.html)|*.html|すべてのファイル (*.*)|*.*",
+            AddExtension = true,
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            ReportService.SaveHtml(dialog.FileName, BuildReport());
+
+            Status = $"{Path.GetFileName(dialog.FileName)} に書き出しました（{Results.Count} 件）。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"保存できませんでした: {ex.Message}";
+        }
+    }
+
+    /// <summary>試験だけの報告書。記録タブから呼ばれるときは測定結果と合わさる。</summary>
+    internal Core.Reporting.ReportData BuildReport()
+    {
+        var environment = new List<(string, string)>
+        {
+            ("試験した端末", Environment.MachineName),
+            ("試験した人", Environment.UserName),
+        };
+
+        string tried = string.Join("・", Proxies.Where(p => p.IsSelected).Select(p => p.Name));
+
+        if (tried.Length > 0)
+            environment.Add(("試したプロキシ", tried));
+
+        return new Core.Reporting.ReportData(
+            "業務確認試験",
+            DateTime.Now,
+            Note: "",
+            StartedAt: null,
+            IntervalMs: 0,
+            environment,
+            Rows: [],
+            Checks: [.. Results]);
     }
 
     /// <summary>
@@ -466,7 +624,12 @@ public sealed class VerifyViewModel : ObservableObject
     {
         _cts?.Cancel();
         Results.Clear();
+        _done = 0;
+        _total = 0;
+        RunningName = "";
         SaveCommand.RaiseCanExecuteChanged();
+        SaveHtmlCommand.RaiseCanExecuteChanged();
+        RaiseProgress();
 
         foreach (VerifyRowViewModel row in Rows)
             row.Status = "◌ 未実行";

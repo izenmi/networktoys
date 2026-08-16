@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using PingWatcher.Core.Metrics;
 using PingWatcher.Core.Models;
+using PingWatcher.Core.Verify;
 using PingWatcher.Core.Work;   // OutageRecord
 
 namespace PingWatcher.Core.Reporting;
@@ -30,6 +31,7 @@ public static class TextReportWriter
 
         WriteHeader(text, data);
         WriteVerdict(text, data);
+        WriteChecks(text, data);
         WriteDownRows(text, data);
         WriteOutages(text, data);
         WriteRows(text, data);
@@ -72,15 +74,77 @@ public static class TextReportWriter
 
         text.AppendLine("[判定]");
         text.AppendLine(ThinRule);
-        text.AppendLine(down > 0
-            ? $"  ★ 応答なし {down} 件 — 確認が必要です"
-            : "  応答なし 0 件");
-        text.AppendLine(lossy > 0
-            ? $"  ! 途中で応答が途切れた宛先 {lossy} 件"
-            : "  途中で応答が途切れた宛先 0 件");
-        text.AppendLine($"  正常 {data.HealthyCount} 件 / 全 {data.Rows.Count} 件");
+
+        // 試験だけの記録では測定の判定を出さない（0 件と並ぶと抜けに見える）
+        if (data.HasRows)
+        {
+            text.AppendLine(down > 0
+                ? $"  ★ 応答なし {down} 件 — 確認が必要です"
+                : "  応答なし 0 件");
+            text.AppendLine(lossy > 0
+                ? $"  ! 途中で応答が途切れた宛先 {lossy} 件"
+                : "  途中で応答が途切れた宛先 0 件");
+            text.AppendLine($"  正常 {data.HealthyCount} 件 / 全 {data.Rows.Count} 件");
+        }
+
+        if (data.Checks is { Count: > 0 } checks)
+        {
+            int failed = checks.Count(c => c.IsFail);
+
+            text.AppendLine(failed > 0
+                ? $"  ★ 業務確認試験 不合格 {failed} 件 — 確認が必要です"
+                : $"  業務確認試験 不合格 0 件 / 全 {checks.Count} 件");
+        }
+
         text.AppendLine();
     }
+
+    /// <summary>
+    /// 業務確認試験の結果。
+    ///
+    /// <b>記号は ASCII に寄せる。</b>画面では ○✕△ を使っているが、
+    /// テキストの表は等幅で桁を揃えるのが役目なので、幅の動かない書き方にする。
+    /// </summary>
+    private static void WriteChecks(StringBuilder text, ReportData data)
+    {
+        if (data.Checks is not { Count: > 0 } checks) return;
+
+        text.AppendLine("[業務確認試験]");
+        text.AppendLine(ThinRule);
+        text.AppendLine(
+            "  判定 " +
+            TextWidth.Cell("項目", 24) + " " +
+            TextWidth.Cell("種類", 10) + " " +
+            TextWidth.Cell("プロキシ", 14) + " " +
+            TextWidth.PadLeft("所要", 9) + "  詳細");
+
+        foreach (CheckResult check in checks)
+        {
+            text.Append("  ")
+                .Append(MarkOf(check.Verdict)).Append(' ')
+                .Append(TextWidth.Cell(check.Name, 24)).Append(' ')
+                .Append(TextWidth.Cell(CheckListParser.NameOf(check.Kind), 10)).Append(' ')
+                .Append(TextWidth.Cell(check.ProxyText, 14)).Append(' ')
+                .Append(TextWidth.PadLeft(check.ElapsedText, 9)).Append("  ")
+                .AppendLine(check.Detail);
+
+            // 宛先は詳細に出ないことがあるので、書かれているときだけ 1 段下げて添える
+            if (check.Target.Length > 0)
+                text.AppendLine($"       -> {check.Target}");
+        }
+
+        text.AppendLine();
+    }
+
+    private static string MarkOf(CheckVerdict verdict) => verdict switch
+    {
+        CheckVerdict.Pass => "[OK]",
+        CheckVerdict.Fail => "[NG]",
+        CheckVerdict.Warn => "[!!]",
+        CheckVerdict.AwaitingPerson => "[??]",
+        CheckVerdict.Skipped => "[--]",
+        _ => "[  ]",
+    };
 
     /// <summary>応答が無かった宛先だけを、探さずに済む場所へ抜き出す。</summary>
     private static void WriteDownRows(StringBuilder text, ReportData data)
@@ -150,6 +214,9 @@ public static class TextReportWriter
 
     private static void WriteRows(StringBuilder text, ReportData data)
     {
+        // 試験だけの記録では見出しごと出さない
+        if (!data.HasRows && data.HasChecks) return;
+
         text.AppendLine("[宛先ごとの結果]");
         text.AppendLine(ThinRule);
         text.AppendLine(

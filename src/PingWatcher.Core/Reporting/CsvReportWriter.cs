@@ -17,10 +17,14 @@ public static class CsvReportWriter
 
         var csv = new StringBuilder();
 
-        AppendRow(csv,
-            "宛先", "IP", "種別", "備考",
-            "試行", "成功", "ロス率(%)",
-            "最小(ms)", "平均(ms)", "最大(ms)", "95%(ms)", "ジッタ(ms)");
+        // 試験だけの記録では、空の見出し行だけを置かない
+        if (data.HasRows || !data.HasChecks)
+        {
+            AppendRow(csv,
+                "宛先", "IP", "種別", "備考",
+                "試行", "成功", "ロス率(%)",
+                "最小(ms)", "平均(ms)", "最大(ms)", "95%(ms)", "ジッタ(ms)");
+        }
 
         foreach (ReportRow row in data.Rows)
         {
@@ -40,8 +44,32 @@ public static class CsvReportWriter
         }
 
         AppendOutages(csv, data);
+        AppendChecks(csv, data);
 
         return csv.ToString();
+    }
+
+    /// <summary>
+    /// 業務確認試験の結果を<b>もう 1 つの表として</b>続ける。
+    ///
+    /// 列の意味が測定とは全く違うので、空行で区切って別の表にする
+    /// （不通の記録と同じ扱い）。試験成績書へはこの表をそのまま貼れる。
+    /// </summary>
+    private static void AppendChecks(StringBuilder csv, ReportData data)
+    {
+        if (data.Checks is not { Count: > 0 } checks) return;
+
+        // 先頭の表が無いときは、余計な空行で始めない
+        if (csv.Length > 0) csv.Append("\r\n");
+
+        AppendRow(csv, "[業務確認試験]");
+
+        Work.CsvTable table = Verify.CheckReport.ToCsv(checks);
+
+        AppendRow(csv, [.. table.Headers]);
+
+        foreach (string[] row in table.Rows)
+            AppendRow(csv, row);
     }
 
     /// <summary>

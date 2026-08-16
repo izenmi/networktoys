@@ -35,12 +35,17 @@ internal static class CheckRunner
     private const int QualityIntervalMs = 200;
 
     /// <param name="progress">終わった件数と、いま試している項目名。</param>
+    /// <param name="finished">
+    /// 1 件終わるたびに、その結果。<b>全部終わるのを待たせない</b>ための口。
+    /// 項目数とプロキシの本数によっては何分もかかるので、済んだところから見せる。
+    /// </param>
     public static async Task<IReadOnlyList<CheckResult>> RunAsync(
         IReadOnlyList<CheckItem> items,
         IReadOnlyList<ProxyChoice> proxies,
         TeamsEndpoints teams,
         IProgress<(int Done, int Total, string Name)>? progress,
-        CancellationToken token)
+        CancellationToken token,
+        IProgress<CheckResult>? finished = null)
     {
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(proxies);
@@ -67,7 +72,10 @@ internal static class CheckRunner
             token.ThrowIfCancellationRequested();
             progress?.Report((results.Count, plan.Count, item.Name));
 
-            results.Add(await RunOneAsync(item, proxy, teams, token).ConfigureAwait(false));
+            CheckResult result = await RunOneAsync(item, proxy, teams, token).ConfigureAwait(false);
+
+            results.Add(result);
+            finished?.Report(result);
         }
 
         progress?.Report((results.Count, plan.Count, ""));

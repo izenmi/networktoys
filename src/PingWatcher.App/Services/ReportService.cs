@@ -38,7 +38,8 @@ internal static class ReportService
         IReadOnlyList<(string Label, string Value)>? wireless = null,
         IReadOnlyList<OutageRecord>? outages = null,
         string? wirelessNote = null,
-        IReadOnlyList<WirelessAccessPoint>? wirelessAccessPoints = null)
+        IReadOnlyList<WirelessAccessPoint>? wirelessAccessPoints = null,
+        IReadOnlyList<PingWatcher.Core.Verify.CheckResult>? checks = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
 
@@ -101,7 +102,8 @@ internal static class ReportService
             wireless,
             outages,
             wirelessNote,
-            wirelessAccessPoints);
+            wirelessAccessPoints,
+            checks);
     }
 
     /// <summary>
