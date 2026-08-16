@@ -4,6 +4,7 @@ using System.Reflection;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -201,6 +202,122 @@ public partial class MainWindow : Window
     {
         if (sender is FrameworkElement { Tag: string key })
             TableColumns.Instance.Drag(key, e.HorizontalChange);
+    }
+
+    /// <summary>
+    /// 表ごとの「列番号 → 並べ替えに使うプロパティ」。空文字の列は並べ替えない。
+    /// 行テンプレートの Binding と同じ名前でないと効かないので、列を足したらここも直す。
+    /// </summary>
+    private static readonly Dictionary<string, string[]> SortPaths = new()
+    {
+        ["trace"] = ["Ttl", "Address", "HostName", "Rtt", "Note", ""],
+        ["scan"] = ["Address", "Rtt", "HostName", "Mac", "Vendor", "Ports", ""],
+        ["ftplog"] = ["Time", "Remote", "Text"],
+        ["tftplog"] = ["Time", "Remote", "Text"],
+        ["sftplog"] = ["Time", "Remote", "Text"],
+        ["syslog"] = ["Time", "Remote", "Text"],
+        ["snmptrap"] = ["Time", "Remote", "Text"],
+        ["snmpget"] = ["Oid", "Name", "Type", "Value"],
+        ["mnet"] = ["Name", "Id", "ProductTypes", "TimeZone", "Tags"],
+        ["mdev"] = ["Name", "Model", "Serial", "Firmware", "Network", "State", "PublicIp", "LanIp"],
+        ["mup"] = ["Network", "Serial", "Interface", "State", "Ip", "Gateway", "PublicIp"],
+        ["mcli"] = ["Description", "Ip", "Mac", "Vlan", "Manufacturer", "Usage", "LastSeen"],
+    };
+
+    /// <summary>
+    /// 見出しの列をクリックして並べ替える（自前の並べ替えを持たない一覧用）。
+    ///
+    /// どの列かは<b>クリックされた X 座標</b>から求める。列ごとに当たり判定の要素を
+    /// 置くとヘッダ 1 つにつき数個ずつ増えるので、見出しの Grid 1 つで受ける。
+    /// 並べ替えは <see cref="ICollectionView.SortDescriptions"/> に任せる（VM を
+    /// 触らずに済み、仮想化も効いたまま）。押すたびに 昇順 → 降順 → 元の並び。
+    /// </summary>
+    private void OnTableHeaderSort(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not Grid { Tag: string table } header
+            || !SortPaths.TryGetValue(table, out string[]? paths))
+            return;
+
+        int column = ColumnAt(header, e.GetPosition(header).X);
+        if (column < 0 || column >= paths.Length || paths[column].Length == 0) return;
+
+        if (FindList(header) is not { ItemsSource: { } source }) return;
+
+        ICollectionView view = CollectionViewSource.GetDefaultView(source);
+        string path = paths[column];
+
+        ListSortDirection? current = null;
+        foreach (SortDescription description in view.SortDescriptions)
+        {
+            if (description.PropertyName != path) continue;
+
+            current = description.Direction;
+            break;
+        }
+
+        view.SortDescriptions.Clear();
+
+        // 昇順 → 降順 → 元の並び
+        if (current is null)
+            view.SortDescriptions.Add(new SortDescription(path, ListSortDirection.Ascending));
+        else if (current == ListSortDirection.Ascending)
+            view.SortDescriptions.Add(new SortDescription(path, ListSortDirection.Descending));
+
+        ShowSortMark(header, column, view.SortDescriptions.Count == 0 ? null : view.SortDescriptions[0].Direction);
+    }
+
+    /// <summary>X 座標から列番号を求める。列幅はドラッグで変わるので実測値で見る。</summary>
+    private static int ColumnAt(Grid header, double x)
+    {
+        double left = 0;
+
+        for (int i = 0; i < header.ColumnDefinitions.Count; i++)
+        {
+            double width = header.ColumnDefinitions[i].ActualWidth;
+            if (x >= left && x < left + width) return i;
+
+            left += width;
+        }
+
+        return -1;
+    }
+
+    /// <summary>見出しと同じ入れ物にいる一覧を探す。</summary>
+    private static ItemsControl? FindList(DependencyObject header)
+    {
+        DependencyObject? parent = VisualTreeHelper.GetParent(header);
+        return parent is null ? null : FindDescendant(parent);
+
+        static ItemsControl? FindDescendant(DependencyObject node)
+        {
+            int count = VisualTreeHelper.GetChildrenCount(node);
+
+            for (int i = 0; i < count; i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(node, i);
+
+                // 見出しの Grid 自身や中の TextBlock を拾わないよう、一覧だけを見る
+                if (child is ListBox list) return list;
+                if (FindDescendant(child) is { } found) return found;
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>並べ替えた列の見出しに ▲▼ を付ける。どこで並べ替えているか分かるように。</summary>
+    private static void ShowSortMark(Grid header, int column, ListSortDirection? direction)
+    {
+        foreach (UIElement child in header.Children)
+        {
+            if (child is not TextBlock text) continue;
+
+            string label = text.Text.TrimEnd(' ', '▲', '▼');
+
+            text.Text = Grid.GetColumn(text) == column && direction is { } d
+                ? label + (d == ListSortDirection.Ascending ? " ▲" : " ▼")
+                : label;
+        }
     }
 
     /// <summary>一覧の見出しクリックで並べ替える。列名は Tag、対象は DataContext で見分ける。</summary>

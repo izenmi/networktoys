@@ -816,7 +816,7 @@
                                    Style="{StaticResource Caption}"
                                    TextWrapping="Wrap" Margin="4,6,0,0" />
 
-                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="trace" MouseLeftButtonDown="OnTableHeaderSort">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.0]}" />
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.1]}" />
@@ -1531,7 +1531,7 @@
                         </StackPanel>
 
                         <!-- 一覧のヘッダ -->
-                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                        <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="scan" MouseLeftButtonDown="OnTableHeaderSort">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.0]}" />
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.1]}" />
@@ -1779,6 +1779,23 @@
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                      Tag="ftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="ftplog.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="ftplog.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
@@ -1798,11 +1815,6 @@
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="ftplog.0" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="ftplog.1" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -1852,6 +1864,23 @@
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                      Tag="tftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="tftplog.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="tftplog.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
@@ -1871,11 +1900,6 @@
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="tftplog.0" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="tftplog.1" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -1932,6 +1956,23 @@
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="接続の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                      Tag="sftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="相手" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="sftplog.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="sftplog.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
@@ -1951,11 +1992,6 @@
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="sftplog.0" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="sftplog.1" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -2116,6 +2152,23 @@
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="受信したメッセージ" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                      Tag="syslog" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="本文" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="syslog.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="syslog.1" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
@@ -2136,11 +2189,6 @@
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                            ToolTip="{Binding Text}" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="syslog.0" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="syslog.1" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -2198,7 +2246,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="snmpget" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.1]}" />
@@ -2288,6 +2336,23 @@
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Top" Text="受信した Trap" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent"
+                                                  Tag="snmptrap" MouseLeftButtonDown="OnTableHeaderSort">
+                                                <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="時刻" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="送信元" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
+                                                <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="snmptrap.0" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="snmptrap.1" DragDelta="OnTableColumnResize" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                             <ListBox ItemsSource="{Binding Log}"
                                                      Style="{StaticResource TargetListBox}"
                                                      ItemContainerStyle="{StaticResource PlainRowContainer}"
@@ -2308,11 +2373,6 @@
                                                             <TextBlock Grid.Column="2" Text="{Binding Text}"
                                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                                        ToolTip="{Binding Text}" />
-                                                            <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                            <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                                   Tag="snmptrap.0" DragDelta="OnTableColumnResize" />
-                                                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                                   Tag="snmptrap.1" DragDelta="OnTableColumnResize" />
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
@@ -3062,7 +3122,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="mnet" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
@@ -3146,7 +3206,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="mdev" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
@@ -3274,7 +3334,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="mup" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
@@ -3418,7 +3478,7 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,4,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
