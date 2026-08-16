@@ -14,23 +14,38 @@ internal static class ReportService
     /// <summary>レポートのスパークラインに描く点数。多すぎても紙の上では読めない。</summary>
     private const int SparklinePoints = 60;
 
+    /// <summary>
+    /// 書き出す測定の 1 まとまり。
+    ///
+    /// <b>Ping と TCP は別の画面で、種別の言い表し方も別に持っている。</b>
+    /// 1 つの記録に混ぜるには組ごとに受け取るしかない
+    /// （<see cref="MonitorViewModel.DescribeEffectiveKind"/> は画面ごとに答えが違う）。
+    /// </summary>
+    /// <param name="Rows">その画面の行。</param>
+    /// <param name="DescribeKind">その画面での種別の言い表し方。</param>
+    internal sealed record ReportSource(
+        IEnumerable<TargetRowViewModel> Rows,
+        Func<Target, string>? DescribeKind = null);
+
     public static ReportData Build(
         string title,
         string note,
-        IEnumerable<TargetRowViewModel> rows,
+        IReadOnlyList<ReportSource> sources,
         NetworkSnapshot network,
         DateTime? startedAt,
         int intervalMs,
         string? ipConfig = null,
-        Func<Target, string>? describeKind = null,
         IReadOnlyList<(string Label, string Value)>? wireless = null,
         IReadOnlyList<OutageRecord>? outages = null,
         string? wirelessNote = null,
         IReadOnlyList<WirelessAccessPoint>? wirelessAccessPoints = null)
     {
+        ArgumentNullException.ThrowIfNull(sources);
+
         var reportRows = new List<ReportRow>();
         var buffer = new ProbeSample[SparklinePoints];
 
+        foreach ((IEnumerable<TargetRowViewModel> rows, Func<Target, string>? describeKind) in sources)
         foreach (TargetRowViewModel row in rows)
         {
             int count = row.CopyHistory(buffer);

@@ -217,4 +217,41 @@ public class ReportWriterTests
         Assert.Contains("無線 LAN", html, StringComparison.Ordinal);
         Assert.Contains("office-wifi", html, StringComparison.Ordinal);
     }
+    [Fact]
+    public void The_csv_carries_the_95th_percentile()
+    {
+        // 平均だけでは「たまに遅い」が見えない。計算済みなのに CSV だけ抜けていた
+        string csv = CsvReportWriter.Render(Sample());
+
+        Assert.Contains("95%(ms)", csv, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_csv_carries_the_outages_as_a_second_table()
+    {
+        // いつ落ちていたかは平均値からは読み取れない。表計算で扱いたいのはむしろこちら
+        var outage = new OutageRecord(
+            TargetKey: "k",
+            Host: "192.168.1.9",
+            StartedAtTicks: new DateTime(2026, 8, 16, 10, 3, 1, DateTimeKind.Local).Ticks,
+            EndedAtTicks: new DateTime(2026, 8, 16, 10, 4, 8, DateTimeKind.Local).Ticks,
+            MissedProbes: 67,
+            IntervalMs: 1000,
+            CloseReason: OutageCloseReason.Recovered,
+            DominantStatus: ProbeStatus.TimedOut,
+            StartUnknown: false);
+
+        string csv = CsvReportWriter.Render(Sample() with { Outages = [outage] });
+
+        Assert.Contains("[不通の記録]", csv, StringComparison.Ordinal);
+        Assert.Contains("192.168.1.9", csv, StringComparison.Ordinal);
+        Assert.Contains("2026/08/16 10:03:01", csv, StringComparison.Ordinal);
+        Assert.Contains("67", csv, StringComparison.Ordinal);
+        // 続いた秒数
+        Assert.Contains(",67,", csv, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Without_outages_the_csv_stays_a_single_table()
+        => Assert.DoesNotContain("[不通の記録]", CsvReportWriter.Render(Sample()), StringComparison.Ordinal);
 }

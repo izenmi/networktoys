@@ -47,7 +47,7 @@ public sealed class ShellViewModel
         Wifi = new WifiViewModel();
 
         // 記録には無線の情報も載せるので、無線画面が持っている内容を参照させる
-        Report = new ReportViewModel(Monitor, Wifi);
+        Report = new ReportViewModel(Monitor, Tcp, Wifi);
         DeviceCompare = new DeviceCompareViewModel();
         Converter = new ConvertViewModel();
 

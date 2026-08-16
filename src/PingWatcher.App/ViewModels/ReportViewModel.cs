@@ -15,14 +15,17 @@ namespace PingWatcher.App.ViewModels;
 public sealed class ReportViewModel : ObservableObject
 {
     private readonly MonitorViewModel _monitor;
+    private readonly MonitorViewModel _tcp;
     private readonly WifiViewModel _wifi;
 
     private string _status = string.Empty;
     private string _preview = string.Empty;
 
-    public ReportViewModel(MonitorViewModel monitor, WifiViewModel wifi)
+    /// <param name="tcp">TCP 画面。宛先も結果も Ping とは別に持つので、別に受け取る。</param>
+    public ReportViewModel(MonitorViewModel monitor, MonitorViewModel tcp, WifiViewModel wifi)
     {
         _monitor = monitor;
+        _tcp = tcp;
         _wifi = wifi;
 
         SaveHtmlCommand = new RelayCommand(() => _ = SaveAsync(ReportFormat.Html), CanSave);
@@ -59,7 +62,7 @@ public sealed class ReportViewModel : ObservableObject
         private set => SetProperty(ref _preview, value);
     }
 
-    private bool CanSave() => _monitor.Rows.Count > 0;
+    private bool CanSave() => _monitor.Rows.Count > 0 || _tcp.Rows.Count > 0;
 
     private async Task SaveAsync(ReportFormat format)
     {
@@ -145,8 +148,8 @@ public sealed class ReportViewModel : ObservableObject
     {
         try
         {
-            Preview = _monitor.Rows.Count == 0
-                ? "測定結果がまだありません。Ping タブで測定すると、ここに書き出される内容が表示されます。"
+            Preview = !CanSave()
+                ? "測定結果がまだありません。Ping か TCP のタブで測定すると、ここに書き出される内容が表示されます。"
                 : TextReportWriter.Render(BuildData(ipConfig: null))
                   + Environment.NewLine
                   + "※ HTML/テキストでの保存時は、ここに [ipconfig /all] の節も加わります。";
@@ -158,18 +161,25 @@ public sealed class ReportViewModel : ObservableObject
         }
     }
 
-    /// <summary>保存とプレビューで同じ内容を組む(表題とメモは 2026-08-16 に廃止)。</summary>
+    /// <summary>
+    /// 保存とプレビューで同じ内容を組む(表題とメモは 2026-08-16 に廃止)。
+    ///
+    /// <b>Ping と TCP の両方を載せる。</b>種別の言い表し方は画面ごとに違うので、
+    /// 組にして渡す。不通の記録も両方から集める。
+    /// </summary>
     private ReportData BuildData(string? ipConfig) => ReportService.Build(
         "",   // 空なら既定の表題になる
         "",
-        _monitor.Rows,
+        [
+            new ReportService.ReportSource(_monitor.Rows, _monitor.DescribeEffectiveKind),
+            new ReportService.ReportSource(_tcp.Rows, _tcp.DescribeEffectiveKind),
+        ],
         _monitor.NetworkInfo,
-        _monitor.StartedAt,
+        _monitor.StartedAt ?? _tcp.StartedAt,
         _monitor.IntervalMs,
         ipConfig,
-        describeKind: _monitor.DescribeEffectiveKind,
         wireless: _wifi.DescribeForReport(),
-        outages: _monitor.Tracker.Records,
+        outages: [.. _monitor.Tracker.Records, .. _tcp.Tracker.Records],
         wirelessNote: _wifi.ReportNote,
         wirelessAccessPoints: _wifi.DescribeAccessPointsForReport());
 }
