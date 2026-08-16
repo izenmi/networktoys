@@ -196,6 +196,46 @@
         <Setter Property="FontWeight" Value="Normal" />
     </Style>
 
+    <!--
+        押しっぱなしで状態を保つボタン（宛先リストの開閉など）。
+        ボタンと同じ寸法にして、開いているあいだはアクセント地で示す。
+        地色だけに頼らないよう、見出しの文字に ▾ を添えて使うこと。
+    -->
+    <Style x:Key="ToggleButton.Subtle" TargetType="ToggleButton">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="10,3" />
+        <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Bd"
+                            Background="{DynamicResource Brush.SurfaceAlt}"
+                            BorderBrush="{DynamicResource Brush.Border}"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource Radius.Control}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Surface}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="1.5" />
+                            <Setter TargetName="Bd" Property="Margin" Value="-0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- 記号を主体にした小さなボタン(配色の切り替えなど) -->
     <Style x:Key="Button.Icon" TargetType="Button" BasedOn="{StaticResource Button.Subtle}">
         <Setter Property="Padding" Value="6,2" />

@@ -62,4 +62,12 @@ public sealed class AppSettingsDocument
     /// 統合 Windows 認証で通す前提なので、<b>ここにも認証情報は入れない</b>。
     /// </summary>
     public string VerifyProxies { get; set; } = "";
+
+    /// <summary>
+    /// 自分で作った試験のひな型（名前 → 項目のテキスト）。
+    ///
+    /// 現場ごとに試す項目は決まっているので、<b>作ったものを名前を付けて残せる</b>ようにする。
+    /// 組み込みのひな型（標準 / Microsoft 365）とは別に持ち、同じ名前なら自分のものが勝つ。
+    /// </summary>
+    public Dictionary<string, string> VerifyTemplates { get; set; } = [];
 }

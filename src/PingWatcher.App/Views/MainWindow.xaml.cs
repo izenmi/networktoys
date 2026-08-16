@@ -53,6 +53,13 @@ public partial class MainWindow : Window
         _shell.Collect.RequestImport += (_, _) => ImportTargetsIntoCollect();
         _shell.Collect.SecretsCleared += (_, _) => ClearCollectPasswordBoxes();
 
+        // ひな型の名前を聞くのは画面の仕事（VM から窓を開かない）
+        _shell.Verify.AskTemplateName = initial => TextPromptDialog.Ask(
+            this,
+            "ひな型に残す",
+            "いまの試験項目に名前を付けて残します。同じ名前があれば上書きします。",
+            initial);
+
         // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
         _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
             this,
@@ -463,12 +470,12 @@ public partial class MainWindow : Window
             using (FileStream stream = File.Create(path))
                 CaptureWindow().Save(stream);
 
-            ShowScreenshotResult("✓ 保存しました");
+            ShowNotice("✓ 保存しました");
         }
         catch (Exception ex)
         {
             CrashLog.Write(ex, "MainWindow.OnScreenshot");
-            ShowScreenshotResult("保存できません");
+            ShowNotice("保存できません");
         }
     }
 
@@ -541,8 +548,8 @@ public partial class MainWindow : Window
     private void OnFileMenuOpened(object sender, RoutedEventArgs e)
         => _shell.Report.RefreshSaveCommands();
 
-    /// <summary>結果はヘッダの文字で 2 秒だけ知らせる。トーストや別窓は出さない。</summary>
-    private void ShowScreenshotResult(string text)
+    /// <summary>短い知らせをヘッダの文字で 2 秒だけ出す。トーストや別窓は出さない。</summary>
+    private void ShowNotice(string text)
     {
         HeaderNotice.Text = text;
 
@@ -1122,6 +1129,155 @@ public partial class MainWindow : Window
     /// （無線は位置情報の同意を求め、遮断は WFP のエンジンを開き、接続は ETW を回す）。
     /// 先祖の TabItem をすべてたどって確かめる。
     /// </summary>
+    /// <summary>
+    /// テキスト欄にファイルを重ねたとき。<b>ファイルのときだけ受ける。</b>
+    ///
+    /// <see cref="TextBox"/> は素で「文字のドラッグ」を扱うので、
+    /// Preview の段で自分の答えを返さないと、既定の動きに先を越される。
+    /// </summary>
+    private void OnTextDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = Services.DroppedText.FilesOf(e).Length > 0
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 放り込まれたファイルを欄に読み込む。
+    ///
+    /// <b>置き換える</b>（足すのではない）。作業前後の貼り付けも設定の貼り付けも、
+    /// 前のものが混ざると気づかないまま誤った差分を見ることになる。
+    /// 複数まとめて放られたら 1 つ目だけを使い、その旨を知らせる。
+    /// </summary>
+    private void OnTextDrop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+
+        if (sender is not TextBox box) return;
+
+        string[] files = Services.DroppedText.FilesOf(e);
+        if (files.Length == 0) return;
+
+        if (Services.DroppedText.TryRead(files[0], out string problem) is not { } text)
+        {
+            ShowNotice(problem);
+            return;
+        }
+
+        box.Text = text;
+        box.Focus();
+
+        ShowNotice(files.Length > 1
+            ? $"{System.IO.Path.GetFileName(files[0])} を読み込みました（1 つ目だけ）。"
+            : $"{System.IO.Path.GetFileName(files[0])} を読み込みました。");
+    }
+
+    /// <summary>試験の項目一覧にファイルを放り込んだとき。書式の解釈は VM に任せる。</summary>
+    private void OnVerifyItemsDrop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+
+        string[] files = Services.DroppedText.FilesOf(e);
+        if (files.Length == 0) return;
+
+        if (Services.DroppedText.TryRead(files[0], out string problem) is not { } text)
+        {
+            ShowNotice(problem);
+            return;
+        }
+
+        _shell.Verify.LoadItemsFrom(text, System.IO.Path.GetFileName(files[0]));
+    }
+
+    /// <summary>一覧に重ねたとき。こちらは既定の動きが無いので DragOver で足りる。</summary>
+    private void OnListDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = Services.DroppedText.FilesOf(e).Length > 0
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// まとめたタブ（見出しに ▾ が付いているもの）を押したら、中身を縦並びのメニューで出す。
+    ///
+    /// 切り替えの帯を横にも縦にも置かない代わりに、<b>押したときだけメニューを降ろす</b>。
+    /// 項目は内側の <see cref="TabControl"/> から組み立てるので、
+    /// 中身を足しても<b>ここは直さなくてよい</b>（見出しの件数だけ直す）。
+    /// </summary>
+    private void OnMainTabsMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source) return;
+
+        // 押されたのが見出しかどうか。中身の上のクリックまで拾わない
+        TabItem? tab = null;
+        for (DependencyObject? node = source; node is not null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is TabItem item) { tab = item; break; }
+            if (node is TabControl) return;   // 見出しの外（中身の側）だった
+        }
+
+        if (tab is null || !ReferenceEquals(ItemsControl.ItemsControlFromItemContainer(tab), MainTabs))
+            return;
+
+        if (InnerTabsOf(tab) is not { } inner || inner.Items.Count == 0) return;
+
+        // まずタブそのものを開く。メニューを閉じても中身が見えている方が自然
+        tab.IsSelected = true;
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = tab,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+        };
+
+        foreach (object? item in inner.Items)
+        {
+            if (item is not TabItem child) continue;
+
+            var entry = new MenuItem
+            {
+                Header = child.Header,
+                IsCheckable = true,
+                IsChecked = child.IsSelected,
+            };
+
+            entry.Click += (_, _) => child.IsSelected = true;
+            menu.Items.Add(entry);
+        }
+
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    /// <summary>そのタブが中に持っている切り替え。無ければ null。</summary>
+    private static TabControl? InnerTabsOf(TabItem tab)
+    {
+        if (tab.Content is not DependencyObject node) return null;
+
+        foreach (object? child in LogicalTreeHelper.GetChildren(node))
+        {
+            if (child is TabControl inner) return inner;
+            if (child is DependencyObject deeper && FindInner(deeper) is { } found) return found;
+        }
+
+        return null;
+    }
+
+    private static TabControl? FindInner(DependencyObject node)
+    {
+        foreach (object? child in LogicalTreeHelper.GetChildren(node))
+        {
+            if (child is TabControl inner) return inner;
+            if (child is DependencyObject deeper && FindInner(deeper) is { } found) return found;
+        }
+
+        return null;
+    }
+
     internal static bool IsShowing(TabItem tab)
     {
         ArgumentNullException.ThrowIfNull(tab);

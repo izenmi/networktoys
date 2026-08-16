@@ -118,7 +118,7 @@ public sealed class VerifyViewModel : ObservableObject
 
     public VerifyViewModel()
     {
-        Templates = [.. RecommendedChecks.Templates.Select(t => new CheckTemplate(t.Name, t.Text))];
+        RebuildTemplates();
         _selectedTemplate = Templates[0];
 
         AddRowCommand = new RelayCommand(() => AddRow(new CheckItem("", CheckKind.Http, "")));
@@ -132,6 +132,8 @@ public sealed class VerifyViewModel : ObservableObject
         MarkPassCommand = new RelayCommand<CheckResult>(r => Mark(r, CheckVerdict.Pass));
         MarkFailCommand = new RelayCommand<CheckResult>(r => Mark(r, CheckVerdict.Fail));
         SaveItemsCommand = new RelayCommand(SaveItems, () => Rows.Count > 0);
+        SaveTemplateCommand = new RelayCommand(SaveTemplate, () => Rows.Count > 0);
+        DeleteTemplateCommand = new RelayCommand(DeleteTemplate, () => SelectedTemplate.IsMine);
 
         _proxyText = Settings.Current.VerifyProxies;
 
@@ -147,14 +149,19 @@ public sealed class VerifyViewModel : ObservableObject
 
     public ObservableCollection<CheckResult> Results { get; } = [];
 
-    public IReadOnlyList<CheckTemplate> Templates { get; }
+    /// <summary>ひな型の選択肢。組み込みのぶんと、自分で保存したぶん。</summary>
+    public ObservableCollection<CheckTemplate> Templates { get; } = [];
 
     private CheckTemplate _selectedTemplate;
 
     public CheckTemplate SelectedTemplate
     {
         get => _selectedTemplate;
-        set => SetProperty(ref _selectedTemplate, value);
+        set
+        {
+            if (SetProperty(ref _selectedTemplate, value))
+                DeleteTemplateCommand.RaiseCanExecuteChanged();
+        }
     }
 
     public RelayCommand AddRowCommand { get; }
@@ -175,6 +182,18 @@ public sealed class VerifyViewModel : ObservableObject
 
     /// <summary>試験項目をファイルへ保存する。</summary>
     public RelayCommand SaveItemsCommand { get; }
+
+    /// <summary>
+    /// いまの項目を、名前を付けてひな型として残す。
+    /// 現場ごとに試す項目は決まっているので、毎回書き直させない。
+    /// </summary>
+    public RelayCommand SaveTemplateCommand { get; }
+
+    /// <summary>自分で作ったひな型を消す。組み込みのものは消せない。</summary>
+    public RelayCommand DeleteTemplateCommand { get; }
+
+    /// <summary>ひな型に付ける名前を聞く。画面側が差し込む（VM から窓を開かないため）。</summary>
+    public Func<string, string?>? AskTemplateName { get; set; }
 
     /// <summary>目視の項目に合格を付ける。</summary>
     public RelayCommand<CheckResult> MarkPassCommand { get; }
@@ -254,6 +273,7 @@ public sealed class VerifyViewModel : ObservableObject
         Rows.Add(new VerifyRowViewModel(item));
         StartCommand.RaiseCanExecuteChanged();
         SaveItemsCommand.RaiseCanExecuteChanged();
+        SaveTemplateCommand.RaiseCanExecuteChanged();
     }
 
     private void RemoveRow(VerifyRowViewModel? row)
@@ -263,6 +283,106 @@ public sealed class VerifyViewModel : ObservableObject
         Rows.Remove(row);
         StartCommand.RaiseCanExecuteChanged();
         SaveItemsCommand.RaiseCanExecuteChanged();
+        SaveTemplateCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// 選択肢を組み直す。<b>組み込みが先、自分のものが後。</b>
+    /// 同じ名前なら自分のものだけを残す（自分で作ったものが勝つ方が驚きが少ない）。
+    /// </summary>
+    private void RebuildTemplates()
+    {
+        string? keep = Templates.Count > 0 ? SelectedTemplate.Name : null;
+
+        Templates.Clear();
+
+        Dictionary<string, string> mine = Settings.Current.VerifyTemplates;
+
+        foreach ((string name, string text) in RecommendedChecks.Templates)
+        {
+            if (!mine.ContainsKey(name))
+                Templates.Add(new CheckTemplate(name, text));
+        }
+
+        foreach ((string name, string text) in mine.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
+            Templates.Add(new CheckTemplate(name, text, IsMine: true));
+
+        if (keep is not null && Templates.FirstOrDefault(t => t.Name == keep) is { } same)
+            SelectedTemplate = same;
+        else if (Templates.Count > 0)
+            SelectedTemplate = Templates[0];
+    }
+
+    /// <summary>
+    /// いまの項目をひな型として残す。
+    ///
+    /// 名前を聞くのは画面側（<see cref="AskTemplateName"/>）。VM から窓を開くと
+    /// 自己診断でここを通せなくなる。
+    /// </summary>
+    private void SaveTemplate()
+    {
+        string suggested = SelectedTemplate.IsMine ? SelectedTemplate.Name : "";
+
+        if (AskTemplateName?.Invoke(suggested) is not { } name) return;
+
+        name = name.Trim();
+        if (name.Length == 0)
+        {
+            Status = "ひな型の名前が空です。";
+            return;
+        }
+
+        SaveTemplate(name, CheckListParser.Format(Rows.Select(r => r.ToItem())));
+    }
+
+    /// <summary>名前と中身を決めて残す。自己診断からも呼べるように分けてある。</summary>
+    internal void SaveTemplate(string name, string text)
+    {
+        Settings.Current.VerifyTemplates[name] = text;
+
+        try
+        {
+            Settings.Save();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"ひな型を残せませんでした: {ex.Message}";
+            return;
+        }
+
+        RebuildTemplates();
+
+        if (Templates.FirstOrDefault(t => t.Name == name) is { } saved)
+            SelectedTemplate = saved;
+
+        Status = $"「{name}」をひな型に残しました（{Rows.Count} 件）。";
+    }
+
+    /// <summary>自分で作ったひな型を消す。組み込みのものには触らない。</summary>
+    private void DeleteTemplate()
+    {
+        CheckTemplate target = SelectedTemplate;
+
+        if (!target.IsMine)
+        {
+            Status = "組み込みのひな型は消せません。";
+            return;
+        }
+
+        Settings.Current.VerifyTemplates.Remove(target.Name);
+
+        try
+        {
+            Settings.Save();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"消せませんでした: {ex.Message}";
+            return;
+        }
+
+        RebuildTemplates();
+        Status = $"ひな型「{target.Name}」を消しました。";
     }
 
     private void ApplyTemplate()
@@ -556,24 +676,33 @@ public sealed class VerifyViewModel : ObservableObject
 
         try
         {
-            IReadOnlyList<CheckItem> items = CheckListParser.Parse(File.ReadAllText(dialog.FileName));
-
-            if (items.Count == 0)
-            {
-                Status = $"{Path.GetFileName(dialog.FileName)} から読める項目がありませんでした。";
-                return;
-            }
-
-            Rows.Clear();
-            foreach (CheckItem item in items)
-                AddRow(item);
-
-            Status = $"{Path.GetFileName(dialog.FileName)} から {items.Count} 件を読み込みました。";
+            LoadItemsFrom(File.ReadAllText(dialog.FileName), Path.GetFileName(dialog.FileName));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Status = $"読み込めませんでした: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// テキストから項目を読み込む。<b>置き換える</b>（足すのではない）。
+    /// ファイル選択からも、欄への放り込みからも、ここを通る。
+    /// </summary>
+    public void LoadItemsFrom(string text, string source)
+    {
+        IReadOnlyList<CheckItem> items = CheckListParser.Parse(text);
+
+        if (items.Count == 0)
+        {
+            Status = $"{source} から読める項目がありませんでした。";
+            return;
+        }
+
+        Rows.Clear();
+        foreach (CheckItem item in items)
+            AddRow(item);
+
+        Status = $"{source} から {items.Count} 件を読み込みました。";
     }
 
     private void SaveItems()
@@ -638,5 +767,14 @@ public sealed class VerifyViewModel : ObservableObject
     }
 }
 
-/// <summary>ひな型 1 つ。</summary>
-public sealed record CheckTemplate(string Name, string Text);
+/// <summary>
+/// ひな型 1 つ。
+/// </summary>
+/// <param name="IsMine">
+/// 自分で作ったものか。<b>組み込みのひな型は消せない</b>ので、その出し分けに使う。
+/// </param>
+public sealed record CheckTemplate(string Name, string Text, bool IsMine = false)
+{
+    /// <summary>コンボに出す文字。自分のものは印を付けて見分けられるようにする。</summary>
+    public string Label => IsMine ? $"★ {Name}" : Name;
+}
