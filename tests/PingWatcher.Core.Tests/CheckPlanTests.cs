@@ -120,6 +120,34 @@ public class CheckPlanTests
         }
     }
 
+    [Fact]
+    public void Every_template_measures_speed()
+    {
+        // 速度はプロキシの入れ替えでいちばん差が出るところ。ひな型から抜けていると
+        // 「入れ替えたら遅くなった」を後から気づくことになる
+        foreach ((string name, string text) in RecommendedChecks.Templates)
+        {
+            IReadOnlyList<CheckItem> items = CheckListParser.Parse(text);
+
+            Assert.Contains(items, i => i.Kind is CheckKind.Download or CheckKind.Upload or CheckKind.FastCom);
+        }
+    }
+
+    [Fact]
+    public void The_fragile_and_the_unprepared_items_stay_commented_out()
+    {
+        // fast.com は先方の変更で壊れるうえ遮断対象のこともある。
+        // 上りは受け取る相手が要る。どちらも既定で走らせない
+        IReadOnlyList<CheckItem> items = CheckListParser.Parse(RecommendedChecks.Standard);
+
+        Assert.DoesNotContain(items, i => i.Kind == CheckKind.FastCom);
+        Assert.DoesNotContain(items, i => i.Kind == CheckKind.Upload);
+
+        // ただし書き方は残しておく（# を外せば使える）
+        Assert.Contains("fast.com", RecommendedChecks.Standard, StringComparison.Ordinal);
+        Assert.Contains("速度上り", RecommendedChecks.Standard, StringComparison.Ordinal);
+    }
+
     // ===== PAC の解決結果 =====
 
     [Theory]
