@@ -457,6 +457,17 @@
                 <MenuItem x:Name="TopmostMenuItem" Header="最前面に固定" IsCheckable="True"
                           Click="OnTopmostMenu" />
                 <Separator />
+                <!-- 文字の大きさ。サブメニューは作れない作りなので並べる。
+                     Tag が倍率で、選ばれているものにチェックが付く -->
+                <MenuItem x:Name="ScaleSmall" Header="文字サイズ 小" IsCheckable="True"
+                          Tag="0.85" Click="OnScaleMenu" />
+                <MenuItem x:Name="ScaleNormal" Header="文字サイズ 標準" IsCheckable="True"
+                          Tag="1.0" Click="OnScaleMenu" />
+                <MenuItem x:Name="ScaleLarge" Header="文字サイズ 大" IsCheckable="True"
+                          Tag="1.25" Click="OnScaleMenu" />
+                <MenuItem x:Name="ScaleExtraLarge" Header="文字サイズ 特大" IsCheckable="True"
+                          Tag="1.5" Click="OnScaleMenu" />
+                <Separator />
                 <!-- 列幅はドラッグで変えられて設定に残るが、戻す手段が無かった -->
                 <MenuItem Header="列幅を既定に戻す" Click="OnResetColumns" />
             </MenuItem>
@@ -1973,7 +1984,7 @@
                                          ScrollViewer.VerticalScrollBarVisibility="Visible">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Height="26">
+                                            <Grid Height="{DynamicResource Size.RowHeight.Input}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.1]}" />
@@ -3867,7 +3878,7 @@
                                          ScrollViewer.VerticalScrollBarVisibility="Visible">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Grid Height="26">
+                                                <Grid Height="{DynamicResource Size.RowHeight.Input}">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
                                                         <ColumnDefinition Width="*" />
@@ -4163,7 +4174,7 @@
                                          ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Height="22">
+                                                        <Grid Height="{DynamicResource Size.RowHeight.Wide}">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
@@ -4281,7 +4292,7 @@
                                          ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Height="22"
+                                                        <Grid Height="{DynamicResource Size.RowHeight.Wide}"
                                                               ContextMenu="{StaticResource RowMenu.Device}">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
@@ -4430,7 +4441,7 @@
                                          ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Height="22">
+                                                        <Grid Height="{DynamicResource Size.RowHeight.Wide}">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
@@ -4597,7 +4608,7 @@
                                          ScrollViewer.VerticalScrollBarVisibility="Visible">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Height="22"
+                                                        <Grid Height="{DynamicResource Size.RowHeight.Wide}"
                                                               ContextMenu="{StaticResource RowMenu.Address}">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />

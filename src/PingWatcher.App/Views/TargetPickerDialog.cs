@@ -48,8 +48,9 @@ internal sealed class TargetPickerDialog : Window
     {
         Title = "宛先リストから取り込む";
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Width = 460;
-        Height = 520;
+        // 文字の大きさに合わせて窓も大きくする
+        Width = 460 * UiScale.Current;
+        Height = 520 * UiScale.Current;
         ShowInTaskbar = false;
         UseLayoutRounding = true;
 

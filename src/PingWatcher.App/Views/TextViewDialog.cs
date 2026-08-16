@@ -21,10 +21,11 @@ internal sealed class TextViewDialog : Window
     {
         Title = title;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Width = 720;
-        Height = 560;
-        MinWidth = 420;
-        MinHeight = 300;
+        // 文字の大きさに合わせて窓も大きくする（中身だけ大きくすると読める量が減る）
+        Width = 720 * UiScale.Current;
+        Height = 560 * UiScale.Current;
+        MinWidth = 420 * UiScale.Current;
+        MinHeight = 300 * UiScale.Current;
         ShowInTaskbar = false;
         UseLayoutRounding = true;
 

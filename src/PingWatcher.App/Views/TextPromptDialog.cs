@@ -19,7 +19,7 @@ internal sealed class TextPromptDialog : Window
         Title = title;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         SizeToContent = SizeToContent.Height;
-        Width = 420;
+        Width = 420 * UiScale.Current;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
         UseLayoutRounding = true;

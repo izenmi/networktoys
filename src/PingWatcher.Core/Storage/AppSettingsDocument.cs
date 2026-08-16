@@ -62,6 +62,12 @@ public sealed class AppSettingsDocument
     /// </summary>
     public bool Topmost { get; set; }
 
+    /// <summary>
+    /// 文字の大きさの倍率（0.85 / 1.0 / 1.25 / 1.5）。
+    /// <b>読めない値は 1.0 に落とす</b> — 設定ファイルは手でも書き換えられる。
+    /// </summary>
+    public double UiScale { get; set; } = 1.0;
+
     /// <summary>業務確認試験の項目（1 行 1 件のテキスト）。</summary>
     public string VerifyChecks { get; set; } = "";
 

@@ -37,6 +37,16 @@ public partial class MainWindow : Window
         TopmostMenuItem.IsChecked = Settings.Current.Topmost;
         Topmost = Settings.Current.Topmost;
 
+        UpdateScaleMenu();
+
+        // 文字を大きくしたら列幅も比例させる。文字だけ大きくすると、
+        // 幅がピクセルで決まっている列で文字が切れる
+        UiScale.Changed += ratio =>
+        {
+            ViewModels.ColumnLayout.Instance.Scale(ratio);
+            ViewModels.TableColumns.Instance.Scale(ratio);
+        };
+
         // メニューに表記したショートカットの実体。表記(InputGestureText)は飾りなので、
         // ここに足したらメニューの表記も揃えること
         InputBindings.Add(new KeyBinding(
@@ -583,6 +593,32 @@ public partial class MainWindow : Window
 
         ThemeToggle.Content = dark ? "☀ ライト" : "☾ ダーク";
         ThemeMenuItem.Header = dark ? "☀ ライトモードにする" : "☾ ダークモードにする";
+    }
+
+    /// <summary>
+    /// 文字の大きさを変える。押した項目の <c>Tag</c> が倍率。
+    /// <b>ラジオのように 1 つだけ選ばれた状態</b>にするので、
+    /// 押したものが既に選ばれていても外させない。
+    /// </summary>
+    private void OnScaleMenu(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: string tag }
+            && double.TryParse(tag, System.Globalization.NumberStyles.Float,
+                               System.Globalization.CultureInfo.InvariantCulture, out double scale))
+        {
+            UiScale.Apply(scale);
+        }
+
+        UpdateScaleMenu();
+    }
+
+    /// <summary>いまの大きさにだけチェックを付ける。</summary>
+    private void UpdateScaleMenu()
+    {
+        ScaleSmall.IsChecked = UiScale.Is(0.85);
+        ScaleNormal.IsChecked = UiScale.Is(1.0);
+        ScaleLarge.IsChecked = UiScale.Is(1.25);
+        ScaleExtraLarge.IsChecked = UiScale.Is(1.5);
     }
 
     /// <summary>最前面固定。<b>次回起動でも覚える</b>（以前は毎回外れていた）。</summary>

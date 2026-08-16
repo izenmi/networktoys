@@ -390,7 +390,7 @@
     <Style TargetType="ComboBox">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
         <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
-        <Setter Property="Height" Value="22" />
+        <Setter Property="Height" Value="{DynamicResource Size.RowHeight.Wide}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
@@ -574,6 +574,17 @@
                             CornerRadius="{DynamicResource Radius.Chip}"
                             Padding="{TemplateBinding Padding}">
                         <DockPanel>
+                            <!--
+                                チェック印。テンプレートを置き換えている以上、ここで描かないと
+                                IsCheckable を立てても状態が画面に出ない（「最前面に固定」が
+                                入っているかどうか分からない、という不具合になっていた）。
+                                幅は常に取る — 印の有無で文字の位置がずれると読みにくい。
+                            -->
+                            <TextBlock x:Name="Check" DockPanel.Dock="Left"
+                                       Text="✓" Width="14"
+                                       VerticalAlignment="Center"
+                                       Visibility="Hidden" />
+
                             <!-- ショートカット表記。無ければ空文字で場所も取らない -->
                             <TextBlock DockPanel.Dock="Right"
                                        Text="{TemplateBinding InputGestureText}"
@@ -585,6 +596,9 @@
                         </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                        </Trigger>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
                             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
@@ -697,7 +711,7 @@
             ContentTemplate は「文字列を渡されたとき」だけに当てる
             （中に要素を組んだ ToolTip まで文字列として描き直してしまわないように）。
         -->
-        <Setter Property="MaxWidth" Value="840" />
+        <Setter Property="MaxWidth" Value="{DynamicResource Size.TooltipWidth}" />
         <Setter Property="ContentTemplate">
             <Setter.Value>
                 <DataTemplate DataType="{x:Type sys:String}">
@@ -707,7 +721,8 @@
                         LineStackingStrategy を明示しないと LineHeight が効かないことがある。
                     -->
                     <TextBlock Text="{Binding}" TextWrapping="Wrap"
-                               LineHeight="19" LineStackingStrategy="BlockLineHeight" />
+                               LineHeight="{DynamicResource Size.LineHeight}"
+                               LineStackingStrategy="BlockLineHeight" />
                 </DataTemplate>
             </Setter.Value>
         </Setter>

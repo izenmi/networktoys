@@ -31,7 +31,7 @@ internal sealed class ConfirmDialog : Window
         {
             Text = message,
             TextWrapping = TextWrapping.Wrap,
-            MaxWidth = 420,
+            MaxWidth = 420 * UiScale.Current,
             Margin = new Thickness(0, 0, 0, 14),
         };
 

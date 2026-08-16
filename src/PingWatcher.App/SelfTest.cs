@@ -635,6 +635,91 @@ internal static class SelfTest
                    "MIT の本文が入っていない");
         });
 
+        Check("文字サイズを変えられる", () =>
+        {
+            // 画面側は寸法をすべて DynamicResource で引いているので、
+            // Application.Resources に入れれば全画面へ伝わる。
+            // ここでは「入れた値が実際に引ける」ところまでを見る
+            double body = (double)Application.Current.TryFindResource("Size.Body")!;
+            double row = (double)Application.Current.TryFindResource("Size.RowHeight")!;
+
+            try
+            {
+                UiScale.Apply(1.5);
+
+                double bigBody = (double)Application.Current.TryFindResource("Size.Body")!;
+                double bigRow = (double)Application.Current.TryFindResource("Size.RowHeight")!;
+
+                Assert(bigBody > body, $"文字が大きくならない: {body} → {bigBody}");
+                Assert(bigRow > row, $"行の高さが追随しない: {row} → {bigRow}");
+
+                // ツールチップの幅は本文の大きさから出す。
+                // 直書きのままだと「全角 68 字」の決まりが倍率で崩れる
+                double width = (double)Application.Current.TryFindResource("Size.TooltipWidth")!;
+
+                Assert(Math.Abs(width - (bigBody * 68 + 24)) < 0.5,
+                       $"ツールチップの幅が本文の大きさに追随しない: {width}");
+
+                UiScale.Apply(0.85);
+                Assert((double)Application.Current.TryFindResource("Size.Body")! < body,
+                       "小さくできない");
+            }
+            finally
+            {
+                // 後続の寸法検査（既定幅・見出しの余白・ⓘ の 68 字）を壊さないよう必ず戻す
+                UiScale.Apply(1.0);
+            }
+
+            Assert(Math.Abs((double)Application.Current.TryFindResource("Size.Body")! - body) < 0.001,
+                   "標準に戻したのに元の大きさへ戻らない");
+        });
+
+        Check("読めない文字サイズは標準に落ちる", () =>
+        {
+            // settings.json は手で書き換えられるし、版が変われば壊れた値も入りうる
+            foreach (double bad in new[] { 0, -1, 99, double.NaN })
+            {
+                UiScale.Apply(bad);
+
+                Assert(UiScale.Is(1.0), $"{bad} を渡したのに標準にならない（いま {UiScale.Current}）");
+            }
+        });
+
+        Check("文字サイズを変えると列幅も比例する", () =>
+        {
+            // 文字だけ大きくすると、幅がピクセルで決まっている列で文字が切れる
+            ViewModels.TableColumns tables = ViewModels.TableColumns.Instance;
+            ViewModels.ColumnLayout layout = ViewModels.ColumnLayout.Instance;
+
+            tables.Reset();
+            layout.Reset();
+
+            double conn = tables["conn.1"].Value;
+            double target = layout.Target.Value;
+
+            try
+            {
+                UiScale.Apply(1.5);
+                tables.Scale(1.5);
+                layout.Scale(1.5);
+
+                Assert(tables["conn.1"].Value > conn, $"表の列幅が追随しない: {conn}");
+                Assert(layout.Target.Value > target, $"Ping の列幅が追随しない: {target}");
+
+                // 戻したときに元の幅へ戻ること（丸めで少しずれるので幅を持たせる）
+                tables.Scale(1 / 1.5);
+                layout.Scale(1 / 1.5);
+
+                Assert(Math.Abs(tables["conn.1"].Value - conn) <= 1, "戻しても元の幅にならない");
+            }
+            finally
+            {
+                UiScale.Apply(1.0);
+                tables.Reset();
+                layout.Reset();
+            }
+        });
+
         Check("列幅を既定に戻せる", () =>
         {
             // ドラッグで崩したときの逃げ道。これが無いと settings.json を直接編集するしかない

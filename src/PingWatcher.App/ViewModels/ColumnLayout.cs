@@ -33,20 +33,48 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength Loss { get => _loss; set => SetProperty(ref _loss, value); }
     public GridLength Spark { get => _spark; set => SetProperty(ref _spark, value); }
 
+    /// <summary>既定幅。文字の大きさに合わせて伸ばすので、素の値はここ 1 か所に持つ。</summary>
+    private static readonly (double State, double Target, double Rtt, double Loss, double Spark)
+        Defaults = (84, 128, 60, 70, 92);
+
     /// <summary>
     /// 既定に戻す。ドラッグで崩したときの逃げ道
     /// （これが無いと settings.json を直接編集するしかない）。
+    /// <b>いまの文字の大きさに合わせた幅</b>に戻す — 素の値のままだと、
+    /// 文字を大きくしている人にとっては狭すぎる。
     /// </summary>
     public void Reset()
     {
-        State = new GridLength(84);
-        Target = new GridLength(128);
-        Rtt = new GridLength(60);
-        Loss = new GridLength(70);
-        Spark = new GridLength(92);
+        double scale = UiScale.Current;
+
+        State = Fit(Defaults.State * scale);
+        Target = Fit(Defaults.Target * scale);
+        Rtt = Fit(Defaults.Rtt * scale);
+        Loss = Fit(Defaults.Loss * scale);
+        Spark = Fit(Defaults.Spark * scale);
 
         Save();
     }
+
+    /// <summary>
+    /// 文字の大きさが変わったぶんだけ、いまの幅を伸ばす（縮める）。
+    /// <b>個別に広げた分の割合は保たれる</b>ので、調整をやり直さずに済む。
+    /// </summary>
+    public void Scale(double ratio)
+    {
+        if (ratio <= 0 || Math.Abs(ratio - 1) < 0.001) return;
+
+        State = Fit(State.Value * ratio);
+        Target = Fit(Target.Value * ratio);
+        Rtt = Fit(Rtt.Value * ratio);
+        Loss = Fit(Loss.Value * ratio);
+        Spark = Fit(Spark.Value * ratio);
+
+        Save();
+    }
+
+    /// <summary>ドラッグと同じ範囲に収める。</summary>
+    private static GridLength Fit(double width) => new(Math.Clamp(Math.Round(width), 36, 600));
 
     /// <summary>アプリを閉じるときに呼ぶ。書けなくても落とさない。</summary>
     public void Save()

@@ -118,18 +118,40 @@ public sealed class TableColumns : ObservableObject
     /// 既定に戻す。ドラッグで崩したときの逃げ道
     /// （これが無いと settings.json を直接編集するしかない）。
     /// 既定値は <see cref="Tables"/> の宣言が持っているので、そこから引き直す。
+    /// <b>いまの文字の大きさに合わせた幅</b>に戻す — 素の値のままだと、
+    /// 文字を大きくしている人にとっては狭すぎる。
     /// </summary>
     public void Reset()
     {
+        double scale = UiScale.Current;
+
         foreach (TableSpec spec in Tables)
         {
             foreach ((int column, double width) in spec.Columns)
-                _widths[$"{spec.Name}.{column}"] = width;
+                _widths[$"{spec.Name}.{column}"] = Fit(width * scale);
         }
 
         OnPropertyChanged("Item[]");
         Save();
     }
+
+    /// <summary>
+    /// 文字の大きさが変わったぶんだけ、いまの幅を伸ばす（縮める）。
+    /// <b>個別に広げた分の割合は保たれる</b>ので、調整をやり直さずに済む。
+    /// </summary>
+    public void Scale(double ratio)
+    {
+        if (ratio <= 0 || Math.Abs(ratio - 1) < 0.001) return;
+
+        foreach (string key in _widths.Keys.ToArray())
+            _widths[key] = Fit(_widths[key] * ratio);
+
+        OnPropertyChanged("Item[]");
+        Save();
+    }
+
+    /// <summary>ドラッグと同じ範囲に収める。</summary>
+    private static double Fit(double width) => Math.Clamp(Math.Round(width), 36, 900);
 
     /// <summary>アプリを閉じるときに呼ぶ。書けなくても落とさない。</summary>
     public void Save()

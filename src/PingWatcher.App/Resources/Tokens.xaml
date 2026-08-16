@@ -36,4 +36,17 @@
          行ピッチは 18 + 区切り線 1px = 19px -->
     <sys:Double x:Key="Size.RowHeight">18</sys:Double>
 
+    <!-- 中に入力欄を持つ行。素の文字だけの行より高さが要る。
+         Wide はコンボや小さなボタンが入る行、Input は PasswordBox が入る行 -->
+    <sys:Double x:Key="Size.RowHeight.Wide">22</sys:Double>
+    <sys:Double x:Key="Size.RowHeight.Input">26</sys:Double>
+
+    <!-- 説明文の行間。文字の 1.6 倍ほど空けないと、日本語の数行がひと塊に見える -->
+    <sys:Double x:Key="Size.LineHeight">19</sys:Double>
+
+    <!-- ツールチップの幅。全角 68 字 + 余白 = 12 * 68 + 24。
+         この 68 字は CLAUDE.md の決まりで、自己診断も同じ数で見ている。
+         文字サイズを変えたときは UiScale が本文の大きさから計算し直す -->
+    <sys:Double x:Key="Size.TooltipWidth">840</sys:Double>
+
 </ResourceDictionary>
