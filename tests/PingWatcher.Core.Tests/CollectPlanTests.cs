@@ -206,45 +206,61 @@ public class CommandListParserTests
 public class DeviceListParserTests
 {
     [Fact]
-    public void The_three_field_forms_are_all_accepted()
+    public void A_line_carries_the_host_method_user_and_memo()
     {
         DeviceListParseResult result = DeviceListParser.Parse("""
             ! 3F の島ハブ
-            192.168.10.1,admin
-            sw-3f.example.local,wataru,3階 EPS
-            10.0.0.1:2222,admin
+            192.168.10.1,ssh,admin
+            sw-3f.example.local,telnet,wataru,3階 EPS
             172.16.0.1
-            """, defaultPort: 22);
+            """, defaultUseSsh: true);
 
-        Assert.Equal(4, result.Devices.Count);
+        Assert.Equal(3, result.Devices.Count);
         Assert.Equal(1, result.CommentLines);
 
-        Assert.Equal(new DeviceEntry("192.168.10.1", 22, "admin", ""), result.Devices[0]);
-        Assert.Equal(new DeviceEntry("sw-3f.example.local", 22, "wataru", "3階 EPS"), result.Devices[1]);
-        Assert.Equal(new DeviceEntry("10.0.0.1", 2222, "admin", ""), result.Devices[2]);
-        Assert.Equal(new DeviceEntry("172.16.0.1", 22, "", ""), result.Devices[3]);
+        Assert.Equal(new DeviceEntry("192.168.10.1", true, "admin", ""), result.Devices[0]);
+        Assert.Equal(new DeviceEntry("sw-3f.example.local", false, "wataru", "3階 EPS"), result.Devices[1]);
+        Assert.Equal(new DeviceEntry("172.16.0.1", true, "", ""), result.Devices[2]);
+    }
+
+    [Fact]
+    public void The_port_comes_from_the_method_not_from_the_text()
+    {
+        DeviceListParseResult result = DeviceListParser.Parse("a,ssh,u\nb,telnet,u", defaultUseSsh: true);
+
+        Assert.Equal(22, result.Devices[0].Port);
+        Assert.Equal(23, result.Devices[1].Port);
+    }
+
+    [Fact]
+    public void Lines_written_before_the_method_existed_are_still_read()
+    {
+        // 2 番目が ssh/telnet でなければユーザー名として読む
+        DeviceListParseResult result = DeviceListParser.Parse("10.0.0.1,admin,コア", defaultUseSsh: false);
+
+        Assert.Equal(new DeviceEntry("10.0.0.1", false, "admin", "コア"), Assert.Single(result.Devices));
     }
 
     [Fact]
     public void Tab_separated_pastes_from_a_spreadsheet_work()
     {
-        DeviceListParseResult result = DeviceListParser.Parse("10.0.0.1\tadmin\tコア", defaultPort: 23);
+        DeviceListParseResult result = DeviceListParser.Parse("10.0.0.1\tssh\tadmin\tコア", defaultUseSsh: false);
 
-        Assert.Equal(new DeviceEntry("10.0.0.1", 23, "admin", "コア"), Assert.Single(result.Devices));
+        Assert.Equal(new DeviceEntry("10.0.0.1", true, "admin", "コア"), Assert.Single(result.Devices));
     }
 
     [Fact]
-    public void Ipv6_literals_are_not_split_on_their_colons()
+    public void Ipv6_literals_survive()
     {
-        DeviceListParseResult result = DeviceListParser.Parse("2001:db8::1,admin", defaultPort: 22);
+        DeviceListParseResult result = DeviceListParser.Parse("2001:db8::1,ssh,admin", defaultUseSsh: true);
 
         Assert.Equal("2001:db8::1", Assert.Single(result.Devices).Host);
     }
 
     [Fact]
-    public void A_broken_port_is_reported_with_its_line_number()
+    public void A_line_without_a_host_is_reported_with_its_line_number()
     {
-        DeviceListParseResult result = DeviceListParser.Parse("10.0.0.1:99999,admin", defaultPort: 22);
+        DeviceListParseResult result = DeviceListParser.Parse(",ssh,admin", defaultUseSsh: true);
 
         Assert.Empty(result.Devices);
         Assert.Contains("1 行目", Assert.Single(result.Errors));
@@ -255,20 +271,20 @@ public class DeviceListParserTests
     {
         DeviceEntry[] devices =
         [
-            new("10.0.0.1", 22, "admin", ""),
-            new("sw.example", 2222, "wataru", "3階"),
+            new("10.0.0.1", true, "admin", ""),
+            new("sw.example", false, "wataru", "3階"),
         ];
 
-        string text = DeviceListParser.Format(devices, defaultPort: 22);
+        string text = DeviceListParser.Format(devices);
 
-        Assert.Equal(devices, DeviceListParser.Parse(text, defaultPort: 22).Devices);
+        Assert.Equal(devices, DeviceListParser.Parse(text, defaultUseSsh: true).Devices);
     }
 
     [Fact]
     public void Duplicate_hosts_are_kept()
     {
         // 同じ機器を 2 回叩きたい使い方がある
-        DeviceListParseResult result = DeviceListParser.Parse("10.0.0.1,a\n10.0.0.1,b", defaultPort: 22);
+        DeviceListParseResult result = DeviceListParser.Parse("10.0.0.1,ssh,a\n10.0.0.1,ssh,b", defaultUseSsh: true);
 
         Assert.Equal(2, result.Devices.Count);
     }
