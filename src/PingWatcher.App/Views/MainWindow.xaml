@@ -4170,8 +4170,8 @@
             </TabItem>
 
             <!-- ===== 記録 ===== -->
-            <!-- ===== 確認（業務確認試験。プロキシを切り替えて同じ試験を回せる） ===== -->
-            <TabItem x:Name="VerifyTab" Header="確認" DataContext="{Binding Verify}">
+            <!-- ===== 試験（業務確認試験。プロキシを切り替えて同じ試験を回せる） ===== -->
+            <TabItem x:Name="VerifyTab" Header="試験" DataContext="{Binding Verify}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
@@ -4187,8 +4187,14 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
                             <Button Content="ひな型を入れる" Command="{Binding ApplyTemplateCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                     ToolTip="いまの項目を置き換えます。" />
+                            <Button Content="項目を読み込む" Command="{Binding LoadItemsCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                    ToolTip="保存しておいた試験項目のファイルを読み込みます（いまの項目は置き換わります）。" />
+                            <Button Content="項目を保存" Command="{Binding SaveItemsCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    ToolTip="いまの試験項目をファイルに保存します。現場ごとに使い分けたり、人に渡したりできます。" />
 
                             <Button Content="まとめて実行" Command="{Binding StartCommand}" Margin="0,0,6,2" />
                             <Button Content="中断" Command="{Binding CancelCommand}"

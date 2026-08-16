@@ -1098,7 +1098,7 @@ public partial class MainWindow : Window
             // 収集タブは機器の一覧とコマンドだけ覚える(パスワードは覚えない)
             _shell.Collect.Save();
 
-            // 確認タブは試験項目とプロキシの定義だけ覚える
+            // 試験タブは項目とプロキシの定義だけ覚える(次に開いたとき続きから)
             _shell.Verify.SaveSettings();
         }
         catch (Exception ex)

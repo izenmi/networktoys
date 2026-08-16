@@ -54,7 +54,7 @@ public sealed class ShellViewModel
         // Meraki もタブを開いただけでは何もしない（API キーを入れて押されて初めて通信する）
         Meraki = new MerakiViewModel();
 
-        // 業務確認試験。こちらもタブを開いただけでは外へ出ない
+        // 試験タブ。こちらもタブを開いただけでは外へ出ない
         Verify = new VerifyViewModel();
     }
 

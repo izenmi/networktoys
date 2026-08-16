@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text;
+using Microsoft.Win32;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
 using PingWatcher.Core.Verify;
@@ -119,6 +121,8 @@ public sealed class VerifyViewModel : ObservableObject
         StartCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && Rows.Count > 0);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         SaveCommand = new RelayCommand(Save, () => Results.Count > 0);
+        LoadItemsCommand = new RelayCommand(LoadItems, () => !IsBusy);
+        SaveItemsCommand = new RelayCommand(SaveItems, () => Rows.Count > 0);
 
         _proxyText = Settings.Current.VerifyProxies;
 
@@ -151,6 +155,12 @@ public sealed class VerifyViewModel : ObservableObject
     public RelayCommand CancelCommand { get; }
     public RelayCommand SaveCommand { get; }
 
+    /// <summary>試験項目をファイルから読み込む。現場ごとに使い分けるため。</summary>
+    public RelayCommand LoadItemsCommand { get; }
+
+    /// <summary>試験項目をファイルへ保存する。</summary>
+    public RelayCommand SaveItemsCommand { get; }
+
     public string Notice => ProxyNotice;
 
     /// <summary>
@@ -177,6 +187,7 @@ public sealed class VerifyViewModel : ObservableObject
             if (!SetProperty(ref _isBusy, value)) return;
 
             ApplyTemplateCommand.RaiseCanExecuteChanged();
+            LoadItemsCommand.RaiseCanExecuteChanged();
             StartCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
         }
@@ -186,6 +197,7 @@ public sealed class VerifyViewModel : ObservableObject
     {
         Rows.Add(new VerifyRowViewModel(item));
         StartCommand.RaiseCanExecuteChanged();
+        SaveItemsCommand.RaiseCanExecuteChanged();
     }
 
     private void RemoveRow(VerifyRowViewModel? row)
@@ -194,6 +206,7 @@ public sealed class VerifyViewModel : ObservableObject
 
         Rows.Remove(row);
         StartCommand.RaiseCanExecuteChanged();
+        SaveItemsCommand.RaiseCanExecuteChanged();
     }
 
     private void ApplyTemplate()
@@ -327,6 +340,72 @@ public sealed class VerifyViewModel : ObservableObject
     {
         if (Services.CsvExport.Save("verify", CheckReport.ToCsv([.. Results])) is { } message)
             Status = message;
+    }
+
+    /// <summary>
+    /// 試験項目をファイルから読み込む。
+    ///
+    /// 終了時に settings.json へも覚えているが、それは<b>「前回の続き」</b>のためのもの。
+    /// 現場ごと・案件ごとに項目一式を使い分けたり、人に渡したりするにはファイルが要る。
+    /// </summary>
+    private void LoadItems()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "試験項目を読み込む",
+            Filter = "試験項目 (*.txt;*.csv)|*.txt;*.csv|すべてのファイル (*.*)|*.*",
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            IReadOnlyList<CheckItem> items = CheckListParser.Parse(File.ReadAllText(dialog.FileName));
+
+            if (items.Count == 0)
+            {
+                Status = $"{Path.GetFileName(dialog.FileName)} から読める項目がありませんでした。";
+                return;
+            }
+
+            Rows.Clear();
+            foreach (CheckItem item in items)
+                AddRow(item);
+
+            Status = $"{Path.GetFileName(dialog.FileName)} から {items.Count} 件を読み込みました。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"読み込めませんでした: {ex.Message}";
+        }
+    }
+
+    private void SaveItems()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = "試験項目を保存する",
+            FileName = $"試験項目-{DateTime.Now:yyyyMMdd}.txt",
+            DefaultExt = "txt",
+            Filter = "試験項目 (*.txt)|*.txt|すべてのファイル (*.*)|*.*",
+            AddExtension = true,
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            // BOM 付き UTF-8。メモ帳でも Excel でも文字化けせずに開ける
+            File.WriteAllText(dialog.FileName,
+                              CheckListParser.Format(Rows.Select(r => r.ToItem())),
+                              new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました（{Rows.Count} 件）。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"保存できませんでした: {ex.Message}";
+        }
     }
 
     /// <summary>アプリを閉じるときに呼ぶ。項目とプロキシの定義だけ覚える。</summary>

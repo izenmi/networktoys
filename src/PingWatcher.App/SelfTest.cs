@@ -574,7 +574,7 @@ internal static class SelfTest
             log.AppendLine($"        行の型: {cases.Length} 通り");
         });
 
-        Check("確認: 試験項目の行テンプレートを実体化できる", () =>
+        Check("試験: 項目の行テンプレートを実体化できる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
 
@@ -598,7 +598,7 @@ internal static class SelfTest
             window.UpdateLayout();
         });
 
-        Check("確認: 偽の STUN サーバと UDP で往復できる", () =>
+        Check("試験: 偽の STUN サーバと UDP で往復できる", () =>
         {
             // Teams の音声が通るかは UDP の応答で決まる。実機も外部通信も要らずに、
             // loopback へ立てた偽サーバ相手に送受信の経路を丸ごと通す
