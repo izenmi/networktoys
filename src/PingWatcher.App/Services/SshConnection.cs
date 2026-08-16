@@ -39,7 +39,7 @@ internal sealed class SshConnection : IDisposable
             // 誰も見ていない収集の最中に止まってしまう。代わりに指紋を記録に残す
             _client.HostKeyReceived += (_, e) =>
             {
-                HostKeyFingerprint = "SHA256:" + Convert.ToBase64String(e.FingerPrintSHA256 ?? []).TrimEnd('=');
+                HostKeyFingerprint = e.FingerPrintSHA256 is { Length: > 0 } print ? "SHA256:" + print : null;
                 e.CanTrust = true;
             };
 
