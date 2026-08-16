@@ -257,15 +257,17 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 | WFP | Windows Filtering Platform が落とした通信の一覧(管理者権限) |
 | IP設定 | IPv4 設定の切替 + プロキシ設定 |
 | 業務確認 | 業務確認試験(プロキシを切り替えて回す。ひな型は自作できる) |
-| **調べる　6 ▾** | TCP Ping / Traceroute / スキャン / DNS / 通信状況 / サブネット計算 |
-| **NW機器　4 ▾** | ログ採取 / showコマンド整形 / SNMP Get / Meraki |
-| **受ける　5 ▾** | FTP / TFTP / SFTP / syslog / SNMP Trap |
+| **その他　15 ▾** | 調べる(TCP Ping / Traceroute / スキャン / DNS / 通信状況 / サブネット計算)<br>NW機器(ログ採取 / showコマンド整形 / Meraki / SNMP Get)<br>受ける(FTP / TFTP / SFTP / syslog / SNMP Trap) |
 
 太字はまとめたタブ。**単独のタブを左、まとめたタブを右**に並べる。まとめたタブは
 見出しに**中身の件数と `▾`** を出し(自己診断が実際の本数と突き合わせる)、
-**押すと縦並びのメニューが降りてくる**(`MainWindow.OnMainTabsMouseDown` が
-内側の TabControl から組み立てる)。切り替えの帯は横にも縦にも出さない —
-帯とメニューの二重の入り口になって迷わせるため。自己診断が帯の非表示を確かめる。
+**押すと分類ごとに並んだメニューが降りてくる**(`MainWindow.OnMainTabsMouseDown` が
+内側の TabControl から組み立てる。分類は各 `TabItem` の `Tag`)。
+
+**帯には「いま開いているもの」だけを出す。** 15 枚を素で並べると名前が読めない。
+`ItemContainerStyle` に「選ばれていなければ `Collapsed`」を当てる —
+`TabControl.Resources` に暗黙スタイルとして置くと、**Meraki の中のサブタブまで
+巻き添えで隠れる**ので必ず `ItemContainerStyle` 側に置くこと。
 
 記録の画面は持たない。書き出しはファイルメニューから(2026-08-16 にタブを畳んだ)。
 `RelayCommand` は `CommandManager` に乗っていないので、**メニューを開くたびに
