@@ -15,9 +15,16 @@ internal sealed class FakeCiscoDevice(string banner, Func<string, string?> respo
 {
     private readonly Queue<byte> _toClient = new(Encoding.UTF8.GetBytes(banner));
     private readonly StringBuilder _fromClient = new();
+    private readonly Lock _gate = new();
+
+    /// <summary>届いたことの合図。読み手は回しっぱなしなので、起こしてやる必要がある。</summary>
+    private readonly SemaphoreSlim _data = new(banner.Length > 0 ? 1 : 0);
 
     /// <summary>クライアントが送ったものの全記録（何を送ったかの検証用）。</summary>
-    public string Sent => _fromClient.ToString();
+    public string Sent
+    {
+        get { lock (_gate) return _fromClient.ToString(); }
+    }
 
     public override bool CanRead => true;
     public override bool CanWrite => true;
@@ -27,36 +34,42 @@ internal sealed class FakeCiscoDevice(string banner, Func<string, string?> respo
 
     private void Push(string text)
     {
-        foreach (byte b in Encoding.UTF8.GetBytes(text))
-            _toClient.Enqueue(b);
+        lock (_gate)
+        {
+            foreach (byte b in Encoding.UTF8.GetBytes(text))
+                _toClient.Enqueue(b);
+        }
+
+        _data.Release();
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default)
     {
-        if (_toClient.Count == 0)
+        while (true)
         {
-            // 無言。呼び出し側の静穏タイムアウトに任せる（実機の沈黙と同じ）
-            try
+            lock (_gate)
             {
-                await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);
+                if (_toClient.Count > 0)
+                {
+                    int count = Math.Min(buffer.Length, _toClient.Count);
+                    for (int i = 0; i < count; i++)
+                        buffer.Span[i] = _toClient.Dequeue();
+
+                    return count;
+                }
             }
-            catch (OperationCanceledException)
-            {
-                return 0;
-            }
+
+            // 無言。届くまで待つ（実機の沈黙と同じ。呼び出し側が別に時間を測る）
+            await _data.WaitAsync(token).ConfigureAwait(false);
         }
-
-        int count = Math.Min(buffer.Length, _toClient.Count);
-        for (int i = 0; i < count; i++)
-            buffer.Span[i] = _toClient.Dequeue();
-
-        return count;
     }
 
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken token = default)
     {
         string text = Encoding.UTF8.GetString(buffer.Span);
-        _fromClient.Append(text);
+
+        lock (_gate)
+            _fromClient.Append(text);
 
         int newline;
         string pending = text;
