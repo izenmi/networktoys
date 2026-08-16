@@ -115,6 +115,31 @@ public class CheckPlanTests
         }
     }
 
+    // ===== PAC の解決結果 =====
+
+    [Theory]
+    // WinHTTP が均した形
+    [InlineData("10.0.0.10:8080", "http://10.0.0.10:8080")]
+    [InlineData("a.example.jp:8080 b.example.jp:8080", "http://a.example.jp:8080")]
+    [InlineData("a.example.jp:8080;b.example.jp:8080", "http://a.example.jp:8080")]
+    // PAC の書式がそのまま来た場合
+    [InlineData("PROXY a.example.jp:8080", "http://a.example.jp:8080")]
+    [InlineData("PROXY a.example.jp:8080; DIRECT", "http://a.example.jp:8080")]
+    // 直接出るべき場合
+    [InlineData("DIRECT", "")]
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void The_first_proxy_from_the_pac_result_is_used(string? list, string expected)
+        => Assert.Equal(expected, PacProxy.FirstProxy(list));
+
+    [Fact]
+    public void Going_direct_is_said_out_loud()
+    {
+        // 空欄だと「解決できなかった」のか「直接でよい」のか分からない
+        Assert.Contains("直接", PacProxy.Describe(""), StringComparison.Ordinal);
+        Assert.Equal("http://a:8080", PacProxy.Describe("http://a:8080"));
+    }
+
     // ===== プロキシ =====
 
     [Fact]
