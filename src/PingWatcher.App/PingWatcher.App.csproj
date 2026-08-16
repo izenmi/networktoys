@@ -86,11 +86,16 @@
          Windows 同梱の ssh.exe を駆るのも不可 — OpenSSH はパスワードを stdin から
          読まない作りで、ホスト鍵の初回確認と旧方式の指定も要る。
          純マネージドで runtimes/ にネイティブ資産を持たないので単一ファイル発行でも安全。
-         依存は BouncyCastle.Cryptography 1 つだけ。
+         net10.0 を直接ターゲットしている(netstandard 経由の互換パッケージが付かない)。
          Cisco では RunCommand(exec チャネル)が使えず ShellStream が要る:
          ①多くの IOS が exec を実装していない ②terminal length 0 の効果が残らない
-         ③対話がないので enable に入れず show running-config が全滅する。 -->
-    <PackageReference Include="SSH.NET" Version="2024.2.0" />
+         ③対話がないので enable に入れず show running-config が全滅する。
+
+         版は 2026.0.0 未満を選ばないこと。2025.1.0 以前は ScpClient の
+         再帰ダウンロードに任意ファイル書き込みの脆弱性があり(GHSA-q939-rpr3-3284)、
+         NU1903 で restore が止まる。こちらは ScpClient を使っていないが、
+         警告をエラーにする方針なのでどのみち通らない。 -->
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
 
     <!-- ipconfig の出力(CP932)の読み取りに使う System.Text.Encoding.CodePages は
          .NET 10 ではフレームワークに同梱されており、明示参照すると NU1510 になる -->
