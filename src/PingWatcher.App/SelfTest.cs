@@ -355,8 +355,11 @@ internal static class SelfTest
             window.ReportTab.IsSelected = true;
             window.UpdateLayout();
 
+            // Meraki は入れ子の中。親を開いていないのに「見えている」と誤判定すると、
+            // タブを開いただけで本番の API を叩き始める
             System.Windows.Controls.TabItem[] mustBeHidden =
-                [window.WifiTab, window.WfpTab, window.ConnectionsTab, window.TraceTab, window.IpConfigTab];
+                [window.WifiTab, window.WfpTab, window.ConnectionsTab, window.TraceTab,
+                 window.IpConfigTab, window.MerakiTab];
 
             foreach (System.Windows.Controls.TabItem tab in mustBeHidden)
             {
@@ -376,7 +379,9 @@ internal static class SelfTest
 
             // サブタブの中身も選ばないと実体化しない(親タブを開くだけでは 1 枚目しか作られない)
             object? original = window!.MainTabs.SelectedItem;
-            window.MerakiTab.IsSelected = true;
+
+            // Meraki は「調べる」の中にある。先祖ごと開かないと中身が作られない
+            Views.MainWindow.Show(window.MerakiTab);
 
             foreach (object? item in window.MerakiSubTabs.Items)
             {
@@ -612,6 +617,45 @@ internal static class SelfTest
             Assert(shell.Verify.Results.Count == 0, "実行していないのに結果が入っている");
 
             shell.Verify.Reset();
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
+        Check("タブ: まとめたタブの見出しの件数が中身と合っている", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 見出しの「8 ▾」は XAML に直書きなので、中身を増減すると黙ってずれる。
+            // 数字が嘘をつくくらいなら書かない方がましなので、ここで突き合わせる。
+            // 中身は選ばないと実体化しないため、1 枚ずつ開いて数える
+            object? original = window!.MainTabs.SelectedItem;
+            int grouped = 0;
+
+            foreach (object? item in window.MainTabs.Items)
+            {
+                if (item is not System.Windows.Controls.TabItem tab) continue;
+
+                string header = tab.Header?.ToString() ?? "";
+                if (!header.Contains('▾', StringComparison.Ordinal)) continue;
+
+                tab.IsSelected = true;
+                window.UpdateLayout();
+
+                System.Windows.Controls.TabControl[] inner = [.. FindInnerTabs(tab)];
+
+                Assert(inner.Length > 0, $"「{header}」は ▾ が付いているのに中身が無い");
+
+                int actual = inner[0].Items.Count;
+                string want = actual.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                Assert(header.Contains(want + " ▾", StringComparison.Ordinal),
+                       $"「{header}」の見出しの件数が中身({actual} 本)と合っていない");
+
+                grouped++;
+            }
+
+            Assert(grouped == 3, $"まとめたタブが 3 枚のはずが {grouped} 枚になっている");
+
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
         });
