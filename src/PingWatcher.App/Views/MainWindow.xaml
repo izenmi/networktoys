@@ -1106,325 +1106,6 @@
                 </Border>
             </TabItem>
 
-            <!-- ===== 機器（Cisco 機器から集める・集めたものを読む） ===== -->
-            <TabItem x:Name="DeviceTab" Header="機器">
-                <DockPanel>
-                    <!-- 中の切り替えであることを見出しで明示する -->
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,2,0,6">
-                        <TextBlock Text="道具" Style="{StaticResource Caption}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0" />
-                    </StackPanel>
-
-                    <TabControl ItemContainerStyle="{StaticResource SubTabItem}" BorderThickness="0" Padding="0">
-
-            <!-- ===== 収集（Cisco 機器へ入って show の出力を集める） ===== -->
-            <TabItem x:Name="CollectTab" Header="収集" DataContext="{Binding Collect}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <Button Content="宛先リストから選ぶ" Command="{Binding ImportFromTargetsCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
-                                    ToolTip="Ping と TCP のタブに登録してある宛先から、取り込む相手を選びます。" />
-
-                            <!-- 機種。コマンド欄の上に置いていたが窓が狭いと目に入らないので、
-                                 他の設定と同じこの行へ出す -->
-                            <TextBlock Text="機種" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="120" Margin="0,0,16,2"
-                                      ItemsSource="{Binding Presets}"
-                                      SelectedItem="{Binding SelectedPreset}"
-                                      ToolTip="選ぶとコマンド欄をその機種のおすすめで置き換えます。既定は IOS / IOS-XE です。">
-                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <TextBlock Text="接続の待ち" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,4,2" />
-                            <TextBox Width="40" Text="{Binding ConnectSeconds}" Margin="0,0,2,2"
-                                     ToolTip="機器につながるまで待つ時間です。この時間を過ぎたら、その機器は諦めて次へ進みます。" />
-                            <TextBlock Text="秒" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,12,2" />
-
-                            <TextBlock Text="応答の待ち" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,4,2" />
-                            <TextBox Width="40" Text="{Binding IdleSeconds}" Margin="0,0,2,2"
-                                     ToolTip="コマンドを送った後、出力が途切れてから諦めるまでの時間です。長い show でも出力が続いている間は待ち続けます。" />
-                            <TextBlock Text="秒" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,16,2" />
-
-                            <Button Content="収集を開始" Command="{Binding StartCommand}" Margin="0,0,6,2" />
-                            <Button Content="中断" Command="{Binding CancelCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
-                            <Button Content="保存先を開く" Command="{Binding OpenFolderCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
-                        </WrapPanel>
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Notice}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,4"
-                                   Foreground="{DynamicResource Brush.Warn.Fg}"
-                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <DockPanel>
-                            <!-- 上: 機器（1 台 1 行の表。書式を人に覚えてもらわない） -->
-                            <Border DockPanel.Dock="Top" MaxHeight="300"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                <DockPanel>
-                                    <!-- 見出し。どの欄に何を入れるかはここで示す -->
-                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.2]}" />
-                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.3]}" />
-                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.4]}" />
-                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.5]}" />
-                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.6]}" />
-                                        </Grid.ColumnDefinitions>
-                                        <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                        <Border BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                        <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                        <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                        <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                        <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                        <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                        <TextBlock Grid.Column="0" Text="削除" Style="{StaticResource Caption}" />
-                                        <TextBlock Grid.Column="1" Text="機器のアドレス" Style="{StaticResource Caption}" />
-                                        <TextBlock Grid.Column="2" Text="接続方法" Style="{StaticResource Caption}" />
-                                        <TextBlock Grid.Column="3" Text="ユーザー名" Style="{StaticResource Caption}" />
-                                        <TextBlock Grid.Column="4" Text="パスワード" Style="{StaticResource Caption}" />
-                                        <TextBlock Grid.Column="5" Text="enable" Style="{StaticResource Caption}"
-                                                   ToolTip="特権モードに入るためのパスワード。要らない機器は空のままで構いません。" />
-                                        <TextBlock Grid.Column="6" Text="状態" Style="{StaticResource Caption}" />
-
-                                        <!-- 列幅のつまみ。星列(1)より左は右端、右は左端の境界に置く -->
-                                        <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="collect.0" DragDelta="OnTableColumnResize" />
-                                        <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.2" DragDelta="OnTableColumnResize" />
-                                        <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.3" DragDelta="OnTableColumnResize" />
-                                        <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.4" DragDelta="OnTableColumnResize" />
-                                        <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.5" DragDelta="OnTableColumnResize" />
-                                        <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.6" DragDelta="OnTableColumnResize" />
-                                    </Grid>
-                                    <Border DockPanel.Dock="Top" Height="1"
-                                            Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-
-                                    <!--
-                                        この一覧だけ仮想化を切る。行コンテナを使い回すと、
-                                        PasswordBox はバインドを持たないので DataContext が変わっても
-                                        中身が入れ替わらず、スクロールしただけで別の機器の欄に
-                                        前の機器のパスワードが載る(そのまま送信されうる)。
-                                        機器は多くても数十台なので実害は無い。
-                                    -->
-                                    <!--
-                                        「行を追加」を先に下端へ留めてから、一覧に残りを埋めさせる。
-                                        逆にして一覧を先に置くと、行が増えたときに一覧が高さを
-                                        取り切ってボタンのぶんが残らず、押せなくなる(実際に起きた)。
-                                        枠は中身なりの高さになるので、行が少ないときは
-                                        ボタンが最後の行のすぐ下に来る。
-                                    -->
-                                    <Button x:Name="CollectAddRow" DockPanel.Dock="Bottom" Content="＋ 行を追加"
-                                            Command="{Binding AddDeviceCommand}"
-                                            Style="{StaticResource Button.Subtle}"
-                                            HorizontalAlignment="Left"
-                                            Margin="4,4,0,0" />
-
-                                    <ListBox ItemsSource="{Binding Rows}"
-                                             Background="Transparent" BorderThickness="0"
-                                             HorizontalContentAlignment="Stretch"
-                                             ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                             VirtualizingPanel.IsVirtualizing="False"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Height="26">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.2]}" />
-                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.3]}" />
-                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.4]}" />
-                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.5]}" />
-                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.6]}" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                    <Border BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                    <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                    <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                    <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-
-                                                    <!-- 行そのものを引数で渡す(どの行の × かを VM に伝える) -->
-                                                    <Button Grid.Column="0" Content="✕"
-                                                            Style="{StaticResource Button.Subtle}"
-                                                            Command="{Binding DataContext.RemoveDeviceCommand,
-                                                                      RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                            CommandParameter="{Binding}"
-                                                            Width="16" Height="16"
-                                                            Padding="0" MinWidth="0" MinHeight="0"
-                                                            FontSize="{DynamicResource Size.Micro}"
-                                                            HorizontalAlignment="Left"
-                                                            VerticalAlignment="Center" Margin="2,0,0,0"
-                                                            ToolTip="この行を消します。" />
-
-                                                    <TextBox Grid.Column="1" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                                             FontFamily="{DynamicResource Font.Mono}"
-                                                             FontSize="{DynamicResource Size.Caption}"
-                                                             Margin="0,0,4,0" VerticalAlignment="Center"
-                                                             ToolTip="機器の IP かホスト名。" />
-
-                                                    <ComboBox Grid.Column="2"
-                                                              ItemsSource="{Binding Methods}"
-                                                              SelectedItem="{Binding Method}"
-                                                              FontSize="{DynamicResource Size.Caption}"
-                                                              VerticalAlignment="Center" Margin="0,0,4,0"
-                                                              ToolTip="つなぎ方。ポートは方式に応じて 22 / 23 を使います。">
-                                                        <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
-                                                        <ComboBox.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <TextBlock Text="{Binding}" />
-                                                            </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-
-                                                    <TextBox Grid.Column="3" Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
-                                                             FontSize="{DynamicResource Size.Caption}"
-                                                             Margin="0,0,4,0" VerticalAlignment="Center"
-                                                             ToolTip="ログインするユーザー名。次回も覚えています。" />
-
-                                                    <PasswordBox Grid.Column="4" Tag="login"
-                                                                 PasswordChanged="OnCollectPasswordChanged"
-                                                                 Margin="0,0,4,0" VerticalAlignment="Center"
-                                                                 ToolTip="ログインのパスワード。保存しません（毎回入力）。" />
-
-                                                    <PasswordBox Grid.Column="5" Tag="enable"
-                                                                 PasswordChanged="OnCollectPasswordChanged"
-                                                                 Margin="0,0,4,0" VerticalAlignment="Center"
-                                                                 ToolTip="enable のパスワード。要らない機器は空のままで構いません。" />
-
-                                                    <TextBlock Grid.Column="6" Text="{Binding Status}"
-                                                               FontSize="{DynamicResource Size.Caption}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               ToolTip="{Binding Status}" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </DockPanel>
-                            </Border>
-
-                            <!-- 下: コマンド。窓が狭いと横並びでは入りきらないので縦に積む -->
-                            <DockPanel Margin="0,6,0,0">
-                                <TextBlock DockPanel.Dock="Top" Margin="0,0,0,3"
-                                           Text="{Binding CommandSummary}" Style="{StaticResource Caption}" />
-
-                                <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding BlockedCommands}"
-                                              Margin="0,4,0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding}" Style="{StaticResource Caption}"
-                                                       Foreground="{DynamicResource Brush.Warn.Fg}"
-                                                       TextWrapping="Wrap" />
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-
-                                <TextBox Text="{Binding CommandText, UpdateSourceTrigger=LostFocus}"
-                                         FontFamily="{DynamicResource Font.Mono}"
-                                         FontSize="{DynamicResource Size.Caption}"
-                                         AcceptsReturn="True" TextWrapping="NoWrap"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         VerticalContentAlignment="Top"
-                                         ToolTip="1 行 1 コマンド。打つ順に並べます。" />
-                            </DockPanel>
-                        </DockPanel>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
-            <!-- ===== パース(Cisco コマンド出力 → CSV) ===== -->
-            <TabItem Header="パース" DataContext="{Binding Converter}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <TextBlock Text="種別" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <ComboBox Width="180"
-                                      ItemsSource="{Binding Modes}"
-                                      SelectedItem="{Binding SelectedMode}"
-                                      Margin="0,0,12,0"
-                                      ToolTip="貼り付けたコマンドの種類。自動判定で決まらないときはここで選びます。">
-                                <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}" Margin="0,0,6,0" />
-                            <Button Content="コピー" Command="{Binding CopyCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0"
-                                    ToolTip="CSV テキストをクリップボードへコピーします。" />
-                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-
-                            <!-- 貼り付け欄。Cisco の出力は長いので折り返さず横スクロール -->
-                            <TextBox Grid.Row="0"
-                                     Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     FontSize="{DynamicResource Size.Caption}"
-                                     AcceptsReturn="True" AcceptsTab="False"
-                                     TextWrapping="NoWrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Auto"
-                                     VerticalContentAlignment="Top"
-                                     ToolTip="show ip route / show interfaces status などの出力をそのまま貼り付けます。" />
-
-                            <TextBlock Grid.Row="1" Text="CSV プレビュー" Style="{StaticResource Caption}" Margin="0,6,0,3" />
-
-                            <TextBox Grid.Row="2"
-                                     Text="{Binding Preview, Mode=OneWay}"
-                                     IsReadOnly="True"
-                                     FontFamily="{DynamicResource Font.Mono}"
-                                     FontSize="{DynamicResource Size.Caption}"
-                                     AcceptsReturn="True"
-                                     TextWrapping="NoWrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Auto"
-                                     VerticalContentAlignment="Top" />
-                        </Grid>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
-                    </TabControl>
-                </DockPanel>
-            </TabItem>
-
             <!-- ===== 差分比較（show ip route / show run を作業前後で見比べる） ===== -->
             <TabItem Header="差分" DataContext="{Binding DeviceCompare}">
                 <Border Style="{StaticResource Card}">
@@ -1738,6 +1419,360 @@
                                 </ListBox>
                             </DockPanel>
                         </Grid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ===== 遮断（WFP が落とした通信。読み取りにも管理者権限が要る） ===== -->
+            <TabItem x:Name="WfpTab" Header="遮断" DataContext="{Binding Wfp}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <CheckBox Content="一時停止" IsChecked="{Binding IsPaused}"
+                                      VerticalAlignment="Center" Margin="0,0,12,0"
+                                      ToolTip="更新を止めて、じっくり読んだり選択したりできます。" />
+                            <TextBlock Text="絞り込み" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="200" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0"
+                                     ToolTip="プロセス名・パス・アドレス・プロトコルの部分一致で絞り込みます。" />
+                            <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,6,0" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <!-- 案内は 2 段構え: 文言の有無で畳み、ボタンはそれぞれの条件で出す -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"
+                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                            <Button DockPanel.Dock="Right" Content="管理者として再起動" Click="OnRelaunchAsAdmin"
+                                    Style="{StaticResource Button.Subtle}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding CanRelaunchAsAdmin, Converter={StaticResource BoolToVisibility}}"
+                                    ToolTip="いったん終了して、管理者権限で起動し直します。測定中の結果は失われます。" />
+                            <Button DockPanel.Dock="Right" Content="記録を有効にする" Click="OnEnableWfpCollection"
+                                    Style="{StaticResource Button.Subtle}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding CanEnableCollection, Converter={StaticResource BoolToVisibility}}"
+                                    ToolTip="Windows にネットワークイベントの記録を始めさせます。アプリを閉じると元に戻します。" />
+                            <TextBlock Text="{Binding Notice}"
+                                       Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource Brush.Warn.Fg}" VerticalAlignment="Center" />
+                        </DockPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.1]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.2]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.3]}" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.5]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.6]}" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag=""
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding TimeHeader}" Style="{StaticResource Caption}" />
+                                    </Border>
+                                    <Border Grid.Column="1" Background="Transparent" Cursor="Hand" Tag="Direction"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding DirectionHeader}" Style="{StaticResource Caption}" />
+                                    </Border>
+                                    <Border Grid.Column="2" Background="Transparent" Cursor="Hand" Tag="Protocol"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding ProtocolHeader}" Style="{StaticResource Caption}" />
+                                    </Border>
+                                    <Border Grid.Column="3" Background="Transparent" Cursor="Hand" Tag="Local"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding LocalHeader}" Style="{StaticResource Caption}" />
+                                    </Border>
+                                    <Border Grid.Column="4" Background="Transparent" Cursor="Hand" Tag="Remote"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding RemoteHeader}" Style="{StaticResource Caption}" />
+                                    </Border>
+                                    <Border Grid.Column="5" Background="Transparent" Cursor="Hand" Tag="Process"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding ProcessHeader}" Style="{StaticResource Caption}" />
+                                    </Border>
+                                    <Border Grid.Column="6" Background="Transparent" Cursor="Hand" Tag="Count"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding CountHeader}" Style="{StaticResource Caption}" />
+                                    </Border>
+
+                                    <!-- 列幅のつまみ。星列(3・4)より左は右端、右は左端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="wfp.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="wfp.1" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="wfp.2" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="wfp.3" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                           Tag="wfp.5" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                           Tag="wfp.6" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1"
+                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                <ListBox ItemsSource="{Binding Rows}"
+                                         Background="Transparent" BorderThickness="0"
+                                         HorizontalContentAlignment="Stretch"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <!-- 行の詰め方は接続タブと同じ。既定の ListBoxItem は
+                                         余白を持つので、指定しないと 1 行ぶん背が高くなる -->
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <!-- 説明はプロセス欄に付ける。行全体に付けるとパスが空のとき空の枠が出る -->
+                                            <Grid Height="{DynamicResource Size.RowHeight}"
+                                                  ContextMenu="{StaticResource RowMenu.Address}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.3]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.6]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding TimeText}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock x:Name="DirectionText" Grid.Column="1" Text="{Binding DirectionText}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Protocol}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Local}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="4" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="5" Text="{Binding ProcessName}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding ProcessNote}" />
+                                                <TextBlock Grid.Column="6" Text="{Binding CountText}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           HorizontalAlignment="Right" />
+                                            </Grid>
+
+                                            <!--
+                                                送信と受信で色を変える。既存のパレットから選んでいるので
+                                                新しい色は足していない(明暗どちらの配色でもコントラストは検算済み)。
+                                                色だけに頼らないよう、文字は「→ 送信」「← 受信」のまま残す。
+                                                向きが読めなかった行は色を付けない(生の値を出したまま)。
+                                            -->
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsOutbound}" Value="True">
+                                                    <Setter TargetName="DirectionText" Property="Foreground"
+                                                            Value="{DynamicResource Brush.Info.Fg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsInbound}" Value="True">
+                                                    <Setter TargetName="DirectionText" Property="Foreground"
+                                                            Value="{DynamicResource Brush.Warn.Fg}" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ===== IP設定（この PC の IPv4 設定を切り替える。適用時だけ UAC 昇格） ===== -->
+            <TabItem x:Name="IpConfigTab" Header="IP設定" DataContext="{Binding IpConfig}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                            <TextBlock Text="アダプタ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <ComboBox Width="300"
+                                      ItemsSource="{Binding Adapters}"
+                                      SelectedItem="{Binding SelectedAdapter}"
+                                      Margin="0,0,6,2"
+                                      ToolTip="設定するアダプタ。抜けている(未接続の)アダプタも選べます。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock TextTrimming="CharacterEllipsis">
+                                            <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Summary, Mode=OneWay}" Foreground="{DynamicResource Brush.TextMuted}" />
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Content="再読み込み" Command="{Binding RefreshCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource Brush.TextMuted}"
+                                   Text="{Binding SelectedAdapter.Description}" />
+
+                        <CheckBox DockPanel.Dock="Top" Content="DHCP で自動取得する" IsChecked="{Binding UseDhcp}"
+                                  Margin="0,0,0,6"
+                                  ToolTip="チェックを外すと下の固定 IP 設定を使います。" />
+
+                        <!-- グレーアウトは分かりづらい(ユーザー指摘)ので、DHCP のときは丸ごと畳む -->
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4"
+                              Visibility="{Binding UseStatic, Converter={StaticResource BoolToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="IP アドレス" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="マスク" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Mask, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                     ToolTip="255.255.255.0 でも 24 でも /24 でも書けます。" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="ゲートウェイ" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Gateway, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                     ToolTip="空欄ならゲートウェイなしで設定します。" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="優先 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Dns1, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="代替 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Dns2, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                     ToolTip="DNS を両方空欄にすると、DNS の設定はクリアされます。" />
+                        </Grid>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding ValidationText}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource Brush.Warn.Fg}" />
+
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock Text="プリセット" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <ComboBox Width="160"
+                                      ItemsSource="{Binding Presets}"
+                                      SelectedItem="{Binding SelectedPreset}"
+                                      Margin="0,0,8,2"
+                                      ToolTip="選ぶと内容が入力欄に入ります(適用はされません)。">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="名前" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <TextBox Width="120" Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,6,2" ToolTip="現場名など(例: 現場A)。同じ名前は上書きされます。" />
+                            <Button Content="保存" Command="{Binding SavePresetCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,5,2"
+                                    ToolTip="いまの入力内容をこの名前で保存します。" />
+                            <Button Content="削除" Command="{Binding DeletePresetCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="適用" Click="OnApplyIpConfig" IsEnabled="{Binding CanApply}"
+                                    Margin="0,0,12,0"
+                                    ToolTip="確認の後、UAC の昇格を経て netsh で設定します。" />
+                            <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Brush.TextMuted}"
+                                   Text="適用には管理者権限が必要です(UAC の確認が 1 回出ます)。アプリ自体は非管理者のまま動きます。この PC の通信が一時的に切れることがあります。" />
+
+                        <!-- ===== プロキシ(WinINET のユーザー設定。管理者権限は不要) ===== -->
+                        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,8,0,8" />
+
+                        <StackPanel DockPanel.Dock="Top" DataContext="{Binding Proxy}">
+                            <WrapPanel Margin="0,0,0,4">
+                                <TextBlock Text="プロキシ" VerticalAlignment="Center" Margin="0,0,8,2" />
+                                <ComboBox Width="190"
+                                          ItemsSource="{Binding Modes}"
+                                          SelectedItem="{Binding SelectedMode}"
+                                          Margin="0,0,8,2">
+                                    <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Text="{Binding CurrentSummary}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                           ToolTip="{Binding CurrentSummary}" Margin="0,0,0,2" />
+                            </WrapPanel>
+
+                            <!-- 選んだ方式の行だけ出す(グレーアウトは分かりづらい、というユーザー指摘) -->
+                            <WrapPanel Margin="0,0,0,4"
+                                       Visibility="{Binding IsPac, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="PAC の URL" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                <TextBox Width="320" Text="{Binding PacUrl, UpdateSourceTrigger=PropertyChanged}"
+                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
+                                         ToolTip="例: http://proxy.example.co.jp/proxy.pac" />
+                            </WrapPanel>
+
+                            <WrapPanel Margin="0,0,0,4"
+                                       Visibility="{Binding IsFixed, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="サーバ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                <TextBox Width="200" Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}"
+                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,2"
+                                         ToolTip="例: proxy.example.co.jp:8080(プロトコル別は http=…;https=… の書式)" />
+                                <TextBlock Text="除外" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                <TextBox Width="220" Text="{Binding Bypass, UpdateSourceTrigger=PropertyChanged}"
+                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
+                                         ToolTip="プロキシを通さない宛先。; 区切り。&lt;local&gt; はローカルアドレスの意味。" />
+                            </WrapPanel>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="プロキシを適用" Command="{Binding ApplyCommand}" Margin="0,0,12,0"
+                                        ToolTip="Windows のプロキシ設定(現在のユーザー)に反映します。管理者権限は不要です。" />
+                                <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border />
                     </DockPanel>
                 </Border>
             </TabItem>
@@ -2700,6 +2735,325 @@
                 </DockPanel>
             </TabItem>
 
+            <!-- ===== 機器（Cisco 機器から集める・集めたものを読む） ===== -->
+            <TabItem x:Name="DeviceTab" Header="機器">
+                <DockPanel>
+                    <!-- 中の切り替えであることを見出しで明示する -->
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,2,0,6">
+                        <TextBlock Text="道具" Style="{StaticResource Caption}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                    </StackPanel>
+
+                    <TabControl ItemContainerStyle="{StaticResource SubTabItem}" BorderThickness="0" Padding="0">
+
+            <!-- ===== 収集（Cisco 機器へ入って show の出力を集める） ===== -->
+            <TabItem x:Name="CollectTab" Header="収集" DataContext="{Binding Collect}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Button Content="宛先リストから選ぶ" Command="{Binding ImportFromTargetsCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    ToolTip="Ping と TCP のタブに登録してある宛先から、取り込む相手を選びます。" />
+
+                            <!-- 機種。コマンド欄の上に置いていたが窓が狭いと目に入らないので、
+                                 他の設定と同じこの行へ出す -->
+                            <TextBlock Text="機種" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <ComboBox Width="120" Margin="0,0,16,2"
+                                      ItemsSource="{Binding Presets}"
+                                      SelectedItem="{Binding SelectedPreset}"
+                                      ToolTip="選ぶとコマンド欄をその機種のおすすめで置き換えます。既定は IOS / IOS-XE です。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock Text="接続の待ち" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,4,2" />
+                            <TextBox Width="40" Text="{Binding ConnectSeconds}" Margin="0,0,2,2"
+                                     ToolTip="機器につながるまで待つ時間です。この時間を過ぎたら、その機器は諦めて次へ進みます。" />
+                            <TextBlock Text="秒" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,12,2" />
+
+                            <TextBlock Text="応答の待ち" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,4,2" />
+                            <TextBox Width="40" Text="{Binding IdleSeconds}" Margin="0,0,2,2"
+                                     ToolTip="コマンドを送った後、出力が途切れてから諦めるまでの時間です。長い show でも出力が続いている間は待ち続けます。" />
+                            <TextBlock Text="秒" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,16,2" />
+
+                            <Button Content="収集を開始" Command="{Binding StartCommand}" Margin="0,0,6,2" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                            <Button Content="保存先を開く" Command="{Binding OpenFolderCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Notice}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource Brush.Warn.Fg}"
+                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <DockPanel>
+                            <!-- 上: 機器（1 台 1 行の表。書式を人に覚えてもらわない） -->
+                            <Border DockPanel.Dock="Top" MaxHeight="300"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                <DockPanel>
+                                    <!-- 見出し。どの欄に何を入れるかはここで示す -->
+                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.2]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.3]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.4]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.5]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.6]}" />
+                                        </Grid.ColumnDefinitions>
+                                        <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                        <Border BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <TextBlock Grid.Column="0" Text="削除" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="1" Text="機器のアドレス" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="2" Text="接続方法" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="3" Text="ユーザー名" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="4" Text="パスワード" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="5" Text="enable" Style="{StaticResource Caption}"
+                                                   ToolTip="特権モードに入るためのパスワード。要らない機器は空のままで構いません。" />
+                                        <TextBlock Grid.Column="6" Text="状態" Style="{StaticResource Caption}" />
+
+                                        <!-- 列幅のつまみ。星列(1)より左は右端、右は左端の境界に置く -->
+                                        <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                               Tag="collect.0" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.2" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.3" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.4" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.5" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="collect.6" DragDelta="OnTableColumnResize" />
+                                    </Grid>
+                                    <Border DockPanel.Dock="Top" Height="1"
+                                            Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                    <!--
+                                        この一覧だけ仮想化を切る。行コンテナを使い回すと、
+                                        PasswordBox はバインドを持たないので DataContext が変わっても
+                                        中身が入れ替わらず、スクロールしただけで別の機器の欄に
+                                        前の機器のパスワードが載る(そのまま送信されうる)。
+                                        機器は多くても数十台なので実害は無い。
+                                    -->
+                                    <!--
+                                        「行を追加」を先に下端へ留めてから、一覧に残りを埋めさせる。
+                                        逆にして一覧を先に置くと、行が増えたときに一覧が高さを
+                                        取り切ってボタンのぶんが残らず、押せなくなる(実際に起きた)。
+                                        枠は中身なりの高さになるので、行が少ないときは
+                                        ボタンが最後の行のすぐ下に来る。
+                                    -->
+                                    <Button x:Name="CollectAddRow" DockPanel.Dock="Bottom" Content="＋ 行を追加"
+                                            Command="{Binding AddDeviceCommand}"
+                                            Style="{StaticResource Button.Subtle}"
+                                            HorizontalAlignment="Left"
+                                            Margin="4,4,0,0" />
+
+                                    <ListBox ItemsSource="{Binding Rows}"
+                                             Background="Transparent" BorderThickness="0"
+                                             HorizontalContentAlignment="Stretch"
+                                             ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             VirtualizingPanel.IsVirtualizing="False"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Height="26">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.2]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.3]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.4]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.5]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.6]}" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                    <Border BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+
+                                                    <!-- 行そのものを引数で渡す(どの行の × かを VM に伝える) -->
+                                                    <Button Grid.Column="0" Content="✕"
+                                                            Style="{StaticResource Button.Subtle}"
+                                                            Command="{Binding DataContext.RemoveDeviceCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                            CommandParameter="{Binding}"
+                                                            Width="16" Height="16"
+                                                            Padding="0" MinWidth="0" MinHeight="0"
+                                                            FontSize="{DynamicResource Size.Micro}"
+                                                            HorizontalAlignment="Left"
+                                                            VerticalAlignment="Center" Margin="2,0,0,0"
+                                                            ToolTip="この行を消します。" />
+
+                                                    <TextBox Grid.Column="1" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontFamily="{DynamicResource Font.Mono}"
+                                                             FontSize="{DynamicResource Size.Caption}"
+                                                             Margin="0,0,4,0" VerticalAlignment="Center"
+                                                             ToolTip="機器の IP かホスト名。" />
+
+                                                    <ComboBox Grid.Column="2"
+                                                              ItemsSource="{Binding Methods}"
+                                                              SelectedItem="{Binding Method}"
+                                                              FontSize="{DynamicResource Size.Caption}"
+                                                              VerticalAlignment="Center" Margin="0,0,4,0"
+                                                              ToolTip="つなぎ方。ポートは方式に応じて 22 / 23 を使います。">
+                                                        <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding}" />
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+
+                                                    <TextBox Grid.Column="3" Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontSize="{DynamicResource Size.Caption}"
+                                                             Margin="0,0,4,0" VerticalAlignment="Center"
+                                                             ToolTip="ログインするユーザー名。次回も覚えています。" />
+
+                                                    <PasswordBox Grid.Column="4" Tag="login"
+                                                                 PasswordChanged="OnCollectPasswordChanged"
+                                                                 Margin="0,0,4,0" VerticalAlignment="Center"
+                                                                 ToolTip="ログインのパスワード。保存しません（毎回入力）。" />
+
+                                                    <PasswordBox Grid.Column="5" Tag="enable"
+                                                                 PasswordChanged="OnCollectPasswordChanged"
+                                                                 Margin="0,0,4,0" VerticalAlignment="Center"
+                                                                 ToolTip="enable のパスワード。要らない機器は空のままで構いません。" />
+
+                                                    <TextBlock Grid.Column="6" Text="{Binding Status}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Status}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- 下: コマンド。窓が狭いと横並びでは入りきらないので縦に積む -->
+                            <DockPanel Margin="0,6,0,0">
+                                <TextBlock DockPanel.Dock="Top" Margin="0,0,0,3"
+                                           Text="{Binding CommandSummary}" Style="{StaticResource Caption}" />
+
+                                <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding BlockedCommands}"
+                                              Margin="0,4,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" Style="{StaticResource Caption}"
+                                                       Foreground="{DynamicResource Brush.Warn.Fg}"
+                                                       TextWrapping="Wrap" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBox Text="{Binding CommandText, UpdateSourceTrigger=LostFocus}"
+                                         FontFamily="{DynamicResource Font.Mono}"
+                                         FontSize="{DynamicResource Size.Caption}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalContentAlignment="Top"
+                                         ToolTip="1 行 1 コマンド。打つ順に並べます。" />
+                            </DockPanel>
+                        </DockPanel>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+            <!-- ===== パース(Cisco コマンド出力 → CSV) ===== -->
+            <TabItem Header="パース" DataContext="{Binding Converter}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="種別" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <ComboBox Width="180"
+                                      ItemsSource="{Binding Modes}"
+                                      SelectedItem="{Binding SelectedMode}"
+                                      Margin="0,0,12,0"
+                                      ToolTip="貼り付けたコマンドの種類。自動判定で決まらないときはここで選びます。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}" Margin="0,0,6,0" />
+                            <Button Content="コピー" Command="{Binding CopyCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,0"
+                                    ToolTip="CSV テキストをクリップボードへコピーします。" />
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- 貼り付け欄。Cisco の出力は長いので折り返さず横スクロール -->
+                            <TextBox Grid.Row="0"
+                                     Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     FontSize="{DynamicResource Size.Caption}"
+                                     AcceptsReturn="True" AcceptsTab="False"
+                                     TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalContentAlignment="Top"
+                                     ToolTip="show ip route / show interfaces status などの出力をそのまま貼り付けます。" />
+
+                            <TextBlock Grid.Row="1" Text="CSV プレビュー" Style="{StaticResource Caption}" Margin="0,6,0,3" />
+
+                            <TextBox Grid.Row="2"
+                                     Text="{Binding Preview, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     FontFamily="{DynamicResource Font.Mono}"
+                                     FontSize="{DynamicResource Size.Caption}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalContentAlignment="Top" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
+                    </TabControl>
+                </DockPanel>
+            </TabItem>
+
             <!-- ===== 受ける（機器から送られてくるものを受け取る） ===== -->
             <TabItem x:Name="ReceiveTab" Header="受ける">
                 <DockPanel>
@@ -3261,360 +3615,6 @@
 
                     </TabControl>
                 </DockPanel>
-            </TabItem>
-
-            <!-- ===== 遮断（WFP が落とした通信。読み取りにも管理者権限が要る） ===== -->
-            <TabItem x:Name="WfpTab" Header="遮断" DataContext="{Binding Wfp}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <CheckBox Content="一時停止" IsChecked="{Binding IsPaused}"
-                                      VerticalAlignment="Center" Margin="0,0,12,0"
-                                      ToolTip="更新を止めて、じっくり読んだり選択したりできます。" />
-                            <TextBlock Text="絞り込み" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="200" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0"
-                                     ToolTip="プロセス名・パス・アドレス・プロトコルの部分一致で絞り込みます。" />
-                            <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,6,0" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                    Style="{StaticResource Button.Subtle}" />
-                        </StackPanel>
-
-                        <!-- 案内は 2 段構え: 文言の有無で畳み、ボタンはそれぞれの条件で出す -->
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"
-                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
-                            <Button DockPanel.Dock="Right" Content="管理者として再起動" Click="OnRelaunchAsAdmin"
-                                    Style="{StaticResource Button.Subtle}" Margin="8,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding CanRelaunchAsAdmin, Converter={StaticResource BoolToVisibility}}"
-                                    ToolTip="いったん終了して、管理者権限で起動し直します。測定中の結果は失われます。" />
-                            <Button DockPanel.Dock="Right" Content="記録を有効にする" Click="OnEnableWfpCollection"
-                                    Style="{StaticResource Button.Subtle}" Margin="8,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding CanEnableCollection, Converter={StaticResource BoolToVisibility}}"
-                                    ToolTip="Windows にネットワークイベントの記録を始めさせます。アプリを閉じると元に戻します。" />
-                            <TextBlock Text="{Binding Notice}"
-                                       Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource Brush.Warn.Fg}" VerticalAlignment="Center" />
-                        </DockPanel>
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-                        <Border Background="{DynamicResource Brush.Surface}"
-                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                            <DockPanel>
-                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.1]}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.2]}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.3]}" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.5]}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.6]}" />
-                                    </Grid.ColumnDefinitions>
-                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                    <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag=""
-                                            MouseLeftButtonDown="OnListHeaderSort"
-                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding TimeHeader}" Style="{StaticResource Caption}" />
-                                    </Border>
-                                    <Border Grid.Column="1" Background="Transparent" Cursor="Hand" Tag="Direction"
-                                            MouseLeftButtonDown="OnListHeaderSort"
-                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding DirectionHeader}" Style="{StaticResource Caption}" />
-                                    </Border>
-                                    <Border Grid.Column="2" Background="Transparent" Cursor="Hand" Tag="Protocol"
-                                            MouseLeftButtonDown="OnListHeaderSort"
-                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding ProtocolHeader}" Style="{StaticResource Caption}" />
-                                    </Border>
-                                    <Border Grid.Column="3" Background="Transparent" Cursor="Hand" Tag="Local"
-                                            MouseLeftButtonDown="OnListHeaderSort"
-                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding LocalHeader}" Style="{StaticResource Caption}" />
-                                    </Border>
-                                    <Border Grid.Column="4" Background="Transparent" Cursor="Hand" Tag="Remote"
-                                            MouseLeftButtonDown="OnListHeaderSort"
-                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding RemoteHeader}" Style="{StaticResource Caption}" />
-                                    </Border>
-                                    <Border Grid.Column="5" Background="Transparent" Cursor="Hand" Tag="Process"
-                                            MouseLeftButtonDown="OnListHeaderSort"
-                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding ProcessHeader}" Style="{StaticResource Caption}" />
-                                    </Border>
-                                    <Border Grid.Column="6" Background="Transparent" Cursor="Hand" Tag="Count"
-                                            MouseLeftButtonDown="OnListHeaderSort"
-                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
-                                        <TextBlock Text="{Binding CountHeader}" Style="{StaticResource Caption}" />
-                                    </Border>
-
-                                    <!-- 列幅のつまみ。星列(3・4)より左は右端、右は左端の境界に置く -->
-                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="wfp.0" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="wfp.1" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="wfp.2" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="wfp.3" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                           Tag="wfp.5" DragDelta="OnTableColumnResize" />
-                                    <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                           Tag="wfp.6" DragDelta="OnTableColumnResize" />
-                                </Grid>
-                                <Border DockPanel.Dock="Top" Height="1"
-                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-
-                                <ListBox ItemsSource="{Binding Rows}"
-                                         Background="Transparent" BorderThickness="0"
-                                         HorizontalContentAlignment="Stretch"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                         VirtualizingPanel.IsVirtualizing="True"
-                                         VirtualizingPanel.VirtualizationMode="Recycling"
-                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                    <!-- 行の詰め方は接続タブと同じ。既定の ListBoxItem は
-                                         余白を持つので、指定しないと 1 行ぶん背が高くなる -->
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <!-- 説明はプロセス欄に付ける。行全体に付けるとパスが空のとき空の枠が出る -->
-                                            <Grid Height="{DynamicResource Size.RowHeight}"
-                                                  ContextMenu="{StaticResource RowMenu.Address}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.0]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.1]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.2]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.3]}" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.5]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[wfp.6]}" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="{Binding TimeText}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock x:Name="DirectionText" Grid.Column="1" Text="{Binding DirectionText}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Protocol}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="3" Text="{Binding Local}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="4" Text="{Binding Remote}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="5" Text="{Binding ProcessName}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           ToolTip="{Binding ProcessNote}" />
-                                                <TextBlock Grid.Column="6" Text="{Binding CountText}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           HorizontalAlignment="Right" />
-                                            </Grid>
-
-                                            <!--
-                                                送信と受信で色を変える。既存のパレットから選んでいるので
-                                                新しい色は足していない(明暗どちらの配色でもコントラストは検算済み)。
-                                                色だけに頼らないよう、文字は「→ 送信」「← 受信」のまま残す。
-                                                向きが読めなかった行は色を付けない(生の値を出したまま)。
-                                            -->
-                                            <DataTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding IsOutbound}" Value="True">
-                                                    <Setter TargetName="DirectionText" Property="Foreground"
-                                                            Value="{DynamicResource Brush.Info.Fg}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsInbound}" Value="True">
-                                                    <Setter TargetName="DirectionText" Property="Foreground"
-                                                            Value="{DynamicResource Brush.Warn.Fg}" />
-                                                </DataTrigger>
-                                            </DataTemplate.Triggers>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </DockPanel>
-                        </Border>
-                    </DockPanel>
-                </Border>
-            </TabItem>
-
-            <!-- ===== IP設定（この PC の IPv4 設定を切り替える。適用時だけ UAC 昇格） ===== -->
-            <TabItem x:Name="IpConfigTab" Header="IP設定" DataContext="{Binding IpConfig}">
-                <Border Style="{StaticResource Card}">
-                    <DockPanel>
-                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                            <TextBlock Text="アダプタ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="300"
-                                      ItemsSource="{Binding Adapters}"
-                                      SelectedItem="{Binding SelectedAdapter}"
-                                      Margin="0,0,6,2"
-                                      ToolTip="設定するアダプタ。抜けている(未接続の)アダプタも選べます。">
-                                <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock TextTrimming="CharacterEllipsis">
-                                            <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Summary, Mode=OneWay}" Foreground="{DynamicResource Brush.TextMuted}" />
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Button Content="再読み込み" Command="{Binding RefreshCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
-                        </WrapPanel>
-
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                   Foreground="{DynamicResource Brush.TextMuted}"
-                                   Text="{Binding SelectedAdapter.Description}" />
-
-                        <CheckBox DockPanel.Dock="Top" Content="DHCP で自動取得する" IsChecked="{Binding UseDhcp}"
-                                  Margin="0,0,0,6"
-                                  ToolTip="チェックを外すと下の固定 IP 設定を使います。" />
-
-                        <!-- グレーアウトは分かりづらい(ユーザー指摘)ので、DHCP のときは丸ごと畳む -->
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4"
-                              Visibility="{Binding UseStatic, Converter={StaticResource BoolToVisibility}}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="110" />
-                                <ColumnDefinition Width="200" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="IP アドレス" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="マスク" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Mask, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
-                                     ToolTip="255.255.255.0 でも 24 でも /24 でも書けます。" />
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="ゲートウェイ" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Gateway, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
-                                     ToolTip="空欄ならゲートウェイなしで設定します。" />
-
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="優先 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Dns1, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
-
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="代替 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Dns2, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
-                                     ToolTip="DNS を両方空欄にすると、DNS の設定はクリアされます。" />
-                        </Grid>
-
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding ValidationText}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                   Foreground="{DynamicResource Brush.Warn.Fg}" />
-
-                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <TextBlock Text="プリセット" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="160"
-                                      ItemsSource="{Binding Presets}"
-                                      SelectedItem="{Binding SelectedPreset}"
-                                      Margin="0,0,8,2"
-                                      ToolTip="選ぶと内容が入力欄に入ります(適用はされません)。">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <TextBlock Text="名前" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <TextBox Width="120" Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,6,2" ToolTip="現場名など(例: 現場A)。同じ名前は上書きされます。" />
-                            <Button Content="保存" Command="{Binding SavePresetCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,5,2"
-                                    ToolTip="いまの入力内容をこの名前で保存します。" />
-                            <Button Content="削除" Command="{Binding DeletePresetCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
-                        </WrapPanel>
-
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="適用" Click="OnApplyIpConfig" IsEnabled="{Binding CanApply}"
-                                    Margin="0,0,12,0"
-                                    ToolTip="確認の後、UAC の昇格を経て netsh で設定します。" />
-                            <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" TextWrapping="Wrap" />
-                        </StackPanel>
-
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource Brush.TextMuted}"
-                                   Text="適用には管理者権限が必要です(UAC の確認が 1 回出ます)。アプリ自体は非管理者のまま動きます。この PC の通信が一時的に切れることがあります。" />
-
-                        <!-- ===== プロキシ(WinINET のユーザー設定。管理者権限は不要) ===== -->
-                        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,8,0,8" />
-
-                        <StackPanel DockPanel.Dock="Top" DataContext="{Binding Proxy}">
-                            <WrapPanel Margin="0,0,0,4">
-                                <TextBlock Text="プロキシ" VerticalAlignment="Center" Margin="0,0,8,2" />
-                                <ComboBox Width="190"
-                                          ItemsSource="{Binding Modes}"
-                                          SelectedItem="{Binding SelectedMode}"
-                                          Margin="0,0,8,2">
-                                    <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Name}" />
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                                <TextBlock Text="{Binding CurrentSummary}" Style="{StaticResource Caption}"
-                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                           ToolTip="{Binding CurrentSummary}" Margin="0,0,0,2" />
-                            </WrapPanel>
-
-                            <!-- 選んだ方式の行だけ出す(グレーアウトは分かりづらい、というユーザー指摘) -->
-                            <WrapPanel Margin="0,0,0,4"
-                                       Visibility="{Binding IsPac, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="PAC の URL" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                                <TextBox Width="320" Text="{Binding PacUrl, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
-                                         ToolTip="例: http://proxy.example.co.jp/proxy.pac" />
-                            </WrapPanel>
-
-                            <WrapPanel Margin="0,0,0,4"
-                                       Visibility="{Binding IsFixed, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="サーバ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                                <TextBox Width="200" Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,2"
-                                         ToolTip="例: proxy.example.co.jp:8080(プロトコル別は http=…;https=… の書式)" />
-                                <TextBlock Text="除外" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                                <TextBox Width="220" Text="{Binding Bypass, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
-                                         ToolTip="プロキシを通さない宛先。; 区切り。&lt;local&gt; はローカルアドレスの意味。" />
-                            </WrapPanel>
-
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="プロキシを適用" Command="{Binding ApplyCommand}" Margin="0,0,12,0"
-                                        ToolTip="Windows のプロキシ設定(現在のユーザー)に反映します。管理者権限は不要です。" />
-                                <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
-                                           VerticalAlignment="Center" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Border />
-                    </DockPanel>
-                </Border>
             </TabItem>
 
             <!-- ===== Meraki(ダッシュボード API からの照会) ===== -->
