@@ -48,6 +48,33 @@ public struct WindowCounters
 
     public readonly double AverageMs => Successes == 0 ? 0 : SumMs / Successes;
 
+    /// <summary>
+    /// 控えた値をそのまま書き戻す（管理者への昇格で起動し直すときの引き継ぎ用）。
+    ///
+    /// <b>履歴の再生では代用できない。</b>リングバッファは古い分を捨てるので、
+    /// 窓を開いてから溢れたぶんの試行回数は履歴から数え直せない。
+    /// 数え直すと作業前後の比較が静かにずれる（このクラスが存在する理由そのもの）。
+    /// </summary>
+    public static WindowCounters Restore(
+        long startedAtTicks, int attempts, int successes, int responses,
+        double sumMs, double minMs, double maxMs,
+        int maxConsecutiveFailures, int consecutiveFailures)
+        => new()
+        {
+            StartedAtTicks = startedAtTicks,
+            Attempts = attempts,
+            Successes = successes,
+            Responses = responses,
+            SumMs = sumMs,
+            MinMs = minMs,
+            MaxMs = maxMs,
+            MaxConsecutiveFailures = maxConsecutiveFailures,
+            _consecutiveFailures = consecutiveFailures,
+        };
+
+    /// <summary>いま何回連続で失敗しているか。引き継ぎで控えるためだけに公開している。</summary>
+    public readonly int ConsecutiveFailures => _consecutiveFailures;
+
     /// <summary>数え始める。以後のサンプルだけが対象になる。</summary>
     public void Start(long startedAtTicks)
     {

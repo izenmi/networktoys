@@ -26,4 +26,5 @@ public sealed class TargetDocument
 [JsonSerializable(typeof(AppSettingsDocument))]
 [JsonSerializable(typeof(IpPreset))]
 [JsonSerializable(typeof(Work.WorkSessionDocument))]
+[JsonSerializable(typeof(HandoverDocument))]
 public partial class PingWatcherJsonContext : JsonSerializerContext;
