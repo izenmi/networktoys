@@ -36,13 +36,13 @@
                      DataContext="{Binding PlacementTarget.DataContext,
                                    RelativeSource={RelativeSource Self}}">
             <MenuItem Header="Ping の宛先に追加" Click="OnSendToPing" />
+            <MenuItem Header="ログ採取の機器に追加" Click="OnSendToCollect" />
+            <Separator />
+            <MenuItem Header="Traceroute を実施" Click="OnSendToTrace" />
+            <MenuItem Header="DNS 解決" Click="OnSendToDns" />
+            <MenuItem Header="SNMP Get で問い合わせ" Click="OnSendToSnmp" />
+            <Separator />
             <MenuItem Header="TCP Ping に追加" Click="OnSendToTcp" />
-            <MenuItem Header="収集の機器に追加" Click="OnSendToCollect" />
-            <Separator />
-            <MenuItem Header="経路を調べる" Click="OnSendToTrace" />
-            <MenuItem Header="名前を引く" Click="OnSendToDns" />
-            <MenuItem Header="SNMP で問い合わせる" Click="OnSendToSnmp" />
-            <Separator />
             <MenuItem Header="アドレスをコピー" Click="OnCopyRowAddress" />
         </ContextMenu>
 
@@ -52,52 +52,11 @@
                                    RelativeSource={RelativeSource Self}}">
             <MenuItem Header="Ping の宛先に追加" Click="OnSendToPing" />
             <Separator />
-            <MenuItem Header="経路を調べる" Click="OnSendToTrace" />
-            <MenuItem Header="名前を引く" Click="OnSendToDns" />
+            <MenuItem Header="Traceroute を実施" Click="OnSendToTrace" />
+            <MenuItem Header="DNS 解決" Click="OnSendToDns" />
             <Separator />
             <MenuItem Header="アドレスをコピー" Click="OnCopyRowAddress" />
         </ContextMenu>
-
-        <!--
-            タブの中のサブタブ用（FTP タブの FTP/TFTP/SFTP など）。
-            主タブと明確に見分けられるよう、小さめのセグメント（連結ボタン）風にする。
-            選択中はアクセント地、非選択はくすませて「これは中の切り替え」と分かる形に。
-        -->
-        <Style x:Key="SubTabItem" TargetType="TabItem">
-            <Setter Property="Cursor" Value="Hand" />
-            <!-- 文字は常に本文色（ダークではほぼ白）。選択中に淡い水色にすると沈んで読みづらい -->
-            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                        <!-- 寸法はメインタブ(Padding 6,2・Size.Caption)と揃える -->
-                        <Border x:Name="Bd"
-                                Background="{DynamicResource Brush.SurfaceAlt}"
-                                BorderBrush="{DynamicResource Brush.Border}"
-                                BorderThickness="1"
-                                Margin="0,0,-1,0"
-                                Padding="6,2">
-                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
-                                              TextElement.FontSize="{DynamicResource Size.Caption}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Surface}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                                <Setter Property="FontWeight" Value="Normal" />
-                                <Setter Property="Panel.ZIndex" Value="1" />
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!--
             まとめたタブ（調べる / NW機器 / 受ける）の中身を選ぶ縦メニュー。
@@ -349,14 +308,13 @@
                             <Border.ContextMenu>
                                 <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
                                                            RelativeSource={RelativeSource Self}}">
-                                    <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
-                                    <Separator />
                                     <MenuItem Header="SSH で接続" Click="OnSshFromRow" />
                                     <MenuItem Header="Telnet で接続" Click="OnTelnetFromRow" />
                                     <Separator />
-                                    <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
-                                    <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
+                                    <MenuItem Header="Traceroute を実施" Click="OnTraceFromRow" />
+                                    <MenuItem Header="DNS 解決" Click="OnResolveFromRow" />
                                     <Separator />
+                                    <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
                                     <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
                                     <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
                                 </ContextMenu>
@@ -404,14 +362,13 @@
                             <Border.ContextMenu>
                                 <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
                                                            RelativeSource={RelativeSource Self}}">
-                                    <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
-                                    <Separator />
                                     <MenuItem Header="SSH で接続" Click="OnSshFromRow" />
                                     <MenuItem Header="Telnet で接続" Click="OnTelnetFromRow" />
                                     <Separator />
-                                    <MenuItem Header="経路を調べる" Click="OnTraceFromRow" />
-                                    <MenuItem Header="名前を引く" Click="OnResolveFromRow" />
+                                    <MenuItem Header="Traceroute を実施" Click="OnTraceFromRow" />
+                                    <MenuItem Header="DNS 解決" Click="OnResolveFromRow" />
                                     <Separator />
+                                    <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
                                     <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
                                     <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
                                 </ContextMenu>
@@ -499,10 +456,9 @@
     </Window.Resources>
 
     <Grid Margin="6,5,6,4">
-        <!-- メニュー / ヘッダ / 本体。接続情報のフッターは廃止(本体を広く取るため。
-             同じ内容は IP設定タブの現在値で見られる) -->
+        <!-- メニューの帯と本体の 2 段だけ。ヘッダも接続情報のフッターも廃止した
+             (本体を広く取るため。接続情報は IP設定タブの現在値で見られる) -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -550,48 +506,32 @@
             </MenuItem>
         </Menu>
 
-        <!-- メニューの帯とヘッダを分ける罫線。ヘッダ下の罫線と同じ引き方 -->
-        <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1"
-                Background="{DynamicResource Brush.Border}" />
-
-        <!-- ===== ヘッダ ===== -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="2,3,0,5">
-            <TextBlock Text="PingWatcher"
-                       FontSize="{DynamicResource Size.Title}"
-                       Margin="0,0,14,0" VerticalAlignment="Center" />
-
-            <!--
-                測定の開始・停止と「クリア」はここから外した（2026-08-16 ユーザー指示）。
-                開始と停止は Ping タブの中に、クリアはメニューバーの「測定」にある。
-                ここに残すのは、伝えないと困ること（失敗など）だけにする。
-            -->
+        <!--
+            知らせの置き場。メニューの帯の右端に間借りする（2026-08-16 ユーザー指示で
+            ヘッダ 1 行を丸ごと廃止した。表題もダークモードのボタンも要らないと判断）。
+            伝えないと困ること（測定の失敗・保存の結果）だけをここに出す。
+        -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal"
+                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
             <TextBlock Text="{Binding Monitor.StatusMessage}" Style="{StaticResource Caption}"
                        VerticalAlignment="Center" MaxWidth="320"
                        TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
 
-            <!-- 保存の結果。記録の画面を畳んだので、伝える場所がここしかない -->
             <TextBlock Text="{Binding Report.Status}" Style="{StaticResource Caption}"
                        VerticalAlignment="Center" MaxWidth="320"
-                       TextTrimming="CharacterEllipsis" Margin="0,0,14,0" />
+                       TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
 
-            <!-- 配色の切り替え。記号だけだと意味が伝わらないので文字も添える -->
-            <Button x:Name="ThemeToggle" Click="OnThemeToggle"
-                    Style="{StaticResource Button.Icon}"
-                    Margin="0,0,8,0"
-                    AutomationProperties.Name="配色の切り替え"
-                    ToolTip="ライトモードとダークモードを切り替えます。" />
-
-            <!-- 操作の結果を短く知らせる場所(画面保存の成否など)。数秒で消える -->
+            <!-- 操作の結果を短く知らせる場所(画面保存・ファイルの読み込みなど)。数秒で消える -->
             <TextBlock x:Name="HeaderNotice" Style="{StaticResource Caption}"
-                       VerticalAlignment="Center" Margin="0,0,10,0" />
+                       VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- 操作の帯と本体を分ける罫線。1 本引くだけで画面が締まる -->
-        <Border Grid.Row="1" VerticalAlignment="Bottom" Height="1"
-                Background="{DynamicResource Brush.Border}" Margin="0,0,0,-1" />
+        <!-- メニューの帯と本体を分ける罫線 -->
+        <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1"
+                Background="{DynamicResource Brush.Border}" />
 
         <!-- ===== 本体 ===== -->
-        <TabControl x:Name="MainTabs" Grid.Row="2" SelectionChanged="OnTabSelectionChanged"
+        <TabControl x:Name="MainTabs" Grid.Row="1" SelectionChanged="OnTabSelectionChanged"
                     PreviewMouseLeftButtonDown="OnMainTabsMouseDown">
 
             <!-- ===== Ping（測定と結果の表示） ===== -->
@@ -2009,7 +1949,9 @@
                                 </DockPanel>
 
                                 <DockPanel Grid.Column="1">
-                                    <TextBlock DockPanel.Dock="Top" Text="試すプロキシ" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Margin="0,0,0,3"
+                                               Text="試すプロキシ（選んだぶんだけ繰り返します）"
+                                               ToolTip="チェックしたプロキシごとに、同じ試験を 1 周ずつ回します。入れ替えの前後を並べて比べるための機能です。" />
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding Proxies}">
                                             <ItemsControl.ItemTemplate>
@@ -3592,8 +3534,9 @@
                                    TextWrapping="Wrap" Margin="0,4,0,0" />
                     </StackPanel>
 
-                    <TabControl x:Name="MerakiSubTabs" ItemContainerStyle="{StaticResource SubTabItem}"
-                                BorderThickness="0" Padding="0">
+                    <!-- 中の切り替えも主タブと同じ見た目にする（2026-08-16 ユーザー指示）。
+                         暗黙の TabItem スタイルに任せるので、ここでは何も当てない -->
+                    <TabControl x:Name="MerakiSubTabs" BorderThickness="0" Padding="0">
 
                         <!-- ネットワーク -->
                         <TabItem Header="ネットワーク">

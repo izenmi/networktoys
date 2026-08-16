@@ -35,16 +35,23 @@ public sealed record ProxyChoice(string Name, ProxyMode Mode, string Address)
     /// <summary>常に選べる「直接」。プロキシ無しの結果と比べるために要る。</summary>
     public static ProxyChoice Direct { get; } = new("直接", ProxyMode.Direct, "");
 
-    /// <summary>常に選べる「いまの Windows 設定」。</summary>
-    public static ProxyChoice System { get; } = new("いまの設定", ProxyMode.System, "");
+    /// <summary>
+    /// 常に選べる「Windows のプロキシ設定」。
+    ///
+    /// 名前が「いまの設定」では<b>何の設定なのか伝わらない</b>ので、どこの設定かを名前に入れる。
+    /// 指すのは Windows の「プロキシ サーバーを使う」／自動構成スクリプト
+    /// （＝ブラウザが従うのと同じ設定。IP設定タブの下段で変えられる）。
+    /// </summary>
+    public static ProxyChoice System { get; } = new("Windows のプロキシ設定", ProxyMode.System, "");
 
-    /// <summary>画面に出す説明。</summary>
+    /// <summary>画面に出す説明。<b>それが何を指すのか</b>まで書く。</summary>
     public string Summary => Mode switch
     {
-        ProxyMode.Direct => "プロキシを通さない",
-        ProxyMode.System => "Windows の設定に従う",
-        ProxyMode.Pac => $"PAC {Address}",
-        _ => Address,
+        ProxyMode.Direct => "プロキシを通さず直接出ます。プロキシ側の問題かどうかを切り分ける基準です。",
+        ProxyMode.System => "この PC にいま入っている Windows のプロキシ設定に従います"
+                          + "（ブラウザが従うのと同じ設定。IP設定タブの下段で確認・変更できます）。",
+        ProxyMode.Pac => $"自動構成スクリプト（PAC）で決めます: {Address}",
+        _ => $"このプロキシを通します: {Address}",
     };
 }
 
