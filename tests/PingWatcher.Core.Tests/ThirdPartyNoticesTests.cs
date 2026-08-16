@@ -36,7 +36,7 @@ public class ThirdPartyNoticesTests
             Path.Combine(Root(), "src", "PingWatcher.App", "PingWatcher.App.csproj"));
 
         string[] packages =
-            [.. Regex.Matches(csproj, """<PackageReference\s+Include="([^"]+)"""")
+            [.. Regex.Matches(csproj, "<PackageReference\\s+Include=\"([^\"]+)\"")
                      .Select(m => m.Groups[1].Value)];
 
         Assert.NotEmpty(packages);
@@ -80,6 +80,6 @@ public class ThirdPartyNoticesTests
         string csproj = File.ReadAllText(
             Path.Combine(Root(), "src", "PingWatcher.App", "PingWatcher.App.csproj"));
 
-        Assert.Contains("""LogicalName="THIRD-PARTY-NOTICES.txt""", csproj, StringComparison.Ordinal);
+        Assert.Contains("LogicalName=\"THIRD-PARTY-NOTICES.txt\"", csproj, StringComparison.Ordinal);
     }
 }
