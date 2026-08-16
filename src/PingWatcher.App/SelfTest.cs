@@ -355,10 +355,10 @@ internal static class SelfTest
             window.ReportTab.IsSelected = true;
             window.UpdateLayout();
 
-            TabItem[] mustBeHidden =
+            System.Windows.Controls.TabItem[] mustBeHidden =
                 [window.WifiTab, window.WfpTab, window.ConnectionsTab, window.TraceTab, window.IpConfigTab];
 
-            foreach (TabItem tab in mustBeHidden)
+            foreach (System.Windows.Controls.TabItem tab in mustBeHidden)
             {
                 Assert(!Views.MainWindow.IsShowing(tab),
                        $"記録タブを選んでいるのに「{tab.Header}」が見えている扱いになっている");
@@ -1361,14 +1361,15 @@ internal static class SelfTest
     /// </summary>
     /// <returns>実体化したタブの枚数。</returns>
     private static int VisitTabs(
-        Views.MainWindow window, System.Windows.Controls.TabControl tabs, Action<TabItem> onShown)
+        Views.MainWindow window, System.Windows.Controls.TabControl tabs,
+        Action<System.Windows.Controls.TabItem> onShown)
     {
         int visited = 0;
         object? original = tabs.SelectedItem;
 
         foreach (object? item in tabs.Items)
         {
-            if (item is not TabItem tab) continue;
+            if (item is not System.Windows.Controls.TabItem tab) continue;
             if (ReferenceEquals(tab, window.WifiTab)) continue;
 
             tabs.SelectedItem = tab;
