@@ -588,7 +588,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
                     <!-- 枠も面も持たない。角も丸めない(ふつうのメニューバーの見た目) -->
-                    <Border x:Name="Bd" Background="Transparent" Padding="10,4">
+                    <Border x:Name="Bd" Background="Transparent" Padding="10,1">
                         <Grid>
                             <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
                                               RecognizesAccessKey="True" />
