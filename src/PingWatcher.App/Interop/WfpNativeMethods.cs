@@ -5,11 +5,29 @@ using PingWatcher.Core.Net;
 namespace PingWatcher.App.Interop;
 
 /// <summary>読み取りの結果。エラーはそのまま画面に出せる日本語。</summary>
+/// <param name="Events">遮断イベント。</param>
+/// <param name="TotalSeen">列挙できたイベントの総数（種類を問わない）。</param>
+/// <param name="CollectOption">FWPM_ENGINE_COLLECT_NET_EVENTS の値。0 なら記録していない。</param>
+/// <param name="Error">失敗した理由。成功なら null。</param>
+/// <param name="WithAppId">
+/// アプリ情報（appId）が付いていた遮断イベントの数。
+/// <b>切り分けのための数字。</b>プロセス欄が全部「—」になるとき、
+/// Windows が付けていないのか、こちらの読み違いなのかはこれでしか分からない。
+/// </param>
+/// <param name="FlagsSeen">
+/// 見たフラグの論理和。ここに 0x20（APP_ID_SET）が一度も立たなければ、
+/// Windows がアプリ情報を付けていない。立つのに <paramref name="WithAppId"/> が
+/// 0 なら、こちらの読み方が悪い。
+/// </param>
+/// <param name="SkippedByFlags">未知のフラグが立っていて捨てた数（レイアウト不一致の疑い）。</param>
 internal sealed record WfpReadResult(
     IReadOnlyList<WfpBlockedEvent> Events,
     int TotalSeen,
     uint CollectOption,
-    string? Error);
+    string? Error,
+    int WithAppId = 0,
+    uint FlagsSeen = 0,
+    int SkippedByFlags = 0);
 
 /// <summary>
 /// Windows Filtering Platform（fwpuclnt.dll）から「遮断されたイベント」を読む P/Invoke 一式。
@@ -150,6 +168,12 @@ internal static class WfpNativeMethods
         int totalSeen = 0;
         uint collectOption = 0;
 
+        // 切り分け用。プロセス欄が全部「—」になる原因が
+        // 「Windows が付けていない」のか「こちらの読み違い」なのかを分ける
+        int withAppId = 0;
+        uint flagsSeen = 0;
+        int skippedByFlags = 0;
+
         // オフセットは x64 前提。32 ビットで動かすと全部ずれるので手前で止める
         if (IntPtr.Size != 8)
             return Failure("64 ビット版でのみ利用できます。");
@@ -197,6 +221,13 @@ internal static class WfpNativeMethods
 
                         if (type != TypeClassifyDrop) continue;
 
+                        // フラグは値域の門を通す前に見ておく。捨てた分も数えたい
+                        uint itemFlags = (uint)Marshal.ReadInt32(item, OffFlags);
+                        flagsSeen |= itemFlags;
+
+                        if ((itemFlags & ~KnownFlags) != 0) skippedByFlags++;
+                        if ((itemFlags & FlagAppIdSet) != 0) withAppId++;
+
                         WfpBlockedEvent? parsed = ParseDropEvent(item);
                         if (parsed is not null)
                             events.Add(parsed);
@@ -212,7 +243,8 @@ internal static class WfpNativeMethods
                 if (returned < request) break;
             }
 
-            return new WfpReadResult(events, totalSeen, collectOption, null);
+            return new WfpReadResult(events, totalSeen, collectOption, null,
+                                     withAppId, flagsSeen, skippedByFlags);
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {
@@ -228,7 +260,8 @@ internal static class WfpNativeMethods
                 FwpmEngineClose0(engine);
         }
 
-        WfpReadResult Failure(string message) => new([], totalSeen, collectOption, message);
+        WfpReadResult Failure(string message)
+            => new([], totalSeen, collectOption, message, withAppId, flagsSeen, skippedByFlags);
     }
 
     /// <summary>

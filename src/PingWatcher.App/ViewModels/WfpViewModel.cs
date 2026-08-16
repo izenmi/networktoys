@@ -263,7 +263,7 @@ public sealed class WfpViewModel : ObservableObject
                    + $"（{DateTime.Now:HH:mm:ss} 時点{suffix}）";
 
             // 記録が無効なら 0 件が正常。その旨を案内に出さないと「壊れている」に見える
-            Notice = IsCollecting ? "" : CollectNotice;
+            Notice = IsCollecting ? DescribeAppIdGap(result) : CollectNotice;
         }
         catch (Exception ex)
         {
@@ -274,6 +274,37 @@ public sealed class WfpViewModel : ObservableObject
         {
             _tickBusy = false;
         }
+    }
+
+    /// <summary>
+    /// プロセス欄が 1 件も埋まらないときだけ、切り分けに要る数字を出す。
+    ///
+    /// 「—」は<b>アプリ情報が付いていない</b>という意味で、「読もうとして失敗した」
+    /// （⚠ 読み取れず）とは別。原因が Windows 側なのかこちらの読み違いなのかは、
+    /// フラグを見ないと切り分けられない。ふだんは邪魔なので出さない。
+    /// </summary>
+    internal static string DescribeAppIdGapForTest(WfpReadResult result) => DescribeAppIdGap(result);
+
+    private static string DescribeAppIdGap(WfpReadResult result)
+    {
+        if (result.Events.Count == 0) return "";
+
+        // 1 件でもプロセスが分かっているなら、取れる環境。案内は要らない
+        if (result.WithAppId > 0) return "";
+
+        const uint AppIdSet = 0x0020;
+
+        string cause = (result.FlagsSeen & AppIdSet) == 0
+            ? "この Windows は遮断イベントにアプリの情報を付けていません（こちらの読み取りの誤りではありません）。"
+            : "アプリの情報は付いているのに読み出せていません。読み取りの誤りの可能性があります。";
+
+        string skipped = result.SkippedByFlags > 0
+            ? $" / 未知のフラグで捨てた {result.SkippedByFlags:N0} 件"
+            : "";
+
+        return $"ℹ プロセス欄が「—」なのは {cause}"
+             + $"（アプリ情報あり {result.WithAppId:N0} / 遮断 {result.Events.Count:N0} 件"
+             + $" / 見たフラグ 0x{result.FlagsSeen:X4}{skipped}）";
     }
 
     private void RebuildRows()

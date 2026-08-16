@@ -838,9 +838,53 @@ internal static class SelfTest
             Assert(result.Error is null, $"列挙に失敗: {result.Error}");
             log.AppendLine($"        全 {result.TotalSeen} 件中 遮断 {result.Events.Count} 件"
                          + $" / 記録: {(result.CollectOption != 0 ? "有効" : "無効")}");
+            log.AppendLine($"        アプリ情報あり {result.WithAppId} 件"
+                         + $" / 見たフラグ 0x{result.FlagsSeen:X4}"
+                         + $" / 未知のフラグで捨てた {result.SkippedByFlags} 件");
 
             foreach (Core.Net.WfpBlockedEvent e in result.Events.Take(3))
                 log.AppendLine($"        {e.TimeUtc:HH:mm:ss} {e.Protocol} {e.Remote}:{e.RemotePort} {e.AppIdRaw}");
+        });
+
+        Check("遮断: プロセスが取れない理由を切り分けられる", () =>
+        {
+            // 「—」は「アプリ情報が付いていない」で、「⚠ 読み取れず」とは別。
+            // 原因が Windows 側かこちらの読み違いかはフラグでしか分けられないので、
+            // その分岐だけは実機の状態に依らず確かめておく。
+            //
+            // WfpNativeMethods.Read は呼ばない（外に触れずに判定だけ試す）
+            var one = new Core.Net.WfpBlockedEvent(
+                TimeUtc: DateTime.UtcNow,
+                Direction: Core.Net.WfpDirection.Outbound,
+                Protocol: 6,
+                Local: IPAddress.Loopback,
+                LocalPort: 1,
+                Remote: IPAddress.Loopback,
+                RemotePort: 2,
+                ScopeId: 0,
+                AppIdRaw: "",
+                FilterId: 1,
+                LayerId: 2,
+                IsLoopback: true);
+
+            string Notice(int withAppId, uint flagsSeen)
+            {
+                var vm = new ViewModels.WfpViewModel();
+                var result = new Interop.WfpReadResult([one], 1, 1, null, withAppId, flagsSeen, 0);
+
+                return ViewModels.WfpViewModel.DescribeAppIdGapForTest(result);
+            }
+
+            // フラグが一度も立たない = Windows が付けていない
+            Assert(Notice(0, 0x019F).Contains("付けていません", StringComparison.Ordinal),
+                   "フラグが無いのに読み取りの誤りだと言っている");
+
+            // 立っているのに 0 件 = こちらの読み方が悪い
+            Assert(Notice(0, 0x01BF).Contains("読み出せていません", StringComparison.Ordinal),
+                   "フラグが立っているのに Windows のせいにしている");
+
+            // 1 件でも取れていれば案内は出さない
+            Assert(Notice(1, 0x01BF).Length == 0, "取れている環境で案内が出ている");
         });
 
         Check("ETW 通信量セッションを開始して停止できる(管理者のときのみ)", () =>
