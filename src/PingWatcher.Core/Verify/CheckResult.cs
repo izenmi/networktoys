@@ -14,6 +14,12 @@ public enum CheckVerdict
     /// <summary>不合格。</summary>
     Fail,
 
+    /// <summary>
+    /// 通ってはいるが目安を割っている。<b>合格とも不合格とも言えない状態は実際にある</b>
+    /// （通話はできるが音が途切れる、など）。合格に丸めると現場で拾えなくなる。
+    /// </summary>
+    Warn,
+
     /// <summary>試験できなかった（宛先が空、種類に対して指定が足りない など）。</summary>
     Skipped,
 }
@@ -44,12 +50,14 @@ public sealed record CheckResult(
     {
         CheckVerdict.Pass => "○ 合格",
         CheckVerdict.Fail => "✕ 不合格",
+        CheckVerdict.Warn => "△ 注意",
         CheckVerdict.Skipped => "— 試験せず",
         _ => "◌ 未実行",
     };
 
     public bool IsPass => Verdict == CheckVerdict.Pass;
     public bool IsFail => Verdict == CheckVerdict.Fail;
+    public bool IsWarn => Verdict == CheckVerdict.Warn;
 
     /// <summary>プロキシを使わない種類は「—」。空欄だと抜けに見える。</summary>
     public string ProxyText => ProxyName.Length > 0 ? ProxyName : "—";
@@ -88,12 +96,20 @@ public static class CheckReport
 
         int pass = results.Count(r => r.IsPass);
         int fail = results.Count(r => r.IsFail);
+        int warn = results.Count(r => r.IsWarn);
         int skipped = results.Count(r => r.Verdict == CheckVerdict.Skipped);
 
-        string tail = skipped > 0 ? $" / 試験せず {skipped}" : "";
+        var tail = new List<string>();
+        if (warn > 0) tail.Add($"注意 {warn}");
+        if (skipped > 0) tail.Add($"試験せず {skipped}");
 
-        return fail == 0
-            ? $"すべて合格しました（{pass} 件{tail}）。"
-            : $"✕ 不合格が {fail} 件あります（合格 {pass}{tail}）。";
+        string extra = tail.Count > 0 ? " / " + string.Join(" / ", tail) : "";
+
+        if (fail > 0)
+            return $"✕ 不合格が {fail} 件あります（合格 {pass}{extra}）。";
+
+        return warn > 0
+            ? $"△ 不合格はありませんが注意が {warn} 件あります（合格 {pass}{extra}）。"
+            : $"すべて合格しました（{pass} 件{extra}）。";
     }
 }

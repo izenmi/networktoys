@@ -4460,6 +4460,9 @@
                                                 <DataTrigger Binding="{Binding IsFail}" Value="True">
                                                     <Setter TargetName="VerdictText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
                                                 </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsWarn}" Value="True">
+                                                    <Setter TargetName="VerdictText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsPass}" Value="True">
                                                     <Setter TargetName="VerdictText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
                                                 </DataTrigger>

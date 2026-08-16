@@ -1,3 +1,4 @@
+using PingWatcher.Core.Metrics;
 using PingWatcher.Core.Verify;
 using Xunit;
 
@@ -139,6 +140,76 @@ public class HttpVerdictTests
     [Fact]
     public void A_banner_keeps_to_one_line()
         => Assert.Equal("220 ready 250 ok", BannerCheck.Summarize("220 ready\r\n250 ok"));
+
+    // ===== 通話品質 =====
+
+    private static RttStatistics Quality(double avg, double jitter, double loss)
+        => new(Attempts: 10, Successes: 10, LossPercent: loss,
+               MinMs: avg, AverageMs: avg, MaxMs: avg, P95Ms: avg, JitterMs: jitter);
+
+    [Fact]
+    public void Good_numbers_are_acceptable()
+    {
+        (bool acceptable, string text) = CallQuality.Judge(Quality(avg: 20, jitter: 3, loss: 0));
+
+        Assert.True(acceptable);
+        // 合否に関わらず測った値は必ず残す
+        Assert.Contains("往復", text, StringComparison.Ordinal);
+        Assert.Contains("ゆらぎ", text, StringComparison.Ordinal);
+        Assert.Contains("欠落", text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    // 目安を 1 つでも割ったら注意
+    [InlineData(400, 3, 0, "往復")]
+    [InlineData(20, 50, 0, "ゆらぎ")]
+    [InlineData(20, 3, 5, "欠落")]
+    public void Numbers_past_the_guideline_are_flagged(double avg, double jitter, double loss, string mentioned)
+    {
+        (bool acceptable, string text) = CallQuality.Judge(Quality(avg, jitter, loss));
+
+        Assert.False(acceptable);
+        Assert.Contains(mentioned, text, StringComparison.Ordinal);
+        Assert.Contains("目安", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Without_any_answer_the_quality_cannot_be_judged()
+    {
+        (bool acceptable, string text) = CallQuality.Judge(
+            new RttStatistics(Attempts: 10, Successes: 0, LossPercent: 100,
+                              MinMs: 0, AverageMs: 0, MaxMs: 0, P95Ms: 0, JitterMs: 0));
+
+        Assert.False(acceptable);
+        Assert.Contains("測れませんでした", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_warning_is_neither_pass_nor_fail()
+    {
+        // 通話はできるが音が途切れる、という状態を合格に丸めると現場で拾えなくなる
+        var warn = new CheckResult("Teams", CheckKind.Teams, "", "", CheckVerdict.Warn, "");
+
+        Assert.True(warn.IsWarn);
+        Assert.False(warn.IsPass);
+        Assert.False(warn.IsFail);
+        Assert.Equal("△ 注意", warn.VerdictText);
+    }
+
+    [Fact]
+    public void The_summary_separates_warnings_from_failures()
+    {
+        CheckResult[] results =
+        [
+            Judge(Ok("ok")),
+            new("Teams", CheckKind.Teams, "", "", CheckVerdict.Warn, ""),
+        ];
+
+        string summary = CheckReport.Summarize(results);
+
+        Assert.Contains("不合格はありません", summary, StringComparison.Ordinal);
+        Assert.Contains("注意が 1 件", summary, StringComparison.Ordinal);
+    }
 
     // ===== まとめ =====
 

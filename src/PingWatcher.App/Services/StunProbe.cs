@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using PingWatcher.Core.Metrics;
+using PingWatcher.Core.Models;
 using PingWatcher.Core.Verify;
 
 namespace PingWatcher.App.Services;
@@ -91,6 +93,37 @@ internal static class StunProbe
         }
 
         return new StunOutcome(false, null, lastProblem, Elapsed(started));
+    }
+
+    /// <summary>
+    /// 同じ相手へ<b>繰り返し</b>問い合わせて、通話品質の材料を集める。
+    ///
+    /// ICMP の ping ではなく<b>通話が実際に使う UDP で測る</b>ことに意味がある。
+    /// 音声は経路も扱いも ICMP と違い、優先されていたり逆に絞られていたりする。
+    ///
+    /// 応答が返らなかった回は<b>欠落として数える</b>（<see cref="ProbeStatus.TimedOut"/>）。
+    /// 統計の計算は既存の <see cref="RttStatistics"/> にそのまま任せる。
+    /// </summary>
+    public static async Task<RttStatistics> MeasureAsync(
+        string host, int port, int count, int intervalMs, int timeoutMs, CancellationToken token)
+    {
+        var samples = new List<ProbeSample>(count);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (i > 0)
+                await Task.Delay(intervalMs, token).ConfigureAwait(false);
+
+            StunOutcome outcome = await RunAsync(host, port, timeoutMs, token).ConfigureAwait(false);
+
+            long now = DateTime.Now.Ticks;
+
+            samples.Add(outcome.Reachable
+                ? ProbeSample.Success(now, outcome.ElapsedMs)
+                : ProbeSample.Failure(now, ProbeStatus.TimedOut));
+        }
+
+        return RttStatistics.Compute(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(samples));
     }
 
     private static double Elapsed(long started)

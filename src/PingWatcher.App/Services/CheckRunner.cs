@@ -1,3 +1,4 @@
+using PingWatcher.Core.Metrics;
 using PingWatcher.Core.Verify;
 
 namespace PingWatcher.App.Services;
@@ -25,6 +26,12 @@ internal static class CheckRunner
 
     /// <summary>UDP の待ち時間。落ちることが前提なので短くして再送に回す。</summary>
     private const int UdpTimeoutMs = 2000;
+
+    /// <summary>通話品質を測る回数。少なすぎるとゆらぎが出ず、多いと試験が長引く。</summary>
+    private const int QualitySamples = 10;
+
+    /// <summary>測る間隔。実際の音声は 20 ミリ秒ごとだが、そこまで詰める必要はない。</summary>
+    private const int QualityIntervalMs = 200;
 
     /// <param name="progress">終わった件数と、いま試している項目名。</param>
     public static async Task<IReadOnlyList<CheckResult>> RunAsync(
@@ -180,7 +187,21 @@ internal static class CheckRunner
                 notes.Add($"UDP {port} ○");
                 if (stun.SeenAddress is { } seen) notes.Add($"外から見えるアドレス {seen.Address}");
 
-                return Pass(item, string.Join(" / ", notes), udpMs);
+                // 通る道が分かったので、その道で通話品質まで測る。
+                // ICMP ではなく音声が実際に使う UDP で測ることに意味がある
+                RttStatistics stats = await StunProbe.MeasureAsync(
+                    teams.RelayHost, port, QualitySamples, QualityIntervalMs, UdpTimeoutMs, token)
+                    .ConfigureAwait(false);
+
+                (bool acceptable, string quality) = CallQuality.Judge(stats);
+                notes.Add(quality);
+
+                string detail = string.Join(" / ", notes);
+
+                // 目安を割っていても通話はできる。不合格ではなく注意にする
+                return acceptable
+                    ? Pass(item, detail, udpMs)
+                    : Warn(item, detail, udpMs);
             }
 
             blocked.Add(port);
@@ -197,6 +218,9 @@ internal static class CheckRunner
 
     private static CheckResult Fail(CheckItem item, string detail, double ms)
         => new(item.Name, item.Kind, item.Target, "", CheckVerdict.Fail, detail, ms);
+
+    private static CheckResult Warn(CheckItem item, string detail, double ms)
+        => new(item.Name, item.Kind, item.Target, "", CheckVerdict.Warn, detail, ms);
 
     private static CheckResult Skip(CheckItem item, string reason)
         => new(item.Name, item.Kind, item.Target, "", CheckVerdict.Skipped, reason);
