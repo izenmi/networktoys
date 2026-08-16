@@ -659,6 +659,27 @@ public partial class MainWindow : Window
     /// 落ちている宛先を見つけたとき、そのまま経路を追えるようにする。
     /// 打ち直しの手間と打ち間違いを無くすのが目的。
     /// </summary>
+    /// <summary>
+    /// 右クリックした宛先を TCP タブの宛先リストへ足す。
+    ///
+    /// ICMP で見ている相手のポートまで見たくなる場面は多いが、宛先リストは
+    /// 画面ごとに分かれているので打ち直しになっていた。ポートは TCP タブに
+    /// 入っている既定値を使う（宛先ごとに変えたければ後から書き換えられる）。
+    /// </summary>
+    private void OnAddToTcpFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row || row.Host.Length == 0) return;
+
+        string port = _shell.Tcp.TcpPort.Trim();
+        string line = port.Length > 0 ? $"{row.Host}:{port}" : row.Host;
+
+        if (row.Comment.Length > 0)
+            line += "\t" + row.Comment;
+
+        _shell.Tcp.AppendToTargetList([line]);
+        TcpTab.IsSelected = true;
+    }
+
     /// <summary>右クリックした宛先へ Tera Term で SSH 接続する。</summary>
     private void OnSshFromRow(object sender, RoutedEventArgs e) => ConnectWithTeraTerm(sender, ssh: true);
 

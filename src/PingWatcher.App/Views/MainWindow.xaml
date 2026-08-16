@@ -249,6 +249,8 @@
                             <Border.ContextMenu>
                                 <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
                                                            RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
+                                    <Separator />
                                     <MenuItem Header="SSH で接続" Click="OnSshFromRow" />
                                     <MenuItem Header="Telnet で接続" Click="OnTelnetFromRow" />
                                     <Separator />
@@ -302,6 +304,8 @@
                             <Border.ContextMenu>
                                 <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
                                                            RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
+                                    <Separator />
                                     <MenuItem Header="SSH で接続" Click="OnSshFromRow" />
                                     <MenuItem Header="Telnet で接続" Click="OnTelnetFromRow" />
                                     <Separator />
@@ -1617,7 +1621,7 @@
             </TabItem>
 
             <!-- ===== TCP（接続できるかで測る。ICMP が塞がれている相手向け） ===== -->
-            <TabItem Header="TCP" DataContext="{Binding Tcp}">
+            <TabItem x:Name="TcpTab" Header="TCP" DataContext="{Binding Tcp}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
