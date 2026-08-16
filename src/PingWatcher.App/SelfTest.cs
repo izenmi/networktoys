@@ -455,6 +455,49 @@ internal static class SelfTest
             log.AppendLine($"        アダプタ: {adapters.Count} 枚");
         });
 
+        Check("昇格の引き継ぎで画面の内容が往復する", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+            string path = Services.HandoverService.NewPath();
+
+            const string pasted = "interface Gi0/1\n description handover\n";
+            shell.Converter.InputText = "show version の出力";
+            shell.Dns.Name = "handover.example.test";
+            shell.DeviceCompare.BeforeText = pasted;
+
+            try
+            {
+                Core.Storage.HandoverStore.Save(path, Services.HandoverService.Capture(shell));
+
+                // 読んだ側が必ず消す(機器の出力に認証情報が入りうるので残さない)
+                Core.Storage.HandoverDocument? loaded = Core.Storage.HandoverStore.LoadAndDelete(path);
+                Assert(loaded is not null, "引き継ぎファイルを読み戻せない");
+                Assert(!File.Exists(path), "引き継ぎファイルが消えていない");
+
+                // いったん消してから書き戻し、本当に往復しているか確かめる
+                shell.Converter.InputText = "";
+                shell.Dns.Name = "";
+                shell.DeviceCompare.BeforeText = "";
+
+                Services.HandoverService.Apply(loaded!, shell);
+
+                Assert(shell.Converter.InputText == "show version の出力", "パースの入力が戻っていない");
+                Assert(shell.Dns.Name == "handover.example.test", "DNS の宛先が戻っていない");
+                Assert(shell.DeviceCompare.BeforeText == pasted,
+                       $"差分比較の貼り付けが戻っていない: {shell.DeviceCompare.BeforeText.Length} 文字");
+
+                // API キーは意図して引き継がない(保存しない決まりのもの)
+                Assert(!loaded!.Panels.GetType().GetProperties().Any(p => p.Name.Contains("ApiKey")),
+                       "引き継ぎに API キーの入れ物がある");
+            }
+            finally
+            {
+                Core.Storage.HandoverStore.Delete(path);
+            }
+        });
+
         Check("WFP: 合成したイベントを 1 フィールドずつ読み出せる", () =>
         {
             // レイアウト誤りに対する主対策。実イベントが 1 件も無い環境でも必ず走る。

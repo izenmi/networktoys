@@ -271,9 +271,36 @@ public sealed class TargetRowViewModel : ObservableObject
         OnPropertyChanged(nameof(Comment));
     }
 
+    /// <summary>履歴が何件まで入るか。書き出し用のバッファを用意する側が使う。</summary>
+    internal int HistoryCapacity => _scratch.Length;
+
     /// <summary>スパークライン描画用に履歴を書き出す。</summary>
     public int CopyHistory(Span<ProbeSample> destination)
         => _history.CopyLatestTo(destination, destination.Length);
+
+    /// <summary>
+    /// 控えておいた状態を書き戻す（管理者への昇格で起動し直したとき）。
+    ///
+    /// 履歴は再生して状態機械と統計を組み直すが、<b>作業窓の集計はそのまま入れる</b>。
+    /// リングから溢れたぶんは履歴から数え直せないので、再生に任せると
+    /// 作業前後の比較が静かにずれる。
+    /// </summary>
+    internal void Restore(IReadOnlyList<ProbeSample> history, WindowCounters window, string address)
+    {
+        foreach (ProbeSample sample in history)
+        {
+            _history.Add(sample);
+            _machine.Observe(sample);
+        }
+
+        _window = window;
+
+        if (!string.IsNullOrEmpty(address))
+            Address = address;
+
+        _isDirty = true;
+        Refresh();
+    }
 
     public void Reset()
     {

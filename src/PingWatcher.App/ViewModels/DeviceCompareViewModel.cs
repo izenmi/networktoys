@@ -273,6 +273,68 @@ public sealed class DeviceCompareViewModel : ObservableObject
     private void RememberInto(DeviceEntryViewModel device)
         => device.Remember(_mode, BeforeText, AfterText);
 
+    /// <summary>
+    /// 貼り付けてある出力を丸ごと控える（昇格で起動し直すときの引き継ぎ用）。
+    /// いま画面に出ている分をまず預けてから集める。
+    /// </summary>
+    internal void CaptureInto(PingWatcher.Core.Storage.HandoverPanels panels)
+    {
+        RememberInto(_selectedDevice);
+
+        panels.SelectedDevice = _selectedDevice.Name;
+        panels.SelectedMode = (int)_mode;
+        panels.DiffNote = Note;
+
+        foreach (DeviceEntryViewModel device in Devices)
+        {
+            var saved = new PingWatcher.Core.Storage.HandoverDevice { Name = device.Name };
+
+            foreach ((DeviceOutputKind kind, PastedPair pair) in device.AllPasted())
+            {
+                saved.Pasted.Add(new PingWatcher.Core.Storage.HandoverPaste
+                {
+                    Kind = (int)kind,
+                    Before = pair.Before,
+                    After = pair.After,
+                });
+            }
+
+            panels.Devices.Add(saved);
+        }
+    }
+
+    /// <summary>控えた貼り付けを書き戻す。機器の並びごと作り直す。</summary>
+    internal void ApplyHandover(PingWatcher.Core.Storage.HandoverPanels panels)
+    {
+        if (panels.Devices.Count == 0) return;
+
+        Devices.Clear();
+
+        foreach (PingWatcher.Core.Storage.HandoverDevice saved in panels.Devices)
+        {
+            var device = new DeviceEntryViewModel(saved.Name);
+
+            foreach (PingWatcher.Core.Storage.HandoverPaste paste in saved.Pasted)
+                device.Remember((DeviceOutputKind)paste.Kind, paste.Before, paste.After);
+
+            Devices.Add(device);
+        }
+
+        _selectedDevice = Devices.FirstOrDefault(d => d.Name == panels.SelectedDevice) ?? Devices[0];
+        _mode = Enum.IsDefined((DeviceOutputKind)panels.SelectedMode)
+            ? (DeviceOutputKind)panels.SelectedMode
+            : _mode;
+
+        // 選んだ機器と対象の貼り付けを画面へ出す
+        Restore();
+
+        RemoveDeviceCommand.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(SelectedDevice));
+        OnPropertyChanged(nameof(SelectedMode));
+        OnPropertyChanged(nameof(HasStructuredView));
+        OnPropertyChanged(nameof(ModeHint));
+    }
+
     private void Restore()
     {
         PastedPair? pair = _selectedDevice.Find(_mode);
@@ -623,6 +685,9 @@ public sealed class DeviceEntryViewModel : ObservableObject
 
     public PastedPair? Find(DeviceOutputKind kind)
         => _pasted.TryGetValue(kind, out PastedPair? pair) ? pair : null;
+
+    /// <summary>預かっている貼り付けを全部返す（昇格で起動し直すときの引き継ぎ用）。</summary>
+    internal IEnumerable<KeyValuePair<DeviceOutputKind, PastedPair>> AllPasted() => _pasted;
 
     /// <summary>貼り付けを預かる。両方とも空なら覚えない（数に含めない）。</summary>
     public void Remember(DeviceOutputKind kind, string before, string after)

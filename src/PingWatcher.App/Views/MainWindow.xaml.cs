@@ -11,6 +11,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using PingWatcher.App.Services;
 using PingWatcher.App.ViewModels;
+using PingWatcher.Core.Storage;
 
 namespace PingWatcher.App.Views;
 
@@ -18,7 +19,14 @@ public partial class MainWindow : Window
 {
     private readonly ShellViewModel _shell = new();
 
-    public MainWindow()
+    public MainWindow() : this(null)
+    {
+    }
+
+    /// <param name="handover">
+    /// 管理者として起動し直したときに前のプロセスから渡された状態。通常起動では null。
+    /// </param>
+    public MainWindow(PingWatcher.Core.Storage.HandoverDocument? handover)
     {
         InitializeComponent();
         DataContext = _shell;
@@ -48,6 +56,54 @@ public partial class MainWindow : Window
             "これは PC 全体に効く設定で、他のアプリからも見えます。\n\n" +
             "PingWatcher を閉じるときに元へ戻します。続けますか？",
             okLabel: "有効にする");
+
+        if (handover is not null)
+            ApplyHandover(handover);
+    }
+
+    /// <summary>
+    /// 昇格前の状態を書き戻す。宛先リストと設定は settings.json から
+    /// すでに読めているので、ここで扱うのはファイルに残らないものだけ。
+    /// </summary>
+    private void ApplyHandover(PingWatcher.Core.Storage.HandoverDocument handover)
+    {
+        try
+        {
+            Services.HandoverService.Apply(handover, _shell);
+
+            if (handover.WindowWidth > 0 && handover.WindowHeight > 0)
+            {
+                Left = handover.WindowLeft;
+                Top = handover.WindowTop;
+                Width = handover.WindowWidth;
+                Height = handover.WindowHeight;
+                WindowStartupLocation = WindowStartupLocation.Manual;
+            }
+
+            if (handover.WindowMaximized)
+                WindowState = WindowState.Maximized;
+
+            foreach (object? item in MainTabs.Items)
+            {
+                if (item is TabItem tab && Equals(tab.Header, handover.SelectedTab))
+                {
+                    tab.IsSelected = true;
+                    break;
+                }
+            }
+
+            // 止まっていたなら止まったまま。動いていたなら測り直しではなく続きから
+            if (handover.WasRunning && _shell.Monitor.StartCommand.CanExecute(null))
+                _shell.Monitor.StartCommand.Execute(null);
+
+            if (handover.TcpWasRunning && _shell.Tcp.StartCommand.CanExecute(null))
+                _shell.Tcp.StartCommand.Execute(null);
+        }
+        catch (Exception ex)
+        {
+            // 引き継ぎに失敗しても起動はさせる（引き継げないより起動しない方が困る）
+            CrashLog.Write(ex, "MainWindow.ApplyHandover");
+        }
     }
 
     /// <summary>
@@ -166,20 +222,34 @@ public partial class MainWindow : Window
     private void OnEnableWfpCollection(object sender, RoutedEventArgs e) => _shell.Wfp.EnableCollection();
 
     /// <summary>
-    /// 接続タブの通信量(ETW)のための管理者再起動。asInvoker は変えない方針なので、
-    /// 昇格したい人だけがここから明示的に選ぶ。測定中の結果は失われるため確認を挟む。
+    /// 接続タブの通信量(ETW)や遮断一覧のための管理者再起動。asInvoker は変えない方針なので、
+    /// 昇格したい人だけがここから明示的に選ぶ。
+    ///
+    /// いまの状態は引き継ぎファイルに控えて次のプロセスへ渡す。渡せないのは
+    /// 待受中のサーバ(ソケットはプロセスをまたげない)と、進行中の処理だけ。
     /// </summary>
     private void OnRelaunchAsAdmin(object sender, RoutedEventArgs e)
     {
+        bool serversRunning = _shell.Ftp.IsRunning || _shell.Tftp.IsRunning || _shell.Sftp.IsRunning
+                              || _shell.Syslog.IsRunning || _shell.SnmpTrap.IsRunning;
+
+        string caution = serversRunning
+            ? "待受中のサーバは引き継げないので停止します（開き直してください）。\n"
+            : "";
+
         bool confirmed = ConfirmDialog.Confirm(
             this,
             "管理者として再起動",
             "いったん終了して、管理者権限で起動し直します。\n" +
-            "測定中の結果と各画面の表示は失われます（宛先リストと設定は残ります）。\n\n" +
+            "測定の結果と各画面の入力はそのまま引き継ぎます。\n" +
+            caution +
+            "Meraki の API キーだけは保存しない決まりなので、入れ直してください。\n\n" +
             "続けますか？",
             okLabel: "再起動する");
 
         if (!confirmed) return;
+
+        string handoverPath = HandoverService.NewPath();
 
         try
         {
@@ -187,17 +257,38 @@ public partial class MainWindow : Window
             string exePath = Environment.ProcessPath
                 ?? throw new InvalidOperationException("実行ファイルの場所が分かりません");
 
+            HandoverDocument document = HandoverService.Capture(_shell);
+
+            document.SelectedTab = MainTabs.SelectedItem is TabItem tab ? tab.Header?.ToString() ?? "" : "";
+            document.WindowMaximized = WindowState == WindowState.Maximized;
+
+            // 最大化中は Left/Width が画面いっぱいの値になるので、元の大きさを控える
+            Rect bounds = WindowState == WindowState.Normal
+                ? new Rect(Left, Top, Width, Height)
+                : RestoreBounds;
+
+            document.WindowLeft = bounds.Left;
+            document.WindowTop = bounds.Top;
+            document.WindowWidth = bounds.Width;
+            document.WindowHeight = bounds.Height;
+
+            HandoverStore.Save(handoverPath, document);
+
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName = exePath,
+                Arguments = $"{HandoverService.Switch} \"{handoverPath}\"",
                 UseShellExecute = true,   // UAC の昇格ダイアログを出すのに必須
                 Verb = "runas",
                 WorkingDirectory = Environment.CurrentDirectory,
             });
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException
+                                      or IOException or UnauthorizedAccessException)
         {
-            // UAC で「いいえ」が選ばれた(1223)か、起動できなかった。いまの窓のまま続ける
+            // UAC で「いいえ」が選ばれた(1223)か、起動できなかった。いまの窓のまま続ける。
+            // 控えたファイルは機器の出力を含みうるので必ず消す
+            HandoverStore.Delete(handoverPath);
             return;
         }
 

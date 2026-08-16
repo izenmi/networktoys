@@ -42,9 +42,16 @@ public partial class App : Application
         // 30 日より古い測定ログの整理。起動を待たせないよう背景で
         _ = Task.Run(Services.SessionLogService.CleanupOldLogs);
 
+        // 管理者として起動し直したときの引き継ぎ。読んだ側が中でファイルを消す
+        // (差分比較の貼り付けに認証情報が入りうるので置きっぱなしにしない)
+        Core.Storage.HandoverDocument? handover =
+            Services.HandoverService.PathFrom(e.Args) is { } path
+                ? Core.Storage.HandoverStore.LoadAndDelete(path)
+                : null;
+
         try
         {
-            new Views.MainWindow().Show();
+            new Views.MainWindow(handover).Show();
         }
         catch (Exception ex)
         {
