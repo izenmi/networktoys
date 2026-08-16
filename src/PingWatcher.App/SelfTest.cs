@@ -515,6 +515,23 @@ internal static class SelfTest
             log.AppendLine($"        {command.Output.Split('\n').Length} 行を取得");
         });
 
+        Check("収集: SSH.NET が単一ファイル発行でも読み込める", () =>
+        {
+            // 依存を足した直後に単一ファイル発行で初めて出る事故(型が解決できない、
+            // ネイティブ資産が展開されない)を、ここで捕まえる。
+            // 外部へは接続しない — 閉じているループバックのポートに向けるだけ
+            Assert(typeof(Renci.SshNet.ShellStream).IsSubclassOf(typeof(Stream)),
+                   "ShellStream が Stream を継承していない(状態機械へ渡せない)");
+
+            using var probe = new Services.SshConnection();
+            Stream? shell = probe.Open("127.0.0.1", 1, "u", "p", TimeSpan.FromSeconds(2), out string? error);
+
+            Assert(shell is null, "閉じたポートに繋がってしまった");
+            Assert(error is { Length: > 0 }, "失敗の理由が空");
+
+            log.AppendLine($"        {error}");
+        });
+
         Check("収集: 引き継ぎファイルにパスワードの入れ物が無い", () =>
         {
             // 保存しないと決めたものは、置き場所を用意した時点で誰かが入れてしまう

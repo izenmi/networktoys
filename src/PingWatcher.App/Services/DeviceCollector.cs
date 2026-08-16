@@ -41,20 +41,44 @@ internal static class DeviceCollector
         DateTime started = DateTime.Now;
         Stream? io = null;
         TcpClient? tcp = null;
+        SshConnection? ssh = null;
+        string? fingerprint = null;
 
         try
         {
             progress?.Report(new CollectProgress(request.Host, "接続しています…"));
 
-            using var connect = CancellationTokenSource.CreateLinkedTokenSource(token);
-            connect.CancelAfter(connectTimeout);
+            if (request.UseSsh)
+            {
+                // SSH の接続は同期 API なので、UI スレッドを塞がないよう逃がす
+                ssh = new SshConnection();
+                (Stream? shell, string? sshError) = await Task.Run(() =>
+                {
+                    Stream? opened = ssh.Open(
+                        request.Host, request.Port, request.Credentials.UserName,
+                        request.Credentials.Password, connectTimeout, out string? error);
 
-            // 周期プローブの LingerOption(true, 0) をここへ流用しない。
-            // あちらはデータを流さない測定用の最適化で、セッションでは行儀よく閉じる
-            tcp = new TcpClient { NoDelay = true };
-            await tcp.ConnectAsync(request.Host, request.Port, connect.Token).ConfigureAwait(false);
+                    return (opened, error);
+                }, token).ConfigureAwait(false);
 
-            io = new TelnetStream(tcp.GetStream());
+                if (shell is null)
+                    return Failed(request, started, sshError ?? "SSH で接続できませんでした。");
+
+                io = shell;
+                fingerprint = ssh.HostKeyFingerprint;
+            }
+            else
+            {
+                using var connect = CancellationTokenSource.CreateLinkedTokenSource(token);
+                connect.CancelAfter(connectTimeout);
+
+                // 周期プローブの LingerOption(true, 0) をここへ流用しない。
+                // あちらはデータを流さない測定用の最適化で、セッションでは行儀よく閉じる
+                tcp = new TcpClient { NoDelay = true };
+                await tcp.ConnectAsync(request.Host, request.Port, connect.Token).ConfigureAwait(false);
+
+                io = new TelnetStream(tcp.GetStream());
+            }
 
             var session = new CiscoSession(io, options)
             {
@@ -62,7 +86,7 @@ internal static class DeviceCollector
             };
 
             return await session.RunAsync(
-                request.Host, request.Port, usedSsh: false, hostKeyFingerprint: null,
+                request.Host, request.Port, request.UseSsh, fingerprint,
                 request.Credentials, commands, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
@@ -79,8 +103,10 @@ internal static class DeviceCollector
         }
         finally
         {
+            // 中断のときは接続を閉じることでブロック中の読み取りを抜けさせる
             io?.Dispose();
             tcp?.Dispose();
+            ssh?.Dispose();
         }
     }
 

@@ -1202,6 +1202,10 @@
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
                                     ToolTip="Ping と TCP のタブに登録してある宛先を機器一覧へ足します。" />
 
+                            <CheckBox Content="SSH" IsChecked="{Binding UseSsh}"
+                                      VerticalAlignment="Center" Margin="0,0,12,2"
+                                      ToolTip="外すと Telnet でつなぎます。既定のポートも切り替わります（機器ごとに :ポート を書けばそちらが優先）。" />
+
                             <TextBlock Text="接続" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,4,2" />
                             <TextBox Width="44" Text="{Binding ConnectSeconds}" Margin="0,0,2,2" />

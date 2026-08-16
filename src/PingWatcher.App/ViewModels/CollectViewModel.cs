@@ -75,6 +75,7 @@ public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
 public sealed class CollectViewModel : ObservableObject
 {
     private const int TelnetPort = 23;
+    private const int SshPort = 22;
 
     private string _deviceListText = "";
     private string _commandText = RecommendedCommands.Ios;
@@ -84,6 +85,7 @@ public sealed class CollectViewModel : ObservableObject
     private int _connectSeconds = 10;
     private int _idleSeconds = 15;
     private string _lastFolder = "";
+    private bool _useSsh = true;
     private CancellationTokenSource? _cts;
 
     public CollectViewModel()
@@ -208,6 +210,22 @@ public sealed class CollectViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// SSH でつなぐか。外すと Telnet。既定の待受ポートも切り替わる
+    /// （機器ごとに <c>:ポート</c> を書けばそちらが優先される）。
+    /// </summary>
+    public bool UseSsh
+    {
+        get => _useSsh;
+        set
+        {
+            if (!SetProperty(ref _useSsh, value)) return;
+
+            // ポートを書いていない機器の既定ポートが変わるので読み直す
+            ApplyDeviceList();
+        }
+    }
+
     /// <summary>接続の待ち（秒）。</summary>
     public int ConnectSeconds
     {
@@ -256,7 +274,7 @@ public sealed class CollectViewModel : ObservableObject
 
     private void ApplyDeviceList()
     {
-        DeviceListParseResult parsed = DeviceListParser.Parse(DeviceListText, TelnetPort);
+        DeviceListParseResult parsed = DeviceListParser.Parse(DeviceListText, UseSsh ? SshPort : TelnetPort);
 
         // 入力中のパスワードは消さない(打ち直しになる)
         Dictionary<string, CollectRowViewModel> existing = [];
@@ -335,7 +353,7 @@ public sealed class CollectViewModel : ObservableObject
                 RememberUserName(row);
 
                 var request = new CollectRequest(
-                    row.Host, row.Port, UseSsh: false,
+                    row.Host, row.Port, UseSsh,
                     new DeviceCredentials(row.UserName, row.Password, row.EnablePassword),
                     row.Memo);
 
