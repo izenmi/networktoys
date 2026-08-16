@@ -114,6 +114,17 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - 保存は `Services/CsvExport.cs` の 1 か所。**BOM 付き UTF-8**（無いと日本語版 Excel が化ける）。取り消されたら `null` を返すので、呼ぶ側は `if (... is { } message) Status = message;` と書く。
 - ファイル名は `DeviceReport.Sanitize` を通す。宛先を混ぜる画面（経路の `trace-<宛先>`）があり、IPv6 を入れられるとコロンだらけになる。**`Path.GetInvalidFileNameChars()` は使わない**（Linux では `/` と NUL しか返さず、開発機と CI で結果が変わる）。
 
+### 試験タブ（業務確認試験）
+
+- **プロキシは `HttpClientHandler.Proxy` を明示して作り分ける。Windows の設定は書き換えない。** システム設定は**プロセス起動時に読まれて固定される**ので、切り替えながら試すこと自体ができない。書き換える方式はほかのアプリを巻き込み、戻し忘れの事故にもなる。
+- **PAC は WinHTTP に評価させる。** .NET の `WebProxy` は固定アドレスしか扱えず `FindProxyForURL` を実行できない。`Interop/WinHttpNativeMethods.cs` が `WinHttpGetProxyForUrl` に**指定した PAC の URL**を渡して評価する（システム設定には触らない）。**PAC は宛先ごとに答えが変わるので、試験する URL ごとに引き直す。** 返ってきた文字列は `GlobalFree` で解放する。
+- **応答コードだけで合格にしない。** フィルタリング製品（Zscaler・i-FILTER など）は遮断時に**自前のページを HTTP 200 で返す**。`Core/Verify/HttpVerdict.cs` が本文も見る。文言の一覧は当てにならないので、**確実にしたい項目は「期待する文字列」を書いてもらう**のが正しい使い方。証跡には最終 URL と Server ヘッダを必ず残す。
+- **証明書の検証を切らない。** TLS を傍受するプロキシを使う環境では、その CA が Windows に入っていることが前提。切ると「見えているのに実は別物」を通してしまう。
+- **プロキシが効くのは HTTP の項目だけ。** TCP・メール・DNS・Teams は直接出るので、プロキシを何本選んでも 1 回しか実行しない。画面にもその断りを出している（`UsesProxy` の分岐はテストで固めてある）。
+- **Teams の UDP はただ投げても判定できない。** 無応答が「開いている」のか「塞がれている」のか区別できないため、**応答が返る STUN** を使う。`Core/Verify/StunMessage.cs` はバイト列の組み立てと解析だけなので CI で固められ、自己診断は **loopback の偽 STUN サーバ**と往復する（偽の Cisco 機器と同じ手）。
+- **タブを開いただけでは外へ出ない。** Meraki と同じ理由（CI の Windows ランナーは外に出られるので、開いた瞬間に本番へ試験が飛ぶ作りにしない）。
+- 認証は統合 Windows 認証（`UseDefaultCredentials` と `DefaultProxyCredentials`）。**認証情報は保存しない**（`AppSettingsDocument` に入れ物を作らない）。
+
 ### 外部 API（Meraki）
 
 - **別ホストへリダイレクトされると `Authorization` ヘッダが落ちる。** Meraki は組織によってリージョン別ホスト（api.meraki.cn など）へ 302 で誘導するので、`AllowAutoRedirect` を既定（true）のままにすると**追従はするが鍵が消えて 401 になる**。`MerakiDashboard` は `AllowAutoRedirect=false` にして自分で `Location` を追い、ヘッダを付け直している。自動追従に戻さないこと。
