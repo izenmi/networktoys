@@ -118,9 +118,8 @@ public sealed class VerifyViewModel : ObservableObject
 
     public VerifyViewModel()
     {
-        RebuildTemplates();
-        _selectedTemplate = Templates[0];
-
+        // コマンドを先に作る。SelectedTemplate の setter が
+        // DeleteTemplateCommand を触るので、逆順にすると生成時に落ちる
         AddRowCommand = new RelayCommand(() => AddRow(new CheckItem("", CheckKind.Http, "")));
         RemoveRowCommand = new RelayCommand<VerifyRowViewModel>(RemoveRow);
         ApplyTemplateCommand = new RelayCommand(ApplyTemplate, () => !IsBusy);
@@ -134,6 +133,8 @@ public sealed class VerifyViewModel : ObservableObject
         SaveItemsCommand = new RelayCommand(SaveItems, () => Rows.Count > 0);
         SaveTemplateCommand = new RelayCommand(SaveTemplate, () => Rows.Count > 0);
         DeleteTemplateCommand = new RelayCommand(DeleteTemplate, () => SelectedTemplate.IsMine);
+
+        RebuildTemplates();
 
         _proxyText = Settings.Current.VerifyProxies;
 
@@ -152,7 +153,8 @@ public sealed class VerifyViewModel : ObservableObject
     /// <summary>ひな型の選択肢。組み込みのぶんと、自分で保存したぶん。</summary>
     public ObservableCollection<CheckTemplate> Templates { get; } = [];
 
-    private CheckTemplate _selectedTemplate;
+    // 空のひな型で始める。RebuildTemplates() が組み込みのものへ差し替える
+    private CheckTemplate _selectedTemplate = new("", "");
 
     public CheckTemplate SelectedTemplate
     {
