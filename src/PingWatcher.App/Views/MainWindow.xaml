@@ -788,7 +788,10 @@
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                     ToolTip="経路上で分割せずに通る最大パケットサイズを二分探索で求めます。" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,2" />
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,2"
+                                    ToolTip="ホップ一覧と、経路が変わった記録を書き出します。" />
                             <CheckBox Content="60秒ごとに見張る" IsChecked="{Binding IsWatching}"
                                       VerticalAlignment="Center" Margin="0,0,10,2"
                                       ToolTip="定期的に経路を調べ直し、変わったら下に記録します。" />
@@ -1530,6 +1533,9 @@
                                 <Button Content="比較を停止" Command="{Binding EditCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                         ToolTip="比較をやめて貼り付け欄に戻ります。貼り付けた内容は残ります。" />
+                                <Button Content="CSV で保存" Command="{Binding SaveChangesCommand}"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                        ToolTip="「何が変わったか」を書き出します。" />
                                 <CheckBox Content="異なる行だけ" IsChecked="{Binding OnlyDifferences}"
                                           VerticalAlignment="Center" Margin="0,0,12,2" />
 
@@ -2045,6 +2051,11 @@
                             <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="90" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
                                      Margin="0,0,12,0" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
                             <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
                                     Style="{StaticResource Button.Subtle}" />
                         </StackPanel>
@@ -2136,6 +2147,11 @@
                                      FontFamily="{DynamicResource Font.Mono}"
                                      HorizontalContentAlignment="Center" Margin="0,0,12,0"
                                      ToolTip="標準は 69。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
                             <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
                                     Style="{StaticResource Button.Subtle}" />
                         </StackPanel>
@@ -2234,6 +2250,11 @@
                             <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="90" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
                                      Margin="0,0,12,0" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
                             <Button Content="フォルダを開く" Command="{Binding OpenFolderCommand}"
                                     Style="{StaticResource Button.Subtle}" />
                         </StackPanel>
@@ -2332,7 +2353,12 @@
                                       ItemsSource="{Binding RecordTypes}"
                                       SelectedItem="{Binding SelectedType}"
                                       Margin="0,0,6,0" />
-                            <Button Content="問い合わせ" Command="{Binding QueryCommand}" Margin="0,0,10,0" />
+                            <Button Content="問い合わせ" Command="{Binding QueryCommand}" Margin="0,0,6,0" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,10,0"
+                                    ToolTip="サーバごとの回答を 1 枚の表にします。回答が無かったサーバも 1 行残します。" />
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
@@ -2438,6 +2464,11 @@
                                      FontFamily="{DynamicResource Font.Mono}"
                                      HorizontalContentAlignment="Center" Margin="0,0,12,0"
                                      ToolTip="標準は 514。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
                             <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
                                     Style="{StaticResource Button.Subtle}" />
                         </StackPanel>
@@ -2542,6 +2573,11 @@
                                                   ToolTip="外すと v1 で問い合わせます。" />
                                         <Button Content="取得" Command="{Binding GetCommand}" Margin="0,0,6,0" />
                                         <Button Content="ウォーク" Command="{Binding WalkCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                        <Button Content="中断" Command="{Binding CancelCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                                ToolTip="ウォークは最大 5000 行まで走ります。" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveCommand}"
                                                 Style="{StaticResource Button.Subtle}" />
                                     </StackPanel>
 
@@ -2636,6 +2672,11 @@
                                                  FontFamily="{DynamicResource Font.Mono}"
                                                  HorizontalContentAlignment="Center" Margin="0,0,12,0"
                                                  ToolTip="標準は 162。" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                                        <Button Content="一覧を消す" Command="{Binding ClearCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                                ToolTip="画面の一覧だけ消します。待受は止めず、ファイルのログにも触りません。" />
                                         <Button Content="ログのフォルダを開く" Command="{Binding OpenFolderCommand}"
                                                 Style="{StaticResource Button.Subtle}" />
                                     </StackPanel>
@@ -2740,6 +2781,9 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="10,0,0,0"
+                                    ToolTip="いま見えている行を書き出します(絞り込みと並べ替えの結果を含みます)。" />
                         </StackPanel>
 
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"

@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Windows.Threading;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
+using PingWatcher.Core.Work;
 
 namespace PingWatcher.App.ViewModels;
 
@@ -113,6 +114,7 @@ public sealed class TraceViewModel : ObservableObject
         TraceCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && !string.IsNullOrWhiteSpace(Host));
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         MtuCommand = new RelayCommand(() => _ = RunMtuAsync(), () => !IsBusy && !string.IsNullOrWhiteSpace(Host));
+        SaveCommand = new RelayCommand(Save, () => Hops.Count > 0);
     }
 
     public ObservableCollection<TraceHopViewModel> Hops { get; } = [];
@@ -174,6 +176,7 @@ public sealed class TraceViewModel : ObservableObject
     public RelayCommand TraceCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand MtuCommand { get; }
+    public RelayCommand SaveCommand { get; }
 
     /// <summary>Path MTU の探索結果。</summary>
     public string MtuText
@@ -208,7 +211,28 @@ public sealed class TraceViewModel : ObservableObject
             TraceCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
             MtuCommand.RaiseCanExecuteChanged();
+            SaveCommand.RaiseCanExecuteChanged();
         }
+    }
+
+    /// <summary>
+    /// ホップ一覧を CSV に出す。経路が変わった記録も末尾に足す
+    /// （アプリを閉じると消えてしまい、報告に貼れなかった）。
+    /// </summary>
+    private void Save()
+    {
+        var rows = new List<string[]>();
+
+        foreach (TraceHopViewModel hop in Hops)
+            rows.Add([hop.Ttl.ToString(), hop.Address, hop.HostName, hop.Rtt, hop.Note, ""]);
+
+        foreach (RouteChangeViewModel change in Changes)
+            rows.Add(["", "", "", "", "経路の変化", $"{change.Time} {change.Summary}"]);
+
+        var table = new CsvTable(["ホップ", "IP", "ホスト名", "RTT", "状態", "備考"], rows);
+
+        if (Services.CsvExport.Save($"trace-{Host.Trim()}", table) is { } message)
+            Status = message;
     }
 
     private async Task RunAsync()

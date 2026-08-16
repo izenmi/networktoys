@@ -51,6 +51,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
         NextDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: true), () => DifferenceCount > 0);
         PreviousDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: false), () => DifferenceCount > 0);
 
+        SaveChangesCommand = new RelayCommand(SaveChanges, () => Changes.Count > 0);
+
         AddDeviceCommand = new RelayCommand(AddDevice);
         RemoveDeviceCommand = new RelayCommand(RemoveDevice, () => Devices.Count > 1);
 
@@ -118,6 +120,29 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
     /// <summary>構造として比べたときの変化。対象によっては空（show run など）。</summary>
     public ObservableCollection<DeviceChange> Changes { get; } = [];
+
+    /// <summary>
+    /// 比べた結果を CSV に出す。貼り付けた原文は保存できるのに、
+    /// 肝心の「何が変わったか」だけ持ち出せなかった。
+    /// </summary>
+    private void SaveChanges()
+    {
+        var table = new CsvTable(
+            ["重さ", "対象", "種類", "内容"],
+            [.. Changes.Select(c => new[]
+            {
+                c.Severity switch
+                {
+                    ChangeSeverity.Critical => "重大",
+                    ChangeSeverity.Warning => "注意",
+                    _ => "情報",
+                },
+                c.Key, c.Kind, c.Description,
+            })]);
+
+        if (Services.CsvExport.Save("diff", table) is { } message)
+            Status = message;
+    }
 
     public RelayCommand NextDifferenceCommand { get; }
     public RelayCommand PreviousDifferenceCommand { get; }
@@ -206,6 +231,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
     public RelayCommand LoadAfterCommand { get; }
     public RelayCommand SaveBeforeCommand { get; }
     public RelayCommand SaveAfterCommand { get; }
+    public RelayCommand SaveChangesCommand { get; }
 
     /// <summary>
     /// 比較対象の選択肢。<see cref="DeviceOutputKind"/> の一部だけを載せる
@@ -343,6 +369,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
         // 結果は対象ごとに持たない。切り替えたら貼り付け欄に戻し、必要なら比べ直す
         Rows.Clear();
         Changes.Clear();
+        SaveChangesCommand.RaiseCanExecuteChanged();
         Headline = string.Empty;
         Note = string.Empty;
         HasResult = false;
@@ -472,6 +499,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
 
         Rows.Clear();
         Changes.Clear();
+        SaveChangesCommand.RaiseCanExecuteChanged();
         Note = string.Empty;
         OnPropertyChanged(nameof(HasNote));   // 空にした側も通知しないと前回の注意書きが残る
 
@@ -500,6 +528,8 @@ public sealed class DeviceCompareViewModel : ObservableObject
             Note = outcome.Note ?? string.Empty;
             OnPropertyChanged(nameof(HasNote));
         }
+
+        SaveChangesCommand.RaiseCanExecuteChanged();
         else
         {
             Headline = result.HasChanges ? $"{result.ChangedCount} 行に違いがあります。" : "違いはありません。";
@@ -589,6 +619,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
         AfterText = string.Empty;
         Rows.Clear();
         Changes.Clear();
+        SaveChangesCommand.RaiseCanExecuteChanged();
         Headline = string.Empty;
         HasResult = false;
         IsEditing = true;

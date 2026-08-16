@@ -308,28 +308,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     private void Save(string kind, CsvTable table)
     {
-        var dialog = new SaveFileDialog
-        {
-            FileName = $"meraki-{kind}-{DateTime.Now:yyyyMMdd-HHmm}.csv",
-            DefaultExt = "csv",
-            Filter = "CSV ファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*",
-            AddExtension = true,
-        };
-
-        if (dialog.ShowDialog() != true) return;
-
-        try
-        {
-            // BOM が無いと日本語版 Excel が文字化けする
-            File.WriteAllText(dialog.FileName, table.ToCsv(),
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-
-            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました（{table.Rows.Count} 件）。";
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Status = $"保存できませんでした: {ex.Message}";
-        }
+        if (Services.CsvExport.Save($"meraki-{kind}", table) is { } message)
+            Status = message;
     }
 
     /// <summary>すべて消す。キーも画面の伏せ字欄も残さない。</summary>

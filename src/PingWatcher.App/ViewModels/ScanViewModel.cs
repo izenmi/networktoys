@@ -214,33 +214,14 @@ public sealed class ScanViewModel : ObservableObject
         }
     }
 
-    /// <summary>スキャン結果を CSV に保存する(BOM 付き UTF-8。Excel でそのまま開ける)。</summary>
     private void Save()
     {
-        var dialog = new SaveFileDialog
-        {
-            FileName = $"scan-{DateTime.Now:yyyyMMdd-HHmm}.csv",
-            DefaultExt = "csv",
-            Filter = "CSV ファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*",
-            AddExtension = true,
-        };
+        var table = new CsvTable(
+            ["IP", "RTT", "ホスト名", "MAC", "ベンダー", "開放ポート"],
+            [.. Results.Select(r => new[] { r.Address, r.Rtt, r.HostName, r.Mac, r.Vendor, r.Ports })]);
 
-        if (dialog.ShowDialog() != true)
-            return;
-
-        try
-        {
-            var table = new CsvTable(
-                ["IP", "RTT", "ホスト名", "MAC", "ベンダー", "開放ポート"],
-                [.. Results.Select(r => new[] { r.Address, r.Rtt, r.HostName, r.Mac, r.Vendor, r.Ports })]);
-
-            File.WriteAllText(dialog.FileName, table.ToCsv(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました({Results.Count} 件)。";
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Status = $"保存できませんでした: {ex.Message}";
-        }
+        if (Services.CsvExport.Save("scan", table) is { } message)
+            Status = message;
     }
 
     private void AddToTargets()

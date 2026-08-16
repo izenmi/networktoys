@@ -116,8 +116,14 @@ public static class DeviceReport
             : $"{name}_{stamp}.txt";
     }
 
-    /// <summary>Windows のファイル名に使えない要素を落とす。</summary>
-    internal static string Sanitize(string value)
+    /// <summary>
+    /// Windows のファイル名に使えない要素を落とす。収集の保存名と、
+    /// 一覧の CSV 書き出し(<c>trace-192.168.1.1</c> のように宛先を混ぜる)で共有する。
+    ///
+    /// <b><c>Path.GetInvalidFileNameChars()</c> は使わない</b> — Linux では
+    /// <c>/</c> と NUL しか返さず、開発機と CI でテストの結果が変わる。
+    /// </summary>
+    public static string Sanitize(string value)
     {
         var builder = new StringBuilder(value.Length);
 

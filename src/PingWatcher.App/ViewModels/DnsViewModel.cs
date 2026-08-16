@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Net;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
+using PingWatcher.Core.Work;
 
 namespace PingWatcher.App.ViewModels;
 
@@ -86,6 +87,8 @@ public sealed class DnsViewModel : ObservableObject
         _serversText = _defaultServersText = string.Join('\n', servers);
 
         QueryCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && !string.IsNullOrWhiteSpace(Name));
+        CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
+        SaveCommand = new RelayCommand(Save, () => Results.Count > 0);
     }
 
     public IReadOnlyList<string> RecordTypes => DnsProbe.SupportedTypes;
@@ -93,6 +96,8 @@ public sealed class DnsViewModel : ObservableObject
     public ObservableCollection<DnsServerResultViewModel> Results { get; } = [];
 
     public RelayCommand QueryCommand { get; }
+    public RelayCommand CancelCommand { get; }
+    public RelayCommand SaveCommand { get; }
 
     public string Name
     {
@@ -128,9 +133,38 @@ public sealed class DnsViewModel : ObservableObject
         get => _isBusy;
         private set
         {
-            if (SetProperty(ref _isBusy, value))
-                QueryCommand.RaiseCanExecuteChanged();
+            if (!SetProperty(ref _isBusy, value)) return;
+
+            QueryCommand.RaiseCanExecuteChanged();
+            CancelCommand.RaiseCanExecuteChanged();
         }
+    }
+
+    /// <summary>
+    /// サーバごとの回答を 1 枚の表にする。
+    /// この画面の値は「どのサーバでは引けてどこでは引けないか」なので、
+    /// <b>回答が 0 件のサーバも 1 行残す</b>（消すと比較にならない）。
+    /// </summary>
+    private void Save()
+    {
+        var rows = new List<string[]>();
+
+        foreach (DnsServerResultViewModel result in Results)
+        {
+            if (result.Records.Count == 0)
+            {
+                rows.Add([result.ServerLabel, "", "", "", "", result.Summary]);
+                continue;
+            }
+
+            foreach (DnsRecordLine record in result.Records)
+                rows.Add([result.ServerLabel, record.Type, record.Name, record.Value, record.TtlText, result.Summary]);
+        }
+
+        var table = new CsvTable(["サーバ", "種別", "名前", "値", "TTL", "結果"], rows);
+
+        if (Services.CsvExport.Save($"dns-{SelectedType}", table) is { } message)
+            Status = message;
     }
 
     private async Task RunAsync()
@@ -200,6 +234,7 @@ public sealed class DnsViewModel : ObservableObject
             if (ReferenceEquals(_cts, cts))
                 _cts = null;
             IsBusy = false;
+            SaveCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -208,6 +243,7 @@ public sealed class DnsViewModel : ObservableObject
     {
         _cts?.Cancel();
         Results.Clear();
+        SaveCommand.RaiseCanExecuteChanged();
         Name = "www.google.com";
         SelectedType = "A";
         ServersText = _defaultServersText;

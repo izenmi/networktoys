@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using PingWatcher.Core.Metrics;
 using PingWatcher.Core.Models;
+using PingWatcher.Core.Work;   // OutageRecord
 
 namespace PingWatcher.Core.Reporting;
 

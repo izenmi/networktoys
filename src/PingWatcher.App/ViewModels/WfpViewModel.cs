@@ -288,29 +288,7 @@ public sealed class WfpViewModel : ObservableObject
 
     private void Save()
     {
-        var dialog = new SaveFileDialog
-        {
-            FileName = $"wfp-blocked-{DateTime.Now:yyyyMMdd-HHmm}.csv",
-            DefaultExt = "csv",
-            Filter = "CSV ファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*",
-            AddExtension = true,
-        };
-
-        if (dialog.ShowDialog() != true) return;
-
-        try
-        {
-            CsvTable table = WfpEventView.ToCsv([.. Rows]);
-
-            // BOM が無いと日本語版 Excel が文字化けする
-            File.WriteAllText(dialog.FileName, table.ToCsv(),
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-
-            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました（{Rows.Count} 件）。";
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Status = $"保存できませんでした: {ex.Message}";
-        }
+        if (Services.CsvExport.Save("wfp-blocked", WfpEventView.ToCsv([.. Rows])) is { } message)
+            Status = message;
     }
 }

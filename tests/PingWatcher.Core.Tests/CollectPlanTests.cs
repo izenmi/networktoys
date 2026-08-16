@@ -357,6 +357,9 @@ public class DeviceReportTests
     [InlineData("CON", "CON_")]
     [InlineData("name.", "name")]
     [InlineData("", "")]
+    // CSV の書き出しも通す。宛先をファイル名に混ぜる画面(経路の trace-<宛先>)があり、
+    // IPv6 を入れられるとコロンだらけの名前になる
+    [InlineData("trace-2001:db8::1", "trace-2001db81")]
     public void File_names_drop_what_windows_cannot_use(string input, string expected)
         => Assert.Equal(expected, DeviceReport.Sanitize(input));
 

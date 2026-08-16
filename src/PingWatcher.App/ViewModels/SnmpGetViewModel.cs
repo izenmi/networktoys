@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
 using PingWatcher.Core.Snmp;
+using PingWatcher.Core.Work;
 
 namespace PingWatcher.App.ViewModels;
 
@@ -35,6 +36,8 @@ public sealed class SnmpGetViewModel : ObservableObject
 
         GetCommand = new RelayCommand(() => _ = RunAsync(walk: false), () => CanRun);
         WalkCommand = new RelayCommand(() => _ = RunAsync(walk: true), () => CanRun);
+        CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
+        SaveCommand = new RelayCommand(Save, () => Rows.Count > 0);
     }
 
     public IReadOnlyList<OidPreset> Presets { get; } =
@@ -53,6 +56,8 @@ public sealed class SnmpGetViewModel : ObservableObject
 
     public RelayCommand GetCommand { get; }
     public RelayCommand WalkCommand { get; }
+    public RelayCommand CancelCommand { get; }
+    public RelayCommand SaveCommand { get; }
 
     public string Host
     {
@@ -96,6 +101,19 @@ public sealed class SnmpGetViewModel : ObservableObject
     {
         GetCommand.RaiseCanExecuteChanged();
         WalkCommand.RaiseCanExecuteChanged();
+        CancelCommand.RaiseCanExecuteChanged();
+        SaveCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>ウォークは数百行になるので、そのまま表計算へ持っていけるようにする。</summary>
+    private void Save()
+    {
+        var table = new CsvTable(
+            ["OID", "名前", "型", "値"],
+            [.. Rows.Select(r => new[] { r.Oid, r.Name, r.Type, r.Value })]);
+
+        if (Services.CsvExport.Save("snmp", table) is { } message)
+            Status = message;
     }
 
     private async Task RunAsync(bool walk)
@@ -135,6 +153,7 @@ public sealed class SnmpGetViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+            SaveCommand.RaiseCanExecuteChanged();
         }
     }
 

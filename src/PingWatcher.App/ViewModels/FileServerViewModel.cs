@@ -7,6 +7,7 @@ using System.Windows.Threading;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
 using PingWatcher.Core.Logging;
+using PingWatcher.Core.Work;
 
 namespace PingWatcher.App.ViewModels;
 
@@ -44,6 +45,8 @@ public abstract class FileServerViewModel : ObservableObject
         StartCommand = new RelayCommand(Start, () => !IsRunning);
         StopCommand = new RelayCommand(Stop, () => IsRunning);
         OpenFolderCommand = new RelayCommand(OpenFolder);
+        SaveCommand = new RelayCommand(Save, () => Log.Count > 0);
+        ClearCommand = new RelayCommand(ClearLog, () => Log.Count > 0);
     }
 
     /// <summary>公開するフォルダ。派生でプロトコルごとに分ける。</summary>
@@ -62,6 +65,8 @@ public abstract class FileServerViewModel : ObservableObject
     public RelayCommand StartCommand { get; }
     public RelayCommand StopCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
+    public RelayCommand SaveCommand { get; }
+    public RelayCommand ClearCommand { get; }
 
     public string Port
     {
@@ -148,9 +153,34 @@ public abstract class FileServerViewModel : ObservableObject
 
             while (Log.Count > MaxRows)
                 Log.RemoveAt(Log.Count - 1);
+
+            SaveCommand.RaiseCanExecuteChanged();
+            ClearCommand.RaiseCanExecuteChanged();
         });
 
         _log?.Append($"{e.At.ToString("HH:mm:ss.f", CultureInfo.InvariantCulture)}\t{e.RemoteAddress}\t{e.Text}");
+    }
+
+    /// <summary>
+    /// 画面に出ている行を CSV に出す。<c>.log</c> は書いているが、
+    /// これまで画面からは「フォルダを開く」しかできなかった。
+    /// </summary>
+    private void Save()
+    {
+        var table = new CsvTable(
+            ["時刻", "送信元", "内容"],
+            [.. Log.Select(r => new[] { r.Time, r.Remote, r.Text })]);
+
+        if (Services.CsvExport.Save(_logPrefix, table) is { } message)
+            Status = message;
+    }
+
+    /// <summary>一覧だけ消す。待受は止めないし、ファイルのログにも触らない。</summary>
+    private void ClearLog()
+    {
+        Log.Clear();
+        SaveCommand.RaiseCanExecuteChanged();
+        ClearCommand.RaiseCanExecuteChanged();
     }
 
     private void OpenFolder()
@@ -170,7 +200,7 @@ public abstract class FileServerViewModel : ObservableObject
     public void Reset()
     {
         Stop();
-        Log.Clear();
+        ClearLog();
         Status = string.Empty;
     }
 }

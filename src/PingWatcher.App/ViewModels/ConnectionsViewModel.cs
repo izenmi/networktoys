@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
 using PingWatcher.Core.Net;
+using PingWatcher.Core.Work;
 
 namespace PingWatcher.App.ViewModels;
 
@@ -63,7 +64,11 @@ public sealed class ConnectionsViewModel : ObservableObject
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = RefreshInterval };
         _timer.Tick += async (_, _) => await RefreshAsync();
+
+        SaveCommand = new RelayCommand(Save, () => Rows.Count > 0);
     }
+
+    public RelayCommand SaveCommand { get; }
 
     public ObservableCollection<ConnectionListRow> Rows { get; } = [];
 
@@ -262,6 +267,28 @@ public sealed class ConnectionsViewModel : ObservableObject
             _sortColumn.Length > 0 ? _sortColumn : null, _sortDescending,
             _selectedStateFilter.State);
         OrderedListSync.Apply(Rows, desired, row => row.SortKey);
+        SaveCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// いま見えている行をそのまま CSV に出す（絞り込みと並べ替えの結果を含む）。
+    /// プロセスの見出し行は、配下の接続と区別できるよう「プロセス」の種別を付ける。
+    /// </summary>
+    private void Save()
+    {
+        var table = new CsvTable(
+            ["種別", "プロセス / プロトコル", "PID / ローカル", "本数 / リモート", "状態", "送信", "受信"],
+            [.. Rows.Select(row => row switch
+            {
+                ConnectionGroupRow g =>
+                    new[] { "プロセス", g.ProcessName, g.PidText, g.CountText, "", g.SentText, g.ReceivedText },
+                ConnectionDetailRow d =>
+                    new[] { "接続", d.Protocol, d.Local, d.Remote, d.StateText, d.SentText, d.ReceivedText },
+                _ => new[] { "", "", "", "", "", "", "" },
+            })]);
+
+        if (Services.CsvExport.Save("connections", table) is { } message)
+            Status = message;
     }
 
     private void StopTrace()
