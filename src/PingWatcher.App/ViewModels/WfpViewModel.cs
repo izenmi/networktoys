@@ -134,7 +134,9 @@ public sealed class WfpViewModel : ObservableObject
     public bool CanEnableCollection => NetTraceSession.IsAdministrator && !_isCollecting;
 
     public string TimeHeader => HeaderLabel("", "時刻");
+    public string DirectionHeader => HeaderLabel("Direction", "方向");
     public string ProtocolHeader => HeaderLabel("Protocol", "プロトコル");
+    public string LocalHeader => HeaderLabel("Local", "送信元");
     public string RemoteHeader => HeaderLabel("Remote", "宛先");
     public string ProcessHeader => HeaderLabel("Process", "プロセス");
     public string CountHeader => HeaderLabel("Count", "件数");
@@ -156,7 +158,8 @@ public sealed class WfpViewModel : ObservableObject
         }
 
         foreach (string name in new[]
-                 { nameof(TimeHeader), nameof(ProtocolHeader), nameof(RemoteHeader),
+                 { nameof(TimeHeader), nameof(DirectionHeader), nameof(ProtocolHeader),
+                   nameof(LocalHeader), nameof(RemoteHeader),
                    nameof(ProcessHeader), nameof(CountHeader) })
             OnPropertyChanged(name);
 

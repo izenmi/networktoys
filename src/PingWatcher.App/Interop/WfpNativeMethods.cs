@@ -319,19 +319,29 @@ internal static class WfpNativeMethods
         return new IPAddress(bytes);
     }
 
+    /// <summary>
+    /// プロセスのパス。取れなかったときは<b>理由が分かる印</b>を返す。
+    ///
+    /// 空文字で潰すと「そもそも機器が出していない」のか「こちらの読み方が違う」のか
+    /// 切り分けられない（実機で「プロセスが何も出ない」と報告を受けた）。
+    /// </summary>
     private static string ReadAppId(IntPtr item, uint flags)
     {
+        // カーネル由来のトラフィックや受信の遮断では、そもそもプロセスが決まらない
         if ((flags & FlagAppIdSet) == 0) return "";
 
         uint size = (uint)Marshal.ReadInt32(item, OffAppIdSize);
         IntPtr data = Marshal.ReadIntPtr(item, OffAppIdData);
 
         // 長さが異常なら触らない。ここを信じて Copy すると一気にバッファ外へ出る
-        if (size < 2 || size > 65534 || !LooksLikePointer(data)) return "";
+        if (size < 2 || size > 65534 || !LooksLikePointer(data))
+            return NtPathText.Unreadable;
 
         byte[] bytes = new byte[size];
         Marshal.Copy(data, bytes, 0, (int)size);
-        return NtPathText.FromBlobBytes(bytes);
+
+        string path = NtPathText.FromBlobBytes(bytes);
+        return path.Length > 0 ? path : NtPathText.Unreadable;
     }
 
     /// <summary>ユーザーモードで現実的なアドレス範囲か。null や小さな整数を弾く。</summary>

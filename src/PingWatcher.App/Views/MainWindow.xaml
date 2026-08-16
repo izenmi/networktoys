@@ -1384,7 +1384,7 @@
             </TabItem>
 
             <!-- ===== 差分比較（show ip route / show run を作業前後で見比べる） ===== -->
-            <TabItem Header="差分比較" DataContext="{Binding DeviceCompare}">
+            <TabItem Header="差分" DataContext="{Binding DeviceCompare}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
 
@@ -2834,13 +2834,21 @@
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
                                         <TextBlock Text="{Binding TimeHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
                                     </Border>
-                                    <TextBlock Grid.Column="1" Text="方向" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <Border Grid.Column="1" Background="Transparent" Cursor="Hand" Tag="Direction"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding DirectionHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    </Border>
                                     <Border Grid.Column="2" Background="Transparent" Cursor="Hand" Tag="Protocol"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">
                                         <TextBlock Text="{Binding ProtocolHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
                                     </Border>
-                                    <TextBlock Grid.Column="3" Text="送信元" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <Border Grid.Column="3" Background="Transparent" Cursor="Hand" Tag="Local"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding LocalHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    </Border>
                                     <Border Grid.Column="4" Background="Transparent" Cursor="Hand" Tag="Remote"
                                             MouseLeftButtonDown="OnListHeaderSort"
                                             ToolTip="クリックで並べ替え（もう一度で逆順）">

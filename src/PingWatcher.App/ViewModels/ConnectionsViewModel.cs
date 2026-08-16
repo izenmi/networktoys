@@ -57,7 +57,9 @@ public sealed class ConnectionsViewModel : ObservableObject
             new ConnectionStateFilter("CLOSE_WAIT のみ", TcpConnectionState.CloseWait),
             new ConnectionStateFilter("UDP のみ", TcpConnectionState.None),
         ];
-        _selectedStateFilter = StateFilters[0];
+        // 既定は ESTABLISHED のみ(ユーザー指示)。LISTEN や TIME_WAIT に埋もれず、
+        // 「いま実際に通っている通信」がすぐ見える
+        _selectedStateFilter = StateFilters[1];
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = RefreshInterval };
         _timer.Tick += async (_, _) => await RefreshAsync();
@@ -211,7 +213,7 @@ public sealed class ConnectionsViewModel : ObservableObject
     public void Reset()
     {
         Filter = "";
-        SelectedStateFilter = StateFilters[0];
+        SelectedStateFilter = StateFilters[1];
         IsPaused = true;   // 既定へ戻す
     }
 

@@ -138,6 +138,13 @@ public static class WfpFormat
 public static class NtPathText
 {
     /// <summary>
+    /// 印が立っているのに読み出せなかったパス。
+    /// 「そもそも無い」（空文字）と区別できるようにしておく — 実機で切り分けるときに、
+    /// この差が「こちらの読み方が違う」のか「機器が出していない」のかを分ける。
+    /// </summary>
+    public const string Unreadable = "\u0001unreadable";
+
+    /// <summary>
     /// FWP_BYTE_BLOB の中身（終端 NUL 付きの UTF-16）を文字列にする。
     ///
     /// size がバイト数で終端を含む、という理解で読んでいるが、含まない場合でも
@@ -216,8 +223,10 @@ public static class WfpEventView
                 Protocol: WfpFormat.Protocol(latest.Protocol),
                 Local: WfpFormat.Endpoint(latest.Local, latest.LocalPort, latest.ScopeId),
                 Remote: WfpFormat.Endpoint(latest.Remote, latest.RemotePort, latest.ScopeId),
-                ProcessName: path.Length == 0 ? "—" : NtPathText.FileName(path),
-                ProcessPath: path,
+                ProcessName: path.Length == 0 ? "—"
+                    : path == NtPathText.Unreadable ? "⚠ 読み取れず"
+                    : NtPathText.FileName(path),
+                ProcessPath: path == NtPathText.Unreadable ? "" : path,
                 Count: list.Count,
                 CountText: list.Count.ToString(CultureInfo.InvariantCulture),
                 FilterId: latest.FilterId.ToString(CultureInfo.InvariantCulture),
@@ -249,7 +258,9 @@ public static class WfpEventView
         Func<WfpBlockedRow, IComparable> key = sortColumn switch
         {
             "Process" => r => r.ProcessName,
+            "Direction" => r => r.DirectionText,
             "Protocol" => r => r.Protocol,
+            "Local" => r => r.Local,
             "Remote" => r => r.Remote,
             "Count" => r => r.Count,
             "Filter" => r => r.FilterId,
