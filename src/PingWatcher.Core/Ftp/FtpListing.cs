@@ -188,8 +188,9 @@ public static class FtpListing
 
         string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        // 権限 + リンク数 + 所有者 + グループ + サイズ + 月 + 日 + 時刻/年 + 名前
-        if (parts.Length < 9) return null;
+        // 最低でも 権限 + 何か + サイズ + 月 + 日 + 時刻/年 + 名前 の 7 つ。
+        // グループを出さないサーバがあるので 9 を要求してはいけない
+        if (parts.Length < 7) return null;
 
         // サイズの位置はサーバによって違う（グループを出さないものがある）。
         // 「月名の 3 つ前」ではなく、月名を探してそこから逆算する
