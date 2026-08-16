@@ -53,4 +53,13 @@ public sealed class AppSettingsDocument
     /// 置き場所を用意した時点で誰かが入れてしまう。
     /// </summary>
     public Dictionary<string, string> CollectUserNames { get; set; } = [];
+
+    /// <summary>業務確認試験の項目（1 行 1 件のテキスト）。</summary>
+    public string VerifyChecks { get; set; } = "";
+
+    /// <summary>
+    /// 試験に使うプロキシの定義（1 行 1 件で <c>名前,種類,アドレス</c>）。
+    /// 統合 Windows 認証で通す前提なので、<b>ここにも認証情報は入れない</b>。
+    /// </summary>
+    public string VerifyProxies { get; set; } = "";
 }

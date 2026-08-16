@@ -574,6 +574,67 @@ internal static class SelfTest
             log.AppendLine($"        行の型: {cases.Length} 通り");
         });
 
+        Check("確認: 試験項目の行テンプレートを実体化できる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 項目が 0 件だと行テンプレートが一度も作られず、
+            // リソースキーの誤りを素通りしてしまう
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+            object? original = window.MainTabs.SelectedItem;
+
+            window.VerifyTab.IsSelected = true;
+            shell.Verify.ApplyTemplateCommand.Execute(null);
+            window.UpdateLayout();
+
+            Assert(shell.Verify.Rows.Count > 0, "ひな型を入れても行が作られない");
+
+            // タブを開いてひな型を入れただけでは、外へ 1 バイトも出ないこと。
+            // 出す作りにすると CI の Windows ランナーから本番へ試験が飛ぶ
+            Assert(shell.Verify.Results.Count == 0, "実行していないのに結果が入っている");
+
+            shell.Verify.Reset();
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
+        Check("確認: 偽の STUN サーバと UDP で往復できる", () =>
+        {
+            // Teams の音声が通るかは UDP の応答で決まる。実機も外部通信も要らずに、
+            // loopback へ立てた偽サーバ相手に送受信の経路を丸ごと通す
+            // （偽の Cisco 機器と同じ手）
+            using var server = new System.Net.Sockets.UdpClient(
+                new IPEndPoint(IPAddress.Loopback, 0));
+
+            int port = ((IPEndPoint)server.Client.LocalEndPoint!).Port;
+            var seen = new IPEndPoint(IPAddress.Parse("203.0.113.9"), 51234);
+
+            using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+            Task serve = Task.Run(async () =>
+            {
+                System.Net.Sockets.UdpReceiveResult got = await server.ReceiveAsync(stop.Token);
+
+                // 受け取った要求と同じトランザクション ID で返す
+                byte[] response = Core.Verify.StunMessage.BuildSuccessResponse(
+                    got.Buffer.AsSpan(8, 12), seen);
+
+                await server.SendAsync(response, got.RemoteEndPoint, stop.Token);
+            }, stop.Token);
+
+            Services.StunOutcome outcome = Services.StunProbe
+                .RunAsync("127.0.0.1", port, 3000, stop.Token).GetAwaiter().GetResult();
+
+            Assert(outcome.Reachable, $"応答を受け取れない: {outcome.Problem}");
+            Assert(Equals(outcome.SeenAddress, seen),
+                   $"外から見えるアドレスが違う: {outcome.SeenAddress}");
+
+            stop.Cancel();
+            try { serve.Wait(2000); } catch (AggregateException) { /* 止めたので握る */ }
+
+            log.AppendLine($"        往復 {outcome.ElapsedMs:0} ms / 見えたアドレス {outcome.SeenAddress}");
+        });
+
         Check("収集: 機器の行テンプレートを実体化できる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

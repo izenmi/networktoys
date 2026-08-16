@@ -7,7 +7,7 @@
         xmlns:vm="clr-namespace:PingWatcher.App.ViewModels"
         xmlns:net="clr-namespace:PingWatcher.Core.Net;assembly=PingWatcher.Core"
         Title="PingWatcher"
-        Width="820" Height="760"
+        Width="880" Height="760"
         MinWidth="700" MinHeight="480"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.Window.Backdrop}"
@@ -4170,6 +4170,298 @@
             </TabItem>
 
             <!-- ===== 記録 ===== -->
+            <!-- ===== 確認（業務確認試験。プロキシを切り替えて同じ試験を回せる） ===== -->
+            <TabItem x:Name="VerifyTab" Header="確認" DataContext="{Binding Verify}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <ComboBox Width="200" Margin="0,0,6,2"
+                                      ItemsSource="{Binding Templates}"
+                                      SelectedItem="{Binding SelectedTemplate}"
+                                      ToolTip="試験項目のひな型です。入れてから宛先を書き換えます。">
+                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Content="ひな型を入れる" Command="{Binding ApplyTemplateCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    ToolTip="いまの項目を置き換えます。" />
+
+                            <Button Content="まとめて実行" Command="{Binding StartCommand}" Margin="0,0,6,2" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
+                                    ToolTip="試験成績書へ貼れる形で書き出します。" />
+                        </WrapPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Notice}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <!-- プロキシ。定義（左）と、そのうちどれで試すか（右） -->
+                        <Border DockPanel.Dock="Top" MaxHeight="96" Margin="0,0,0,6"
+                                Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="240" />
+                                </Grid.ColumnDefinitions>
+
+                                <DockPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Margin="0,0,0,3"
+                                               Text="プロキシの一覧（1 行 1 件・名前,pac または proxy,アドレス）" />
+                                    <TextBox Text="{Binding ProxyText, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="{DynamicResource Font.Mono}"
+                                             FontSize="{DynamicResource Size.Caption}"
+                                             AcceptsReturn="True" TextWrapping="NoWrap"
+                                             VerticalScrollBarVisibility="Auto"
+                                             VerticalContentAlignment="Top"
+                                             ToolTip="例: Zscaler,pac,http://pac.zscaler.net/example/proxy.pac" />
+                                </DockPanel>
+
+                                <DockPanel Grid.Column="1">
+                                    <TextBlock DockPanel.Dock="Top" Text="試すプロキシ" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding Proxies}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,0,2"
+                                                              Content="{Binding Name}" ToolTip="{Binding Summary}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 上: 試験項目（編集）。窓の幅が足りないので結果とは縦に積む -->
+                        <Border DockPanel.Dock="Top" MaxHeight="240" Margin="0,0,0,6"
+                                Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.0]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.1]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.2]}" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.4]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.5]}" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="削除" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="項目名" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="種類" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="宛先" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="4" Text="期待" Style="{StaticResource Caption}"
+                                               ToolTip="本文にこの文字列が含まれることまで確かめます（HTTP のみ）。遮断ページを合格と誤読しないための確実な手です。" />
+                                    <TextBlock Grid.Column="5" Text="結果" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(3)より左は右端、右は左端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="verify.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="verify.1" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="verify.2" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                           Tag="verify.4" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                           Tag="verify.5" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1"
+                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                <!-- 「行を追加」を先に下端へ留めてから、一覧に残りを埋めさせる -->
+                                <Button DockPanel.Dock="Bottom" Content="＋ 行を追加"
+                                        Command="{Binding AddRowCommand}"
+                                        Style="{StaticResource Button.Subtle}"
+                                        HorizontalAlignment="Left" Margin="4,4,0,0" />
+
+                                <ListBox ItemsSource="{Binding Rows}"
+                                         Background="Transparent" BorderThickness="0"
+                                         HorizontalContentAlignment="Stretch"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="26">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.2]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.5]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+
+                                                <Button Grid.Column="0" Content="✕"
+                                                        Style="{StaticResource Button.Subtle}"
+                                                        Command="{Binding DataContext.RemoveRowCommand,
+                                                                  RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}"
+                                                        Width="16" Height="16"
+                                                        Padding="0" MinWidth="0" MinHeight="0"
+                                                        FontSize="{DynamicResource Size.Micro}"
+                                                        HorizontalAlignment="Left"
+                                                        VerticalAlignment="Center" Margin="2,0,0,0"
+                                                        ToolTip="この行を消します。" />
+
+                                                <TextBox Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="{DynamicResource Size.Caption}"
+                                                         Margin="0,0,4,0" VerticalAlignment="Center"
+                                                         ToolTip="試験成績書にそのまま出る名前です。" />
+
+                                                <ComboBox Grid.Column="2"
+                                                          ItemsSource="{Binding Kinds}"
+                                                          SelectedItem="{Binding Kind}"
+                                                          FontSize="{DynamicResource Size.Caption}"
+                                                          VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+
+                                                <TextBox Grid.Column="3" Text="{Binding Target, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontFamily="{DynamicResource Font.Mono}"
+                                                         FontSize="{DynamicResource Size.Caption}"
+                                                         Margin="0,0,4,0" VerticalAlignment="Center"
+                                                         ToolTip="{Binding TargetHint}" />
+
+                                                <TextBox Grid.Column="4" Text="{Binding Expect, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="{DynamicResource Size.Caption}"
+                                                         Margin="0,0,4,0" VerticalAlignment="Center"
+                                                         ToolTip="本文にこの文字列が含まれることまで確かめます（HTTP のみ）。" />
+
+                                                <TextBlock Grid.Column="5" Text="{Binding Status}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding Status}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 下: 結果。1 行 = 1 項目 × 1 プロキシ -->
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="結果（1 行 = 1 項目 × 1 プロキシ）"
+                                           Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
+                                      Tag="vres" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.0]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.1]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.2]}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.3]}" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="0" Text="項目" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="プロキシ" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="合否" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="所要" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="4" Text="詳細" Style="{StaticResource Caption}" />
+                                    <!-- 列幅のつまみ。星列(4)より左なので右端の境界に置く -->
+                                    <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="vres.0" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="vres.1" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="vres.2" DragDelta="OnTableColumnResize" />
+                                    <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                           Tag="vres.3" DragDelta="OnTableColumnResize" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1"
+                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                <ListBox ItemsSource="{Binding Results}" Tag="vres"
+                                         Style="{StaticResource TargetListBox}"
+                                         ItemTemplate="{x:Null}"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.3]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Target}" />
+                                                <TextBlock Grid.Column="1" Text="{Binding ProxyText}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding ProxyText}" />
+                                                <TextBlock x:Name="VerdictText" Grid.Column="2" Text="{Binding VerdictText}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding ElapsedText}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="4" Text="{Binding Detail}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}" />
+                                            </Grid>
+
+                                            <!-- 合否は文字で出したうえで色を添える（色だけで表さない） -->
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsFail}" Value="True">
+                                                    <Setter TargetName="VerdictText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsPass}" Value="True">
+                                                    <Setter TargetName="VerdictText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <TabItem x:Name="ReportTab" Header="記録" DataContext="{Binding Report}">
                 <Border Style="{StaticResource Card}">
                     <DockPanel>

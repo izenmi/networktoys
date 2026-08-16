@@ -229,6 +229,7 @@ public partial class MainWindow : Window
         ["syslog"] = ["Time", "Remote", "Severity", "Text"],
         ["snmptrap"] = ["Time", "Remote", "Text"],
         ["snmpget"] = ["Oid", "Name", "Type", "Value"],
+        ["vres"] = ["Name", "ProxyText", "VerdictText", "ElapsedMs", "Detail"],
         ["mnet"] = ["Name", "Id", "ProductTypes", "TimeZone", "Tags"],
         ["mdev"] = ["Name", "Model", "Serial", "Firmware", "Network", "State", "PublicIp", "LanIp"],
         ["mup"] = ["Network", "Serial", "Interface", "State", "Ip", "Gateway", "PublicIp"],
@@ -1096,6 +1097,9 @@ public partial class MainWindow : Window
 
             // 収集タブは機器の一覧とコマンドだけ覚える(パスワードは覚えない)
             _shell.Collect.Save();
+
+            // 確認タブは試験項目とプロキシの定義だけ覚える
+            _shell.Verify.SaveSettings();
         }
         catch (Exception ex)
         {

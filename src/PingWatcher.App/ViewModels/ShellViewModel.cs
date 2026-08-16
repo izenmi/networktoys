@@ -53,6 +53,9 @@ public sealed class ShellViewModel
 
         // Meraki もタブを開いただけでは何もしない（API キーを入れて押されて初めて通信する）
         Meraki = new MerakiViewModel();
+
+        // 業務確認試験。こちらもタブを開いただけでは外へ出ない
+        Verify = new VerifyViewModel();
     }
 
     public MonitorViewModel Monitor { get; }
@@ -108,6 +111,9 @@ public sealed class ShellViewModel
     /// <summary>Meraki ダッシュボードからの照会。API キーは保存しない。</summary>
     public MerakiViewModel Meraki { get; }
 
+    /// <summary>業務確認試験。プロキシを切り替えて同じ試験を回せる。</summary>
+    public VerifyViewModel Verify { get; }
+
     /// <summary>WFP が落とした通信の一覧。管理者のときだけ中身が出る。</summary>
     public WfpViewModel Wfp { get; }
 
@@ -145,6 +151,7 @@ public sealed class ShellViewModel
         Converter.Reset();
         Collect.Reset();
         Meraki.Reset();
+        Verify.Reset();
         Report.Reset();
     }
 }
