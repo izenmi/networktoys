@@ -494,6 +494,15 @@ internal static class SelfTest
 
             Assert(shell.Collect.Rows.Count == 1, $"機器の行が作られない: {shell.Collect.Rows.Count}");
 
+            // 行が増えても「行を追加」が押せること。一覧に高さを取り切られて
+            // ボタンのぶんが残らなくなる事故を 2 度やっている
+            shell.Collect.Import(Enumerable.Range(2, 40).Select(i => ($"192.0.2.{i}", "自己診断用")));
+            window.UpdateLayout();
+
+            Assert(window.CollectAddRow.ActualHeight > 0 && window.CollectAddRow.ActualWidth > 0,
+                   $"行が {shell.Collect.Rows.Count} 台になると「行を追加」が潰れる"
+                   + $"（{window.CollectAddRow.ActualWidth}x{window.CollectAddRow.ActualHeight}）");
+
             shell.Collect.Reset();
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
