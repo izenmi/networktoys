@@ -257,7 +257,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 | WFP | Windows Filtering Platform が落とした通信の一覧(管理者権限) |
 | IP設定 | IPv4 設定の切替 + プロキシ設定 |
 | 業務確認 | 業務確認試験(プロキシを切り替えて回す。ひな型は自作できる) |
-| **その他　15 ▾** | 調べる(TCP Ping / Traceroute / スキャン / DNS / 通信状況 / サブネット計算)<br>NW機器(ログ採取 / showコマンド整形 / Meraki / SNMP Get)<br>受ける(FTP / TFTP / SFTP / syslog / SNMP Trap) |
+| **その他　15 ▾** | 調べる(TCP Ping / Traceroute / スキャン / DNS / 通信状況 / サブネット計算)<br>受ける(FTP / TFTP / SFTP / syslog / SNMP Trap)<br>NW機器(ログ採取 / showコマンド整形 / Meraki / SNMP Get) |
 
 太字はまとめたタブ。**単独のタブを左、まとめたタブを右**に並べる。まとめたタブは
 見出しに**中身の件数と `▾`** を出し(自己診断が実際の本数と突き合わせる)、

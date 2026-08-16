@@ -95,15 +95,15 @@ ping のほかに TCP 接続・DNS・traceroute・IP スキャン・無線 LAN�
 | その他 → 調べる → **DNS** | 同じ名前を複数の DNS サーバへ同時に問い合わせて横並び比較。A / AAAA / CNAME / MX / NS / TXT / SOA / SRV / PTR |
 | その他 → 調べる → **通信状況** | この PC のどのプロセスがどこと TCP/UDP 通信しているかをプロセス別に一覧(リソースモニター風)。管理者起動時は接続ごとの送受信 B/秒 も表示 |
 | その他 → 調べる → **サブネット計算** | サブネット電卓。CIDR かマスク付き IP を入れると、ネットワーク/ブロードキャスト/ホスト範囲/分割案を表示。/8〜/32 のマスク早見表つき |
-| その他 → NW機器 → **ログ採取** | Cisco 機器へ SSH/Telnet で入り、`show` の出力を自動収集して 1 台 1 ファイルに保存。機種（IOS / IOS-XE・ASA・NX-OS）を選ぶとコマンド一式が入ります。宛先リストから対象を取り込める。パスワードは保存しない。危険なコマンドは実行前に弾く |
-| その他 → NW機器 → **showコマンド整形** | Cisco コマンドの出力(show ip route / interfaces status / inventory / version / logging など 8 種)を貼り付けると CSV に変換。種類は自動判定 |
-| その他 → NW機器 → **SNMP Get** | v1/v2c の GET・ウォーク。sysDescr など主要 OID のプリセットつき（Trap の受信は「受ける」側） |
-| その他 → NW機器 → **Meraki** | ダッシュボード API から ネットワーク / 機器(シリアル・ファーム) / MX のアップリンクとグローバル IP / クライアント を取得。各一覧を CSV 保存。API キーは保存しない(毎回入力・伏せ字) |
 | その他 → 受ける → **FTP** | 使い捨ての FTP サーバ。機器の `copy running-config ftp:` を受けて `ftp\` フォルダに保存します。**平文なので使うときだけ開始**。PASV/PORT 両対応 |
 | その他 → 受ける → **TFTP** | 使い捨ての TFTP サーバ（UDP/69）。機器の `copy … tftp:` を受けて `tftp\` フォルダへ。blksize 交渉に対応。**認証なしなので使うときだけ開始** |
 | その他 → 受ける → **SFTP** | 使い捨ての SFTP サーバ（SSH 越しで暗号化）。WinSCP などで `sftp\` フォルダへ読み書き。ホスト鍵は初回に生成して保存 |
 | その他 → 受ける → **syslog** | 機器からの syslog を受けて一覧表示。`logging <このPCのIP>` を機器に入れるだけ。**重大度の列と「warning 以上 / err 以上」の絞り込み**つき。`logs\` にも保存 |
 | その他 → 受ける → **SNMP Trap** | SNMP Trap の受信（UDP/162）。varbind は件数で打ち切らず、長い行は全文を ToolTip に出します |
+| その他 → NW機器 → **ログ採取** | Cisco 機器へ SSH/Telnet で入り、`show` の出力を自動収集して 1 台 1 ファイルに保存。機種（IOS / IOS-XE・ASA・NX-OS）を選ぶとコマンド一式が入ります。宛先リストから対象を取り込める。パスワードは保存しない。危険なコマンドは実行前に弾く |
+| その他 → NW機器 → **showコマンド整形** | Cisco コマンドの出力(show ip route / interfaces status / inventory / version / logging など 8 種)を貼り付けると CSV に変換。種類は自動判定 |
+| その他 → NW機器 → **SNMP Get** | v1/v2c の GET・ウォーク。sysDescr など主要 OID のプリセットつき（Trap の受信は「受ける」側） |
+| その他 → NW機器 → **Meraki** | ダッシュボード API から ネットワーク / 機器(シリアル・ファーム) / MX のアップリンクとグローバル IP / クライアント を取得。各一覧を CSV 保存。API キーは保存しない(毎回入力・伏せ字) |
 
 一覧の行を**右クリック**すると、その相手を次の道具へそのまま渡せます。Ping / TCP では経路・名前解決・
 Tera Term での接続を、スキャン / 接続 / 遮断 / Meraki / syslog / SNMP Trap では
