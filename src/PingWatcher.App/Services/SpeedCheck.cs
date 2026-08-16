@@ -80,8 +80,8 @@ internal static class SpeedCheck
     /// <summary>
     /// 指定した URL へアップロードして速度を測る。
     ///
-    /// <b>送るのは 0 で埋めた作り物</b>。宛先に <c>?bytes=…</c> や末尾の
-    /// <c>|サイズMB</c> が無ければ既定の量を送る。
+    /// <b>送るのは 0 で埋めた作り物</b>。宛先の末尾に <c>|サイズMB</c> が
+    /// 無ければ既定の量（8MB）を送る。
     /// <b>受け取ってくれる相手が要る</b>（社内なら、このアプリの FTP/SFTP サーバでもよい）。
     /// </summary>
     public static async Task<(SpeedSample Sample, string UsedProxy)> UploadAsync(
