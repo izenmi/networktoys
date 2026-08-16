@@ -59,48 +59,6 @@
         </ContextMenu>
 
         <!--
-            まとめたタブ（調べる / NW機器 / 受ける）の中身を選ぶ縦メニュー。
-
-            サブタブの帯を横に並べると、7 本 8 本になったところで名前が読めなくなる。
-            左に立てたメニューなら名前を省略せずに置け、いま何を開いているかも一目で分かる。
-            中身は TabControl のまま（TabStripPlacement="Left"）なので、
-            見えていないタブが動き出さない仕組み（MainWindow.IsShowing）はそのまま効く。
-        -->
-        <Style x:Key="MenuTabItem" TargetType="TabItem">
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="Bd"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="3,0,0,0"
-                                Padding="9,4,12,4"
-                                Margin="0,0,0,1">
-                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
-                                              HorizontalAlignment="Left"
-                                              TextElement.FontSize="{DynamicResource Size.Caption}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
-                            </Trigger>
-                            <!-- 選ばれている項目は、地色と左の縦棒の両方で示す（色だけに頼らない） -->
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!--
             各タブの先頭に置く 1 行の説明と、その左の ⓘ。
             「何をする画面か」は開いた瞬間に分かる必要がある（タブ名だけでは足りない）。
             詳しい話は ⓘ にマウスを載せたときだけ出し、常時は 1 行に抑える。
@@ -486,12 +444,9 @@
                 <Separator />
                 <MenuItem Header="終了" Click="OnExit" />
             </MenuItem>
+            <!-- 開始と停止は Ping タブの中だけに置く（2026-08-16 ユーザー指示）。
+                 F5 / Shift+F5 のショートカットは InputBindings 側に残っている -->
             <MenuItem Header="測定(_M)" Style="{StaticResource MenuBarItem}">
-                <MenuItem Header="開始" InputGestureText="F5"
-                          Command="{Binding Monitor.StartCommand}" Click="OnStartClicked" />
-                <MenuItem Header="停止" InputGestureText="Shift+F5"
-                          Command="{Binding Monitor.StopCommand}" />
-                <Separator />
                 <MenuItem Header="Ping の測定結果だけ消す" Click="OnClearPingResults" />
                 <MenuItem Header="すべて消す（起動直後に戻す）" Click="OnClearAll" />
             </MenuItem>
@@ -2270,17 +2225,12 @@
                     </DockPanel>
 
                     <!--
-                        中身は TabControl のまま（見えていないタブが動き出さない仕組みが効く）だが、
-                        切り替えの帯は出さない。タブの見出しを押すと縦並びのメニューが降りてくる
-                        （MainWindow.OnMainTabsMouseDown が組み立てる）。
+                        中身の切り替え。見た目は主タブと同じにする（2026-08-16 ユーザー指示）。
+                        暗黙の TabItem スタイルに任せるので、ここでは何も当てない。
+                        タブの見出しを押すと縦並びのメニューも降りてくる
+                        （MainWindow.OnMainTabsMouseDown。遠くの項目へ一息で飛ぶための道）。
                     -->
-                    <TabControl ItemContainerStyle="{StaticResource MenuTabItem}"
-                                BorderThickness="0" Padding="0">
-                        <TabControl.Resources>
-                            <Style TargetType="TabPanel">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </Style>
-                        </TabControl.Resources>
+                    <TabControl BorderThickness="0" Padding="0" Margin="0,0,0,4">
 
             <!-- ===== TCP（接続できるかで測る。ICMP が塞がれている相手向け） ===== -->
             <TabItem x:Name="TcpTab" Header="TCP Ping" DataContext="{Binding Tcp}">
@@ -3180,17 +3130,12 @@
                     </DockPanel>
 
                     <!--
-                        中身は TabControl のまま（見えていないタブが動き出さない仕組みが効く）だが、
-                        切り替えの帯は出さない。タブの見出しを押すと縦並びのメニューが降りてくる
-                        （MainWindow.OnMainTabsMouseDown が組み立てる）。
+                        中身の切り替え。見た目は主タブと同じにする（2026-08-16 ユーザー指示）。
+                        暗黙の TabItem スタイルに任せるので、ここでは何も当てない。
+                        タブの見出しを押すと縦並びのメニューも降りてくる
+                        （MainWindow.OnMainTabsMouseDown。遠くの項目へ一息で飛ぶための道）。
                     -->
-                    <TabControl ItemContainerStyle="{StaticResource MenuTabItem}"
-                                BorderThickness="0" Padding="0">
-                        <TabControl.Resources>
-                            <Style TargetType="TabPanel">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </Style>
-                        </TabControl.Resources>
+                    <TabControl BorderThickness="0" Padding="0" Margin="0,0,0,4">
 
             <!-- ===== 収集（Cisco 機器へ入って show の出力を集める） ===== -->
             <TabItem x:Name="CollectTab" Header="ログ採取" DataContext="{Binding Collect}">
@@ -4254,17 +4199,12 @@
                     </DockPanel>
 
                     <!--
-                        中身は TabControl のまま（見えていないタブが動き出さない仕組みが効く）だが、
-                        切り替えの帯は出さない。タブの見出しを押すと縦並びのメニューが降りてくる
-                        （MainWindow.OnMainTabsMouseDown が組み立てる）。
+                        中身の切り替え。見た目は主タブと同じにする（2026-08-16 ユーザー指示）。
+                        暗黙の TabItem スタイルに任せるので、ここでは何も当てない。
+                        タブの見出しを押すと縦並びのメニューも降りてくる
+                        （MainWindow.OnMainTabsMouseDown。遠くの項目へ一息で飛ぶための道）。
                     -->
-                    <TabControl ItemContainerStyle="{StaticResource MenuTabItem}"
-                                BorderThickness="0" Padding="0">
-                        <TabControl.Resources>
-                            <Style TargetType="TabPanel">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </Style>
-                        </TabControl.Resources>
+                    <TabControl BorderThickness="0" Padding="0" Margin="0,0,0,4">
             <!-- FTP: 機器の config バックアップ受け・平文 -->
             <TabItem Header="FTP" DataContext="{Binding Ftp}">
                 <Border Style="{StaticResource Card}">

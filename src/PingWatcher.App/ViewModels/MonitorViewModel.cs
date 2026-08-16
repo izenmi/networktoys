@@ -504,6 +504,18 @@ public sealed class MonitorViewModel : ObservableObject
 
     private async Task StopCoreAsync()
     {
+        // 必ず 1 度は呼び出し元へ制御を返してから中身に入る。
+        //
+        // ここを同期で走り切ると、下の finally の「_stopTask = null」が
+        // 呼び出し元の「_stopTask = StopCoreAsync()」より先に動く。すると
+        // <b>完了済みの停止処理が _stopTask に残りっぱなし</b>になり、
+        // 次に停止を押したとき StopAsync() がそれをそのまま返して素通りする
+        // ＝「停止を押しても止まらない」（ユーザー報告）。
+        //
+        // 停止が同期で終わるのは珍しくない（宛先が 0 件、あるいは
+        // すべてのループが既に畳まれているとき）ので、必ず起きうる道。
+        await Task.Yield();
+
         // 後片付けの途中で何が起きても「実行中」のまま固まらせない。
         // 以前は記録の書き出しなどで例外が出ると IsRunning が false にならず、
         // 停止を押しても開始ボタンが「実行中」から戻らなかった（ユーザー報告）

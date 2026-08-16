@@ -709,14 +709,10 @@ internal static class SelfTest
                     Assert(header.Contains(want + " ▾", StringComparison.Ordinal),
                            $"「{header}」の見出しの件数が中身({actual} 本)と合っていない");
 
-                    // 切り替えの帯は出さない決まり（見出しを押すとメニューが降りてくる）。
-                    // 帯が出ていると、メニューと二重の入り口になって迷わせる
-                    Assert(inner[0].FindResource(typeof(System.Windows.Controls.Primitives.TabPanel))
-                               is Style { Setters: var setters }
-                           && setters.OfType<Setter>().Any(x =>
-                                  x.Property == UIElement.VisibilityProperty
-                                  && Equals(x.Value, Visibility.Collapsed)),
-                           $"「{header}」に切り替えの帯が出たままになっている");
+                    // 中身の切り替えは主タブと同じ見た目にする決まり（ユーザー指示）。
+                    // 専用のスタイルを当てると、そこだけ別物に見える
+                    Assert(inner[0].ItemContainerStyle is null,
+                           $"「{header}」の切り替えに専用のスタイルが当たっている");
 
                     grouped++;
                 }

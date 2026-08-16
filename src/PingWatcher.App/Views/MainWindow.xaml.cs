@@ -1223,9 +1223,6 @@ public partial class MainWindow : Window
 
         if (InnerTabsOf(tab) is not { } inner || inner.Items.Count == 0) return;
 
-        // まずタブそのものを開く。メニューを閉じても中身が見えている方が自然
-        tab.IsSelected = true;
-
         var menu = new ContextMenu
         {
             PlacementTarget = tab,
@@ -1240,14 +1237,24 @@ public partial class MainWindow : Window
             {
                 Header = child.Header,
                 IsCheckable = true,
-                IsChecked = child.IsSelected,
+                IsChecked = child.IsSelected && tab.IsSelected,
             };
 
-            entry.Click += (_, _) => child.IsSelected = true;
+            // 選んで初めて画面が変わる。開いただけで飛ばさない（ユーザー指示）。
+            // 中身を先に選んでから親を開く順にすると、親の切り替えで戻されない
+            entry.Click += (_, _) =>
+            {
+                child.IsSelected = true;
+                tab.IsSelected = true;
+            };
+
             menu.Items.Add(entry);
         }
 
         menu.IsOpen = true;
+
+        // タブそのものは選ばない。メニューを閉じただけで画面が変わると、
+        // 「見に行っただけ」のつもりが測定中の画面から飛ばされる
         e.Handled = true;
     }
 
