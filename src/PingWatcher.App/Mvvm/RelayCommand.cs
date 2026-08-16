@@ -23,3 +23,21 @@ public sealed class RelayCommand : ICommand
 
     public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }
+
+/// <summary>
+/// 引数を 1 つ受け取るコマンド。
+///
+/// 一覧の行から「この行を消す」のように、<b>どれに対する操作か</b>を
+/// 渡す必要があるときだけ使う（引数の要らない操作は <see cref="RelayCommand"/>）。
+/// </summary>
+public sealed class RelayCommand<T>(Action<T?> execute, Func<T?, bool>? canExecute = null) : ICommand
+{
+    public event EventHandler? CanExecuteChanged;
+
+    public bool CanExecute(object? parameter)
+        => canExecute is null || canExecute(parameter is T typed ? typed : default);
+
+    public void Execute(object? parameter) => execute(parameter is T typed ? typed : default);
+
+    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+}

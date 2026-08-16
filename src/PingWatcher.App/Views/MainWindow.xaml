@@ -1199,12 +1199,8 @@
                     <DockPanel>
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <Button Content="宛先リストから選ぶ" Command="{Binding ImportFromTargetsCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
                                     ToolTip="Ping と TCP のタブに登録してある宛先から、取り込む相手を選びます。" />
-                            <Button Content="行を追加" Command="{Binding AddDeviceCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
-                            <Button Content="チェックの無い行を消す" Command="{Binding RemoveDeviceCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2" />
 
                             <TextBlock Text="接続の待ち" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,4,2" />
@@ -1259,7 +1255,7 @@
                                             <ColumnDefinition Width="90" />
                                             <ColumnDefinition Width="130" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="収集" Style="{StaticResource Caption}" />
+                                        <TextBlock Grid.Column="0" Text="削除" Style="{StaticResource Caption}" />
                                         <TextBlock Grid.Column="1" Text="機器のアドレス" Style="{StaticResource Caption}" />
                                         <TextBlock Grid.Column="2" Text="接続方法" Style="{StaticResource Caption}" />
                                         <TextBlock Grid.Column="3" Text="ユーザー名" Style="{StaticResource Caption}" />
@@ -1270,6 +1266,12 @@
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1"
                                             Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                    <!-- 一覧の下に置く。足す場所が末尾にある方が手が迷わない -->
+                                    <Button DockPanel.Dock="Bottom" Content="＋ 行を追加"
+                                            Command="{Binding AddDeviceCommand}"
+                                            Style="{StaticResource Button.Subtle}"
+                                            HorizontalAlignment="Left" Margin="4,4,0,0" />
 
                                     <!--
                                         この一覧だけ仮想化を切る。行コンテナを使い回すと、
@@ -1297,9 +1299,15 @@
                                                         <ColumnDefinition Width="130" />
                                                     </Grid.ColumnDefinitions>
 
-                                                    <CheckBox Grid.Column="0" IsChecked="{Binding Selected}"
-                                                              VerticalAlignment="Center"
-                                                              ToolTip="外すとこの機器は飛ばします。" />
+                                                    <!-- 行そのものを引数で渡す(どの行の × かを VM に伝える) -->
+                                                    <Button Grid.Column="0" Content="✕"
+                                                            Style="{StaticResource Button.Subtle}"
+                                                            Command="{Binding DataContext.RemoveDeviceCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                            CommandParameter="{Binding}"
+                                                            Padding="4,0" MinWidth="0"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip="この行を消します。" />
 
                                                     <TextBox Grid.Column="1" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
                                                              FontFamily="{DynamicResource Font.Mono}"
@@ -1345,6 +1353,7 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
+
                                 </DockPanel>
                             </Border>
 

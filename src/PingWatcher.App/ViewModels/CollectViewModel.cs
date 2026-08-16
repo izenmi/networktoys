@@ -10,7 +10,6 @@ namespace PingWatcher.App.ViewModels;
 /// <summary>収集する機器 1 台ぶんの画面状態。</summary>
 public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
 {
-    private bool _selected = true;
     private string _host = entry.Host;
     private bool _useSsh = entry.UseSsh;
     private string _userName = entry.UserName;
@@ -52,13 +51,6 @@ public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
     {
         get => _memo;
         set => SetProperty(ref _memo, value);
-    }
-
-    /// <summary>この機器から集めるか。外すと飛ばす。</summary>
-    public bool Selected
-    {
-        get => _selected;
-        set => SetProperty(ref _selected, value);
     }
 
     public string UserName
@@ -124,7 +116,7 @@ public sealed class CollectViewModel : ObservableObject
         _selectedPreset = Presets[0];
 
         AddDeviceCommand = new RelayCommand(() => AddRow(new DeviceEntry("", true, "", "")));
-        RemoveDeviceCommand = new RelayCommand(RemoveSelected, () => Rows.Count > 0);
+        RemoveDeviceCommand = new RelayCommand<CollectRowViewModel>(RemoveRow);
         ImportFromTargetsCommand = new RelayCommand(() => RequestImport?.Invoke(this, EventArgs.Empty));
         StartCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && Rows.Count > 0);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
@@ -162,7 +154,9 @@ public sealed class CollectViewModel : ObservableObject
     }
 
     public RelayCommand AddDeviceCommand { get; }
-    public RelayCommand RemoveDeviceCommand { get; }
+
+    /// <summary>行の × から呼ばれる。消す行そのものを受け取る。</summary>
+    public RelayCommand<CollectRowViewModel> RemoveDeviceCommand { get; }
     public RelayCommand ImportFromTargetsCommand { get; }
     public RelayCommand StartCommand { get; }
     public RelayCommand CancelCommand { get; }
@@ -283,17 +277,14 @@ public sealed class CollectViewModel : ObservableObject
     {
         Rows.Add(new CollectRowViewModel(entry));
         StartCommand.RaiseCanExecuteChanged();
-        RemoveDeviceCommand.RaiseCanExecuteChanged();
     }
 
-    /// <summary>チェックの外れている行を消す（残す方を選んでもらう形にする）。</summary>
-    private void RemoveSelected()
+    private void RemoveRow(CollectRowViewModel? row)
     {
-        foreach (CollectRowViewModel row in Rows.Where(r => !r.Selected).ToList())
-            Rows.Remove(row);
+        if (row is null) return;
 
+        Rows.Remove(row);
         StartCommand.RaiseCanExecuteChanged();
-        RemoveDeviceCommand.RaiseCanExecuteChanged();
     }
 
     private async Task RunAsync()
@@ -310,10 +301,10 @@ public sealed class CollectViewModel : ObservableObject
             return;
         }
 
-        CollectRowViewModel[] targets = [.. Rows.Where(r => r.Selected)];
+        CollectRowViewModel[] targets = [.. Rows.Where(r => r.Host.Trim().Length > 0)];
         if (targets.Length == 0)
         {
-            Status = "収集する機器が選ばれていません。";
+            Status = "機器が 1 台も入っていません。";
             return;
         }
 
@@ -472,7 +463,6 @@ public sealed class CollectViewModel : ObservableObject
 
         Rows.Clear();
         StartCommand.RaiseCanExecuteChanged();
-        RemoveDeviceCommand.RaiseCanExecuteChanged();
         CommandText = RecommendedCommands.Ios;
         Status = "宛先リストから取り込むか、機器を直接書いて「収集を開始」を押します。";
         Notice = "";
