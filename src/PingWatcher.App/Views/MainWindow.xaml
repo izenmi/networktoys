@@ -2437,6 +2437,144 @@
                 </Border>
             </TabItem>
 
+            <!-- ===== 遮断（WFP が落とした通信。読み取りにも管理者権限が要る） ===== -->
+            <TabItem x:Name="WfpTab" Header="遮断" DataContext="{Binding Wfp}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <CheckBox Content="一時停止" IsChecked="{Binding IsPaused}"
+                                      VerticalAlignment="Center" Margin="0,0,12,0"
+                                      ToolTip="更新を止めて、じっくり読んだり選択したりできます。" />
+                            <TextBlock Text="絞り込み" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="200" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0"
+                                     ToolTip="プロセス名・パス・アドレス・プロトコルの部分一致で絞り込みます。" />
+                            <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,6,0" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" />
+                        </StackPanel>
+
+                        <!-- 案内は 2 段構え: 文言の有無で畳み、ボタンはそれぞれの条件で出す -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"
+                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                            <Button DockPanel.Dock="Right" Content="管理者として再起動" Click="OnRelaunchAsAdmin"
+                                    Style="{StaticResource Button.Subtle}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding CanRelaunchAsAdmin, Converter={StaticResource BoolToVisibility}}"
+                                    ToolTip="いったん終了して、管理者権限で起動し直します。測定中の結果は失われます。" />
+                            <Button DockPanel.Dock="Right" Content="記録を有効にする" Click="OnEnableWfpCollection"
+                                    Style="{StaticResource Button.Subtle}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding CanEnableCollection, Converter={StaticResource BoolToVisibility}}"
+                                    ToolTip="Windows にネットワークイベントの記録を始めさせます。アプリを閉じると元に戻します。" />
+                            <TextBlock Text="{Binding Notice}"
+                                       Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource Brush.Warn.Fg}" VerticalAlignment="Center" />
+                        </DockPanel>
+
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <Border Background="{DynamicResource Brush.Surface}"
+                                BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Margin="4,0,4,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="96" />
+                                        <ColumnDefinition Width="66" />
+                                        <ColumnDefinition Width="66" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="130" />
+                                        <ColumnDefinition Width="52" />
+                                        <ColumnDefinition Width="96" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="Transparent" Cursor="Hand" Tag=""
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding TimeHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Text="方向" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <Border Grid.Column="2" Background="Transparent" Cursor="Hand" Tag="Protocol"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding ProtocolHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="3" Text="送信元" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    <Border Grid.Column="4" Background="Transparent" Cursor="Hand" Tag="Remote"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding RemoteHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <Border Grid.Column="5" Background="Transparent" Cursor="Hand" Tag="Process"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding ProcessHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <Border Grid.Column="6" Background="Transparent" Cursor="Hand" Tag="Count"
+                                            MouseLeftButtonDown="OnListHeaderSort"
+                                            ToolTip="クリックで並べ替え（もう一度で逆順）">
+                                        <TextBlock Text="{Binding CountHeader}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="7" Text="フィルタ / 層" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                                </Grid>
+                                <Border DockPanel.Dock="Top" Height="1"
+                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                <ListBox ItemsSource="{Binding Rows}"
+                                         Background="Transparent" BorderThickness="0"
+                                         HorizontalContentAlignment="Stretch"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="22" ToolTip="{Binding ProcessPath}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="96" />
+                                                    <ColumnDefinition Width="66" />
+                                                    <ColumnDefinition Width="66" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="52" />
+                                                    <ColumnDefinition Width="96" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding TimeText}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding DirectionText}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Protocol}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Local}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="4" Text="{Binding Remote}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="5" Text="{Binding ProcessName}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="6" Text="{Binding CountText}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="7"
+                                                           FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                                           HorizontalAlignment="Right">
+                                                    <Run Text="{Binding FilterId, Mode=OneWay}" />
+                                                    <Run Text="/" />
+                                                    <Run Text="{Binding LayerId, Mode=OneWay}" />
+                                                </TextBlock>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+
             <!-- ===== IP設定（この PC の IPv4 設定を切り替える。適用時だけ UAC 昇格） ===== -->
             <TabItem x:Name="IpConfigTab" Header="IP設定" DataContext="{Binding IpConfig}">
                 <Border Style="{StaticResource Card}">

@@ -144,14 +144,15 @@ internal static class WfpNativeMethods
     /// </summary>
     public static WfpReadResult Read(int maxEvents)
     {
-        if (IntPtr.Size != 8)
-            return Failure("64 ビット版でのみ利用できます。");
-
         IntPtr engine = IntPtr.Zero;
         IntPtr enumHandle = IntPtr.Zero;
         var events = new List<WfpBlockedEvent>();
         int totalSeen = 0;
         uint collectOption = 0;
+
+        // オフセットは x64 前提。32 ビットで動かすと全部ずれるので手前で止める
+        if (IntPtr.Size != 8)
+            return Failure("64 ビット版でのみ利用できます。");
 
         try
         {

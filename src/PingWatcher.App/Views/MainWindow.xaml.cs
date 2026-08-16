@@ -39,6 +39,15 @@ public partial class MainWindow : Window
         // 「すべて消す」でキーを捨てたら、画面の伏せ字欄も空にする
         // (PasswordBox は中身をバインドできないので VM から知らせてもらう)
         _shell.Meraki.ApiKeyCleared += (_, _) => MerakiKeyBox.Clear();
+
+        // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
+        _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
+            this,
+            "ネットワークイベントの記録を有効にする",
+            "Windows に、遮断を含むネットワークイベントの記録を始めさせます。\n" +
+            "これは PC 全体に効く設定で、他のアプリからも見えます。\n\n" +
+            "PingWatcher を閉じるときに元へ戻します。続けますか？",
+            okLabel: "有効にする");
     }
 
     /// <summary>
@@ -144,8 +153,17 @@ public partial class MainWindow : Window
             case WifiViewModel wifi:
                 wifi.SortAccessPointsBy(column);
                 break;
+            case WfpViewModel wfp:
+                wfp.SortBy(column);
+                break;
         }
     }
+
+    /// <summary>
+    /// WFP の記録を有効にする。<b>システム全体に効く設定</b>を変えるので、
+    /// VM から確認ダイアログを出してもらってから実行する。
+    /// </summary>
+    private void OnEnableWfpCollection(object sender, RoutedEventArgs e) => _shell.Wfp.EnableCollection();
 
     /// <summary>
     /// 接続タブの通信量(ETW)のための管理者再起動。asInvoker は変えない方針なので、
@@ -508,6 +526,12 @@ public partial class MainWindow : Window
         else
             _shell.Connections.OnDeactivated();
 
+        // 遮断一覧も見えている間だけ WFP のエンジンを開く
+        if (WfpTab.IsSelected)
+            _shell.Wfp.OnActivated();
+        else
+            _shell.Wfp.OnDeactivated();
+
         // IP設定はタブを開いたときにアダプタを列挙し直す
         if (IpConfigTab.IsSelected)
             _shell.IpConfig.OnActivated();
@@ -533,6 +557,11 @@ public partial class MainWindow : Window
             _shell.Tcp.BeginStop();
             _shell.Wifi.OnDeactivated();
             _shell.Connections.OnDeactivated();
+            _shell.Wfp.OnDeactivated();
+
+            // 自分で立てた WFP の記録設定を戻す(システム全体に効く設定なので置き去りにしない)
+            _shell.Wfp.RestoreCollectionSetting();
+
             _shell.Ftp.Reset();
             _shell.Tftp.Reset();
             _shell.Sftp.Reset();

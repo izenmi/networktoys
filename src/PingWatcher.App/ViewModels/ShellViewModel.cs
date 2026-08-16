@@ -34,6 +34,9 @@ public sealed class ShellViewModel
         // 接続一覧もタブが開かれている間だけ OS を叩く
         Connections = new ConnectionsViewModel();
 
+        // 遮断一覧も同じ寿命。記録設定は押されたときだけ立てる
+        Wfp = new WfpViewModel();
+
         // IP 設定。列挙はタブを開いたときだけ
         IpConfig = new IpConfigViewModel();
 
@@ -104,6 +107,9 @@ public sealed class ShellViewModel
     /// <summary>Meraki ダッシュボードからの照会。API キーは保存しない。</summary>
     public MerakiViewModel Meraki { get; }
 
+    /// <summary>WFP が落とした通信の一覧。管理者のときだけ中身が出る。</summary>
+    public WfpViewModel Wfp { get; }
+
     /// <summary>
     /// 測った結果をすべて捨てて、起動直後の状態へ戻す。
     ///
@@ -130,6 +136,7 @@ public sealed class ShellViewModel
         Dns.Reset();
         Trace.Reset();
         Connections.Reset();
+        Wfp.Reset();
         IpConfig.Reset();
         Wifi.Reset();
         Converter.Reset();
