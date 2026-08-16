@@ -699,18 +699,18 @@ internal static class SelfTest
 
             try
             {
+                // 比例させるのは MainWindow が UiScale.Changed を拾ってやる。
+                // ここで自分でも Scale を呼ぶと二重にかかるので、実際の道だけを通す
                 UiScale.Apply(1.5);
-                tables.Scale(1.5);
-                layout.Scale(1.5);
 
                 Assert(tables["conn.1"].Value > conn, $"表の列幅が追随しない: {conn}");
                 Assert(layout.Target.Value > target, $"Ping の列幅が追随しない: {target}");
 
                 // 戻したときに元の幅へ戻ること（丸めで少しずれるので幅を持たせる）
-                tables.Scale(1 / 1.5);
-                layout.Scale(1 / 1.5);
+                UiScale.Apply(1.0);
 
-                Assert(Math.Abs(tables["conn.1"].Value - conn) <= 1, "戻しても元の幅にならない");
+                Assert(Math.Abs(tables["conn.1"].Value - conn) <= 1,
+                       $"戻しても元の幅にならない: {conn} → {tables["conn.1"].Value}");
             }
             finally
             {
