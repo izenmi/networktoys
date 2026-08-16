@@ -591,7 +591,7 @@ public partial class MainWindow : Window
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = "https://github.com/izenmi/pastelnet/blob/main/docs/USAGE.md",
+                FileName = "https://github.com/izenmi/pingwatcher/blob/main/docs/USAGE.md",
                 UseShellExecute = true,
             });
         }
@@ -614,7 +614,7 @@ public partial class MainWindow : Window
             "バージョン情報",
             $"PingWatcher {version}\n\n" +
             "色々できるネットワーク診断ツール\n" +
-            "https://github.com/izenmi/pastelnet");
+            "https://github.com/izenmi/pingwatcher");
     }
 
     /// <summary>消す範囲を選ばせる。ボタンの下にメニューを出す。</summary>

@@ -15,7 +15,7 @@
 | 技術 | C# + WPF + **.NET 10 (LTS)** | Wi-Fi/ICMP/TCP/DNSがすべて標準API・P-Invokeで素直に叩ける。単一プロセスで追加ランタイム不要 |
 | 配布 | self-contained 単一exe + ランタイム別途版 | 起動0.3〜0.6秒、メモリ60〜90MB目標 |
 | ビルド | GitHub Actions `windows-latest` | 開発環境はLinux devcontainerでdotnet SDK未導入 |
-| リポジトリ | `izenmi/pastelnet` (public) | 2026-08-15 に PingWatcher へ改名。リポジトリ名は据え置き |
+| リポジトリ | `izenmi/pingwatcher` (public) | アプリ名もリポジトリ名も PingWatcher（旧 PastelNet）。旧 URL は GitHub がリダイレクトする |
 
 **.NET 10 を選ぶ理由**: .NET 9 は2026年11月10日にサポート終了(3ヶ月後)。.NET 10 は LTS で2028年11月まで。
 

@@ -53,7 +53,7 @@ def main() -> int:
     # User-Agent を付けないと 418 で弾かれる
     request = urllib.request.Request(
         URL,
-        headers={"User-Agent": "PingWatcher-oui-builder/1.0 (+https://github.com/izenmi/pastelnet)"},
+        headers={"User-Agent": "PingWatcher-oui-builder/1.0 (+https://github.com/izenmi/pingwatcher)"},
     )
     with urllib.request.urlopen(request, timeout=120) as response:
         raw = response.read()
