@@ -47,6 +47,9 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
 
     private string? _hostname;
 
+    /// <summary>最後に確かめたプロンプトの段階。バッファを消しても失われないよう持つ。</summary>
+    private PromptLevel _level = PromptLevel.User;
+
     /// <summary>進捗の知らせ（画面のステータス用）。</summary>
     public IProgress<string>? Progress { get; init; }
 
@@ -140,6 +143,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             if (CiscoPrompt.TryMatchAtEnd(view, null, out PromptMatch match))
             {
                 _hostname = match.Hostname;
+                _level = match.Level;
                 _buffer.Clear();
                 return null;
             }
@@ -177,11 +181,8 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     /// </summary>
     private async Task<bool> EnableAsync(DeviceCredentials credentials, CancellationToken token)
     {
-        // すでに # なら二重に投げない
-        if (_hostname is not null
-            && CiscoPrompt.TryMatchAtEnd(Clean(), _hostname, out PromptMatch current)
-            && current.Level == PromptLevel.Enable)
-            return true;
+        // すでに # なら二重に投げない(ログインで見た段階を覚えてある)
+        if (_level != PromptLevel.User) return true;
 
         await SendAsync("enable", token).ConfigureAwait(false);
 
@@ -213,6 +214,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
 
             if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out PromptMatch match))
             {
+                _level = match.Level;
                 _buffer.Clear();
                 return match.Level != PromptLevel.User;
             }
@@ -381,7 +383,8 @@ public static class CommandCapture
     {
         if (chunk.Length == 0) return "";
 
-        string[] lines = chunk.Split('\n');
+        // ページャの痕跡はここで落とす(判定側はまだ必要としている)
+        string[] lines = TerminalText.StripMorePrompts(chunk).Split('\n');
         int start = 0;
         int end = lines.Length;
 

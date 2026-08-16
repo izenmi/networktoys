@@ -22,9 +22,11 @@ public static class TerminalText
     {
         if (raw.Length == 0) return "";
 
+        // --More-- はここでは落とさない。ページャが出ていることを
+        // 呼び出し側が判定してから、出力を組み立てるときに落とす
+        // (先に消すと EndsWithMore が永久に false になり、ページャで止まる)
         string text = ApplyBackspaces(raw);
         text = StripAnsi(text);
-        text = StripMorePrompts(text);
         return NormalizeNewlines(text);
     }
 
@@ -111,7 +113,7 @@ public static class TerminalText
     }
 
     /// <summary>バックスペースで消されなかった <c>--More--</c> を掃除する。</summary>
-    internal static string StripMorePrompts(string text)
+    public static string StripMorePrompts(string text)
     {
         if (!text.Contains("--More--", StringComparison.Ordinal)
             && !text.Contains("<--- More --->", StringComparison.Ordinal))

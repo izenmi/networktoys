@@ -295,8 +295,17 @@ public class CiscoSessionTests
     [Fact]
     public async Task A_confirmation_prompt_is_left_unanswered()
     {
-        var device = new FakeCiscoDevice("\r\nR1#", AlreadyEnabled(text =>
-            text == "show risky" ? "Proceed? [confirm]" : "ok"));
+        // 実機は確認を出したところで止まる(プロンプトは返さない)
+        var device = new FakeCiscoDevice("\r\nR1#", line =>
+        {
+            string text = line.Trim();
+
+            if (text.StartsWith("terminal ", StringComparison.Ordinal)) return "\r\nR1#";
+            if (text == "show risky") return "\r\nProceed? [confirm]";
+            if (text == "q") return "\r\nR1#";
+
+            return "\r\nR1#";
+        });
 
         DeviceCollectionResult result = await RunAsync(device, ["show risky"]);
 
@@ -309,13 +318,21 @@ public class CiscoSessionTests
     [Fact]
     public async Task Cancelling_stops_quickly_and_keeps_what_was_collected()
     {
-        var device = new FakeCiscoDevice("\r\nR1#", AlreadyEnabled(_ => "ok"));
+        // 応答を待っている最中に止められること
+        var device = new FakeCiscoDevice("\r\nR1#", line =>
+        {
+            string text = line.Trim();
+
+            if (text.StartsWith("terminal ", StringComparison.Ordinal)) return "\r\nR1#";
+
+            return text == "show slow" ? null : "\r\nR1#";
+        });
+
         using var cts = new CancellationTokenSource();
 
-        Task<DeviceCollectionResult> run = RunAsync(
-            device, ["show clock", "show version", "show run"], cts.Token);
+        Task<DeviceCollectionResult> run = RunAsync(device, ["show slow"], cts.Token);
 
-        await Task.Delay(150, CancellationToken.None);
+        await Task.Delay(200, CancellationToken.None);
         await cts.CancelAsync();
 
         DeviceCollectionResult result = await run;
