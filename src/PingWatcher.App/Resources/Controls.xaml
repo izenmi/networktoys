@@ -138,11 +138,14 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <!-- 枠は常に確保しておき、フォーカス時に色だけ変える（寸法が動かない） -->
+                    <!--
+                        枠は常に細く見せる(ユーザー指示)。押せる場所の輪郭が分かるように。
+                        太さは変えずに色だけ差し替えるので、フォーカスが移っても寸法が動かない。
+                    -->
                     <Border x:Name="Bd"
                             Background="{TemplateBinding Background}"
-                            BorderBrush="Transparent"
-                            BorderThickness="1.5"
+                            BorderBrush="{DynamicResource Brush.Button.Edge}"
+                            BorderThickness="1"
                             CornerRadius="{DynamicResource Radius.Control}"
                             Padding="{TemplateBinding Padding}"
                             RenderTransformOrigin="0.5,0.5">
@@ -176,6 +179,8 @@
                         -->
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="1.5" />
+                            <Setter TargetName="Bd" Property="Margin" Value="-0.5" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

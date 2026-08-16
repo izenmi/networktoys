@@ -54,6 +54,9 @@
 
     <!-- 細部。ここも無彩色に寄せる -->
     <SolidColorBrush x:Key="Brush.Chip.Edge"    Color="#2A2D33" po:Freeze="True" />
+    <!-- ボタンの輪郭。面より一段濃くして「押せる場所」の形が分かるようにする。
+         フォーカス時はアクセント色に差し替えるので、それより控えめな濃さにとどめる -->
+    <SolidColorBrush x:Key="Brush.Button.Edge" Color="#5A6070" po:Freeze="True" />
     <!-- つまみは一段明るく(以前の #4A4E56 は面に溶けて見つけにくかった) -->
     <SolidColorBrush x:Key="Brush.Scroll.Thumb" Color="#5C616C" po:Freeze="True" />
     <SolidColorBrush x:Key="Brush.Scroll.Thumb.Hover" Color="#8A909E" po:Freeze="True" />
