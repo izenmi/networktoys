@@ -548,23 +548,21 @@
     <!--
         メニューバー。既定の Menu/トップレベル MenuItem はシステム色で描かれ、
         暗い配色で白い帯になる(ContextMenu と同じ罠)ので、両方とも自前で持つ。
-        ドロップダウンの中の項目は上の暗黙 MenuItem スタイルがそのまま当たる。
-        中の項目はすべてフラットにすること(この暗黙テンプレートは子ポップアップ
-        =PART_Popup を持たないので、入れ子のサブメニューは開かない)。
+
+        見た目はふつうのメニューバーにする(ユーザー指示)。帯にも項目にも
+        地色や枠は置かず、文字だけを並べ、指した項目とと開いている項目だけを
+        淡く反転させる。ドロップダウンの中の項目は下の暗黙 MenuItem スタイルが
+        そのまま当たる。中の項目はすべてフラットにすること(あちらのテンプレートは
+        子ポップアップ=PART_Popup を持たないので、入れ子のサブメニューは開かない)。
     -->
-    <!-- メニューの帯。一般的なアプリのように、地色を敷いて本体と切り分ける -->
     <Style TargetType="Menu">
-        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-        <Setter Property="Padding" Value="2" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Menu">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{DynamicResource Brush.Border}"
-                            BorderThickness="1"
-                            CornerRadius="{DynamicResource Radius.Control}"
-                            Padding="{TemplateBinding Padding}">
+                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
                         <ItemsPresenter />
                     </Border>
                 </ControlTemplate>
@@ -574,19 +572,11 @@
 
     <Style x:Key="MenuBarItem" TargetType="MenuItem">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-        <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
-        <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
-                    <!-- 押せる場所だと分かるよう、面と枠を持たせる。
-                         文字だけだとただの見出しに見える(ユーザー指摘) -->
-                    <Border x:Name="Bd"
-                            Background="{DynamicResource Brush.Surface}"
-                            BorderBrush="{DynamicResource Brush.Border}"
-                            BorderThickness="1"
-                            CornerRadius="{DynamicResource Radius.Control}"
-                            Padding="10,3" Margin="0,0,3,0">
+                    <!-- 枠も面も持たない。角も丸めない(ふつうのメニューバーの見た目) -->
+                    <Border x:Name="Bd" Background="Transparent" Padding="10,4">
                         <Grid>
                             <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
                                               RecognizesAccessKey="True" />
@@ -599,8 +589,7 @@
                                 <Border Background="{DynamicResource Brush.Surface}"
                                         BorderBrush="{DynamicResource Brush.Border}"
                                         BorderThickness="1"
-                                        CornerRadius="{DynamicResource Radius.Control}"
-                                        Padding="3"
+                                        Padding="2"
                                         MinWidth="230">
                                     <ItemsPresenter />
                                 </Border>
@@ -608,15 +597,12 @@
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- 指したときと開いているときだけ淡く反転させる -->
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
                         </Trigger>
-                        <!-- 開いている間は押し込んだ見た目にする(どれを開いたか分かる) -->
                         <Trigger Property="IsSubmenuOpen" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
-                            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -2683,7 +2683,10 @@
                                          HorizontalContentAlignment="Stretch"
                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                          VirtualizingPanel.IsVirtualizing="True"
-                                         VirtualizingPanel.VirtualizationMode="Recycling">
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ItemContainerStyle="{StaticResource PlainRowContainer}">
+                                    <!-- 行の詰め方は接続タブと同じ。既定の ListBoxItem は
+                                         余白を持つので、指定しないと 1 行ぶん背が高くなる -->
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight}" ToolTip="{Binding ProcessPath}">
