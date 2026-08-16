@@ -37,10 +37,6 @@ public class WinHttpProxyScriptTests
         => Assert.Equal(["winhttp reset proxy"],
                         WinHttpProxyScript.Build(new ProxyPlan(mode, "http://x/p.pac", "", "")));
 
-    [Fact]
-    public void Importing_from_the_user_settings_is_one_line()
-        => Assert.Equal(["winhttp import proxy source=ie"], WinHttpProxyScript.BuildImportFromUser());
-
     // ===== 組み立ての安全 =====
 
     [Theory]

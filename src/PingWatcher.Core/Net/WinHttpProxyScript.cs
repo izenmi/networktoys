@@ -39,9 +39,6 @@ public static class WinHttpProxyScript
             : [line];
     }
 
-    /// <summary>WinINET（ユーザーの設定）から取り込む。同じ値に揃えたいときの近道。</summary>
-    public static IReadOnlyList<string> BuildImportFromUser() => ["winhttp import proxy source=ie"];
-
     /// <summary>
     /// 引用符と改行を落とす。
     ///

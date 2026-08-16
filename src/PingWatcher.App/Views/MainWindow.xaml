@@ -1812,15 +1812,41 @@
                                     <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
                                                Text="サービスとして動くもの（Windows Update・監視エージェント・.NET のアプリ）が従う設定です。ブラウザは見えるのに更新やエージェントだけ外に出られない、というときはここを確かめてください。適用には管理者権限が要ります（UAC の確認が 1 回出ます）。" />
 
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Content="上の設定を WinHTTP にも適用"
-                                                Command="{Binding ApplyWinHttpCommand}" Margin="0,0,8,0"
-                                                ToolTip="上で選んだ内容を WinHTTP にも入れます。WinHTTP は PAC を扱えないので、PAC を選んでいるときは適用できません。" />
-                                        <Button Content="上の設定から取り込む"
-                                                Command="{Binding ImportWinHttpCommand}"
-                                                Style="{StaticResource Button.Subtle}"
-                                                ToolTip="いま Windows に入っているユーザー側の設定を、そのまま WinHTTP へ複製します（netsh winhttp import proxy source=ie）。" />
-                                    </StackPanel>
+                                    <!-- 上段とは別の設定なので、選び方も入力欄もこちらで持つ。
+                                         PAC は WinHTTP が持てない仕様なので選択肢に出さない -->
+                                    <WrapPanel Margin="0,0,0,4">
+                                        <TextBlock Text="方式" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <ComboBox Width="190"
+                                                  ItemsSource="{Binding WinHttpModes}"
+                                                  SelectedItem="{Binding SelectedWinHttpMode}"
+                                                  Margin="0,0,8,2"
+                                                  ToolTip="WinHTTP は PAC（自動構成スクリプト）を扱えません。PAC の現場では、PAC が返す代表的なプロキシを「固定」で入れてください。">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </WrapPanel>
+
+                                    <!-- 選んだ方式の行だけ出す(グレーアウトは分かりづらい、というユーザー指摘) -->
+                                    <WrapPanel Margin="0,0,0,4"
+                                               Visibility="{Binding WinHttpIsFixed, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="サーバ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <TextBox Width="200" Text="{Binding WinHttpServer, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,2"
+                                                 ToolTip="例: proxy.example.co.jp:8080" />
+                                        <TextBlock Text="除外" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <TextBox Width="220" Text="{Binding WinHttpBypass, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
+                                                 ToolTip="プロキシを通さない宛先。; 区切り。&lt;local&gt; はローカルアドレスの意味。" />
+                                    </WrapPanel>
+
+                                    <Button Content="WinHTTP に適用" HorizontalAlignment="Left"
+                                            Command="{Binding ApplyWinHttpCommand}"
+                                            ToolTip="この欄の内容を PC 全体の WinHTTP 設定に反映します。UAC の確認が 1 回出ます。" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>
