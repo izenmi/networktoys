@@ -714,6 +714,71 @@ internal static class SelfTest
             Assert(grouped == 3, $"まとめたタブが 3 枚のはずが {grouped} 枚になっている");
         });
 
+        Check("試験: ひな型を自分で作って残せる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+            int builtin = shell.Verify.Templates.Count;
+
+            const string name = "自己診断のひな型";
+            const string text = "名前が引ける,DNS,www.example.jp";
+
+            try
+            {
+                shell.Verify.SaveTemplate(name, text);
+
+                Assert(shell.Verify.Templates.Count == builtin + 1,
+                       "残したひな型が選択肢に出てこない");
+                Assert(shell.Verify.SelectedTemplate.Name == name,
+                       "残した直後に、そのひな型が選ばれていない");
+                Assert(shell.Verify.SelectedTemplate.IsMine,
+                       "自作のひな型が組み込み扱いになっている");
+
+                // 組み込みは消せないこと（消せると次の起動で戻ってきて混乱する）
+                Assert(!shell.Verify.Templates[0].IsMine, "組み込みのひな型が自作扱いになっている");
+
+                shell.Verify.DeleteTemplateCommand.Execute(null);
+
+                Assert(shell.Verify.Templates.Count == builtin, "消したのに選択肢が減っていない");
+            }
+            finally
+            {
+                Settings.Current.VerifyTemplates.Remove(name);
+            }
+        });
+
+        Check("試験: 放り込んだテキストから項目を読める", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+
+            shell.Verify.LoadItemsFrom("社内ポータル,HTTP,http://portal.example.jp/", "落としたファイル");
+
+            Assert(shell.Verify.Rows.Count == 1, $"1 件のはずが {shell.Verify.Rows.Count} 件");
+            Assert(shell.Verify.Rows[0].Name == "社内ポータル", "項目名が読めていない");
+
+            // 読めないものを渡したら、黙って空にしない
+            shell.Verify.LoadItemsFrom("", "空のファイル");
+            Assert(shell.Verify.Rows.Count == 1, "読めない内容で、いまの項目を消してしまっている");
+
+            shell.Verify.Reset();
+        });
+
+        Check("放り込んだファイルの文字コードを見分ける", () =>
+        {
+            // 機器から落としたログは cp932 のことが多い。UTF-8 として読むと化ける
+            byte[] utf8 = System.Text.Encoding.UTF8.GetBytes("ホスト名 の設定");
+
+            Assert(Services.DroppedText.Decode(utf8) == "ホスト名 の設定", "UTF-8 を読めていない");
+
+            // UTF-8 として通らないバイト列は cp932 とみなす（Linux では Latin1 に落ちる）
+            byte[] broken = [0x83, 0x7A, 0x83, 0x58, 0x83, 0x67];
+
+            Assert(Services.DroppedText.Decode(broken).Length > 0, "読めないバイト列で空になっている");
+        });
+
         Check("試験: 結果を HTML の報告書にできる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
