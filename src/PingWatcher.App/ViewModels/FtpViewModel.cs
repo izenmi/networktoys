@@ -1,3 +1,4 @@
+using PingWatcher.App.Mvvm;
 using PingWatcher.App.Services;
 
 namespace PingWatcher.App.ViewModels;
@@ -13,7 +14,13 @@ public sealed class FtpViewModel : FileServerViewModel
 
     public FtpViewModel(string? localAddress) : base("ftp", 21, localAddress)
     {
+        CopyCommandCommand = new RelayCommand(() => ClipboardText.Copy(CommandLine));
     }
+
+    /// <summary>
+    /// 画面に出す案内文はパスワードを伏せるので、実物はクリップボード経由で渡す。
+    /// </summary>
+    public RelayCommand CopyCommandCommand { get; }
 
     public override string RootDirectory => AppData.PathOf("ftp");
 
@@ -29,17 +36,30 @@ public sealed class FtpViewModel : FileServerViewModel
         set { if (SetProperty(ref _password, value)) RefreshCommandHint(); }
     }
 
-    public override string CommandHint
-    {
-        get
-        {
-            string credential = string.IsNullOrEmpty(User)
-                ? string.Empty
-                : string.IsNullOrEmpty(Password) ? $"{User}@" : $"{User}:{Password}@";
+    /// <summary>
+    /// 機器へ打つコマンドの実物。<b>パスワードを含むので画面には出さない。</b>
+    /// 「コマンドをコピー」からクリップボードへ渡すためだけに使う。
+    /// </summary>
+    private string CommandLine => $"copy running-config ftp://{Credential(masked: false)}{HostForHint}/running-config";
 
-            return $"copy running-config ftp://{credential}{HostForHint}/running-config\n" +
-                   "（機器が繋がらないときは機器側で「ip ftp passive」を設定）";
-        }
+    /// <summary>
+    /// 画面に出す案内。<b>パスワードは伏せる。</b>
+    ///
+    /// FTP は認証情報を URL に埋める書き方なので、そのまま出すと画面に平文で残り、
+    /// F12 の画面保存にも焼き込まれる（Meraki の API キーや収集タブのパスワードを
+    /// 伏せ字にしているのと同じ理由）。実物は「コマンドをコピー」で渡す。
+    /// </summary>
+    public override string CommandHint
+        => $"copy running-config ftp://{Credential(masked: true)}{HostForHint}/running-config\n" +
+           "（右の「コマンドをコピー」でパスワード入りの実物を写せます。"
+         + "機器が繋がらないときは機器側で「ip ftp passive」を設定）";
+
+    private string Credential(bool masked)
+    {
+        if (string.IsNullOrEmpty(User)) return string.Empty;
+        if (string.IsNullOrEmpty(Password)) return $"{User}@";
+
+        return masked ? $"{User}:********@" : $"{User}:{Password}@";
     }
 
     private protected override IFileServer CreateServer(int port)

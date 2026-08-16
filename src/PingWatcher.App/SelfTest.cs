@@ -660,6 +660,30 @@ internal static class SelfTest
             log.AppendLine($"        {error}");
         });
 
+        Check("FTP: 画面の案内にパスワードが出ない", () =>
+        {
+            // FTP は認証情報を URL に埋める書き方なので、素直に組み立てると
+            // 画面に平文で残り、F12 の画面保存にも焼き込まれる。
+            // 実物は「コマンドをコピー」でクリップボードへ渡す決まり。
+            const string secret = "s3cr3t-not-on-screen";
+
+            var ftp = new ViewModels.FtpViewModel("192.0.2.1")
+            {
+                User = "backup",
+                Password = secret,
+            };
+
+            Assert(!ftp.CommandHint.Contains(secret, StringComparison.Ordinal),
+                   $"案内にパスワードが出ている: {ftp.CommandHint}");
+            Assert(ftp.CommandHint.Contains("backup", StringComparison.Ordinal),
+                   "ユーザー名は出したい（伏せるのはパスワードだけ）");
+
+            // SFTP はそもそも案内に認証情報を載せない
+            var sftp = new ViewModels.SftpViewModel("192.0.2.1") { User = "backup", Password = secret };
+            Assert(!sftp.CommandHint.Contains(secret, StringComparison.Ordinal),
+                   $"SFTP の案内にパスワードが出ている: {sftp.CommandHint}");
+        });
+
         Check("収集: 引き継ぎファイルにパスワードの入れ物が無い", () =>
         {
             // 保存しないと決めたものは、置き場所を用意した時点で誰かが入れてしまう

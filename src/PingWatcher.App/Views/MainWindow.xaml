@@ -2092,8 +2092,13 @@
                                      Margin="0,0,8,0"
                                      ToolTip="空欄なら誰でも接続できます（anonymous）。" />
                             <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="90" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,12,0" />
+                            <!-- 伏せ字にする。TextBox にすると画面にも F12 の画面保存にも平文で残る
+                                 (Meraki の API キーや収集タブのパスワードと同じ理由)。
+                                 PasswordBox は中身をバインドできないので、変更のたびに VM へ手で押し込む -->
+                            <PasswordBox Width="90" Tag="ftp"
+                                         PasswordChanged="OnFileServerPasswordChanged"
+                                         Margin="0,0,12,0"
+                                         ToolTip="空欄なら誰でも接続できます。保存しません（毎回入力）。" />
                             <Button Content="CSV で保存" Command="{Binding SaveCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
                             <Button Content="一覧を消す" Command="{Binding ClearCommand}"
@@ -2111,6 +2116,10 @@
                                            Text="機器から受け取ったファイルは、exe と同じ場所の ftp フォルダに入ります。機器側では次のように打ちます。" />
                                 <TextBox Style="{StaticResource CopyableValue}" Text="{Binding CommandHint, Mode=OneWay}"
                                          Margin="0,4,0,0" TextWrapping="Wrap" />
+                                <Button Content="コマンドをコピー" Command="{Binding CopyCommandCommand}"
+                                        Style="{StaticResource Button.Subtle}"
+                                        HorizontalAlignment="Left" Margin="0,4,0,0"
+                                        ToolTip="上の案内はパスワードを伏せてあります。こちらは実物（パスワード入り）を写します。" />
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
                                            Foreground="{DynamicResource Brush.Warn.Fg}"
                                            Text="⚠ 通信は暗号化されません（平文）。使うときだけ開始し、終わったら停止してください。初回はWindowsのファイアウォールでこのPCの通信を許可する必要があります。" />
@@ -2293,8 +2302,13 @@
                                      Margin="0,0,8,0"
                                      ToolTip="空欄なら認証なしで接続できます。" />
                             <TextBlock Text="パス" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
-                            <TextBox Width="90" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,12,0" />
+                            <!-- 伏せ字にする。TextBox にすると画面にも F12 の画面保存にも平文で残る
+                                 (Meraki の API キーや収集タブのパスワードと同じ理由)。
+                                 PasswordBox は中身をバインドできないので、変更のたびに VM へ手で押し込む -->
+                            <PasswordBox Width="90" Tag="sftp"
+                                         PasswordChanged="OnFileServerPasswordChanged"
+                                         Margin="0,0,12,0"
+                                         ToolTip="空欄なら認証なしです。保存しません（毎回入力）。" />
                             <Button Content="CSV で保存" Command="{Binding SaveCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
                             <Button Content="一覧を消す" Command="{Binding ClearCommand}"

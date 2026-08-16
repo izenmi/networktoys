@@ -711,6 +711,22 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// FTP / SFTP サーバのパスワードを VM へ渡す。
+    /// <see cref="PasswordBox.Password"/> はバインドできない（平文を依存関係プロパティに
+    /// 置かない設計）ので、変更のたびに手で押し込む。どちらの画面かは Tag で見分ける。
+    /// </summary>
+    private void OnFileServerPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox { Tag: string which } box) return;
+
+        switch (which)
+        {
+            case "ftp": _shell.Ftp.Password = box.Password; break;
+            case "sftp": _shell.Sftp.Password = box.Password; break;
+        }
+    }
+
+    /// <summary>
     /// 収集タブのパスワードを行の VM へ渡す。
     /// <see cref="PasswordBox.Password"/> はバインドできないので、変更のたびに手で押し込む。
     /// 行は <c>DataTemplate</c> の中にあるので、<c>Style</c> の <c>Setter</c> に
@@ -997,23 +1013,7 @@ public partial class MainWindow : Window
 
     private void OnCopyRowAddress(object sender, RoutedEventArgs e) => CopyText(AddressOf(sender));
 
-    /// <summary>
-    /// クリップボードは他のプロセスが掴んでいると失敗する。
-    /// 写せなかったからといって落ちる操作ではないので、記録して黙って諦める。
-    /// </summary>
-    private static void CopyText(string text)
-    {
-        if (string.IsNullOrEmpty(text)) return;
-
-        try
-        {
-            Clipboard.SetText(text);
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write(ex, "Clipboard.SetText");
-        }
-    }
+    private static void CopyText(string text) => Services.ClipboardText.Copy(text);
 
     /// <summary>
     /// 無線画面は開かれたときに初めて API を叩く。
