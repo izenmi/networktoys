@@ -68,8 +68,10 @@ public class CheckPlanTests
     {
         // ここを間違えると「プロキシを変えたのに結果が同じ」の説明が付かなくなる。
         // 速度もプロキシ経由で測る（どちらがボトルネックかを見るのが要）
+        // Teams も入る。署名・チャット・在席は HTTPS なのでプロキシを通る
+        // （直接出るのは音声・映像の UDP だけ）
         CheckKind[] throughProxy =
-            [CheckKind.Http, CheckKind.Download, CheckKind.Upload, CheckKind.FastCom];
+            [CheckKind.Http, CheckKind.Download, CheckKind.Upload, CheckKind.FastCom, CheckKind.Teams];
 
         foreach (CheckKind kind in throughProxy)
             Assert.True(new CheckItem("a", kind, "a").UsesProxy, $"{kind} がプロキシを通らない");

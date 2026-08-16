@@ -104,8 +104,9 @@ public sealed class ProxyChoiceViewModel : ObservableObject
 public sealed class VerifyViewModel : ObservableObject
 {
     private const string ProxyNotice =
-        "ℹ プロキシを変えて結果が変わるのは HTTP の項目だけです。"
-        + "TCP・メール・DNS・Teams は直接出るため、何本選んでも 1 回だけ試験します。";
+        "ℹ プロキシを通るのは HTTP・速度・Teams の項目です（選んだプロキシごとに試験します）。"
+        + "TCP・メール・DNS は直接出るため、何本選んでも 1 回だけです。"
+        + "Teams は署名とチャットがプロキシを通り、音声の UDP だけ直接出ます。";
 
     private string _proxyText = "";
     private string _status = "ひな型を入れるか項目を書いて「まとめて実行」を押します。";

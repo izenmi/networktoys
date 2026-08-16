@@ -90,7 +90,7 @@ internal static class CheckRunner
         {
             CheckKind.Http => await RunHttpAsync(item, proxy, token).ConfigureAwait(false),
             CheckKind.Dns => await RunDnsAsync(item, token).ConfigureAwait(false),
-            CheckKind.Teams => await RunTeamsAsync(item, teams, token).ConfigureAwait(false),
+            CheckKind.Teams => await RunTeamsAsync(item, proxy, teams, token).ConfigureAwait(false),
             CheckKind.Download or CheckKind.Upload or CheckKind.FastCom
                 => await RunSpeedAsync(item, proxy, token).ConfigureAwait(false),
             CheckKind.Manual => OpenForPerson(item),
@@ -225,11 +225,18 @@ internal static class CheckRunner
     }
 
     /// <summary>
-    /// Teams は 3 つ確かめる。名前が引けるか・TCP 443 が通るか・<b>音声の UDP が通るか</b>。
-    /// UDP は 1 つでも応答が返れば通話の道はある（Teams も空いている口を選ぶ）。
+    /// Teams は 3 つ確かめる。名前が引けるか・<b>HTTPS がプロキシ越しに通るか</b>・
+    /// <b>音声の UDP が通るか</b>。
+    ///
+    /// <b>署名・チャット・在席は HTTPS なのでプロキシを通る。</b>だから選ばれた
+    /// プロキシごとに試す。素の TCP で繋ぐとプロキシを迂回してしまい、
+    /// 実際の Teams と違う経路を見ることになる。
+    ///
+    /// 一方<b>音声・映像の UDP はプロキシを通らない</b>ので、どのプロキシでも同じ経路。
+    /// 同じ数字が並ぶが、それぞれの行を単独で読めるように毎回測る。
     /// </summary>
     private static async Task<CheckResult> RunTeamsAsync(
-        CheckItem item, TeamsEndpoints teams, CancellationToken token)
+        CheckItem item, ProxyChoice proxy, TeamsEndpoints teams, CancellationToken token)
     {
         var notes = new List<string>();
 
@@ -237,18 +244,24 @@ internal static class CheckRunner
             .QueryAsync(DnsProbe.SystemResolver, teams.WebHost, "A", ConnectTimeoutMs, token)
             .ConfigureAwait(false);
 
+        string via = proxy.Name;
+
         if (!dns.Success || dns.Records.Count == 0)
-            return Fail(item, $"{teams.WebHost} の名前を解決できませんでした", dns.ElapsedMs);
+            return Fail(item, $"{teams.WebHost} の名前を解決できませんでした", dns.ElapsedMs, via);
 
         notes.Add("名前解決 ○");
 
-        ConnectOutcome tcp = await BannerProbe
-            .RunAsync(teams.WebHost, 443, readBanner: false, ConnectTimeoutMs, token).ConfigureAwait(false);
+        // ここはプロキシを通す。応答コードが何であれ、返ってきた時点で経路は通っている
+        // （Teams はサインイン画面へ飛ばすので 200 とは限らない）
+        (HttpOutcome web, double webMs, string used) = await HttpCheck
+            .RunAsync($"https://{teams.WebHost}/", proxy, token).ConfigureAwait(false);
 
-        if (!tcp.Connected)
-            return Fail(item, $"TCP 443 に繋がりません（{tcp.Problem}）", tcp.ElapsedMs);
+        if (used.Length > 0) via = used;
 
-        notes.Add("TCP 443 ○");
+        if (web.Error is { } webError)
+            return Fail(item, $"HTTPS 443 に繋がりません（{webError}）", webMs, via);
+
+        notes.Add($"HTTPS 443 ○（HTTP {web.StatusCode}）");
 
         // ここからが本題。ここが塞がれていると通話だけできない
         var blocked = new List<int>();
@@ -274,13 +287,14 @@ internal static class CheckRunner
 
                 (bool acceptable, string quality) = CallQuality.Judge(stats);
                 notes.Add(quality);
+                notes.Add("音声の UDP はプロキシを通りません");
 
                 string detail = string.Join(" / ", notes);
 
                 // 目安を割っていても通話はできる。不合格ではなく注意にする
                 return acceptable
-                    ? Pass(item, detail, udpMs)
-                    : Warn(item, detail, udpMs);
+                    ? Pass(item, detail, udpMs, via)
+                    : Warn(item, detail, udpMs, via);
             }
 
             blocked.Add(port);
@@ -289,17 +303,17 @@ internal static class CheckRunner
         return Fail(item,
                     $"UDP {string.Join("・", blocked)} のいずれも応答がありません。"
                     + $"通話の音声が通りません（{string.Join(" / ", notes)}）",
-                    udpMs);
+                    udpMs, via);
     }
 
-    private static CheckResult Pass(CheckItem item, string detail, double ms)
-        => new(item.Name, item.Kind, item.Target, "", CheckVerdict.Pass, detail, ms);
+    private static CheckResult Pass(CheckItem item, string detail, double ms, string proxy = "")
+        => new(item.Name, item.Kind, item.Target, proxy, CheckVerdict.Pass, detail, ms);
 
-    private static CheckResult Fail(CheckItem item, string detail, double ms)
-        => new(item.Name, item.Kind, item.Target, "", CheckVerdict.Fail, detail, ms);
+    private static CheckResult Fail(CheckItem item, string detail, double ms, string proxy = "")
+        => new(item.Name, item.Kind, item.Target, proxy, CheckVerdict.Fail, detail, ms);
 
-    private static CheckResult Warn(CheckItem item, string detail, double ms)
-        => new(item.Name, item.Kind, item.Target, "", CheckVerdict.Warn, detail, ms);
+    private static CheckResult Warn(CheckItem item, string detail, double ms, string proxy = "")
+        => new(item.Name, item.Kind, item.Target, proxy, CheckVerdict.Warn, detail, ms);
 
     private static CheckResult Skip(CheckItem item, string reason)
         => new(item.Name, item.Kind, item.Target, "", CheckVerdict.Skipped, reason);

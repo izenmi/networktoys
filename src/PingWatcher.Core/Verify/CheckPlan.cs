@@ -61,11 +61,15 @@ public enum CheckKind
 public sealed record CheckItem(string Name, CheckKind Kind, string Target, string Expect = "")
 {
     /// <summary>
-    /// プロキシを変えて結果が変わりうるか。<b>HTTP でやり取りする種類だけが真。</b>
-    /// 速度はプロキシがボトルネックかを見たい要なので、当然ここに入る。
+    /// プロキシを変えて結果が変わりうるか。<b>HTTP でやり取りする種類が真。</b>
+    ///
+    /// 速度はプロキシがボトルネックかを見たい要なので当然入る。
+    /// <b>Teams も入る</b> — 署名・チャット・在席は HTTPS なのでプロキシを通る。
+    /// 直接出るのは音声・映像の UDP だけで、そちらは経路が別。
     /// </summary>
     public bool UsesProxy
-        => Kind is CheckKind.Http or CheckKind.Download or CheckKind.Upload or CheckKind.FastCom;
+        => Kind is CheckKind.Http or CheckKind.Download or CheckKind.Upload
+                or CheckKind.FastCom or CheckKind.Teams;
 
     /// <summary>種類ごとの既定ポート。0 なら宛先の指定に従う。</summary>
     public static int DefaultPort(CheckKind kind) => kind switch
