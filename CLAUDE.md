@@ -48,6 +48,14 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **IP設定（ElevatedNetsh）の罠。** ①昇格プロセスの出力は読めない（リダイレクトと ShellExecute は両立しない）し、netsh の出力はロケール依存なのでどのみち**パースしない** — 成否は ExitCode と、適用後の `NetworkInterface` 再読で確かめる。②スクリプトファイルは **ANSI（cp932）**で書く（UTF-8 だと日本語アダプタ名が `name=` で一致せず静かに失敗する）。③タイムアウトしても昇格した子は Kill できない（AccessDenied）— 放置して現在値の確認を促す。④**selftest から ElevatedNetsh を呼ばない** — CI ランナーは管理者なので UAC なしで本当に適用され、ランナーのネットワークが壊れる。⑤ステータスバーの NetworkInfo は起動時スナップショットのままで、適用後も更新しない（意図的。タブ内の現在値表示で足りる）。
 - **ETW（通信量表示）の罠。** ①セッション名は固定（`PingWatcher-KernelNet`）なので、**開始前に必ず `ControlTrace` STOP で前回の残骸を掃除**する（クラッシュ後はセッションが OS に残り続ける）。②ネイティブに渡すコールバックの**デリゲートはフィールドに保持**しないと GC に回収されて即死する。③`ProcessTrace` はセッションが止まるまで返らないので専用の背景スレッドで回し、停止は `CloseTrace` → `ControlTrace` STOP → `Join(1秒)`。④TraceEvent（NuGet）は不採用 — 必要なのは 1 プロバイダ・8 イベント ID の固定レイアウトだけで、ローカルで検証できないバージョン依存の方がリスクが大きい。⑤`EVENT_RECORD` のレイアウト誤りは catch 不能の AccessViolation でプロセスごと落ちる。防波堤は自己診断の ETW 検査（CI の Windows ランナーは管理者なので実経路が通る）。非管理者の縮退表示だけは CI で踏めないため実機確認。
 
+### 外部 API（Meraki）
+
+- **別ホストへリダイレクトされると `Authorization` ヘッダが落ちる。** Meraki は組織によってリージョン別ホスト（api.meraki.cn など）へ 302 で誘導するので、`AllowAutoRedirect` を既定（true）のままにすると**追従はするが鍵が消えて 401 になる**。`MerakiDashboard` は `AllowAutoRedirect=false` にして自分で `Location` を追い、ヘッダを付け直している。自動追従に戻さないこと。
+- **API キーはどこにも保存しない・出さない。** settings.json にも書かず（毎回入力）、`Status` の文言・`CrashLog`・URL クエリにも載せない。入力欄は `PasswordBox`（TextBox にすると **F12 の画面 PNG 保存にキーが焼き込まれる**）。エラーメッセージは応答本文を読まず、ステータスコードから組み立てる。
+- **clients の `vlan` は数値と文字列が混在する。** `int?` で受けると `JsonException` で一覧が丸ごと落ちるので `JsonElement` で受けて表示側で文字列にする。Meraki は項目の増減もあるため POCO を作らず `JsonDocument` で必要な項目だけ拾っている。
+- **selftest から実 API を叩かない。** タブを選んだだけでは通信しない作り（`OnActivated` を持たない）にしてある。CI の Windows ランナーは外に出られるので、タブ選択で取得を始める作りにすると全タブ検査から本番へリクエストが飛ぶ。
+- ページングは `Link` ヘッダの `rel=next` を追う。20 ページで打ち切り、**打ち切ったことは必ず画面に出す**（黙って切ると「その機器は無い」と誤読される）。429 は `Retry-After` を 1〜60 秒に丸めて最大 3 回まで再送。
+
 ### UI
 
 - **`Style` の `Setter` の中に、イベントハンドラを持つ要素を置かない。** `<Setter Property="ContextMenu">` の下に `Click="..."` 付きの `MenuItem` を書くと、**ビルドは通り、起動した瞬間に `XamlParseException: Set connectionId threw an exception` で落ちる**（`MenuItem` を `Grid` にキャストできない、のように無関係な型が出る）。リソースは後から展開されるのに、結線の番号は文書順で振られるためずれる。`ControlTemplate` / `DataTemplate` の中は独自の結線を持つので安全。**メニューはテンプレートの中の要素に付ける**こと。
