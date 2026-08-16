@@ -192,6 +192,17 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Ping 以外の一覧の列幅。Tag は "テーブル名.列番号"。
+    /// 掴んだ境界がカーソルから離れないための符号の判断は
+    /// <see cref="TableColumns"/> の表の宣言 1 か所に閉じてある。
+    /// </summary>
+    private void OnTableColumnResize(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string key })
+            TableColumns.Instance.Drag(key, e.HorizontalChange);
+    }
+
     /// <summary>一覧の見出しクリックで並べ替える。列名は Tag、対象は DataContext で見分ける。</summary>
     private void OnListHeaderSort(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -659,6 +670,7 @@ public partial class MainWindow : Window
             _shell.Syslog.Reset();
             _shell.SnmpTrap.Reset();
             ColumnLayout.Instance.Save();
+            TableColumns.Instance.Save();
         }
         catch (Exception ex)
         {

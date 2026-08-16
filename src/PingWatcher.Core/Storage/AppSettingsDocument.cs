@@ -19,6 +19,12 @@ public sealed class AppSettingsDocument
     /// </summary>
     public List<double> Columns { get; set; } = [];
 
+    /// <summary>
+    /// Ping/TCP 以外の一覧の列幅。キーは「テーブル名.列番号」。
+    /// 知らないキーは読み飛ばすので、列を足し引きしても壊れない。
+    /// </summary>
+    public Dictionary<string, double> TableColumns { get; set; } = [];
+
     /// <summary>Ping 画面の宛先リストと測定の既定値。</summary>
     public TargetDocument Ping { get; set; } = new();
 

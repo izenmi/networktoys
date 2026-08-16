@@ -188,6 +188,26 @@
         <Setter Property="Padding" Value="6,2" />
     </Style>
 
+    <!--
+        一覧の列幅を掴むつまみ。見出しの列の境目に重ねて置く。
+        見えないが当たり判定は要るので、地は Transparent（null だと拾えない）。
+        GridSplitter は使わない — あちらは掴んだ列と隣の列を同時に伸縮するため、
+        1 列だけ広げたいときに隣が潰れる不自然な動きになる（ユーザー指摘）。
+    -->
+    <Style x:Key="ColumnGrip" TargetType="Thumb">
+        <Setter Property="Width" Value="7" />
+        <Setter Property="Cursor" Value="SizeWE" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Panel.ZIndex" Value="2" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ===== 入力欄 ===== -->
     <Style TargetType="TextBox">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
