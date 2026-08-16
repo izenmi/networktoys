@@ -4408,9 +4408,14 @@
                                 <Border DockPanel.Dock="Top" Height="1"
                                         Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
+                                <!-- TargetListBox は Ping 用の ItemTemplate を既定で当ててくるので使わない。
+                                     ここは自前のテンプレートを 1 つ置くだけ -->
                                 <ListBox ItemsSource="{Binding Results}" Tag="vres"
-                                         Style="{StaticResource TargetListBox}"
-                                         ItemTemplate="{x:Null}"
+                                         Background="Transparent" BorderThickness="0"
+                                         HorizontalContentAlignment="Stretch"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          ScrollViewer.VerticalScrollBarVisibility="Visible">
                                     <ListBox.ItemTemplate>
