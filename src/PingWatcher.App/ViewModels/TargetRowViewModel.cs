@@ -78,7 +78,6 @@ public sealed class TargetRowViewModel : ObservableObject
     public string Id => Target.Id;
     public string Host => Target.Host;
     public string Comment => Target.Comment;
-    public string Group => Target.Group;
 
     public RowState State
     {

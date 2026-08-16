@@ -19,9 +19,6 @@ public sealed class Target
 
     public string Comment { get; set; } = string.Empty;
 
-    /// <summary>表示上のまとまり。空でもよい。</summary>
-    public string Group { get; set; } = string.Empty;
-
     public ProbeKind Kind { get; set; } = ProbeKind.Icmp;
 
     /// <summary><see cref="ProbeKind.Tcp"/> のときの接続先ポート。</summary>

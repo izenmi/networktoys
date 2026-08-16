@@ -34,7 +34,7 @@ public class TargetStoreTests : IDisposable
         {
             Targets =
             [
-                new Target { Host = "192.168.1.1", Comment = "既定ゲートウェイ", Group = "社内" },
+                new Target { Host = "192.168.1.1", Comment = "既定ゲートウェイ" },
                 new Target { Host = "example.jp", Kind = ProbeKind.Tcp, Port = 443, Comment = "Web" },
             ],
             Settings = new MonitorSettings { IntervalMs = 2000, SlowThresholdMs = 250 },

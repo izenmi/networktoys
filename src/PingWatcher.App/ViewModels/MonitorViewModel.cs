@@ -113,7 +113,7 @@ public sealed class MonitorViewModel : ObservableObject
     public ObservableCollection<TargetRowViewModel> DownRows { get; } = [];
 
     /// <summary>
-    /// 一覧の絞り込み。宛先・備考・グループ・解決したアドレスの部分一致。
+    /// 一覧の絞り込み。宛先・備考・解決したアドレスの部分一致。
     ///
     /// 行を collection から抜かずに <see cref="ICollectionView.Filter"/> で隠す。
     /// 応答あり／なしの振り分けは元の collection を直接触っているので、
@@ -146,7 +146,6 @@ public sealed class MonitorViewModel : ObservableObject
     private bool Matches(TargetRowViewModel row)
         => row.Host.Contains(_filter, StringComparison.OrdinalIgnoreCase)
            || row.Comment.Contains(_filter, StringComparison.OrdinalIgnoreCase)
-           || row.Group.Contains(_filter, StringComparison.OrdinalIgnoreCase)
            || row.Address.Contains(_filter, StringComparison.OrdinalIgnoreCase);
 
     private int VisibleCount(ObservableCollection<TargetRowViewModel> rows)
@@ -484,7 +483,6 @@ public sealed class MonitorViewModel : ObservableObject
         Id = source.Id,
         Host = source.Host,
         Comment = source.Comment,
-        Group = source.Group,
         Enabled = source.Enabled,
         IntervalMs = source.IntervalMs,
         TimeoutMs = source.TimeoutMs,
