@@ -45,6 +45,9 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     private readonly Decoder _decoder = Encoding.UTF8.GetDecoder();
     private readonly char[] _chars = new char[8192];
 
+    /// <summary>無言の機器へ改行を入れて様子を見る間隔。</summary>
+    private static readonly TimeSpan ProbeInterval = TimeSpan.FromSeconds(1);
+
     private string? _hostname;
 
     /// <summary>最後に確かめたプロンプトの段階。バッファを消しても失われないよう持つ。</summary>
@@ -126,6 +129,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         int passwordSent = 0;
         bool userSent = false;
         var deadline = Stopwatch.StartNew();
+        var probe = Stopwatch.StartNew();
 
         // 何も言ってこない機器のために、こちらから改行を 1 つ入れて呼び水にする
         await SendAsync("", token).ConfigureAwait(false);
@@ -167,9 +171,13 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                 continue;
             }
 
-            // 何も来なくなったら、こちらから改行を入れて様子を見る
-            if (!got)
+            // 何も来なくなったら、こちらから改行を入れて様子を見る。
+            // 静穏のたびに送ると機器側が数え切れないほどの改行を受け取るので間を空ける
+            if (!got && probe.Elapsed > ProbeInterval)
+            {
+                probe.Restart();
                 await SendAsync("", token).ConfigureAwait(false);
+            }
         }
 
         return "ログインの応答がありませんでした。";
@@ -256,6 +264,10 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         string? problem = null;
         int moreCount = 0;
 
+        // 「最後に何か届いてから」の無音を測る。1 回黙っただけで諦めると、
+        // 考えている最中のコマンド(show run の頭など)を切ってしまう
+        var silence = Stopwatch.StartNew();
+
         while (true)
         {
             token.ThrowIfCancellationRequested();
@@ -273,6 +285,8 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             }
 
             bool got = await PumpAsync(options.SettleTime, token).ConfigureAwait(false);
+            if (got) silence.Restart();
+
             string view = Clean();
 
             if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out _))
@@ -298,7 +312,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                 continue;
             }
 
-            if (!got)
+            if (!got && silence.Elapsed > options.IdleTimeout)
             {
                 // 無音が続いた。プロンプトが返らないまま止まっている
                 problem = "応答が返らないため打ち切りました。";

@@ -137,8 +137,13 @@ public class TerminalTextTests
         => Assert.Equal("説明 3階EPS\n", TerminalText.Clean("説明 3階EPS\r\n"));
 
     [Fact]
-    public void Leftover_more_prompts_are_swept_up()
-        => Assert.Equal("ab", TerminalText.Clean("a--More--b"));
+    public void Leftover_more_prompts_are_swept_up_when_building_the_output()
+    {
+        // Clean は --More-- を残す。ページャが出ていることを判定してから、
+        // 出力を組み立てる段で落とす(先に消すと永久にページャで止まる)
+        Assert.Contains("--More--", TerminalText.Clean("a--More--b"));
+        Assert.Equal("ab", TerminalText.StripMorePrompts("a--More--b"));
+    }
 
     [Fact]
     public void An_empty_string_stays_empty()
