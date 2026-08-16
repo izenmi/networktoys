@@ -70,6 +70,27 @@ jobs:
             -o publish/${{ matrix.name }}
           if ($LASTEXITCODE -ne 0) { throw "publish が失敗しました" }
 
+      # 軽量版は .NET デスクトップランタイムが別途要る。入っていないと exe は
+      # Windows 側の起動処理で止まり、アプリのコードは 1 行も動かないので、
+      # 「入っていないときの案内」はアプリの中には書けない。exe の隣に置く
+      # このスクリプトが、起動前に確かめて日本語で案内する。
+      - name: 起動用スクリプトを同梱（軽量版のみ）
+        if: matrix.name == 'win-x64-runtime-required'
+        shell: pwsh
+        run: |
+          Copy-Item tools/launcher/PingWatcher.cmd publish/${{ matrix.name }}/PingWatcher.cmd
+
+          # ランタイムがある環境なので、素通りして exe を起動できることだけ確かめる。
+          # (無い環境の分岐は CI では踏めない。ランナーには必ず入っている)
+          $out = & cmd /c "publish/${{ matrix.name }}/PingWatcher.cmd" --selftest 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            throw "起動用スクリプトがランタイムを見つけられなかった: $out"
+          }
+
+          # 起動しっぱなしにしない（--selftest は自分で終わるが、念のため待つ）
+          Get-Process PingWatcher -ErrorAction SilentlyContinue |
+            ForEach-Object { $_.WaitForExit(30000) | Out-Null }
+
       # ウィンドウを実際に開いてレイアウトまで通す検査。XAML の誤りやフォント初期化の
       # 不具合はコンパイルを通り抜けるので、ここが実質唯一の防波堤になる。
       - name: 自己診断 (--selftest)
