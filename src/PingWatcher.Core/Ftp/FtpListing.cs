@@ -231,7 +231,9 @@ public static class FtpListing
     /// UNIX 形式の日時。<b>年が無いことがある</b>
     /// （半年より古いものは年、新しいものは時刻を出すのが ls の作法）。
     ///
-    /// 年が無いときは今年とみなし、<b>半年以上先になるなら前年</b>とする。
+    /// <b>時刻が出ている＝直近半年以内</b>ということなので、未来にはなりえない。
+    /// 今年とみなして未来に飛んだら前年とする。1 日ぶんだけ余裕を持たせるのは、
+    /// 相手の時計がこちらより少し進んでいることがあるため。
     /// </summary>
     private static DateTime ParseUnixDate(string month, string day, string third, DateTime now)
     {
@@ -264,8 +266,8 @@ public static class FtpListing
 
         var guess = new DateTime(now.Year, monthNumber, dayNumber, hour, minute, 0, DateTimeKind.Unspecified);
 
-        // 半年以上先に見えるなら、去年のもの
-        return guess > now.AddDays(183) ? guess.AddYears(-1) : guess;
+        // 未来に見えるなら去年のもの（時計のずれぶんだけ猶予を持たせる）
+        return guess > now.AddDays(1) ? guess.AddYears(-1) : guess;
     }
 
     private static bool Valid(int year, int month, int day)

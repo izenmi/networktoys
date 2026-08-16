@@ -118,8 +118,8 @@ public class FtpListingTests
     [Fact]
     public void A_date_that_would_be_in_the_future_belongs_to_last_year()
     {
-        // ls は半年より新しいものに時刻を出す。「いま」が 8/16 なら
-        // 12/25 は来年ではなく去年のはず
+        // 時刻が出ている＝直近半年以内。未来にはなりえないので、
+        // 「いま」が 2026/8/16 なら 12/25 は来年ではなく去年のはず
         RemoteEntry entry = Parse("-rw-r--r-- 1 root wheel 10 Dec 25 23:59 last-year.txt");
 
         Assert.Equal(2025, entry.Modified.Year);
