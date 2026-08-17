@@ -877,6 +877,25 @@ internal static class SelfTest
             }
         });
 
+        Check("スキャン: ⓘ に並べたポートが実装と一致している", () =>
+        {
+            // ⓘ の番号は直書きなので、調べるポートを増減すると黙ってずれる
+            // （まとめたタブの件数と同じ性質）。実物と突き合わせておく。
+            int[] listed =
+            [
+                .. System.Text.RegularExpressions.Regex
+                    .Matches(Help.TabHelp.Scan, @"(?:・|/ )(\d+) ")
+                    .Select(m => int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)),
+            ];
+
+            Assert(listed.SequenceEqual(Services.ScanOptions.DefaultPorts),
+                   $"ⓘ のポートが実装と違う: ⓘ [{string.Join(", ", listed)}] / "
+                   + $"実装 [{string.Join(", ", Services.ScanOptions.DefaultPorts)}]");
+
+            Assert(Help.TabHelp.Scan.Contains($"{listed.Length} 個", StringComparison.Ordinal),
+                   $"ⓘ に書いた個数が実際（{listed.Length} 個）と違う");
+        });
+
         Check("IP設定: プリセットは何度でも入れ直せる", () =>
         {
             // コンボボックスは同じ項目を選び直しても通知を出さない。

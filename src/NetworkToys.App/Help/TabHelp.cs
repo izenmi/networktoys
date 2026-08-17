@@ -210,8 +210,14 @@ internal static class TabHelp
         ・台帳に載っていない機器を見つける
         ・空いている IP アドレスを探す
 
+        調べるポート（22 個。既定では調べない）
+        ・21 FTP / 22 SSH / 23 Telnet / 25 SMTP / 53 DNS / 80 HTTP / 110 POP3
+        ・135 RPC / 139 NetBIOS / 143 IMAP / 443 HTTPS / 445 SMB / 515 LPD / 631 IPP
+        ・993 IMAPS / 995 POP3S / 1433 SQL Server / 3306 MySQL / 3389 RDP
+        ・5432 PostgreSQL / 8080 HTTP 代替 / 8443 HTTPS 代替
+
         気をつけること
-        ・ポート調査は既定で無効。有効にすると、よく使う 22 ポートへ順に接続を試みる
+        ・ポート調査は既定で無効。有効にすると、上の 22 ポートへ順に接続を試みる
         ・ウイルス対策ソフトや EDR が反応することがあるので、
         　自分が管理権限を持つネットワークでのみ使う
 
