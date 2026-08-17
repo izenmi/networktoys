@@ -515,7 +515,7 @@ public partial class MainWindow : Window
         ["snmptrap"] = ["Time", "Remote", "Text"],
         ["snmpget"] = ["Oid", "Name", "Type", "Value"],
         ["vres"] = ["Name", "ProxyText", "VerdictText", "ElapsedMs", "Detail"],
-        ["mdev"] = ["Name", "Model", "Serial", "Firmware", "Network", "State", "PublicIp", "LanIp"],
+        ["mdev"] = ["Name", "Model", "Serial", "Firmware", "Network", "State", "LanIp"],
         ["mup"] = ["Network", "Serial", "Interface", "State", "Ip", "Gateway", "PublicIp"],
         ["mcli"] = ["Network", "Description", "Ip", "Mac", "Vlan", "Manufacturer", "Usage", "LastSeen"],
         // スコアは数値のまま並べる（表示文字列で並べると 9 が 80 より後ろへ行く）
@@ -1413,8 +1413,7 @@ public partial class MainWindow : Window
             ScanRowViewModel scan => scan.Address,
             NetworkToys.Core.Net.ConnectionDetailRow conn => conn.Remote,
             NetworkToys.Core.Net.WfpBlockedRow wfp => wfp.Remote,
-            NetworkToys.Core.Cloud.MerakiDeviceRow device =>
-                device.LanIp.Length > 0 ? device.LanIp : device.PublicIp,
+            NetworkToys.Core.Cloud.MerakiDeviceRow device => device.LanIp,
             NetworkToys.Core.Cloud.MerakiClientRow client => client.Ip,
             NetworkToys.Core.Fabric.AciEndpointRow endpoint => endpoint.Ip,
             NetworkToys.Core.Wireless.WlcClientRow wireless => wireless.Ip,

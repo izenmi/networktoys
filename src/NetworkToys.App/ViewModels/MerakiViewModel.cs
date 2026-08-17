@@ -407,13 +407,40 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             Status = "機器一覧を取得しています…";
             IReadOnlyList<string> devicePages = await _dashboard.DevicesAsync(ApiKey, organizationId, token);
             IReadOnlyList<string> statusPages = await _dashboard.DeviceStatusesAsync(ApiKey, organizationId, token);
-            Replace(DeviceRows, MerakiCatalog.JoinDevices(devicePages, statusPages, networks));
+
+            // 設定と違う版で動いている機器は firmware に版が入らないので、更新の記録から補う。
+            // 記録が引けない組織（権限）もあるので、取れなくても機器一覧は出す
+            IReadOnlyDictionary<string, string> versions =
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                Status = "ファームの版を確認しています…";
+                versions = MerakiCatalog.RunningVersions(
+                    await _dashboard.FirmwareUpgradesAsync(ApiKey, organizationId, token));
+            }
+            catch (MerakiApiException)
+            {
+                // 版が補えないだけ。一覧は「⚠ 設定と違う版」で出る
+            }
+
+            Replace(DeviceRows, MerakiCatalog.JoinDevices(devicePages, statusPages, networks, versions));
 
             Status = "アップリンクの状態を取得しています…";
             IReadOnlyList<string> uplinkPages = await _dashboard.UplinksAsync(ApiKey, organizationId, token);
             IReadOnlyList<MerakiUplinkRow> uplinks = MerakiCatalog.ParseUplinks(uplinkPages, networks);
-            Replace(UplinkRows, uplinks);
-            GlobalIpText = MerakiCatalog.GlobalIpSummary(uplinks);
+
+            // 導入時確認だけは停止中の機器のぶんも見る（「取れなかった」と
+            // 「切れている」を区別するため）。一覧と CSV には出さない
+            _allUplinks = uplinks;
+
+            IReadOnlyList<MerakiUplinkRow> shown =
+                MerakiCatalog.WithoutOfflineDevices(uplinks, DeviceRows);
+
+            Replace(UplinkRows, shown);
+            GlobalIpText = MerakiCatalog.GlobalIpSummary(shown);
+
+            await FillApplianceIpsAsync(token);
 
             Status = $"ネットワーク {NetworkRows.Count} 件 / 機器 {DeviceRows.Count} 台 / "
                    + $"回線 {UplinkRows.Count} 本（{DateTime.Now:HH:mm:ss} 時点）。";
@@ -447,6 +474,115 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// MX の LAN 側アドレスを埋める。
+    ///
+    /// <b>MX の LAN IP は組織まとめの応答に入っていない</b>ので、MX のある拠点ごとに
+    /// LAN の設定を引く（VLAN を使っていない拠点は singleLan へ落とす）。
+    /// 拠点の数だけ呼ぶことになるが、<b>途中で打ち切らない</b>（2026-08-17 ユーザー指示）。
+    /// 引けない拠点は空欄のままにする — 分からないものを埋めない。
+    /// </summary>
+    private async Task FillApplianceIpsAsync(CancellationToken token)
+    {
+        string[] networks =
+        [
+            .. DeviceRows.Where(d => d.Model.StartsWith("MX", StringComparison.OrdinalIgnoreCase))
+                .Select(d => d.Network)
+                .Where(n => n.Length > 0)
+                .Distinct(StringComparer.Ordinal),
+        ];
+
+        if (networks.Length == 0) return;
+
+        if (networks.Length > 1) Notice = SlowNotice(networks.Length);
+
+        var byNetwork = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < networks.Length; i++)
+        {
+            string name = networks[i];
+
+            if (NetworkRows.FirstOrDefault(n => n.Name == name) is not { } network) continue;
+
+            Status = $"MX の LAN アドレスを取得しています… {i + 1}/{networks.Length}（{name}）";
+
+            IReadOnlyList<string> ips = [];
+
+            try
+            {
+                ips = MerakiCatalog.ApplianceIps(
+                    await _dashboard.ApplianceVlansAsync(ApiKey, network.Id, token));
+            }
+            catch (MerakiApiException)
+            {
+                // VLAN を使っていない拠点。LAN は 1 つだけなので、そちらを引く
+            }
+
+            if (ips.Count == 0)
+            {
+                try
+                {
+                    ips = MerakiCatalog.ApplianceIps(
+                        await _dashboard.ApplianceSingleLanAsync(ApiKey, network.Id, token));
+                }
+                catch (MerakiApiException)
+                {
+                    // その拠点は空欄のまま
+                }
+            }
+
+            if (ips.Count > 0) byNetwork[name] = string.Join(" / ", ips);
+        }
+
+        Replace(DeviceRows, MerakiCatalog.WithApplianceIps(DeviceRows, byNetwork));
+        ClearSlowNotice();
+    }
+
+    /// <summary>
+    /// その拠点にあるセグメント。<b>VLAN（無ければ単一 LAN）とスタティックルートの和</b>。
+    /// どれも引けない拠点（MX が無い）は空で返す — 取得そのものは止めない。
+    /// </summary>
+    private async Task<IReadOnlyList<string>> SubnetsOfAsync(
+        MerakiNetworkRow network, CancellationToken token)
+    {
+        var found = new List<string>();
+
+        try
+        {
+            found.AddRange(MerakiCatalog.ApplianceSubnets(
+                await _dashboard.ApplianceVlansAsync(ApiKey, network.Id, token)));
+        }
+        catch (MerakiApiException)
+        {
+            // VLAN を使っていない拠点。LAN は 1 つだけなので、そちらを引く
+        }
+
+        if (found.Count == 0)
+        {
+            try
+            {
+                found.AddRange(MerakiCatalog.ApplianceSubnets(
+                    await _dashboard.ApplianceSingleLanAsync(ApiKey, network.Id, token)));
+            }
+            catch (MerakiApiException)
+            {
+                // その拠点に MX が無い、というだけ
+            }
+        }
+
+        try
+        {
+            found.AddRange(MerakiCatalog.ParseStaticRouteSubnets(
+                await _dashboard.StaticRoutesAsync(ApiKey, network.Id, token)));
+        }
+        catch (MerakiApiException)
+        {
+            // スタティックルートを持たない拠点の方が多い
+        }
+
+        return [.. found.Distinct(StringComparer.OrdinalIgnoreCase)];
+    }
+
     private async Task FetchClientsAsync()
     {
         if (!AllNetworks && SelectedNetwork is null) return;
@@ -459,10 +595,14 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         {
             MerakiTimespan timespan = SelectedTimespan;
 
-            // 全拠点は拠点の数だけ呼び出しが増えるので、拠点の一覧と同じ上限で打ち切る
+            // 全拠点は拠点の数だけ呼び出しが増える。それでも最後まで取る
+            // （途中で打ち切ると「その拠点には端末が居ない」と誤読される。2026-08-17 ユーザー指示）
             MerakiNetworkRow[] targets = AllNetworks
-                ? [.. NetworkRows.Take(MaxSites)]
+                ? [.. NetworkRows]
                 : [SelectedNetwork!];
+
+            if (targets.Length > 1)
+                Notice = SlowNotice(targets.Length);
 
             var clients = new List<MerakiClientRow>();
 
@@ -480,6 +620,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             }
 
             Replace(ClientRows, clients);
+            ClearSlowNotice();
 
             Status = targets.Length == 1
                 ? $"「{targets[0].Name}」で {ClientRows.Count} 台（直近 {timespan.Name}）。"
@@ -488,8 +629,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             if (_dashboard.WasTruncated)
                 Notice = "⚠ 台数が多いため途中までしか取得できていません。期間を短くして試してください。";
 
-            if (AllNetworks && NetworkRows.Count > targets.Length)
-                Notice = $"⚠ 拠点が多いため {targets.Length} 件で打ち切りました（全 {NetworkRows.Count} 件）。";
         }
         catch (MerakiApiException ex)
         {
@@ -525,6 +664,12 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SelectedOrganization = Organizations.FirstOrDefault(o => o.Id == keep);
     }
 
+    /// <summary>
+    /// 停止している機器のぶんも含めた回線。<b>一覧（<see cref="UplinkRows"/>）は
+    /// 停止中のぶんを落としてある</b>ので、導入時確認はこちらを見る。
+    /// </summary>
+    private IReadOnlyList<MerakiUplinkRow> _allUplinks = [];
+
     private static void Replace<T>(ObservableCollection<T> target, IReadOnlyList<T> rows)
     {
         target.Clear();
@@ -532,8 +677,22 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             target.Add(row);
     }
 
-    /// <summary>拠点の数だけ呼ぶので、多すぎる組織では途中で止める。</summary>
-    private const int MaxSites = 40;
+    /// <summary>
+    /// 全拠点ぶんを取る前の断り書き。<b>拠点 1 件につき数回の呼び出し</b>になるので、
+    /// 数十拠点あると分単位で待つことになる（打ち切らない代わりに、待つことを先に伝える）。
+    /// </summary>
+    private static string SlowNotice(int count, string unit = "拠点")
+        => $"⚠ 全 {count} {unit}ぶんを取ります。数が多いと数分かかります（「中断」で止められます）。";
+
+    /// <summary>
+    /// 待ち時間の断りを引っ込める。<b>取り終わったら消す</b> —
+    /// 残したままだと、次に画面を見たときに「まだ取っている」ように読める。
+    /// ほかの警告（打ち切りや失敗）は消さない。
+    /// </summary>
+    private void ClearSlowNotice()
+    {
+        if (Notice.StartsWith("⚠ 全 ", StringComparison.Ordinal)) Notice = "";
+    }
 
     /// <summary>ロスと遅延をさかのぼる長さ。<b>この API は 5 分までしか受けない。</b></summary>
     private const int QualitySeconds = 300;
@@ -583,7 +742,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             {
                 MerakiUplinkRow[] uplinks =
                 [
-                    .. UplinkRows.Where(u => string.Equals(
+                    .. _allUplinks.Where(u => string.Equals(
                         u.Serial, appliance.Serial, StringComparison.OrdinalIgnoreCase)),
                 ];
 
@@ -793,7 +952,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             var sites = new List<MerakiSiteRow>();
             var segments = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            MerakiNetworkRow[] targets = [.. NetworkRows.Take(MaxSites)];
+            MerakiNetworkRow[] targets = [.. NetworkRows];
+
+            if (targets.Length > 1)
+                Notice = SlowNotice(targets.Length);
 
             for (int i = 0; i < targets.Length; i++)
             {
@@ -804,19 +966,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
                 IReadOnlyList<MerakiClientRow> clients = MerakiCatalog.ParseClients(
                     await _dashboard.ClientsAsync(ApiKey, network.Id, timespan.Seconds, token));
 
-                // スタティックルートは MX のある拠点にしか無い。無ければ 404 になるので、
-                // そこで取得全体を止めない
-                IReadOnlyList<string> routes = [];
-
-                try
-                {
-                    routes = MerakiCatalog.ParseStaticRouteSubnets(
-                        await _dashboard.StaticRoutesAsync(ApiKey, network.Id, token));
-                }
-                catch (MerakiApiException)
-                {
-                    // その拠点に MX が無い、というだけ
-                }
+                // 拠点のセグメントは VLAN で切ってあるのが普通で、スタティックルートは
+                // その先に別のルータがぶら下がっている拠点にしか無い。
+                // ルートだけを見ていたので大半が空欄だった（2026-08-17 ユーザー指摘）
+                IReadOnlyList<string> routes = [.. await SubnetsOfAsync(network, token)];
 
                 IReadOnlyList<string> used = MerakiCatalog.SegmentsWithClients(
                     routes, clients.Select(c => c.Ip));
@@ -831,14 +984,13 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             }
 
             Replace(SiteRows, sites);
+            ClearSlowNotice();
 
             // 機器一覧の LAN IP にセグメントを足す（足すのは MX だけ）
             Replace(DeviceRows, MerakiCatalog.WithSegments(DeviceRows, segments));
 
             Status = $"拠点 {SiteRows.Count} 件を数えました（{timespan.Name}・{DateTime.Now:HH:mm:ss} 時点）。";
 
-            if (NetworkRows.Count > targets.Length)
-                Notice = $"⚠ 拠点が多いため {targets.Length} 件で打ち切りました（全 {NetworkRows.Count} 件）。";
         }
         catch (MerakiApiException ex)
         {
@@ -875,8 +1027,11 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             MerakiDeviceRow[] appliances =
             [
                 .. DeviceRows.Where(d => d.Model.StartsWith("MX", StringComparison.OrdinalIgnoreCase)
-                                         && d.Serial.Length > 0).Take(MaxSites),
+                                         && d.Serial.Length > 0),
             ];
+
+            if (appliances.Length > 1)
+                Notice = SlowNotice(appliances.Length, "台");
 
             var rows = new List<MerakiDhcpRow>();
 
@@ -900,6 +1055,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             }
 
             Replace(DhcpRows, rows);
+            ClearSlowNotice();
 
             Status = appliances.Length == 0
                 ? "MX が見つかりませんでした（先に「取得」を押してください）。"
@@ -1040,8 +1196,11 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             MerakiDeviceRow[] appliances =
             [
                 .. DeviceRows.Where(d => d.Model.StartsWith("MX", StringComparison.OrdinalIgnoreCase)
-                                         && d.Serial.Length > 0).Take(MaxSites),
+                                         && d.Serial.Length > 0),
             ];
+
+            if (appliances.Length > 1)
+                Notice = SlowNotice(appliances.Length, "台");
 
             var rows = new List<MerakiUtilizationRow>();
 
@@ -1068,6 +1227,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             }
 
             Replace(UtilizationRows, rows);
+            ClearSlowNotice();
 
             Status = appliances.Length == 0
                 ? "MX が見つかりませんでした（先に「機器」を取得してください）。"

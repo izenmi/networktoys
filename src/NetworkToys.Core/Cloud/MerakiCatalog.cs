@@ -26,7 +26,6 @@ public sealed record MerakiDeviceRow(
     string Network,
     string State,
     ConnectionStateKind StateKind,
-    string PublicIp,
     string LanIp);
 
 /// <summary>アップリンクの 1 行。MX 1 台につき WAN1/WAN2 で 2 行になる。</summary>
@@ -161,10 +160,15 @@ public static class MerakiCatalog
     /// 片方にしか出てこないシリアルも落とさない。1 項目の欠落で機器が一覧から消えると、
     /// 「その機器が無い」のか「情報が取れなかった」のか区別できなくなる。
     /// </summary>
+    /// <param name="runningVersions">
+    /// シリアル → いま動いている版（<see cref="RunningVersions"/>）。
+    /// 設定と違う版で動いている機器の <c>firmware</c> は版ではなく英文なので、ここから補う。
+    /// </param>
     public static IReadOnlyList<MerakiDeviceRow> JoinDevices(
         IEnumerable<string> devicePages,
         IEnumerable<string> statusPages,
-        IReadOnlyList<MerakiNetworkRow> networks)
+        IReadOnlyList<MerakiNetworkRow> networks,
+        IReadOnlyDictionary<string, string>? runningVersions = null)
     {
         Dictionary<string, string> networkNames = networks
             .GroupBy(n => n.Id)
@@ -187,7 +191,7 @@ public static class MerakiCatalog
             seen.Add(serial);
 
             byStatus.TryGetValue(serial, out JsonElement status);
-            rows.Add(BuildDeviceRow(item, status, networkNames));
+            rows.Add(BuildDeviceRow(item, status, networkNames, runningVersions));
         }
 
         // 機器一覧に出てこなかったが稼働状況にはいるシリアル（権限や取得タイミングのずれ）
@@ -195,29 +199,165 @@ public static class MerakiCatalog
         {
             if (seen.Contains(serial)) continue;
 
-            rows.Add(BuildDeviceRow(default, status, networkNames));
+            rows.Add(BuildDeviceRow(default, status, networkNames, runningVersions));
         }
 
         return rows;
     }
 
     private static MerakiDeviceRow BuildDeviceRow(
-        JsonElement device, JsonElement status, Dictionary<string, string> networkNames)
+        JsonElement device, JsonElement status, Dictionary<string, string> networkNames,
+        IReadOnlyDictionary<string, string>? runningVersions)
     {
         // 名前と型番はどちらの応答にも入りうる。空でない方を採る
         string networkId = Or(Str(device, "networkId"), Str(status, "networkId"));
         (string text, ConnectionStateKind kind) = DescribeDeviceStatus(Str(status, "status"));
 
+        string serial = Or(Str(device, "serial"), Str(status, "serial"));
+        string running = runningVersions is not null
+                         && runningVersions.TryGetValue(serial, out string? version) ? version : "";
+
         return new MerakiDeviceRow(
             Name: Or(Str(device, "name"), Str(status, "name")),
             Model: Or(Str(device, "model"), Str(status, "model")),
-            Serial: Or(Str(device, "serial"), Str(status, "serial")),
-            Firmware: Str(device, "firmware"),
+            Serial: serial,
+            Firmware: DescribeFirmware(Str(device, "firmware"), running),
             Network: networkNames.TryGetValue(networkId, out string? name) ? name : networkId,
             State: text,
             StateKind: kind,
-            PublicIp: Str(status, "publicIp"),
             LanIp: Or(Str(status, "lanIp"), Str(device, "lanIp")));
+    }
+
+    // ===== ファーム =====
+
+    /// <summary>
+    /// 機器が設定どおりの版で動いていないとき、<c>firmware</c> に版の代わりに入ってくる英文。
+    /// <b>版が入るはずの項目に文章が返る</b>ので、そのまま出すと一覧が読めない。
+    /// </summary>
+    public const string FirmwareMismatch = "Not running configured version";
+
+    /// <summary>
+    /// ファームの表示。<b>実際に動いている版は <c>firmware</c> からは分からない</b>ので、
+    /// 更新の記録（<see cref="RunningVersions"/>）から補う。
+    /// 補えなかったときは版を騙らず、設定と違うことだけを出す。
+    /// </summary>
+    public static string DescribeFirmware(string? firmware, string running = "")
+    {
+        string text = firmware ?? "";
+
+        if (!text.Contains(FirmwareMismatch, StringComparison.OrdinalIgnoreCase)) return text;
+
+        return running.Length > 0 ? $"{running}（⚠ 設定と違う）" : "⚠ 設定と違う版";
+    }
+
+    /// <summary>
+    /// シリアル → いま動いている版。組織のファーム更新の記録から、
+    /// <b>完了した更新の「更新後の版」</b>を採る（進行中や取り消しは信用しない）。
+    /// 記録が無い機器は入らない — 分からないものを埋めない。
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> RunningVersions(IEnumerable<string> pages)
+    {
+        var latest = new Dictionary<string, (string Time, string Version)>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (JsonElement item in Items(pages))
+        {
+            string serial = Str(item, "serial");
+            if (serial.Length == 0) continue;
+
+            if (!item.TryGetProperty("upgrade", out JsonElement upgrade)
+                || upgrade.ValueKind != JsonValueKind.Object)
+                continue;
+
+            if (!Str(upgrade, "status").Contains("completed", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            string version = upgrade.TryGetProperty("toVersion", out JsonElement to)
+                             && to.ValueKind == JsonValueKind.Object
+                ? Or(Str(to, "shortName"), Str(to, "firmware"))
+                : "";
+
+            if (version.Length == 0) continue;
+
+            // 同じ機器の記録が何本もある。ISO 8601 なので文字の大小がそのまま時刻の前後
+            string time = Str(upgrade, "time");
+
+            if (!latest.TryGetValue(serial, out (string Time, string Version) kept)
+                || string.CompareOrdinal(time, kept.Time) > 0)
+                latest[serial] = (time, version);
+        }
+
+        return latest.ToDictionary(p => p.Key, p => p.Value.Version, StringComparer.OrdinalIgnoreCase);
+    }
+
+    // ===== MX の LAN 側アドレス =====
+
+    /// <summary>
+    /// MX が持っている LAN 側のアドレス。
+    ///
+    /// <b>MX の LAN IP は機器の一覧にも稼働状況にも入っていない</b>（あちらの <c>lanIp</c> は
+    /// スイッチや AP の管理アドレス）。VLAN を有効にしてある拠点は
+    /// <c>appliance/vlans</c>、していない拠点は <c>appliance/singleLan</c> に入っていて、
+    /// <b>応答は前者が配列・後者がオブジェクト</b>なので、どちらの形でも読めるようにしてある。
+    /// </summary>
+    public static IReadOnlyList<string> ApplianceIps(IEnumerable<string> pages)
+    {
+        var found = new List<string>();
+
+        foreach (JsonElement item in Items(pages).Concat(RootObjects(pages)))
+        {
+            string ip = Str(item, "applianceIp");
+
+            if (ip.Length > 0 && !found.Contains(ip, StringComparer.OrdinalIgnoreCase))
+                found.Add(ip);
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// 拠点の LAN 側のセグメント（VLAN のサブネット）。<see cref="ApplianceIps"/> と同じ応答から拾う。
+    ///
+    /// <b>拠点のセグメントはスタティックルートではなく VLAN で切ってあるのが普通</b>で、
+    /// ルートだけを見ると大半の拠点が空欄になる（2026-08-17 に実機で発覚）。
+    /// </summary>
+    public static IReadOnlyList<string> ApplianceSubnets(IEnumerable<string> pages)
+    {
+        var found = new List<string>();
+
+        foreach (JsonElement item in Items(pages).Concat(RootObjects(pages)))
+        {
+            string subnet = Str(item, "subnet");
+
+            if (subnet.Length > 0 && !found.Contains(subnet, StringComparer.OrdinalIgnoreCase))
+                found.Add(subnet);
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// 機器一覧の MX に LAN 側アドレスを入れる。入れるのは<b>空欄のときだけ</b> —
+    /// 機器の応答に入っていたなら、そちらの方が確かなため。
+    /// </summary>
+    public static IReadOnlyList<MerakiDeviceRow> WithApplianceIps(
+        IEnumerable<MerakiDeviceRow> devices, IReadOnlyDictionary<string, string> ipsByNetwork)
+    {
+        ArgumentNullException.ThrowIfNull(devices);
+        ArgumentNullException.ThrowIfNull(ipsByNetwork);
+
+        var rows = new List<MerakiDeviceRow>();
+
+        foreach (MerakiDeviceRow device in devices)
+        {
+            bool fill = device.Model.StartsWith("MX", StringComparison.OrdinalIgnoreCase)
+                        && device.LanIp.Length == 0
+                        && ipsByNetwork.TryGetValue(device.Network, out string? ip)
+                        && ip.Length > 0;
+
+            rows.Add(fill ? device with { LanIp = ipsByNetwork[device.Network] } : device);
+        }
+
+        return rows;
     }
 
     // ===== アップリンク =====
@@ -263,6 +403,27 @@ public static class MerakiCatalog
         }
 
         return rows;
+    }
+
+    /// <summary>
+    /// 停止している機器の回線を落とす。
+    ///
+    /// 機器が落ちていれば回線も当然切れているので、一覧に並べても
+    /// 「切れている回線」を数えるときの邪魔にしかならない（2026-08-17 ユーザー指示）。
+    /// <b>導入時確認では落とさない</b> — あちらは「取れなかった」と「切れている」を区別する。
+    /// </summary>
+    public static IReadOnlyList<MerakiUplinkRow> WithoutOfflineDevices(
+        IEnumerable<MerakiUplinkRow> uplinks, IEnumerable<MerakiDeviceRow> devices)
+    {
+        ArgumentNullException.ThrowIfNull(uplinks);
+        ArgumentNullException.ThrowIfNull(devices);
+
+        // シリアルの大小は応答によって揺れる（機器一覧と回線の突き合わせも同じ規則）
+        var offline = new HashSet<string>(
+            devices.Where(d => d.State == OfflineState && d.Serial.Length > 0).Select(d => d.Serial),
+            StringComparer.OrdinalIgnoreCase);
+
+        return [.. uplinks.Where(u => !offline.Contains(u.Serial))];
     }
 
     /// <summary>アップリンクのグローバル IP を 1 行にまとめる。重複は畳む。</summary>
@@ -317,6 +478,9 @@ public static class MerakiCatalog
 
     // ===== 状態の表示 =====
 
+    /// <summary>停止している機器の状態表示。回線を省く判定でも見るので 1 か所に置く。</summary>
+    public const string OfflineState = "✕ 停止";
+
     /// <summary>
     /// 機器の状態。状態は色だけで表さない決まりなので記号を併記する
     /// （記号と種別の対応は接続タブの TcpStateText と揃えてある）。
@@ -326,7 +490,7 @@ public static class MerakiCatalog
         "online" => ("● 稼働", ConnectionStateKind.Ok),
         "alerting" => ("⊘ 警報", ConnectionStateKind.Info),
         "dormant" => ("◌ 休止", ConnectionStateKind.Muted),
-        "offline" => ("✕ 停止", ConnectionStateKind.Muted),
+        "offline" => (OfflineState, ConnectionStateKind.Muted),
         null or "" => ("—", ConnectionStateKind.Muted),
         // 知らない値は言い換えずにそのまま出す
         _ => (status, ConnectionStateKind.Muted),
@@ -702,8 +866,8 @@ public static class MerakiCatalog
         [.. rows.Select(r => new[] { r.Name, r.Id, r.ProductTypes, r.TimeZone, r.Tags })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiDeviceRow> rows) => new(
-        ["名前", "型番", "シリアル", "ファーム", "ネットワーク", "状態", "グローバル IP", "LAN IP"],
-        [.. rows.Select(r => new[] { r.Name, r.Model, r.Serial, r.Firmware, r.Network, r.State, r.PublicIp, r.LanIp })]);
+        ["名前", "型番", "シリアル", "ファーム", "ネットワーク", "状態", "LAN IP"],
+        [.. rows.Select(r => new[] { r.Name, r.Model, r.Serial, r.Firmware, r.Network, r.State, r.LanIp })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiUplinkRow> rows) => new(
         ["ネットワーク", "シリアル", "回線", "状態", "IP", "ゲートウェイ", "グローバル IP"],
@@ -814,6 +978,31 @@ public static class MerakiCatalog
                     if (item.ValueKind == JsonValueKind.Object)
                         yield return item.Clone();
                 }
+            }
+        }
+    }
+
+    /// <summary>応答そのものがオブジェクトのとき（<c>singleLan</c> など）の受け口。</summary>
+    private static IEnumerable<JsonElement> RootObjects(IEnumerable<string> pages)
+    {
+        foreach (string page in pages)
+        {
+            if (string.IsNullOrWhiteSpace(page)) continue;
+
+            JsonDocument document;
+            try
+            {
+                document = JsonDocument.Parse(page);
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
+            using (document)
+            {
+                if (document.RootElement.ValueKind == JsonValueKind.Object)
+                    yield return document.RootElement.Clone();
             }
         }
     }

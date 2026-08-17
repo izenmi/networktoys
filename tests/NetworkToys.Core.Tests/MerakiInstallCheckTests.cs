@@ -378,7 +378,7 @@ public class MerakiInstallCheckTests
     {
         (string text, ConnectionStateKind kind) = MerakiCatalog.DescribeDeviceStatus(status);
 
-        return new MerakiDeviceRow(name, "MX68", "Q2XX-1111-1111", "17.10", "本社", text, kind, "", "");
+        return new MerakiDeviceRow(name, "MX68", "Q2XX-1111-1111", "17.10", "本社", text, kind, "");
     }
 
     private static MerakiDeviceRow Appliance() => Device("MX-1F", "online");

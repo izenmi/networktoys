@@ -1167,7 +1167,7 @@ internal static class SelfTest
 
                 (new Core.Cloud.MerakiDeviceRow(
                     "MX-01", "MX68", "Q2QN", "18.1", "本社", "オンライン",
-                    Core.Net.ConnectionStateKind.Ok, "203.0.113.1", "192.168.128.1"), "192.168.128.1"),
+                    Core.Net.ConnectionStateKind.Ok, "192.168.128.1"), "192.168.128.1"),
 
                 (new Core.Cloud.MerakiClientRow(
                     "本社", "pc-01", "192.168.128.50", "aa:bb:cc:dd:ee:ff", "10", "Dell", "1 MB", "10:00"),

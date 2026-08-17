@@ -85,10 +85,9 @@ public class MerakiCatalogTests
 
         MerakiDeviceRow hq = rows.Single(r => r.Serial == "Q2AA-1111-AAAA");
 
-        // 型番とファームは機器一覧から、状態とグローバル IP は稼働状況から来る
+        // 型番とファームは機器一覧から、状態と LAN IP は稼働状況から来る
         Assert.Equal("MX68", hq.Model);
         Assert.Equal("wired-18-107", hq.Firmware);
-        Assert.Equal("203.0.113.5", hq.PublicIp);
         Assert.Equal("192.168.10.1", hq.LanIp);
         // networkId はネットワーク名に解決される
         Assert.Equal("本社", hq.Network);
@@ -107,7 +106,7 @@ public class MerakiCatalogTests
         // 稼働状況が無い機器も消えない（状態は「—」になるだけ）
         MerakiDeviceRow osaka = rows.Single(r => r.Serial == "Q2BB-2222-BBBB");
         Assert.Equal("—", osaka.State);
-        Assert.Equal("", osaka.PublicIp);
+        Assert.Equal("", osaka.LanIp);
 
         // 機器一覧に無い機器も消えない
         MerakiDeviceRow ghost = rows.Single(r => r.Serial == "Q2CC-3333-CCCC");
@@ -125,6 +124,69 @@ public class MerakiCatalogTests
         Assert.Equal("N_111", rows.Single(r => r.Serial == "Q2AA-1111-AAAA").Network);
     }
 
+    [Fact]
+    public void Firmware_falls_back_to_the_version_that_is_actually_running()
+    {
+        const string devices = """
+            [ { "serial": "Q2AA-1111-AAAA", "model": "MX68",
+                "firmware": "Not running configured version", "networkId": "N_111" } ]
+            """;
+
+        // 完了した更新のうち、いちばん新しいものを採る（取り消しは信用しない）
+        const string upgrades = """
+            [ { "serial": "Q2AA-1111-AAAA", "upgrade": { "time": "2026-01-01T00:00:00Z",
+                  "status": "Completed", "toVersion": { "shortName": "MX 18.107" } } },
+              { "serial": "Q2AA-1111-AAAA", "upgrade": { "time": "2026-06-01T00:00:00Z",
+                  "status": "Completed", "toVersion": { "shortName": "MX 18.211" } } },
+              { "serial": "Q2AA-1111-AAAA", "upgrade": { "time": "2026-07-01T00:00:00Z",
+                  "status": "Cancelled", "toVersion": { "shortName": "MX 19.1" } } } ]
+            """;
+
+        IReadOnlyDictionary<string, string> running = MerakiCatalog.RunningVersions([upgrades]);
+
+        Assert.Equal("MX 18.211", running["Q2AA-1111-AAAA"]);
+
+        MerakiDeviceRow row = MerakiCatalog.JoinDevices([devices], [], [], running)[0];
+
+        Assert.Equal("MX 18.211（⚠ 設定と違う）", row.Firmware);
+
+        // 記録が引けなければ版を騙らない
+        Assert.Equal("⚠ 設定と違う版", MerakiCatalog.JoinDevices([devices], [], [])[0].Firmware);
+    }
+
+    [Fact]
+    public void Appliance_lan_addresses_and_subnets_are_read_from_both_shapes()
+    {
+        const string vlans = """
+            [ { "id": 10, "subnet": "192.168.10.0/24", "applianceIp": "192.168.10.1" },
+              { "id": 20, "subnet": "192.168.20.0/24", "applianceIp": "192.168.20.1" } ]
+            """;
+
+        // VLAN を使っていない拠点はオブジェクトが 1 つ返る
+        const string singleLan = """
+            { "subnet": "192.168.128.0/24", "applianceIp": "192.168.128.1" }
+            """;
+
+        Assert.Equal(new[] { "192.168.10.1", "192.168.20.1" }, MerakiCatalog.ApplianceIps([vlans]).ToArray());
+        Assert.Equal(new[] { "192.168.128.1" }, MerakiCatalog.ApplianceIps([singleLan]).ToArray());
+        Assert.Equal(new[] { "192.168.10.0/24", "192.168.20.0/24" },
+                     MerakiCatalog.ApplianceSubnets([vlans]).ToArray());
+
+        // 入るのは MX の空欄だけ（スイッチや AP の管理アドレスを上書きしない）
+        const string devices = """
+            [ { "serial": "Q2AA-1111-AAAA", "model": "MX68", "networkId": "N_111" },
+              { "serial": "Q2DD-4444-DDDD", "model": "MS120", "networkId": "N_111" } ]
+            """;
+
+        IReadOnlyList<MerakiNetworkRow> networks = MerakiCatalog.ParseNetworks([NetworksJson]);
+        IReadOnlyList<MerakiDeviceRow> rows = MerakiCatalog.WithApplianceIps(
+            MerakiCatalog.JoinDevices([devices], [], networks),
+            new Dictionary<string, string> { ["本社"] = "192.168.10.1" });
+
+        Assert.Equal("192.168.10.1", rows.Single(r => r.Model == "MX68").LanIp);
+        Assert.Equal("", rows.Single(r => r.Model == "MS120").LanIp);
+    }
+
     // ===== アップリンク =====
 
     [Fact]
@@ -140,6 +202,25 @@ public class MerakiCatalogTests
         Assert.Equal(ConnectionStateKind.Ok, rows[0].StateKind);
         Assert.Equal("◌ 待機", rows[1].State);
         Assert.Equal("198.51.100.1", rows[0].Gateway);
+    }
+
+    [Fact]
+    public void Uplinks_of_offline_devices_are_dropped()
+    {
+        IReadOnlyList<MerakiNetworkRow> networks = MerakiCatalog.ParseNetworks([NetworksJson]);
+        IReadOnlyList<MerakiUplinkRow> uplinks = MerakiCatalog.ParseUplinks([UplinksJson], networks);
+
+        IReadOnlyList<MerakiDeviceRow> devices =
+            MerakiCatalog.JoinDevices([DevicesJson], [DeviceStatusesJson], networks);
+
+        // 稼働している MX の回線はそのまま残る
+        Assert.Equal(2, MerakiCatalog.WithoutOfflineDevices(uplinks, devices).Count);
+
+        // 同じ機器が停止していれば、その回線は 1 本も出さない
+        MerakiDeviceRow[] offline =
+            [.. devices.Select(d => d with { State = MerakiCatalog.OfflineState })];
+
+        Assert.Empty(MerakiCatalog.WithoutOfflineDevices(uplinks, offline));
     }
 
     [Fact]

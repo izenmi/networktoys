@@ -2583,7 +2583,6 @@
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.4]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.5]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.6]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.7]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
                                                 <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
@@ -2592,15 +2591,13 @@
                                                 <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="1" Text="型番" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="2" Text="シリアル" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="3" Text="ファーム" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="4" Text="ネットワーク" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="5" Text="状態" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="7" Text="LAN IP" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="6" Text="LAN IP" Style="{StaticResource Caption}" />
                                                 <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                                 <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
                                                        Tag="mdev.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
@@ -2614,8 +2611,6 @@
                                                        Tag="mdev.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
                                                        Tag="mdev.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -2640,8 +2635,7 @@
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.4]}" />
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.5]}" />
                                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.6]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.7]}" />
-                                                            </Grid.ColumnDefinitions>
+                                                                        </Grid.ColumnDefinitions>
                                                             <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
                                                             <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                             <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
@@ -2649,8 +2643,7 @@
                                                             <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                             <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                             <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                        <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                                        FontSize="{DynamicResource Size.Caption}"
                                                                        VerticalAlignment="Center"
                                                                        TextTrimming="CharacterEllipsis" />
@@ -2687,11 +2680,7 @@
                                                                     </Style>
                                                                 </TextBlock.Style>
                                                             </TextBlock>
-                                                            <TextBlock Grid.Column="6" Text="{Binding PublicIp}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="7" Text="{Binding LanIp}"
+                                                            <TextBlock Grid.Column="6" Text="{Binding LanIp}"
                                                                        Style="{StaticResource Mono}"
                                                                        FontSize="{DynamicResource Size.Caption}"
                                                                        VerticalAlignment="Center" />
@@ -2872,7 +2861,7 @@
                                         </ComboBox>
                                         <CheckBox Content="全拠点" IsChecked="{Binding AllNetworks}"
                                                   VerticalAlignment="Center" Margin="0,0,12,0"
-                                                  ToolTip="拠点の数だけ問い合わせるので時間がかかります（40 拠点で打ち切り）。" />
+                                                  ToolTip="拠点の数だけ問い合わせます。途中で打ち切らず最後まで取るので、拠点が多いと数分かかります（「中断」で止められます）。" />
                                         <TextBlock Text="期間" Style="{StaticResource Caption}"
                                                    VerticalAlignment="Center" Margin="0,0,5,0" />
                                         <ComboBox Width="90" Margin="0,0,12,0"
@@ -3195,11 +3184,15 @@
                                                 <TextBlock Grid.Column="4" Text="{Binding UsedText}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                <!-- 右端に寄せた数字と、左端から始まる使用率がくっついて読めなくなる。
+                                                     余白は数字の側に持たせる（列を広げると空きが目立ちすぎる） -->
                                                 <TextBlock Grid.Column="5" Text="{Binding FreeText}"
                                                            FontSize="{DynamicResource Size.Caption}"
+                                                           Margin="0,0,12,0"
                                                            VerticalAlignment="Center" HorizontalAlignment="Right" />
                                                 <TextBlock Grid.Column="6" Text="{Binding UsageText}"
                                                            FontSize="{DynamicResource Size.Caption}"
+                                                           Margin="4,0,0,0"
                                                            VerticalAlignment="Center">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">

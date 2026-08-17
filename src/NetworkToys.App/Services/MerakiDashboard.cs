@@ -57,6 +57,28 @@ internal sealed class MerakiDashboard : IDisposable
     public Task<IReadOnlyList<string>> DeviceStatusesAsync(string apiKey, string organizationId, CancellationToken token)
         => GetPagesAsync($"/organizations/{Escape(organizationId)}/devices/statuses?perPage=1000", apiKey, token);
 
+    /// <summary>
+    /// 組織のファーム更新の記録。<b>いま動いている版はここからしか分からない</b> —
+    /// 機器一覧の <c>firmware</c> は、設定と違う版で動いていると版ではなく英文を返す。
+    /// </summary>
+    public Task<IReadOnlyList<string>> FirmwareUpgradesAsync(
+        string apiKey, string organizationId, CancellationToken token)
+        => GetPagesAsync(
+            $"/organizations/{Escape(organizationId)}/firmware/upgrades/byDevice?perPage=250", apiKey, token);
+
+    /// <summary>
+    /// 拠点の LAN 側の設定（VLAN ごとの MX のアドレス）。
+    /// VLAN を使っていない拠点では 400 が返るので、<see cref="ApplianceSingleLanAsync"/> へ落とす。
+    /// </summary>
+    public Task<IReadOnlyList<string>> ApplianceVlansAsync(
+        string apiKey, string networkId, CancellationToken token)
+        => GetPagesAsync($"/networks/{Escape(networkId)}/appliance/vlans", apiKey, token);
+
+    /// <summary>VLAN を使っていない拠点の LAN 側の設定。<b>応答はオブジェクト 1 つ。</b></summary>
+    public Task<IReadOnlyList<string>> ApplianceSingleLanAsync(
+        string apiKey, string networkId, CancellationToken token)
+        => GetPagesAsync($"/networks/{Escape(networkId)}/appliance/singleLan", apiKey, token);
+
     public Task<IReadOnlyList<string>> UplinksAsync(string apiKey, string organizationId, CancellationToken token)
         => GetPagesAsync($"/organizations/{Escape(organizationId)}/appliance/uplink/statuses?perPage=1000", apiKey, token);
 
