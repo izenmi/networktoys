@@ -4241,14 +4241,14 @@
                          暗黙の TabItem スタイルに任せるので、ここでは何も当てない -->
                     <TabControl x:Name="MerakiSubTabs" BorderThickness="0" Padding="0">
 
-                        <!-- 導入時確認(入れた日に、その拠点が上がっているかを一通り見る) -->
+                        <!-- 導入時確認(入れた日に、その拠点が正常に導入されたかを一通り見る) -->
                         <TabItem Header="導入時確認">
                             <Border Style="{StaticResource Card}">
                                 <DockPanel>
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiInstallCheck}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="入れた拠点が上がっているかを、項目ごとに ○ か ✕ で確かめます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点が正常に導入されたかを、項目ごとに ○ か ✕ で確かめます。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                                         <TextBlock Text="拠点" Style="{StaticResource Caption}"

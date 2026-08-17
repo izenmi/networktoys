@@ -567,7 +567,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             MerakiDeviceRow[] appliances = [.. devices.Where(d => IsModel(d, "MX"))];
             MerakiDeviceRow[] switches = [.. devices.Where(d => IsModel(d, "MS"))];
 
-            // 1. 機器が上がっているか（取得済みの一覧だけで判る）
+            // 1. 機器が正常に稼働しているか（取得済みの一覧だけで判る）
             Step(1, "機器の稼働", network);
             rows.Add(MerakiInstallCheck.Devices(devices));
 

@@ -111,7 +111,7 @@ internal sealed class MerakiDashboard : IDisposable
 
     /// <summary>
     /// 回線ごとのロスと遅延（実測値）。<b>期間は 5 分まで</b>で、
-    /// 上がった直後はまだ値が入っていない。
+    /// リンクアップした直後はまだ値が入っていない。
     /// </summary>
     public Task<IReadOnlyList<string>> LossAndLatencyAsync(
         string apiKey, string organizationId, int timespanSeconds, CancellationToken token)

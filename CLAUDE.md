@@ -202,7 +202,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **イベント（`/networks/{id}/events`）は 1 ページだけ取る**（`GetOnePageAsync`）。この応答には**常に次ページの Link が付く**ので `GetPagesAsync` に渡すと 20 ページぶん引く。**応答も配列ではなく `{pageStartAt, pageEndAt, events:[…]}` のオブジェクト**なので、ほかの一覧と同じ `Items` では 1 件も読めない。
 - **MX の LAN/WAN ポートの速度・全二重はダッシュボード API に無い**（画面の Appliance status にしかない）。MS は `/devices/{serial}/switch/ports/statuses` で `speed`（「1 Gbps」）と `duplex` が取れる。**無いものを推測で埋めない** — 導入時確認では MX のぶんを「目視で確認」の行として人に渡している。
 - **どの WAN を使う設定かは `/devices/{serial}/appliance/uplinks/settings` にしかない。** 状態（`appliance/uplink/statuses`）には使っていない WAN2 も「not connected」で出てくるので、状態だけで「全部リンクアップ」を判定すると**単線の拠点が必ず不合格になる**。
-- **`status` は `active` と `ready` が両方とも「上がっている」**（ready は冗長側の待機）。`connecting` は上がっていない。表示用の文字（`◌ 待機` / `◌ 接続中`）では区別が付かないので、`MerakiUplinkRow.RawStatus` に生の値を持たせてある。
+- **`status` は `active` と `ready` が両方とも「リンクアップ」**（ready は冗長側の待機）。`connecting` はまだリンクアップしていない。表示用の文字（`◌ 待機` / `◌ 接続中`）では区別が付かないので、`MerakiUplinkRow.RawStatus` に生の値を持たせてある。
 
 ### 外部 API（Cisco ACI / APIC）
 

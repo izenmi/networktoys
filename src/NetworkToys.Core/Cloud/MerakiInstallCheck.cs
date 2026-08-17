@@ -39,13 +39,13 @@ public sealed record MerakiCheckRow(
 }
 
 /// <summary>
-/// MX を入れた日に、その拠点が正しく上がっているかを 1 画面で確かめる。
+/// MX を入れた日に、その拠点が正常に導入されたかを 1 画面で確かめる。
 ///
 /// ここは HTTP に触らない（<c>MerakiCatalog</c> と同じ）。応答の JSON 文字列と、
 /// すでに一覧になっている行を受け取って合否だけを決めるので、固定のサンプルで検証できる。
 ///
 /// 判定の考え方:
-/// ・<b>取れなかったものを合格にしない。</b>「— 試験せず」と理由を出す
+/// ・<b>取れなかったものを合格にしない。</b>「— 確認できず」と理由を出す
 /// ・<b>1 項目の失敗で全体を止めない。</b>呼ぶ側が項目ごとに捕まえて <see cref="Unavailable"/> を積む
 /// ・<b>数えられないものは人に渡す。</b>MX のポート速度は API に無いので目視の行にする
 /// </summary>
@@ -134,14 +134,14 @@ public static class MerakiInstallCheck
 
         string state = string.Join(" / ", uplinks.Select(u => $"{u.Interface} {u.State}"));
 
-        // 設定が取れなかった: 上がっている回線が 1 本でもあるかだけを見る
+        // 設定が取れなかった: リンクアップしている回線が 1 本でもあるかだけを見る
         if (enabled is null)
         {
             bool anyUp = uplinks.Any(IsLinkedUp);
 
             return new(WanName, device, anyUp ? CheckVerdict.Warn : CheckVerdict.Fail,
                        $"どの WAN を使う設定かが取れなかったので、状態だけで見ています（{state}）。"
-                       + (anyUp ? "" : " 上がっている回線がありません。"));
+                       + (anyUp ? "" : " リンクアップしている回線がありません。"));
         }
 
         if (enabled.Count == 0)
@@ -166,14 +166,14 @@ public static class MerakiInstallCheck
         string enabledText = string.Join(" / ", enabled);
 
         return down.Count == 0
-            ? new(WanName, device, CheckVerdict.Pass, $"有効な回線 {enabledText} はすべて上がっています（{state}）。")
+            ? new(WanName, device, CheckVerdict.Pass, $"有効な回線 {enabledText} はすべてリンクアップしています（{state}）。")
             : new(WanName, device, CheckVerdict.Fail,
-                  $"上がっていない回線があります: {Listed(down)}（有効: {enabledText}）。ケーブルと ONU の口を確認してください。");
+                  $"リンクアップしていない回線があります: {Listed(down)}（有効: {enabledText}）。ケーブルと ONU の口を確認してください。");
     }
 
     /// <summary>
-    /// 上がっているとみなす状態。<c>ready</c> は待機（冗長側で正常）だが、
-    /// <b><c>connecting</c> はまだ上がっていない</b>ので含めない。
+    /// リンクアップとみなす状態。<c>ready</c> は待機（冗長側で正常）だが、
+    /// <b><c>connecting</c> はまだリンクアップしていない</b>ので含めない。
     /// </summary>
     public static bool IsLinkedUp(MerakiUplinkRow uplink)
     {
@@ -265,7 +265,7 @@ public static class MerakiInstallCheck
             if (loss.Count == 0 && latency.Count == 0)
             {
                 rows.Add(new(QualityName, target, CheckVerdict.Skipped,
-                             "実測値がまだありません（回線が上がった直後は数分かかります）。"));
+                             "実測値がまだありません（リンクアップした直後は数分かかります）。"));
                 continue;
             }
 
