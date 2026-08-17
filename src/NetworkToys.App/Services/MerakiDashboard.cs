@@ -130,20 +130,6 @@ internal sealed class MerakiDashboard : IDisposable
         => GetPagesAsync(
             $"/organizations/{Escape(organizationId)}/appliance/vpn/statuses?perPage=300", apiKey, token);
 
-    /// <summary>VPN から外す通信の設定（Teams などのローカルブレイクアウト）。</summary>
-    public Task<IReadOnlyList<string>> VpnExclusionsAsync(string apiKey, string networkId, CancellationToken token)
-        => GetPagesAsync(
-            $"/networks/{Escape(networkId)}/appliance/trafficShaping/vpnExclusions", apiKey, token);
-
-    /// <summary>
-    /// 拠点のイベント。<b>1 ページだけ取る</b> — この応答には常に次ページの Link が付いてくるので、
-    /// 追うと 20 ページぶん（＝数千件）を無意味に引くことになる。
-    /// </summary>
-    public Task<IReadOnlyList<string>> EventsAsync(
-        string apiKey, string networkId, int perPage, CancellationToken token)
-        => GetOnePageAsync(
-            $"/networks/{Escape(networkId)}/events?productType=appliance&perPage={perPage}", apiKey, token);
-
     /// <summary>ページを最後まで（上限まで）取る。</summary>
     public async Task<IReadOnlyList<string>> GetPagesAsync(string path, string apiKey, CancellationToken token)
     {
@@ -163,17 +149,6 @@ internal sealed class MerakiDashboard : IDisposable
             WasTruncated = true;
 
         return pages;
-    }
-
-    /// <summary>次ページを追わずに 1 ページだけ取る。</summary>
-    public async Task<IReadOnlyList<string>> GetOnePageAsync(
-        string path, string apiKey, CancellationToken token)
-    {
-        string url = path.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? path : BaseUrl + path;
-
-        (string body, _) = await GetOneAsync(url, apiKey, token).ConfigureAwait(false);
-
-        return [body];
     }
 
     /// <summary>

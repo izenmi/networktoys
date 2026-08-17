@@ -59,8 +59,6 @@ public static class MerakiInstallCheck
     public const string PortsName = "ポートの速度・全二重";
     public const string VpnName = "VPN（IPsec）";
     public const string DhcpName = "DHCP";
-    public const string TeamsName = "Teams の LBO";
-    public const string EventsName = "イベントログ";
     public const string ClientsName = "クライアント";
 
     // ===== 目安（実機で緩めたくなったらここだけ動かす） =====
@@ -76,15 +74,6 @@ public static class MerakiInstallCheck
 
     /// <summary>求める速度。<b>これ以上なら合格</b>（10G の上位ポートを不合格にしない）。</summary>
     public const double RequiredSpeedMbps = 1000;
-
-    /// <summary>
-    /// 気になるイベントの種別。<c>type</c> に<b>含まれていれば</b>拾う。
-    ///
-    /// <b>実機で外れたら 1 行足せば直る</b>ようにここへまとめてある。
-    /// 素の <c>dhcp</c> を入れないのは、正常な払い出し（<c>dhcp_lease</c>）で埋まるため。
-    /// </summary>
-    public static IReadOnlyList<string> EventKeywords { get; } =
-        ["vpn", "uplink", "carrier", "failover", "no_leases", "reboot", "restart", "spare", "down", "fail", "error"];
 
     // ===== 1. 機器の稼働 =====
 
@@ -489,155 +478,7 @@ public static class MerakiInstallCheck
         return result;
     }
 
-    // ===== 7. Teams の LBO =====
-
-    /// <summary>Teams が使う UDP。ここが VPN を通ると音が途切れる。</summary>
-    public static IReadOnlyList<int> TeamsUdpPorts { get; } = [3478, 3479, 3480, 3481];
-
-    /// <summary>
-    /// Teams をローカルブレイクアウトさせる設定（VPN exclusion）が入っているか。
-    ///
-    /// <b>ここで分かるのは設定が入っていることまで。</b>実際に UDP が抜けるかは
-    /// 試験タブの Teams（STUN で往復する）で確かめる。
-    /// </summary>
-    public static MerakiCheckRow TeamsBreakout(IEnumerable<string> pages)
-    {
-        var found = new List<string>();
-        bool readable = false;
-
-        foreach (JsonElement root in Objects(pages))
-        {
-            readable = true;
-
-            if (root.TryGetProperty("majorApplications", out JsonElement applications)
-                && applications.ValueKind == JsonValueKind.Array)
-            {
-                foreach (JsonElement application in applications.EnumerateArray())
-                {
-                    if (application.ValueKind != JsonValueKind.Object) continue;
-
-                    string name = MerakiCatalog.Str(application, "name");
-
-                    if (name.Contains("teams", StringComparison.OrdinalIgnoreCase))
-                        found.Add(name);
-                }
-            }
-
-            if (root.TryGetProperty("custom", out JsonElement custom)
-                && custom.ValueKind == JsonValueKind.Array)
-            {
-                foreach (JsonElement rule in custom.EnumerateArray())
-                {
-                    if (rule.ValueKind != JsonValueKind.Object) continue;
-
-                    string protocol = MerakiCatalog.Str(rule, "protocol");
-                    string port = MerakiCatalog.Scalar(rule, "port");
-
-                    bool udp = protocol.Length == 0
-                               || protocol.Contains("udp", StringComparison.OrdinalIgnoreCase)
-                               || protocol.Contains("any", StringComparison.OrdinalIgnoreCase);
-
-                    if (udp && CoversTeamsPort(port))
-                        found.Add($"独自ルール {Or(protocol, "udp")} {port}");
-                }
-            }
-        }
-
-        if (!readable)
-        {
-            return new(TeamsName, "VPN 除外", CheckVerdict.Skipped,
-                       "この拠点では VPN 除外の設定が取れませんでした（版によっては持っていません）。");
-        }
-
-        return found.Count > 0
-            ? new(TeamsName, "VPN 除外", CheckVerdict.Pass,
-                  $"Teams を VPN から外す設定が入っています: {Listed(found)}"
-                  + "　実際に UDP が抜けるかは試験タブの Teams で確かめてください。")
-            : new(TeamsName, "VPN 除外", CheckVerdict.Fail,
-                  "Teams を VPN から外す設定がありません。このままでは音声がハブ経由になります。"
-                  + "ダッシュボードの SD-WAN & traffic shaping → VPN exclusion rules を確認してください。");
-    }
-
-    /// <summary>「3478」「3478-3481」「any」を受ける。</summary>
-    public static bool CoversTeamsPort(string? port)
-    {
-        if (string.IsNullOrWhiteSpace(port)) return false;
-
-        string text = port.Trim();
-
-        if (text.Contains("any", StringComparison.OrdinalIgnoreCase)) return true;
-
-        foreach (string part in text.Split(','))
-        {
-            string[] ends = part.Split('-');
-
-            if (!int.TryParse(ends[0].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int from))
-                continue;
-
-            int to = from;
-
-            if (ends.Length > 1
-                && !int.TryParse(ends[^1].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out to))
-                continue;
-
-            if (TeamsUdpPorts.Any(p => p >= from && p <= to)) return true;
-        }
-
-        return false;
-    }
-
-    // ===== 8. イベントログ =====
-
-    /// <summary>
-    /// 直近のイベントに気になるものが出ていないか。
-    /// <b>応答は配列ではなく <c>{"pageStartAt":…,"events":[…]}</c></b> なので、
-    /// ほかの一覧と同じようには読めない。
-    /// </summary>
-    public static MerakiCheckRow Events(IEnumerable<string> pages)
-    {
-        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        int total = 0;
-        string latest = "";
-
-        foreach (JsonElement item in EventItems(pages))
-        {
-            total++;
-
-            string type = MerakiCatalog.Str(item, "type");
-            if (type.Length == 0) continue;
-
-            if (!EventKeywords.Any(k => type.Contains(k, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            counts[type] = counts.GetValueOrDefault(type) + 1;
-
-            string occurred = MerakiCatalog.Str(item, "occurredAt");
-            if (occurred.Length > 0 && string.CompareOrdinal(occurred, latest) > 0) latest = occurred;
-        }
-
-        if (total == 0)
-        {
-            return new(EventsName, "直近", CheckVerdict.Skipped,
-                       "イベントが 1 件も取れませんでした。");
-        }
-
-        if (counts.Count == 0)
-            return new(EventsName, $"直近 {total} 件", CheckVerdict.Pass, "気になるイベントは出ていません。");
-
-        string[] top =
-        [
-            .. counts.OrderByDescending(p => p.Value).ThenBy(p => p.Key, StringComparer.Ordinal)
-                .Take(3).Select(p => $"{p.Key} {p.Value} 件"),
-        ];
-
-        int hits = counts.Values.Sum();
-
-        return new(EventsName, $"直近 {total} 件", CheckVerdict.Warn,
-                   $"気になるイベントが {hits} 件あります: {string.Join("・", top)}"
-                   + (latest.Length > 0 ? $"（最新 {latest}）" : ""));
-    }
-
-    // ===== 9. クライアント =====
+    // ===== 7. クライアント =====
 
     /// <summary>その拠点に端末が居るか。0 台なら「まだ何も繋がっていない」。</summary>
     public static MerakiCheckRow Clients(IReadOnlyList<MerakiClientRow> clients, string timespanName)
@@ -754,23 +595,6 @@ public static class MerakiInstallCheck
             {
                 if (document.RootElement.ValueKind == JsonValueKind.Object)
                     yield return document.RootElement.Clone();
-            }
-        }
-    }
-
-    /// <summary>イベントの応答から <c>events</c> の要素を順に返す。</summary>
-    private static IEnumerable<JsonElement> EventItems(IEnumerable<string> pages)
-    {
-        foreach (JsonElement root in Objects(pages))
-        {
-            if (!root.TryGetProperty("events", out JsonElement events)
-                || events.ValueKind != JsonValueKind.Array)
-                continue;
-
-            foreach (JsonElement item in events.EnumerateArray())
-            {
-                if (item.ValueKind == JsonValueKind.Object)
-                    yield return item;
             }
         }
     }

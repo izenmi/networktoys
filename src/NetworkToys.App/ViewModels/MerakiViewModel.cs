@@ -399,7 +399,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             Status = "ネットワーク一覧を取得しています…";
             IReadOnlyList<string> networkPages = await _dashboard.NetworksAsync(ApiKey, organizationId, token);
             IReadOnlyList<MerakiNetworkRow> networks = MerakiCatalog.ParseNetworks(networkPages);
-            Replace(NetworkRows, networks);
+            // 拠点は名前順に並べる。API が返す順はダッシュボード任せで、
+            // 選ぶ欄に何十件も並ぶと目当ての拠点を探せない（2026-08-17 ユーザー指示）
+            Replace(NetworkRows, [.. networks.OrderBy(n => n.Name, StringComparer.CurrentCulture)]);
             SelectedNetwork ??= NetworkRows.FirstOrDefault();
 
             Status = "機器一覧を取得しています…";
@@ -536,11 +538,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     /// <summary>ロスと遅延をさかのぼる長さ。<b>この API は 5 分までしか受けない。</b></summary>
     private const int QualitySeconds = 300;
 
-    /// <summary>イベントを何件見るか。多くしても導入日には古すぎて役に立たない。</summary>
-    private const int EventCount = 100;
-
-    /// <summary>導入時確認で走らせる項目の数（画面に「3/9」と出すため）。</summary>
-    private const int CheckSteps = 9;
+    /// <summary>導入時確認で走らせる項目の数（画面に「3/7」と出すため）。</summary>
+    private const int CheckSteps = 7;
 
     /// <summary>
     /// 選んだ拠点の導入時確認。<b>項目ごとに失敗を捕まえて次へ進む</b> —
@@ -698,36 +697,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
             rows.AddRange(MerakiInstallCheck.Dhcp(subnets));
 
-            // 7. Teams をローカルブレイクアウトさせる設定が入っているか
-            Step(7, "Teams の LBO", network);
-
-            try
-            {
-                rows.Add(MerakiInstallCheck.TeamsBreakout(
-                    await _dashboard.VpnExclusionsAsync(ApiKey, network.Id, token)));
-            }
-            catch (MerakiApiException ex)
-            {
-                rows.Add(MerakiInstallCheck.Unavailable(
-                    MerakiInstallCheck.TeamsName, network.Name, ex.Message));
-            }
-
-            // 8. 気になるイベントが出ていないか
-            Step(8, "イベントログ", network);
-
-            try
-            {
-                rows.Add(MerakiInstallCheck.Events(
-                    await _dashboard.EventsAsync(ApiKey, network.Id, EventCount, token)));
-            }
-            catch (MerakiApiException ex)
-            {
-                rows.Add(MerakiInstallCheck.Unavailable(
-                    MerakiInstallCheck.EventsName, network.Name, ex.Message));
-            }
-
-            // 9. 端末が実際に繋がっているか
-            Step(9, "クライアント", network);
+            // 7. 端末が実際に繋がっているか
+            Step(7, "クライアント", network);
 
             try
             {
