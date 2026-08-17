@@ -877,6 +877,33 @@ internal static class SelfTest
             dialog.Close();
         });
 
+        Check("差分比較: 機器から取ってくる小窓を表示できる", () =>
+        {
+            // 窓はコードで組んでいるので、リソースキーの打ち間違いは実行時にしか出ない。
+            // 実際に表示まで通す。ここでは 1 バイトも外へ出さない（「取得」は押さない）
+            var dialog = new Views.DeviceFetchDialog("検査用", "show version");
+            dialog.Show();
+            dialog.UpdateLayout();
+
+            Assert(dialog.ActualWidth > 0 && dialog.ActualHeight > 0, "小窓の実サイズが 0");
+            dialog.Close();
+        });
+
+        Check("差分比較: 比較する対象に合わせた show が既定になる", () =>
+        {
+            Assert(Core.Work.DeviceComparison.CommandFor(Core.Work.DeviceOutputKind.Configuration)
+                       == "show running-config",
+                   "show run の既定が違う");
+
+            Assert(Core.Work.DeviceComparison.CommandFor(Core.Work.DeviceOutputKind.RouteTable)
+                       == "show ip route",
+                   "show ip route の既定が違う");
+
+            // 「そのまま比較」には決まった形が無い。勝手に何かを流さない
+            Assert(Core.Work.DeviceComparison.CommandFor(Core.Work.DeviceOutputKind.PlainText).Length == 0,
+                   "そのまま比較に既定のコマンドを入れている");
+        });
+
         Check("ICMP を実行できる(応答の有無は問わない)", () =>
         {
             // 管理者権限なしで Ping が動くこと自体の確認。

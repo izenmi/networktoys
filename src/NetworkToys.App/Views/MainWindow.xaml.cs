@@ -178,6 +178,32 @@ public partial class MainWindow : Window
             _shell.Wlc.Password = box.Password;
     }
 
+    /// <summary>差分比較の「作業前」を、機器から直に取ってくる。</summary>
+    private void OnDiffFetchBefore(object sender, RoutedEventArgs e) => FetchIntoDiff(before: true);
+
+    /// <summary>差分比較の「作業後」を、機器から直に取ってくる。</summary>
+    private void OnDiffFetchAfter(object sender, RoutedEventArgs e) => FetchIntoDiff(before: false);
+
+    /// <summary>
+    /// 小窓で機器へ入り、比較する対象の <c>show</c> を 1 本流して欄に入れる。
+    /// <b>読み込みは置き換え</b>（ファイルから読むときと同じ。混ざると誤った差分を見る）。
+    /// </summary>
+    private void FetchIntoDiff(bool before)
+    {
+        ViewModels.DeviceCompareViewModel compare = _shell.DeviceCompare;
+
+        string command = NetworkToys.Core.Work.DeviceComparison.CommandFor(compare.SelectedMode.Kind);
+
+        if (DeviceFetchDialog.Fetch(this, before ? "機器から取得（作業前）" : "機器から取得（作業後）", command)
+            is not { Length: > 0 } output)
+        {
+            return;
+        }
+
+        if (before) compare.BeforeText = output;
+        else compare.AfterText = output;
+    }
+
     private void OnDnacPasswordChanged(object sender, RoutedEventArgs e)
     {
         if (sender is PasswordBox box)

@@ -1251,6 +1251,9 @@
                                         <TextBlock Text="作業前" VerticalAlignment="Center" />
                                         <Button Content="ファイルから" Command="{Binding LoadBeforeCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
+                                        <Button Content="機器から" Click="OnDiffFetchBefore"
+                                                Style="{StaticResource Button.Subtle}" Margin="5,0,0,0"
+                                                ToolTip="機器へ入って、比較する対象の show を 1 本流し、その出力をこの欄に入れます。" />
                                         <Button Content="保存" Command="{Binding SaveBeforeCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="5,0,0,0" />
                                     </StackPanel>
@@ -1271,6 +1274,9 @@
                                         <TextBlock Text="作業後" VerticalAlignment="Center" />
                                         <Button Content="ファイルから" Command="{Binding LoadAfterCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="10,0,0,0" />
+                                        <Button Content="機器から" Click="OnDiffFetchAfter"
+                                                Style="{StaticResource Button.Subtle}" Margin="5,0,0,0"
+                                                ToolTip="機器へ入って、比較する対象の show を 1 本流し、その出力をこの欄に入れます。" />
                                         <Button Content="保存" Command="{Binding SaveAfterCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="5,0,0,0" />
                                     </StackPanel>

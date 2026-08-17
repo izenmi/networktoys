@@ -30,6 +30,22 @@ public enum DeviceOutputKind
 /// </summary>
 public static class DeviceComparison
 {
+    /// <summary>
+    /// その種類を取るための <c>show</c>。機器から直に取ってくるときの既定として使う。
+    ///
+    /// <b>「そのまま比較」には決まった形が無い</b>ので空文字を返す（何を取るかは人が決める）。
+    /// ここで返すのはあくまで既定で、打ち替えられる前提。
+    /// </summary>
+    public static string CommandFor(DeviceOutputKind kind) => kind switch
+    {
+        DeviceOutputKind.RouteTable => "show ip route",
+        DeviceOutputKind.InterfaceBrief => "show ip interface brief",
+        DeviceOutputKind.CdpNeighbors => "show cdp neighbors detail",
+        DeviceOutputKind.MacTable => "show mac address-table",
+        DeviceOutputKind.Configuration => "show running-config",
+        _ => "",
+    };
+
     public static DeviceCompareOutcome? Compare(DeviceOutputKind kind, string? before, string? after) => kind switch
     {
         DeviceOutputKind.RouteTable => FromRouteTable(before, after),
