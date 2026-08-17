@@ -7,6 +7,7 @@ using NetworkToys.App.Services;
 using NetworkToys.Core.Assurance;
 using NetworkToys.Core.Net;
 using NetworkToys.Core.Reporting;
+using NetworkToys.Core.Terminal;
 using NetworkToys.Core.Work;
 
 namespace NetworkToys.App.ViewModels;
