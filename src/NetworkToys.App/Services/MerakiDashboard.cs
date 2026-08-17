@@ -100,6 +100,50 @@ internal sealed class MerakiDashboard : IDisposable
     public Task<IReadOnlyList<string>> AlertsAsync(string apiKey, string organizationId, CancellationToken token)
         => GetPagesAsync($"/organizations/{Escape(organizationId)}/assurance/alerts?perPage=300", apiKey, token);
 
+    // ===== 導入時確認で使うもの =====
+
+    /// <summary>
+    /// MX 1 台の回線の設定。<b>どの WAN を使う設定にしてあるか</b>はここにしか無い
+    /// （状態の方には、使っていない WAN も「未接続」として出てくる）。
+    /// </summary>
+    public Task<IReadOnlyList<string>> UplinkSettingsAsync(string apiKey, string serial, CancellationToken token)
+        => GetPagesAsync($"/devices/{Escape(serial)}/appliance/uplinks/settings", apiKey, token);
+
+    /// <summary>
+    /// 回線ごとのロスと遅延（実測値）。<b>期間は 5 分まで</b>で、
+    /// 上がった直後はまだ値が入っていない。
+    /// </summary>
+    public Task<IReadOnlyList<string>> LossAndLatencyAsync(
+        string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
+        => GetPagesAsync(
+            $"/organizations/{Escape(organizationId)}/devices/uplinksLossAndLatency?timespan={timespanSeconds}",
+            apiKey, token);
+
+    /// <summary>スイッチ 1 台のポートの状態（速度・全二重・エラー）。</summary>
+    public Task<IReadOnlyList<string>> SwitchPortStatusesAsync(
+        string apiKey, string serial, CancellationToken token)
+        => GetPagesAsync($"/devices/{Escape(serial)}/switch/ports/statuses", apiKey, token);
+
+    /// <summary>拠点ごとの VPN の状態（AutoVPN とサードパーティ IPsec の到達性）。</summary>
+    public Task<IReadOnlyList<string>> VpnStatusesAsync(
+        string apiKey, string organizationId, CancellationToken token)
+        => GetPagesAsync(
+            $"/organizations/{Escape(organizationId)}/appliance/vpn/statuses?perPage=300", apiKey, token);
+
+    /// <summary>VPN から外す通信の設定（Teams などのローカルブレイクアウト）。</summary>
+    public Task<IReadOnlyList<string>> VpnExclusionsAsync(string apiKey, string networkId, CancellationToken token)
+        => GetPagesAsync(
+            $"/networks/{Escape(networkId)}/appliance/trafficShaping/vpnExclusions", apiKey, token);
+
+    /// <summary>
+    /// 拠点のイベント。<b>1 ページだけ取る</b> — この応答には常に次ページの Link が付いてくるので、
+    /// 追うと 20 ページぶん（＝数千件）を無意味に引くことになる。
+    /// </summary>
+    public Task<IReadOnlyList<string>> EventsAsync(
+        string apiKey, string networkId, int perPage, CancellationToken token)
+        => GetOnePageAsync(
+            $"/networks/{Escape(networkId)}/events?productType=appliance&perPage={perPage}", apiKey, token);
+
     /// <summary>ページを最後まで（上限まで）取る。</summary>
     public async Task<IReadOnlyList<string>> GetPagesAsync(string path, string apiKey, CancellationToken token)
     {
@@ -119,6 +163,17 @@ internal sealed class MerakiDashboard : IDisposable
             WasTruncated = true;
 
         return pages;
+    }
+
+    /// <summary>次ページを追わずに 1 ページだけ取る。</summary>
+    public async Task<IReadOnlyList<string>> GetOnePageAsync(
+        string path, string apiKey, CancellationToken token)
+    {
+        string url = path.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? path : BaseUrl + path;
+
+        (string body, _) = await GetOneAsync(url, apiKey, token).ConfigureAwait(false);
+
+        return [body];
     }
 
     /// <summary>

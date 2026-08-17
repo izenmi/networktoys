@@ -7,6 +7,7 @@ using NetworkToys.App.Mvvm;
 using NetworkToys.App.Services;
 using NetworkToys.Core.Cloud;
 using NetworkToys.Core.Design;
+using NetworkToys.Core.Verify;
 using NetworkToys.Core.Work;
 
 namespace NetworkToys.App.ViewModels;
@@ -85,6 +86,14 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
+        FetchInstallCheckCommand = new RelayCommand(
+            () => _ = FetchInstallCheckAsync(),
+            () => !IsBusy && ApiKey.Length > 0 && SelectedNetwork is not null && DeviceRows.Count > 0);
+        SaveInstallCheckCommand = new RelayCommand(
+            () => Save("check", MerakiInstallCheck.ToCsv([.. CheckRows])), () => CheckRows.Count > 0);
+        MarkCheckPassCommand = new RelayCommand<MerakiCheckRow>(row => MarkCheck(row, CheckVerdict.Pass));
+        MarkCheckFailCommand = new RelayCommand<MerakiCheckRow>(row => MarkCheck(row, CheckVerdict.Fail));
+
         FetchSitesCommand = new RelayCommand(() => _ = FetchSitesAsync(),
             () => !IsBusy && ApiKey.Length > 0 && NetworkRows.Count > 0);
         FetchDhcpCommand = new RelayCommand(() => _ = FetchDhcpAsync(),
@@ -130,6 +139,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     public ObservableCollection<MerakiDeviceRow> DeviceRows { get; } = [];
     public ObservableCollection<MerakiUplinkRow> UplinkRows { get; } = [];
     public ObservableCollection<MerakiClientRow> ClientRows { get; } = [];
+
+    /// <summary>導入時確認の判定。</summary>
+    public ObservableCollection<MerakiCheckRow> CheckRows { get; } = [];
 
     /// <summary>拠点ごとの内訳（クライアント数とセグメント）。</summary>
     public ObservableCollection<MerakiSiteRow> SiteRows { get; } = [];
@@ -188,6 +200,16 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     public RelayCommand SaveUplinksCommand { get; }
     public RelayCommand SaveClientsCommand { get; }
 
+    /// <summary>選んだ拠点の導入時確認を一通り走らせる。</summary>
+    public RelayCommand FetchInstallCheckCommand { get; }
+
+    public RelayCommand SaveInstallCheckCommand { get; }
+
+    /// <summary>目視の項目に人が合否を付ける（API から判定できないもの）。</summary>
+    public RelayCommand<MerakiCheckRow> MarkCheckPassCommand { get; }
+
+    public RelayCommand<MerakiCheckRow> MarkCheckFailCommand { get; }
+
     /// <summary>拠点ごとの内訳を取る。クライアント数の期間は 30 日で固定。</summary>
     public RelayCommand FetchSitesCommand { get; }
 
@@ -222,6 +244,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
             FetchCommand.RaiseCanExecuteChanged();
             FetchClientsCommand.RaiseCanExecuteChanged();
+            FetchInstallCheckCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -265,8 +288,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         get => _selectedNetwork;
         set
         {
-            if (SetProperty(ref _selectedNetwork, value))
-                FetchClientsCommand.RaiseCanExecuteChanged();
+            if (!SetProperty(ref _selectedNetwork, value)) return;
+
+            FetchClientsCommand.RaiseCanExecuteChanged();
+            FetchInstallCheckCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -322,6 +347,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
             FetchCommand.RaiseCanExecuteChanged();
             FetchClientsCommand.RaiseCanExecuteChanged();
+            FetchInstallCheckCommand.RaiseCanExecuteChanged();
             FetchSitesCommand.RaiseCanExecuteChanged();
             FetchDhcpCommand.RaiseCanExecuteChanged();
             FetchAlertsCommand.RaiseCanExecuteChanged();
@@ -506,6 +532,273 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     /// <summary>拠点の数だけ呼ぶので、多すぎる組織では途中で止める。</summary>
     private const int MaxSites = 40;
+
+    /// <summary>ロスと遅延をさかのぼる長さ。<b>この API は 5 分までしか受けない。</b></summary>
+    private const int QualitySeconds = 300;
+
+    /// <summary>イベントを何件見るか。多くしても導入日には古すぎて役に立たない。</summary>
+    private const int EventCount = 100;
+
+    /// <summary>導入時確認で走らせる項目の数（画面に「3/9」と出すため）。</summary>
+    private const int CheckSteps = 9;
+
+    /// <summary>
+    /// 選んだ拠点の導入時確認。<b>項目ごとに失敗を捕まえて次へ進む</b> —
+    /// 1 本が取れないだけで残りが分からなくなる方が、現場では困る。
+    /// 取れなかった項目は「確認できず」として理由ごと残す（合格に丸めない）。
+    /// </summary>
+    private async Task FetchInstallCheckAsync()
+    {
+        if (SelectedNetwork is not { } network) return;
+
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        _dashboard.ResetTruncation();
+
+        var rows = new List<MerakiCheckRow>();
+
+        try
+        {
+            CancellationToken token = _cts.Token;
+            MerakiTimespan timespan = SelectedTimespan;
+            string organizationId = SelectedOrganization?.Id ?? "";
+
+            MerakiDeviceRow[] devices = [.. DeviceRows.Where(d => d.Network == network.Name)];
+            MerakiDeviceRow[] appliances = [.. devices.Where(d => IsModel(d, "MX"))];
+            MerakiDeviceRow[] switches = [.. devices.Where(d => IsModel(d, "MS"))];
+
+            // 1. 機器が上がっているか（取得済みの一覧だけで判る）
+            Step(1, "機器の稼働", network);
+            rows.Add(MerakiInstallCheck.Devices(devices));
+
+            // 2. 有効にしてある WAN が全部リンクアップしているか
+            Step(2, "インターネット回線", network);
+
+            if (appliances.Length == 0)
+            {
+                rows.Add(MerakiInstallCheck.Unavailable(
+                    MerakiInstallCheck.WanName, network.Name, "この拠点に MX がありません"));
+            }
+
+            foreach (MerakiDeviceRow appliance in appliances)
+            {
+                MerakiUplinkRow[] uplinks =
+                [
+                    .. UplinkRows.Where(u => string.Equals(
+                        u.Serial, appliance.Serial, StringComparison.OrdinalIgnoreCase)),
+                ];
+
+                IReadOnlyList<string> settings = [];
+
+                try
+                {
+                    settings = await _dashboard.UplinkSettingsAsync(ApiKey, appliance.Serial, token);
+                }
+                catch (MerakiApiException)
+                {
+                    // 設定が取れないぶんは「状態だけで見た」注意になる
+                }
+
+                rows.Add(MerakiInstallCheck.Wan(NameOf(appliance), settings, uplinks));
+            }
+
+            // 3. 回線のロスと遅延（実測値）
+            Step(3, "回線の品質", network);
+
+            if (organizationId.Length == 0 || appliances.Length == 0)
+            {
+                rows.Add(MerakiInstallCheck.Unavailable(
+                    MerakiInstallCheck.QualityName,
+                    network.Name,
+                    appliances.Length == 0 ? "この拠点に MX がありません" : "組織が選ばれていません"));
+            }
+            else
+            {
+                try
+                {
+                    rows.AddRange(MerakiInstallCheck.Quality(
+                        await _dashboard.LossAndLatencyAsync(ApiKey, organizationId, QualitySeconds, token),
+                        appliances));
+                }
+                catch (MerakiApiException ex)
+                {
+                    rows.Add(MerakiInstallCheck.Unavailable(
+                        MerakiInstallCheck.QualityName, network.Name, ex.Message));
+                }
+            }
+
+            // 4. ポートの速度と全二重（MX は API に無いので目視に回す）
+            Step(4, "ポートの速度・全二重", network);
+
+            foreach (MerakiDeviceRow device in switches)
+            {
+                try
+                {
+                    rows.Add(MerakiInstallCheck.SwitchPorts(
+                        NameOf(device),
+                        await _dashboard.SwitchPortStatusesAsync(ApiKey, device.Serial, token)));
+                }
+                catch (MerakiApiException ex)
+                {
+                    rows.Add(MerakiInstallCheck.Unavailable(
+                        MerakiInstallCheck.PortsName, NameOf(device), ex.Message));
+                }
+            }
+
+            foreach (MerakiDeviceRow appliance in appliances)
+                rows.Add(MerakiInstallCheck.AppliancePortsByPerson(NameOf(appliance), appliance.Model));
+
+            if (switches.Length == 0 && appliances.Length == 0)
+            {
+                rows.Add(MerakiInstallCheck.Unavailable(
+                    MerakiInstallCheck.PortsName, network.Name, "この拠点にスイッチも MX もありません"));
+            }
+
+            // 5. トンネルが張れているか
+            Step(5, "VPN", network);
+
+            if (organizationId.Length == 0)
+            {
+                rows.Add(MerakiInstallCheck.Unavailable(
+                    MerakiInstallCheck.VpnName, network.Name, "組織が選ばれていません"));
+            }
+            else
+            {
+                try
+                {
+                    rows.AddRange(MerakiInstallCheck.Vpn(
+                        await _dashboard.VpnStatusesAsync(ApiKey, organizationId, token), network.Id));
+                }
+                catch (MerakiApiException ex)
+                {
+                    rows.Add(MerakiInstallCheck.Unavailable(
+                        MerakiInstallCheck.VpnName, network.Name, ex.Message));
+                }
+            }
+
+            // 6. アドレスが配れているか
+            Step(6, "DHCP", network);
+
+            var subnets = new List<MerakiDhcpRow>();
+
+            foreach (MerakiDeviceRow appliance in appliances)
+            {
+                try
+                {
+                    subnets.AddRange(MerakiCatalog.ParseDhcp(
+                        await _dashboard.DhcpSubnetsAsync(ApiKey, appliance.Serial, token),
+                        network.Name,
+                        NameOf(appliance)));
+                }
+                catch (MerakiApiException)
+                {
+                    // DHCP を持たせていない MX もある。その 1 台で全体を止めない
+                }
+            }
+
+            rows.AddRange(MerakiInstallCheck.Dhcp(subnets));
+
+            // 7. Teams をローカルブレイクアウトさせる設定が入っているか
+            Step(7, "Teams の LBO", network);
+
+            try
+            {
+                rows.Add(MerakiInstallCheck.TeamsBreakout(
+                    await _dashboard.VpnExclusionsAsync(ApiKey, network.Id, token)));
+            }
+            catch (MerakiApiException ex)
+            {
+                rows.Add(MerakiInstallCheck.Unavailable(
+                    MerakiInstallCheck.TeamsName, network.Name, ex.Message));
+            }
+
+            // 8. 気になるイベントが出ていないか
+            Step(8, "イベントログ", network);
+
+            try
+            {
+                rows.Add(MerakiInstallCheck.Events(
+                    await _dashboard.EventsAsync(ApiKey, network.Id, EventCount, token)));
+            }
+            catch (MerakiApiException ex)
+            {
+                rows.Add(MerakiInstallCheck.Unavailable(
+                    MerakiInstallCheck.EventsName, network.Name, ex.Message));
+            }
+
+            // 9. 端末が実際に繋がっているか
+            Step(9, "クライアント", network);
+
+            try
+            {
+                rows.Add(MerakiInstallCheck.Clients(
+                    MerakiCatalog.ParseClients(
+                        await _dashboard.ClientsAsync(ApiKey, network.Id, timespan.Seconds, token),
+                        network.Name),
+                    timespan.Name));
+            }
+            catch (MerakiApiException ex)
+            {
+                rows.Add(MerakiInstallCheck.Unavailable(
+                    MerakiInstallCheck.ClientsName, network.Name, ex.Message));
+            }
+
+            Status = $"{network.Name}（{DateTime.Now:HH:mm:ss} 時点）："
+                   + MerakiInstallCheck.Summarize(rows);
+        }
+        catch (MerakiApiException ex)
+        {
+            Status = ex.Message;
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。ここまでの判定だけ残しています。";
+        }
+        catch (Exception ex)
+        {
+            Status = $"導入時確認に失敗しました: {ex.Message}";
+            CrashLog.Write(ex, "MerakiViewModel.FetchInstallCheckAsync");
+        }
+        finally
+        {
+            // 中断しても、済んだところまでは見せる
+            Replace(CheckRows, rows);
+
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+            RefreshSaveCommands();
+        }
+    }
+
+    /// <summary>いま何をしているかを出す。項目が多いので進み具合が見えないと待てない。</summary>
+    private void Step(int step, string what, MerakiNetworkRow network)
+        => Status = $"「{network.Name}」を確認しています… {step}/{CheckSteps}（{what}）";
+
+    /// <summary>
+    /// 目視の項目に人が合否を付ける。<b>行を差し替える</b>ので CSV にもそのまま載る
+    /// （試験タブと同じ扱い）。
+    /// </summary>
+    private void MarkCheck(MerakiCheckRow? row, CheckVerdict verdict)
+    {
+        if (row is null) return;
+
+        int at = CheckRows.IndexOf(row);
+        if (at < 0) return;
+
+        string mark = verdict == CheckVerdict.Pass ? "目視で確認しました" : "目視で問題を確認しました";
+
+        CheckRows[at] = row with { Verdict = verdict, Detail = $"{mark}（{row.Detail}）" };
+
+        Status = MerakiInstallCheck.Summarize([.. CheckRows]);
+    }
+
+    private static bool IsModel(MerakiDeviceRow device, string prefix)
+        => device.Model.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && device.Serial.Length > 0;
+
+    /// <summary>名前が無い機器はシリアルで呼ぶ（空欄だと行が誰のものか分からない）。</summary>
+    private static string NameOf(MerakiDeviceRow device)
+        => device.Name.Length > 0 ? device.Name : device.Serial;
 
     /// <summary>
     /// 拠点ごとの内訳。<b>拠点の数だけ呼び出しが増える</b>ので、
@@ -904,6 +1197,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         DeviceRows.Clear();
         UplinkRows.Clear();
         ClientRows.Clear();
+        CheckRows.Clear();
         SiteRows.Clear();
         DhcpRows.Clear();
         AlertRows.Clear();
@@ -932,6 +1226,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SaveDevicesCommand.RaiseCanExecuteChanged();
         SaveUplinksCommand.RaiseCanExecuteChanged();
         SaveClientsCommand.RaiseCanExecuteChanged();
+        SaveInstallCheckCommand.RaiseCanExecuteChanged();
         SaveSitesCommand.RaiseCanExecuteChanged();
         SaveDhcpCommand.RaiseCanExecuteChanged();
         SaveAlertsCommand.RaiseCanExecuteChanged();

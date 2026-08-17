@@ -28,6 +28,25 @@ public enum CheckVerdict
 }
 
 /// <summary>
+/// 合否を画面に出す文字。<b>色だけで表さない</b>ので記号と文字を併記する。
+///
+/// 試験タブと Meraki の導入時確認が同じ判定を使うので、
+/// <b>文字は 1 か所だけ</b>に置く（別々に書くと記号が食い違う）。
+/// </summary>
+public static class CheckVerdictText
+{
+    public static string Of(CheckVerdict verdict) => verdict switch
+    {
+        CheckVerdict.Pass => "○ 合格",
+        CheckVerdict.Fail => "✕ 不合格",
+        CheckVerdict.Warn => "△ 注意",
+        CheckVerdict.Skipped => "— 試験せず",
+        CheckVerdict.AwaitingPerson => "◍ 目視で確認",
+        _ => "◌ 未実行",
+    };
+}
+
+/// <summary>
 /// 試験 1 回ぶんの結果。<b>1 行 = 1 項目 × 1 プロキシ。</b>
 /// </summary>
 /// <param name="Name">項目名。</param>
@@ -46,18 +65,8 @@ public sealed record CheckResult(
     string Detail,
     double? ElapsedMs = null)
 {
-    /// <summary>
-    /// 画面に出す合否。<b>色だけで表さない</b>ので記号と文字を併記する。
-    /// </summary>
-    public string VerdictText => Verdict switch
-    {
-        CheckVerdict.Pass => "○ 合格",
-        CheckVerdict.Fail => "✕ 不合格",
-        CheckVerdict.Warn => "△ 注意",
-        CheckVerdict.Skipped => "— 試験せず",
-        CheckVerdict.AwaitingPerson => "◍ 目視で確認",
-        _ => "◌ 未実行",
-    };
+    /// <summary>画面に出す合否。</summary>
+    public string VerdictText => CheckVerdictText.Of(Verdict);
 
     public bool IsPass => Verdict == CheckVerdict.Pass;
     public bool IsFail => Verdict == CheckVerdict.Fail;

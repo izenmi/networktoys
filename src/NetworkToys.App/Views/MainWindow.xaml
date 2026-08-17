@@ -4241,6 +4241,144 @@
                          暗黙の TabItem スタイルに任せるので、ここでは何も当てない -->
                     <TabControl x:Name="MerakiSubTabs" BorderThickness="0" Padding="0">
 
+                        <!-- 導入時確認(入れた日に、その拠点が上がっているかを一通り見る) -->
+                        <TabItem Header="導入時確認">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="{x:Static help:TabHelp.MerakiInstallCheck}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="入れた拠点が上がっているかを、項目ごとに ○ か ✕ で確かめます。" />
+                                    </DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <TextBlock Text="拠点" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="180" Margin="0,0,12,0"
+                                                  ItemsSource="{Binding NetworkRows}"
+                                                  SelectedItem="{Binding SelectedNetwork}"
+                                                  ToolTip="入れたばかりの拠点を 1 つ選びます。">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <Button Content="確認する" Command="{Binding FetchInstallCheckCommand}" Margin="0,0,6,0"
+                                                ToolTip="9 項目を順に確かめます。先に「取得」を押しておいてください。" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveInstallCheckCommand}"
+                                                Style="{StaticResource Button.Subtle}"
+                                                ToolTip="判定をそのまま証跡として残せます。" />
+                                    </StackPanel>
+                                <Border Background="{DynamicResource Brush.Surface}"
+                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                    <DockPanel>
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrcheck" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrcheck.0]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrcheck.1]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrcheck.2]}" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <TextBlock Grid.Column="0" Text="項目" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="1" Text="対象" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="2" Text="判定" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="3" Text="詳細" Style="{StaticResource Caption}" />
+                                            <!-- 星列より左は右端の境界につまみを置く -->
+                                            <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mrcheck.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mrcheck.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mrcheck.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                        </Grid>
+                                        <Border DockPanel.Dock="Top" Height="1"
+                                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                        <ListBox Tag="mrcheck" ItemsSource="{Binding CheckRows}"
+                                                 ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 VirtualizingPanel.IsVirtualizing="True"
+                                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Height="{DynamicResource Size.RowHeight.Wide}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrcheck.0]}" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrcheck.1]}" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrcheck.2]}" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                        <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                        <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                        <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                   FontSize="{DynamicResource Size.Caption}"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding Target}"
+                                                                   FontSize="{DynamicResource Size.Caption}"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                   ToolTip="{Binding Target}" />
+                                                        <TextBlock x:Name="CheckVerdictText" Grid.Column="2" Text="{Binding VerdictText}"
+                                                                   FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center" />
+
+                                                        <!-- API から判定できない項目だけ、その場で合否を付けられるようにする -->
+                                                        <StackPanel x:Name="CheckMarkButtons" Grid.Column="2" Orientation="Horizontal"
+                                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                    Visibility="Collapsed">
+                                                            <Button Content="○" Margin="0,0,2,0"
+                                                                    Width="18" Height="16" Padding="0" MinWidth="0" MinHeight="0"
+                                                                    FontSize="{DynamicResource Size.Micro}"
+                                                                    Style="{StaticResource Button.Subtle}"
+                                                                    Command="{Binding DataContext.MarkCheckPassCommand,
+                                                                              RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip="目視で確認できたので合格にします。" />
+                                                            <Button Content="✕"
+                                                                    Width="18" Height="16" Padding="0" MinWidth="0" MinHeight="0"
+                                                                    FontSize="{DynamicResource Size.Micro}"
+                                                                    Style="{StaticResource Button.Subtle}"
+                                                                    Command="{Binding DataContext.MarkCheckFailCommand,
+                                                                              RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip="目視で問題があったので不合格にします。" />
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="3" Text="{Binding Detail}"
+                                                                   FontSize="{DynamicResource Size.Caption}"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                   ToolTip="{Binding Detail}" />
+                                                    </Grid>
+
+                                                    <!-- 合否は文字で出したうえで色を添える(色だけで表さない) -->
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsFail}" Value="True">
+                                                            <Setter TargetName="CheckVerdictText" Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsWarn}" Value="True">
+                                                            <Setter TargetName="CheckVerdictText" Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding NeedsPerson}" Value="True">
+                                                            <Setter TargetName="CheckVerdictText" Property="Foreground" Value="{DynamicResource Brush.Info.Fg}" />
+                                                            <Setter TargetName="CheckMarkButtons" Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsPass}" Value="True">
+                                                            <Setter TargetName="CheckVerdictText" Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DockPanel>
+                                </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
 
                         <!-- 機器 -->
                         <TabItem Header="機器">

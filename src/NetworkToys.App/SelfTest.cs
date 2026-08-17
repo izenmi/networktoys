@@ -546,6 +546,7 @@ internal static class SelfTest
             Assert(shell.Meraki.ApiKey.Length == 0, "起動直後に API キーが入っている");
             Assert(!shell.Meraki.FetchCommand.CanExecute(null), "キー未入力でも取得できてしまう");
             Assert(!shell.Meraki.FetchClientsCommand.CanExecute(null), "キー未入力でもクライアントを取得できてしまう");
+            Assert(!shell.Meraki.FetchInstallCheckCommand.CanExecute(null), "キー未入力でも導入時確認が走ってしまう");
         });
 
         Check("ACI: 資格情報が空では取得できない(CI から APIC を叩かない)", () =>

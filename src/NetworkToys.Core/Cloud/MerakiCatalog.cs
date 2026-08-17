@@ -30,6 +30,10 @@ public sealed record MerakiDeviceRow(
     string LanIp);
 
 /// <summary>アップリンクの 1 行。MX 1 台につき WAN1/WAN2 で 2 行になる。</summary>
+/// <param name="RawStatus">
+/// 応答の <c>status</c> をそのまま。導入時確認は<b>「待機」と「接続中」を区別する</b>必要があり、
+/// 表示用の <c>State</c> ではどちらも「◌」で見分けが付かない。
+/// </param>
 public sealed record MerakiUplinkRow(
     string Network,
     string Serial,
@@ -38,7 +42,8 @@ public sealed record MerakiUplinkRow(
     ConnectionStateKind StateKind,
     string Ip,
     string Gateway,
-    string PublicIp);
+    string PublicIp,
+    string RawStatus = "");
 
 /// <summary>クライアント一覧の 1 行。</summary>
 public sealed record MerakiClientRow(
@@ -252,7 +257,8 @@ public static class MerakiCatalog
                     StateKind: kind,
                     Ip: Str(uplink, "ip"),
                     Gateway: Str(uplink, "gateway"),
-                    PublicIp: Str(uplink, "publicIp")));
+                    PublicIp: Str(uplink, "publicIp"),
+                    RawStatus: Str(uplink, "status")));
             }
         }
 
@@ -778,10 +784,10 @@ public static class MerakiCatalog
         _ => $"取得できませんでした（HTTP {statusCode}）。",
     };
 
-    // ===== JSON の小物 =====
+    // ===== JSON の小物（導入時確認からも使うので internal） =====
 
     /// <summary>各ページ（JSON 配列）の要素を順に返す。配列でないページは読み飛ばす。</summary>
-    private static IEnumerable<JsonElement> Items(IEnumerable<string> pages)
+    internal static IEnumerable<JsonElement> Items(IEnumerable<string> pages)
     {
         foreach (string page in pages)
         {
@@ -812,7 +818,7 @@ public static class MerakiCatalog
         }
     }
 
-    private static string Str(JsonElement parent, string name)
+    internal static string Str(JsonElement parent, string name)
         => parent.ValueKind == JsonValueKind.Object
            && parent.TryGetProperty(name, out JsonElement value)
            && value.ValueKind == JsonValueKind.String
@@ -820,7 +826,7 @@ public static class MerakiCatalog
             : "";
 
     /// <summary>数値でも文字列でも受ける項目（clients の vlan など）。</summary>
-    private static string Scalar(JsonElement parent, string name)
+    internal static string Scalar(JsonElement parent, string name)
     {
         if (parent.ValueKind != JsonValueKind.Object
             || !parent.TryGetProperty(name, out JsonElement value))
@@ -836,7 +842,7 @@ public static class MerakiCatalog
         };
     }
 
-    private static double Number(JsonElement parent, string name)
+    internal static double Number(JsonElement parent, string name)
         => parent.ValueKind == JsonValueKind.Object
            && parent.TryGetProperty(name, out JsonElement value)
            && value.ValueKind == JsonValueKind.Number

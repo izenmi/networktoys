@@ -199,6 +199,10 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **clients の `vlan` は数値と文字列が混在する。** `int?` で受けると `JsonException` で一覧が丸ごと落ちるので `JsonElement` で受けて表示側で文字列にする。Meraki は項目の増減もあるため POCO を作らず `JsonDocument` で必要な項目だけ拾っている。
 - **selftest から実 API を叩かない。** タブを選んだだけでは通信しない作り（`OnActivated` を持たない）にしてある。CI の Windows ランナーは外に出られるので、タブ選択で取得を始める作りにすると全タブ検査から本番へリクエストが飛ぶ。
 - ページングは `Link` ヘッダの `rel=next` を追う。20 ページで打ち切り、**打ち切ったことは必ず画面に出す**（黙って切ると「その機器は無い」と誤読される）。429 は `Retry-After` を 1〜60 秒に丸めて最大 3 回まで再送。
+- **イベント（`/networks/{id}/events`）は 1 ページだけ取る**（`GetOnePageAsync`）。この応答には**常に次ページの Link が付く**ので `GetPagesAsync` に渡すと 20 ページぶん引く。**応答も配列ではなく `{pageStartAt, pageEndAt, events:[…]}` のオブジェクト**なので、ほかの一覧と同じ `Items` では 1 件も読めない。
+- **MX の LAN/WAN ポートの速度・全二重はダッシュボード API に無い**（画面の Appliance status にしかない）。MS は `/devices/{serial}/switch/ports/statuses` で `speed`（「1 Gbps」）と `duplex` が取れる。**無いものを推測で埋めない** — 導入時確認では MX のぶんを「目視で確認」の行として人に渡している。
+- **どの WAN を使う設定かは `/devices/{serial}/appliance/uplinks/settings` にしかない。** 状態（`appliance/uplink/statuses`）には使っていない WAN2 も「not connected」で出てくるので、状態だけで「全部リンクアップ」を判定すると**単線の拠点が必ず不合格になる**。
+- **`status` は `active` と `ready` が両方とも「上がっている」**（ready は冗長側の待機）。`connecting` は上がっていない。表示用の文字（`◌ 待機` / `◌ 接続中`）では区別が付かないので、`MerakiUplinkRow.RawStatus` に生の値を持たせてある。
 
 ### 外部 API（Cisco ACI / APIC）
 
