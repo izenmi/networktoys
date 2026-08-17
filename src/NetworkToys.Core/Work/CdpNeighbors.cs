@@ -169,7 +169,7 @@ public static class CdpNeighborDiff
             if (!string.Equals(entry.RemotePort, current.RemotePort, StringComparison.OrdinalIgnoreCase))
             {
                 // ここが cdp を見る一番の理由。挿し直したポートが違っている
-                changes.Add(DeviceChange.Critical(port, "挿し口が変わった",
+                changes.Add(DeviceChange.Critical(port, "接続先のポートが変わった",
                     $"{port} の接続先が {entry.DeviceId} の {entry.RemotePort} から {current.RemotePort} に変わりました。挿し間違いの可能性があります。"));
             }
         }

@@ -420,7 +420,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
         DeviceOutputKind.InterfaceBrief =>
             "ポートの状態を突き合わせます。up から落ちたポートを見つけます。",
         DeviceOutputKind.CdpNeighbors =>
-            "隣接機器と挿し口を突き合わせます。Holdtime は無視するので、時間が経っただけの違いは差分になりません。ケーブルを別のポートに挿し直していれば見つかります。",
+            "隣接機器と接続先のポートを突き合わせます。Holdtime は無視するので、時間が経っただけの違いは差分になりません。ケーブルを別のポートに挿し直していれば見つかります。",
         DeviceOutputKind.MacTable =>
             "MAC がどのポートに見えるかを突き合わせます。動的エントリは通信が無いと数分で消えるため、増減より「ポートが移った」を見てください。",
         DeviceOutputKind.Configuration =>

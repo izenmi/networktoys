@@ -6174,7 +6174,7 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.AciEpgs}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="EPG と、そこに結び付いた口・VLAN を見ます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="EPG と、そこに結び付いたポート・VLAN を見ます。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                                         <Button Content="EPG を取得" Command="{Binding FetchEpgsCommand}" Margin="0,0,12,0" />
@@ -6280,7 +6280,7 @@
                                         </DockPanel>
                                     </Border>
                                     <TextBlock Grid.Row="1" Style="{StaticResource Caption}" Margin="0,6,0,3"
-                                               Text="選んだ EPG に結び付いている口（静的パス）" />
+                                               Text="選んだ EPG に結び付いているポート（静的パス）" />
                                     <Border Grid.Row="2" Background="{DynamicResource Brush.Surface}"
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">

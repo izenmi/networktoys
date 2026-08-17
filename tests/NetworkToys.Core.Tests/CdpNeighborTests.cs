@@ -109,7 +109,7 @@ public class CdpNeighborTests
 
         DeviceChange change = Assert.Single(CdpNeighborDiff.Compare(before, after).Changes);
 
-        Assert.Equal("挿し口が変わった", change.Kind);
+        Assert.Equal("接続先のポートが変わった", change.Kind);
         Assert.Equal(ChangeSeverity.Critical, change.Severity);
         Assert.Contains("挿し間違い", change.Description, StringComparison.Ordinal);
     }
