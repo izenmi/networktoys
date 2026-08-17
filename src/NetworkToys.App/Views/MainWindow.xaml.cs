@@ -425,6 +425,7 @@ public partial class MainWindow : Window
         ["mrsite"] = ["Network", "Clients", "Segments", "Note"],
         ["mrdhcp"] = ["Network", "Device", "Vlan", "Subnet", "Used", "Free", "UsagePercent"],
         ["mralert"] = ["Severity", "Type", "Network", "Device", "StartedAt", "Detail"],
+        ["mrutil"] = ["Network", "Device", "Model", "Serial", "Utilization", "Note"],
         ["acihl"] = ["Kind", "Name", "Score", "State"],
         ["aciflt"] = ["Severity", "Code", "Created", "Target", "Description", "Ack"],
         ["aciport"] = ["Node", "Interface", "OperState", "Speed", "Vlans", "Modes", "PortChannel",

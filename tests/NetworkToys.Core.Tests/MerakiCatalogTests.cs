@@ -409,36 +409,45 @@ public class MerakiCatalogTests
     }
 
     [Fact]
-    public void Channel_utilisation_is_averaged_across_devices_and_bands()
+    public void MX_の利用率を読み取る()
     {
-        const string json = """
-            [ {"serial":"Q2AA-1111-AAAA",
-               "wifi0":[{"utilization":10},{"utilization":20}],
-               "wifi1":[{"utilization":30},{"utilization":40}]} ]
-            """;
+        // 応答は配列ではなくオブジェクト 1 個
+        MerakiUtilizationRow row = MerakiCatalog.ParseAppliancePerformance(
+            ["""{"perfScore":20}"""], "本社", "MX-honsha", "MX68", "Q2AA-1111-AAAA");
 
-        MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseChannelUtilization([json], null, "本社");
-
-        Assert.Equal([20, 30], series.Values);
-        Assert.Equal(100, series.Maximum);
-        Assert.Equal("%", series.Unit);
+        Assert.Equal("本社", row.Network);
+        Assert.Equal("MX-honsha", row.Device);
+        Assert.Contains("20%", row.Utilization, StringComparison.Ordinal);
+        Assert.Equal(SeverityKind.Ok, row.UtilizationKind);
     }
 
-    [Fact]
-    public void Channel_utilisation_can_be_limited_to_one_device()
-    {
-        const string json = """
-            [ {"serial":"AAAA","wifi0":[{"utilization":10}]},
-              {"serial":"BBBB","wifi0":[{"utilization":90}]} ]
-            """;
+    [Theory]
+    [InlineData(0, SeverityKind.Ok)]
+    [InlineData(33, SeverityKind.Ok)]
+    [InlineData(34, SeverityKind.Notice)]
+    [InlineData(66, SeverityKind.Notice)]
+    [InlineData(67, SeverityKind.Alert)]
+    [InlineData(100, SeverityKind.Alert)]
+    public void 利用率は_3_段階で読ませる(double score, SeverityKind expected)
+        => Assert.Equal(expected, MerakiCatalog.DescribeUtilization(score).Kind);
 
-        Assert.Equal([90], MerakiCatalog.ParseChannelUtilization([json], "BBBB", "本社").Values);
+    [Fact]
+    public void データが無い_MX_は_0_パーセントにしない()
+    {
+        // 204 No Content は本文が空で返る。0% と混同させない
+        MerakiUtilizationRow row = MerakiCatalog.ParseAppliancePerformance(
+            [""], "大阪", "MX-osaka", "MX67", "Q2BB-2222-BBBB");
+
+        Assert.Equal("—", row.Utilization);
+        Assert.Equal(SeverityKind.Muted, row.UtilizationKind);
+
+        Assert.Equal("—", MerakiCatalog.DescribeUtilization(null).Text);
     }
 
     [Fact]
     public void A_series_with_nothing_in_it_says_so_instead_of_drawing_zero()
     {
-        MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseChannelUtilization(["[]"], null, "本社");
+        MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseUplinkHistory(["[]"], "本社");
 
         Assert.Empty(series.Values);
         Assert.Equal("—", series.Summary);

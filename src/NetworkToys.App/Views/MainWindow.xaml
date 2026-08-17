@@ -4960,70 +4960,178 @@
                         </TabItem>
 
 
-                        <!-- 使われ具合（棒グラフ） -->
-                        <TabItem Header="使われ具合">
+                        <!-- 利用率（MX の device utilization ＋ 回線の推移） -->
+                        <TabItem Header="利用率">
                             <Border Style="{StaticResource Card}">
                                 <DockPanel>
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiUsage}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点の使われ具合を、期間の中の推移で見ます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="MX の利用率と、選んだ拠点の回線の使われ方を見ます。" />
                                     </DockPanel>
 
                                     <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                        <TextBlock Text="拠点" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <ComboBox Width="180" Margin="0,0,12,2"
-                                                  ItemsSource="{Binding NetworkRows}"
-                                                  SelectedItem="{Binding SelectedNetwork}"
-                                                  ToolTip="先に「取得」を押すと、ここに拠点が並びます。">
-                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-
-                                        <TextBlock Text="見方" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <ComboBox Width="180" Margin="0,0,12,2"
-                                                  ItemsSource="{Binding UsageKinds}"
-                                                  SelectedItem="{Binding SelectedUsageKind}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-
-                                        <TextBlock Text="期間" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <ComboBox Width="110" Margin="0,0,12,2"
-                                                  ItemsSource="{Binding Timespans}"
-                                                  SelectedItem="{Binding SelectedTimespan}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-
-                                        <Button Content="取得" Command="{Binding FetchUsageCommand}" Margin="0,0,12,2" />
-
-                                        <!-- グラフだけでは数字が読めないので、最大と平均を必ず添える -->
-                                        <TextBlock Text="{Binding UsageSummary}" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" />
+                                        <Button Content="MX の利用率を取得" Command="{Binding FetchUtilizationCommand}"
+                                                Margin="0,0,6,2"
+                                                ToolTip="機器タブで取った MX を 1 台ずつ見ます。先に「取得」を押してください。" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveUtilizationCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
                                     </WrapPanel>
 
-                                    <Border Background="{DynamicResource Brush.Surface}"
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                    <Border Grid.Row="0" Background="{DynamicResource Brush.Surface}"
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <controls:SeriesChart Values="{Binding UsageSeries}"
-                                                              Maximum="{Binding UsageMaximum}"
-                                                              Unit="{Binding UsageUnit}"
-                                                              MinHeight="120" />
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrutil" MouseLeftButtonDown="OnTableHeaderSort">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.0]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.5]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="拠点" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="機器" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="型番" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="シリアル" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="利用率" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="5" Text="備考" Style="{StaticResource Caption}" />
+                                                <!-- 星列より左は右端、右は左端の境界につまみを置く -->
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="mrutil.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mrutil.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mrutil.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mrutil.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="mrutil.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                            <ListBox ItemsSource="{Binding UtilizationRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                <Grid Height="{DynamicResource Size.RowHeight.Wide}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.0]}" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.2]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.3]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.4]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrutil.5]}" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <TextBlock Grid.Column="0" Text="{Binding Network}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Device}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding Model}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding Serial}" Style="{StaticResource Mono}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="4" Text="{Binding Utilization}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding UtilizationKind}" Value="Ok">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding UtilizationKind}" Value="Notice">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding UtilizationKind}" Value="Alert">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Column="5" Text="{Binding Note}"
+                                                               FontSize="{DynamicResource Size.Caption}"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Note}" />
+                                                </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
                                     </Border>
+                                        <WrapPanel Grid.Row="1" Margin="0,8,0,6">
+                                            <TextBlock Text="回線の使用量（WAN）" Style="{{StaticResource Caption}}"
+                                                       VerticalAlignment="Center" Margin="0,0,12,2" />
+                                            <TextBlock Text="拠点" Style="{{StaticResource Caption}}"
+                                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                                            <ComboBox Width="180" Margin="0,0,12,2"
+                                                      ItemsSource="{{Binding NetworkRows}}"
+                                                      SelectedItem="{{Binding SelectedNetwork}}"
+                                                      ToolTip="先に「取得」を押すと、ここに拠点が並びます。">
+                                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{{Binding Name}}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+
+                                            <TextBlock Text="期間" Style="{{StaticResource Caption}}"
+                                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                                            <ComboBox Width="110" Margin="0,0,12,2"
+                                                      ItemsSource="{{Binding Timespans}}"
+                                                      SelectedItem="{{Binding SelectedTimespan}}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{{Binding Name}}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+
+                                            <Button Content="取得" Command="{{Binding FetchUsageCommand}}" Margin="0,0,12,2" />
+
+                                            <!-- グラフだけでは数字が読めないので、最大と平均を必ず添える -->
+                                            <TextBlock Text="{{Binding UsageSummary}}" Style="{{StaticResource Caption}}"
+                                                       VerticalAlignment="Center" />
+                                        </WrapPanel>
+
+                                        <Border Grid.Row="2" Background="{{DynamicResource Brush.Surface}}"
+                                                BorderThickness="1" BorderBrush="{{DynamicResource Brush.Border}}"
+                                                CornerRadius="{{DynamicResource Radius.Card}}" Padding="6">
+                                            <controls:SeriesChart Values="{{Binding UsageSeries}}"
+                                                                  Maximum="{{Binding UsageMaximum}}"
+                                                                  Unit="{{Binding UsageUnit}}"
+                                                                  MinHeight="120" />
+                                        </Border>
+                                    </Grid>
                                 </DockPanel>
                             </Border>
                         </TabItem>

@@ -88,13 +88,13 @@ internal sealed class MerakiDashboard : IDisposable
             + $"?timespan={timespanSeconds}&resolution={resolutionSeconds}",
             apiKey, token);
 
-    /// <summary>拠点の AP のチャンネル使用率の推移。</summary>
-    public Task<IReadOnlyList<string>> ChannelUtilizationAsync(
-        string apiKey, string networkId, int timespanSeconds, int resolutionSeconds, CancellationToken token)
-        => GetPagesAsync(
-            $"/networks/{Escape(networkId)}/networkHealth/channelUtilization"
-            + $"?timespan={timespanSeconds}&resolution={resolutionSeconds}",
-            apiKey, token);
+    /// <summary>
+    /// MX 1 台の利用率（<c>perfScore</c>）。<b>答えるのはプライマリの MX だけ</b>で、
+    /// それ以外は 400、まだデータが無ければ 204（本文が空）が返る。
+    /// </summary>
+    public Task<IReadOnlyList<string>> AppliancePerformanceAsync(
+        string apiKey, string serial, CancellationToken token)
+        => GetPagesAsync($"/devices/{Escape(serial)}/appliance/performance", apiKey, token);
 
     /// <summary>組織のアラート。版によっては持っていない（その場合は 404 が返る）。</summary>
     public Task<IReadOnlyList<string>> AlertsAsync(string apiKey, string organizationId, CancellationToken token)

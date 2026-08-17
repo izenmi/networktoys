@@ -74,6 +74,19 @@ public sealed record MerakiDhcpRow(
     string UsageText,
     SeverityKind UsageKind);
 
+/// <summary>
+/// 機器の利用率の 1 行（MX 1 台ぶん）。
+/// <b>利用率を答えるのはプライマリの MX だけ</b>なので、答えられない機器は <c>Note</c> に理由を入れる。
+/// </summary>
+public sealed record MerakiUtilizationRow(
+    string Network,
+    string Device,
+    string Model,
+    string Serial,
+    string Utilization,
+    SeverityKind UtilizationKind,
+    string Note);
+
 /// <summary>拠点ごとの帯域利用量の 1 行（回線 1 本ぶん）。</summary>
 public sealed record MerakiBandwidthRow(
     string Network,
@@ -514,7 +527,7 @@ public static class MerakiCatalog
         return rows;
     }
 
-    // ===== 使われ具合の推移 =====
+    // ===== 利用率 =====
 
     /// <summary>
     /// 折れ線 1 本ぶん。<c>Values</c> は古い順。<c>Maximum</c> は縦軸の上限
@@ -567,52 +580,59 @@ public static class MerakiCatalog
     }
 
     /// <summary>
-    /// AP のチャンネル使用率の推移。<paramref name="serial"/> を指定すると、その 1 台だけ。
-    /// 指定が無ければ、同じ時刻どうしを平均して 1 本にまとめる。
+    /// MX 1 台の利用率（<c>perfScore</c>）。
+    ///
+    /// <b>応答は配列ではなく <c>{"perfScore":20}</c> の 1 個</b>なので、ほかの一覧と同じようには読めない。
+    /// <b>まだデータが無いときは 204</b> が返る（本文が空）ので、そのときは「—」にする
+    /// （0% と混同させない）。
     /// </summary>
-    public static MerakiSeries ParseChannelUtilization(IEnumerable<string> pages, string? serial, string label)
+    public static MerakiUtilizationRow ParseAppliancePerformance(
+        IEnumerable<string> pages, string network, string device, string model, string serial)
     {
-        // 時刻ごとに集める。機器も帯域(2.4/5GHz)もまたいで平均する
-        var byIndex = new List<List<double>>();
+        double? score = null;
 
-        foreach (JsonElement device in Items(pages))
+        foreach (string page in pages)
         {
-            if (serial is { Length: > 0 } wanted
-                && !string.Equals(Str(device, "serial"), wanted, StringComparison.OrdinalIgnoreCase))
-                continue;
+            if (string.IsNullOrWhiteSpace(page)) continue;
 
-            foreach (string band in (string[])["wifi0", "wifi1", "wifi2"])
+            JsonDocument document;
+            try
             {
-                if (!device.TryGetProperty(band, out JsonElement samples)
-                    || samples.ValueKind != JsonValueKind.Array)
-                    continue;
+                document = JsonDocument.Parse(page);
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
 
-                int index = 0;
-
-                foreach (JsonElement sample in samples.EnumerateArray())
+            using (document)
+            {
+                if (document.RootElement.ValueKind == JsonValueKind.Object
+                    && document.RootElement.TryGetProperty("perfScore", out JsonElement value)
+                    && value.ValueKind == JsonValueKind.Number
+                    && value.TryGetDouble(out double number))
                 {
-                    double percent = Number(sample, "utilization");
-
-                    while (byIndex.Count <= index) byIndex.Add([]);
-
-                    byIndex[index].Add(percent);
-                    index++;
+                    score = number;
                 }
             }
         }
 
-        List<double> values = [.. byIndex.Where(v => v.Count > 0).Select(v => v.Average())];
-        double max = values.Count > 0 ? values.Max() : 0;
+        (string text, SeverityKind kind) = DescribeUtilization(score);
 
-        return new MerakiSeries(
-            Label: label,
-            Values: values,
-            Maximum: 100,
-            Unit: "%",
-            Summary: values.Count == 0
-                ? "—"
-                : $"最大 {max:0.#}% ／ 平均 {values.Average():0.#}%");
+        return new MerakiUtilizationRow(network, device, model, serial, text, kind, "");
     }
+
+    /// <summary>
+    /// 利用率の読み方。ダッシュボードと同じく <b>33 まで低い・66 まで中くらい・それ以上は高い</b>。
+    /// 取れないものは「—」で、<b>0% とは意味が違う</b>。
+    /// </summary>
+    public static (string Text, SeverityKind Kind) DescribeUtilization(double? score) => score switch
+    {
+        null => ("—", SeverityKind.Muted),
+        <= 33 => ($"{score:0}% ● 余裕", SeverityKind.Ok),
+        <= 66 => ($"{score:0}% ⊘ やや高い", SeverityKind.Notice),
+        _ => ($"{score:0}% ✕ 高い", SeverityKind.Alert),
+    };
 
     /// <summary>区間の長さ（秒）。開始と終了から出す。読めなければ 0。</summary>
     private static double IntervalSeconds(JsonElement item)
@@ -690,6 +710,10 @@ public static class MerakiCatalog
     public static CsvTable ToCsv(IReadOnlyList<MerakiDhcpRow> rows) => new(
         ["拠点", "機器", "VLAN", "サブネット", "払い出し済み", "空き", "使用率"],
         [.. rows.Select(r => new[] { r.Network, r.Device, r.Vlan, r.Subnet, r.UsedText, r.FreeText, r.UsageText })]);
+
+    public static CsvTable ToCsv(IReadOnlyList<MerakiUtilizationRow> rows) => new(
+        ["拠点", "機器", "型番", "シリアル", "利用率", "備考"],
+        [.. rows.Select(r => new[] { r.Network, r.Device, r.Model, r.Serial, r.Utilization, r.Note })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiBandwidthRow> rows) => new(
         ["拠点", "回線", "合計", "送信", "受信"],
