@@ -30,6 +30,10 @@ public partial class MainWindow : Window
     public MainWindow(NetworkToys.Core.Storage.HandoverDocument? handover)
     {
         InitializeComponent();
+
+        // 「その他」の見出しは件数を数えて組み立てる（直書きにしない）
+        UpdateOtherHeader();
+
         DataContext = _shell;
         UpdateThemeToggle();
 
@@ -1338,12 +1342,33 @@ public partial class MainWindow : Window
     /// </summary>
     internal bool SuppressWifiActivation;
 
+    /// <summary>
+    /// 「その他」の見出しに、いま開いているタブの名前を続ける。
+    ///
+    /// 束ねた中の帯は出さない（1 枚のために行を 1 つ食う）。代わりにここへ出すことで、
+    /// 主タブの右側の空きを使う（2026-08-17 ユーザー指示）。
+    ///
+    /// <b>件数は数えて入れる。</b>直書きだと中身を増減したときに黙ってずれる。
+    /// </summary>
+    private void UpdateOtherHeader()
+    {
+        int count = OtherInnerTabs.Items.Count;
+        string name = (OtherInnerTabs.SelectedItem as TabItem)?.Header?.ToString() ?? "";
+
+        // 開いていないときに中身の名前を出すと、そのタブが開いているように見えてしまう
+        OtherTab.Header = OtherTab.IsSelected && name.Length > 0
+            ? $"その他　{count} ▾　│　{name}"
+            : $"その他　{count} ▾";
+    }
+
     private void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         // 内側の ListBox などの選択変更が浮上してくるので、TabControl 由来だけを扱う。
         // 内側の TabControl(サブタブ)の変更もここへ通す — 弾くと、束ねたタブを
         // 切り替えても OnActivated / OnDeactivated が走らなくなる
         if (e.OriginalSource is not TabControl) return;
+
+        UpdateOtherHeader();
 
         if (SuppressWifiActivation) return;
 

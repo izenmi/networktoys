@@ -2291,15 +2291,15 @@
                         この Style は ItemContainerStyle として当てる。TabControl.Resources に
                         暗黙スタイルとして置くと、Meraki の中のサブタブまで巻き添えで隠れる。
                     -->
-                    <TabControl BorderThickness="0" Padding="0" Margin="0,0,0,4">
+                    <TabControl x:Name="OtherInnerTabs" BorderThickness="0" Padding="0" Margin="0,0,0,4">
+                        <!--
+                            帯そのものを出さない。1 枚だけ出しても行を 1 つ食うので、
+                            いま開いているものは「その他」の見出しの右隣に出す
+                            （MainWindow.UpdateOtherHeader。2026-08-17 ユーザー指示）。
+                        -->
                         <TabControl.ItemContainerStyle>
                             <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
                                 <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </Trigger>
-                                </Style.Triggers>
                             </Style>
                         </TabControl.ItemContainerStyle>
 
