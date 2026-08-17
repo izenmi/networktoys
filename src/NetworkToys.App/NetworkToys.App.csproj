@@ -1,0 +1,113 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>NetworkToys</AssemblyName>
+    <RootNamespace>NetworkToys.App</RootNamespace>
+    <Version>0.1.0</Version>
+
+    <!-- Core と同じく警告をエラーにする。CI が唯一のコンパイラなので、
+         いちばん検証しづらい WPF 側こそ警告止まりにしない -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- exe のプロパティ画面に出る情報。未署名の exe を配る以上、空欄にしない -->
+    <Product>NetworkToys</Product>
+    <Company>izenmi</Company>
+    <Copyright>© izenmi</Copyright>
+    <Description>ネットワーク診断ツール</Description>
+
+    <!-- 管理者権限を要求しない / 高DPI対応を宣言する -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- exe に埋め込むアイコン。エクスプローラ・タスクバー・タイトルバーが使う。
+         元の SVG から tools/icon/build_icon.sh で焼いたもの。手で差し替えないこと。 -->
+    <ApplicationIcon>Resources/AppIcon.ico</ApplicationIcon>
+
+    <!-- PDB を exe に埋め込む。配布物が 1 ファイルで済み、例外の行番号も残る -->
+    <DebugType>embedded</DebugType>
+
+    <!-- 起動速度・省メモリのための設定。publish 固有の設定(SelfContained /
+         PublishSingleFile / PublishReadyToRun)は CI のコマンドラインで渡す。
+         Phase 0 で 3 構成を実測して採用形を決めるため、ここには書かない。 -->
+    <!-- InvariantGlobalization は WPF では使えない。true にすると ICU が同梱されず、
+         MS.Internal.FontCache.MajorLanguages の型初期化に失敗して最初の TextBlock を
+         測った瞬間に落ちる(CI で実測。dotnet publish は通り、ウィンドウ表示時に死ぬ)。
+         ICU の分だけ大きくなるが、日本語の日付書式が正しく出せる利点もある。 -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+    <!-- WPF はトリミング非対応。true にすると NETSDK1168 でビルドが失敗する。
+         PublishAot も同様に使えない。単一 exe のサイズは削れないものと割り切り、
+         「軽量」はファイルサイズではなく起動時間とメモリで満たす。 -->
+    <PublishTrimmed>false</PublishTrimmed>
+
+    <!-- composite R2R はサイズが激増するので使わない -->
+    <PublishReadyToRunComposite>false</PublishReadyToRunComposite>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- IEEE の MA-L 登録簿から作った OUI テーブル。初回の MAC 解決時にだけ展開する。
+         更新は tools/oui/build_oui.py を手で実行する。 -->
+    <EmbeddedResource Include="Resources/oui.tsv.gz" />
+
+    <!-- 同梱物の著作権表示とライセンス本文。exe に埋め込む。
+         zip から exe だけ取り出されても「ヘルプ → ライセンス情報」で読めるように。
+         MIT / Apache-2.0 / OFL 1.1 はいずれも再配布時の添付を求めている。 -->
+    <EmbeddedResource Include="../../THIRD-PARTY-NOTICES.txt" LogicalName="THIRD-PARTY-NOTICES.txt" />
+
+    <!-- 埋め込みフォント。Noto Sans JP(サブセット OTF, family="Noto Sans JP")。
+         端末に入っていなくても同じ字面になるよう exe に同梱する。
+         Resource ビルドアクションが必須(Content だと FontFamily から引けない)。 -->
+    <Resource Include="Resources/Fonts/NotoSansJP-Regular.otf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- System.Net.Dns は A/AAAA/PTR しか引けず、問い合わせ先サーバも指定できない。
+         「社内 DNS では引けるが外部 DNS では引けない」の切り分けに必要なので使う。
+         ネイティブ依存がないので単一ファイル発行でも安全。 -->
+    <PackageReference Include="DnsClient" Version="1.8.0" />
+
+    <!-- Native Wifi API のマネージドラッパ。依存パッケージなし。
+         これ以外の選択肢は wlanapi の自前 P/Invoke になる。 -->
+    <PackageReference Include="ManagedNativeWifi" Version="3.0.2" />
+
+    <!-- SFTP サーバのための SSH 実装。SSH を自前で書くのは非現実的（暗号の
+         正しさが命）なので、これだけは依存を許容する。MIT / net8.0 /
+         ECDH nistp256-521・aes-gcm・hmac-sha2・SFTPv3。Microsoft の
+         dev-tunnels-ssh の元コード。SFTP サブシステム実装はライブラリに
+         含まれないので Vendor/FxSsh/SftpService.cs に取り込んである。 -->
+    <PackageReference Include="FxSsh" Version="1.4.0" />
+
+    <!-- 収集タブが機器へ SSH で入るためのクライアント。FxSsh はサーバ実装だけで
+         クライアント側の型が無く、SSH を自前で書くのは非現実的(暗号の正しさが命)。
+         Windows 同梱の ssh.exe を駆るのも不可 — OpenSSH はパスワードを stdin から
+         読まない作りで、ホスト鍵の初回確認と旧方式の指定も要る。
+         純マネージドで runtimes/ にネイティブ資産を持たないので単一ファイル発行でも安全。
+         net10.0 を直接ターゲットしている(netstandard 経由の互換パッケージが付かない)。
+         Cisco では RunCommand(exec チャネル)が使えず ShellStream が要る:
+         ①多くの IOS が exec を実装していない ②terminal length 0 の効果が残らない
+         ③対話がないので enable に入れず show running-config が全滅する。
+
+         版は 2026.0.0 未満を選ばないこと。2025.1.0 以前は ScpClient の
+         再帰ダウンロードに任意ファイル書き込みの脆弱性があり(GHSA-q939-rpr3-3284)、
+         NU1903 で restore が止まる。こちらは ScpClient を使っていないが、
+         警告をエラーにする方針なのでどのみち通らない。 -->
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+
+    <!-- ipconfig の出力(CP932)の読み取りに使う System.Text.Encoding.CodePages は
+         .NET 10 ではフレームワークに同梱されており、明示参照すると NU1510 になる -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../NetworkToys.Core/NetworkToys.Core.csproj" />
+  </ItemGroup>
+
+</Project>

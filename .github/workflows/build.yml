@@ -30,7 +30,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: テスト
-        run: dotnet test tests/PingWatcher.Core.Tests/PingWatcher.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
+        run: dotnet test tests/NetworkToys.Core.Tests/NetworkToys.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
 
   # Phase 0 の実測（CI ランナー上）で決めた 2 構成。
   #   単一exe + R2R      : 起動 663ms / メモリ 93.5MB / 124.8MB
@@ -62,7 +62,7 @@ jobs:
       - name: publish (${{ matrix.name }})
         shell: pwsh
         run: |
-          dotnet publish src/PingWatcher.App/PingWatcher.App.csproj `
+          dotnet publish src/NetworkToys.App/NetworkToys.App.csproj `
             -c Release `
             -r win-x64 `
             -p:IncludeNativeLibrariesForSelfExtract=true `
@@ -87,12 +87,12 @@ jobs:
         if: matrix.name == 'win-x64-runtime-required'
         shell: pwsh
         run: |
-          Copy-Item tools/launcher/PingWatcher.cmd publish/${{ matrix.name }}/PingWatcher.cmd
+          Copy-Item tools/launcher/NetworkToys.cmd publish/${{ matrix.name }}/NetworkToys.cmd
 
           # ランナーにはランタイムが入っているので、見つけられることを確かめる。
           # --check は判定だけしてアプリを起動しない口。
           # (入っていない側の分岐は CI では踏めない)
-          $launcher = (Resolve-Path "publish/${{ matrix.name }}/PingWatcher.cmd").Path
+          $launcher = (Resolve-Path "publish/${{ matrix.name }}/NetworkToys.cmd").Path
           $out = & $launcher --check 2>&1
           if ($LASTEXITCODE -ne 0) {
             throw "起動用スクリプトがランタイムを見つけられなかった (終了コード $LASTEXITCODE): $out"
@@ -104,8 +104,8 @@ jobs:
         shell: pwsh
         working-directory: publish/${{ matrix.name }}
         run: |
-          $exe = Join-Path $PWD 'PingWatcher.exe'
-          if (-not (Test-Path $exe)) { throw "PingWatcher.exe が生成されていません" }
+          $exe = Join-Path $PWD 'NetworkToys.exe'
+          if (-not (Test-Path $exe)) { throw "NetworkToys.exe が生成されていません" }
 
           function Invoke-SelfTest {
             $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -137,7 +137,7 @@ jobs:
         shell: pwsh
         working-directory: publish/${{ matrix.name }}
         run: |
-          $exe = Join-Path $PWD 'PingWatcher.exe'
+          $exe = Join-Path $PWD 'NetworkToys.exe'
           Remove-Item 'crash.log' -ErrorAction SilentlyContinue
 
           $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -185,7 +185,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: PingWatcher-${{ matrix.name }}
+          name: NetworkToys-${{ matrix.name }}
           path: publish/${{ matrix.name }}
           retention-days: 30
 

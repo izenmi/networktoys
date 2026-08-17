@@ -1,4 +1,4 @@
-# PingWatcher 開発メモ
+# NetworkToys 開発メモ
 
 Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10 (LTS)。
 
@@ -9,10 +9,10 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 
 そのための設計:
 
-1. **`PingWatcher.Core` (net10.0) に純粋ロジックを押し出す** — ネットワークにも WPF にも触らないコード（IP 範囲パース、統計、MOS 算出、OUI 解決、レポート生成）はすべてここへ。CI の xUnit で検証できる面積を最大化する。
+1. **`NetworkToys.Core` (net10.0) に純粋ロジックを押し出す** — ネットワークにも WPF にも触らないコード（IP 範囲パース、統計、MOS 算出、OUI 解決、レポート生成）はすべてここへ。CI の xUnit で検証できる面積を最大化する。
    原則: **テストできない部分（WPF・P/Invoke・実ネットワーク）を、テストできる純関数の薄いラッパーに追い込む。**
    例: traceroute なら「Ping を投げる部分」と「ホップ列を解析・整形する部分」を分け、後者を固定データでテストする。
-2. **`--selftest`** — `PingWatcher.exe --selftest` で自己診断し、終了コードを返す。**XAML のエラー（リソースキーの打ち間違いなど）はコンパイルを通り抜けて実行時に落ちる**ので、MainWindow を実際に生成・表示するこの検査が実質唯一の防波堤。新しい画面やリソースを足したら必ずここに検査を追加する。
+2. **`--selftest`** — `NetworkToys.exe --selftest` で自己診断し、終了コードを返す。**XAML のエラー（リソースキーの打ち間違いなど）はコンパイルを通り抜けて実行時に落ちる**ので、MainWindow を実際に生成・表示するこの検査が実質唯一の防波堤。新しい画面やリソースを足したら必ずここに検査を追加する。
    **ウィンドウは `Show()` してから `UpdateLayout()` すること。** Show せずに `Measure()` を呼んでもテキスト整形まで到達せず、フォント初期化の不具合を見逃す（InvariantGlobalization の事故で実証済み）。
 3. **1 フェーズ = 1 まとまり = CI グリーン** — 大きな差分を積むと失敗の切り分けが不可能になる。
 
@@ -53,7 +53,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **`arp -a` をパースしない。** 出力が OS の表示言語でローカライズされるため日本語環境と英語環境で壊れる。`iphlpapi.dll` の `GetIpNetTable2` を P/Invoke する（管理者権限不要）。同じ理由で **`netstat` もパースしない**。接続一覧は `GetExtendedTcpTable` / `GetExtendedUdpTable`（非管理者で全プロセスの PID まで取れる）。この 4 種の行テーブルは**配列が先頭ヘッダの +4 から始まる**。`GetIpNetTable2` の +8 を写経すると 1 行目から壊れる。
 - 全機能を**非管理者で動作させる**方針。`app.manifest` は `asInvoker` 固定。例外は 2 つ。①**接続タブの通信量（B/秒）** — ETW のカーネルネットワークイベントが管理者限定のため、非管理者では列を「—」にして案内を出す縮退動作（接続一覧そのものは非管理者で動く）。案内行の「管理者として再起動」ボタンから望む人だけ `runas` で昇格できる（確認ダイアログ付き。UAC 拒否 1223 は握って続行）。②**IP設定タブの「適用」** — アプリ自体は昇格せず、適用の瞬間だけ `netsh -f 一時スクリプト` を `runas` で起動する（複数コマンドを 1 ファイルにまとめるので UAC は 1 回）。
 - **IP設定（ElevatedNetsh）の罠。** ①昇格プロセスの出力は読めない（リダイレクトと ShellExecute は両立しない）し、netsh の出力はロケール依存なのでどのみち**パースしない** — 成否は ExitCode と、適用後の `NetworkInterface` 再読で確かめる。②スクリプトファイルは **ANSI（cp932）**で書く（UTF-8 だと日本語アダプタ名が `name=` で一致せず静かに失敗する）。③タイムアウトしても昇格した子は Kill できない（AccessDenied）— 放置して現在値の確認を促す。④**selftest から ElevatedNetsh を呼ばない** — CI ランナーは管理者なので UAC なしで本当に適用され、ランナーのネットワークが壊れる。⑤接続情報のフッターは 2026-08-16 にユーザー指示で廃止した（本体を広く取るため）。現在値は IP設定タブで見せる。再提案しないこと。
-- **ETW（通信量表示）の罠。** ①セッション名は固定（`PingWatcher-KernelNet`）なので、**開始前に必ず `ControlTrace` STOP で前回の残骸を掃除**する（クラッシュ後はセッションが OS に残り続ける）。②ネイティブに渡すコールバックの**デリゲートはフィールドに保持**しないと GC に回収されて即死する。③`ProcessTrace` はセッションが止まるまで返らないので専用の背景スレッドで回し、停止は `CloseTrace` → `ControlTrace` STOP → `Join(1秒)`。④TraceEvent（NuGet）は不採用 — 必要なのは 1 プロバイダ・8 イベント ID の固定レイアウトだけで、ローカルで検証できないバージョン依存の方がリスクが大きい。⑤`EVENT_RECORD` のレイアウト誤りは catch 不能の AccessViolation でプロセスごと落ちる。防波堤は自己診断の ETW 検査（CI の Windows ランナーは管理者なので実経路が通る）。非管理者の縮退表示だけは CI で踏めないため実機確認。
+- **ETW（通信量表示）の罠。** ①セッション名は固定（`NetworkToys-KernelNet`）なので、**開始前に必ず `ControlTrace` STOP で前回の残骸を掃除**する（クラッシュ後はセッションが OS に残り続ける）。②ネイティブに渡すコールバックの**デリゲートはフィールドに保持**しないと GC に回収されて即死する。③`ProcessTrace` はセッションが止まるまで返らないので専用の背景スレッドで回し、停止は `CloseTrace` → `ControlTrace` STOP → `Join(1秒)`。④TraceEvent（NuGet）は不採用 — 必要なのは 1 プロバイダ・8 イベント ID の固定レイアウトだけで、ローカルで検証できないバージョン依存の方がリスクが大きい。⑤`EVENT_RECORD` のレイアウト誤りは catch 不能の AccessViolation でプロセスごと落ちる。防波堤は自己診断の ETW 検査（CI の Windows ランナーは管理者なので実経路が通る）。非管理者の縮退表示だけは CI で踏めないため実機確認。
 
 ### 一覧の列幅と並べ替え
 
@@ -304,7 +304,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 
 ## アイコン
 
-元は `src/PingWatcher.App/Resources/AppIcon.svg`（LAN ケーブルの端子 RJ45 を正面から見た形。
+元は `src/NetworkToys.App/Resources/AppIcon.svg`（LAN ケーブルの端子 RJ45 を正面から見た形。
 地は敷かず透過、アクセント水色の 3 色）。`tools/icon/build_icon.sh` を**手で実行**して
 16〜256px の 9 サイズを焼き、`.ico` にまとめる
 （CI に入れると ImageMagick を毎回入れることになるので入れていない）。
@@ -324,17 +324,17 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 ## 設定の保存先
 
 **exe と同じフォルダ**。`AppData.PathOf()` を通すこと。持ち出して使うための作り。
-書き込めない場所（Program Files など）に置かれたときだけ `%APPDATA%\PingWatcher\` へ逃がす。
+書き込めない場所（Program Files など）に置かれたときだけ `%APPDATA%\NetworkToys\` へ逃がす。
 場所は**実際に 1 ファイル書いて消して**決めている。属性だけでは判定できないため。
-旧名 `PastelNet` のフォルダがあれば初回に一度だけ複製して引き継ぐ（移動ではない）。
+旧名 `PingWatcher` / `PastelNet` のフォルダがあれば初回に一度だけ複製して引き継ぐ（移動ではない）。
 
 **設定は `settings.json` の 1 ファイルに統合**（2026-08-16、ユーザー指示）。配色・列幅・Ping/TCP の宛先リストと測定既定値がすべて入る。入り口は `App/Settings.cs`（起動時に `Settings.Initialize()` — **`ThemeManager.Initialize()` より前**でないと配色が読めない）。旧 4 ファイル（targets.json / tcp-targets.json / theme.txt / columns.txt）は初回起動時に取り込み、統合ファイルを書けたときだけ削除する。新しい設定を足すときは `AppSettingsDocument` にプロパティを足し、`Settings.Current` を書き換えて `Settings.Save()` を呼ぶ（ファイルを増やさない）。
 
 ## 構成
 
 ```
-src/PingWatcher.Core/   純粋ロジック。Windows 非依存。ここを厚くする
-src/PingWatcher.App/    WPF 本体。Core を参照する（逆参照は禁止）
+src/NetworkToys.Core/   純粋ロジック。Windows 非依存。ここを厚くする
+src/NetworkToys.App/    WPF 本体。Core を参照する（逆参照は禁止）
 tests/                Core のユニットテスト
 tools/                OUI テーブル生成などの手動スクリプト
 ```

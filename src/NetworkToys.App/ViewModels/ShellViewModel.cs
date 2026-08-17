@@ -1,0 +1,166 @@
+namespace NetworkToys.App.ViewModels;
+
+/// <summary>
+/// ウィンドウ全体の入れ物。タブごとに DataContext を切り替えて使う。
+/// </summary>
+public sealed class ShellViewModel
+{
+    public ShellViewModel()
+    {
+        Monitor = new MonitorViewModel();
+
+        // TCP は独立した画面にする。ICMP で見る相手とポートまで見る相手は別物なので、
+        // 宛先リストも(settings.json の中で)分けて持つ
+        Tcp = new MonitorViewModel(alwaysTcp: true);
+
+        // 現在の DNS サーバを比較対象の既定値として渡す
+        Dns = new DnsViewModel(Monitor.SystemDnsServers);
+        Trace = new TraceViewModel();
+
+        // 自分のサブネットをスキャン範囲の既定値にしておく（現場で最もよく使う操作）
+        Scan = new ScanViewModel(Monitor.SubnetCidr, Monitor.AppendToTargetList);
+
+        // 電卓も自分のいるサブネットから始める
+        Subnet = new SubnetViewModel(Monitor.SubnetCidr);
+
+        // ファイル配布サーバ。機器側コマンド例に自分の IP を渡す
+        Ftp = new FtpViewModel(Monitor.LocalAddress);
+        Tftp = new TftpViewModel(Monitor.LocalAddress);
+        Sftp = new SftpViewModel(Monitor.LocalAddress);
+        Syslog = new SyslogViewModel(Monitor.LocalAddress);
+        SnmpGet = new SnmpGetViewModel(Monitor.GatewayText is "—" ? null : Monitor.GatewayText);
+        SnmpTrap = new SnmpTrapViewModel(Monitor.LocalAddress);
+
+        // ファイル転送のクライアント（FTP / SFTP）。こちらもタブを開いただけでは繋がない
+        Transfer = new TransferViewModel();
+
+        // 接続一覧もタブが開かれている間だけ OS を叩く
+        Connections = new ConnectionsViewModel();
+
+        // 遮断一覧も同じ寿命。記録設定は押されたときだけ立てる
+        Wfp = new WfpViewModel();
+
+        // 機器へ入って出力を集める。パスワードは覚えない
+        Collect = new CollectViewModel();
+
+        // IP 設定。列挙はタブを開いたときだけ
+        IpConfig = new IpConfigViewModel();
+
+        // 無線は画面が開かれるまで API に触れない（位置情報の同意を求める時機のため）
+        Wifi = new WifiViewModel();
+
+        DeviceCompare = new DeviceCompareViewModel();
+        Converter = new ConvertViewModel();
+
+        // Meraki もタブを開いただけでは何もしない（API キーを入れて押されて初めて通信する）
+        Meraki = new MerakiViewModel();
+
+        // 試験タブ。こちらもタブを開いただけでは外へ出ない
+        Verify = new VerifyViewModel();
+
+        // 記録には無線の情報と試験の結果も載せるので、それぞれの画面を参照させる。
+        // 作業の証跡は「測ったこと」と「試したこと」が揃って 1 つになる
+        Report = new ReportViewModel(Monitor, Tcp, Wifi, Verify);
+    }
+
+    public MonitorViewModel Monitor { get; }
+
+    /// <summary>TCP 接続で測る画面。宛先も結果も Ping とは別に持つ。</summary>
+    public MonitorViewModel Tcp { get; }
+
+    public DnsViewModel Dns { get; }
+
+    public TraceViewModel Trace { get; }
+
+    public ScanViewModel Scan { get; }
+
+    /// <summary>サブネット電卓。</summary>
+    public SubnetViewModel Subnet { get; }
+
+    /// <summary>使い捨て FTP サーバ。</summary>
+    public FtpViewModel Ftp { get; }
+
+    /// <summary>使い捨て TFTP サーバ。</summary>
+    public TftpViewModel Tftp { get; }
+
+    /// <summary>使い捨て SFTP サーバ。</summary>
+    public SftpViewModel Sftp { get; }
+
+    /// <summary>syslog 受信サーバ。</summary>
+    public SyslogViewModel Syslog { get; }
+
+    /// <summary>SNMP の GET / ウォーク。</summary>
+    public SnmpGetViewModel SnmpGet { get; }
+
+    /// <summary>SNMP Trap の受信。</summary>
+    public SnmpTrapViewModel SnmpTrap { get; }
+
+    /// <summary>FTP / SFTP のクライアント（2 ペイン）。パスワードは覚えない。</summary>
+    public TransferViewModel Transfer { get; }
+
+    /// <summary>PC 上の TCP/UDP 接続一覧。</summary>
+    public ConnectionsViewModel Connections { get; }
+
+    /// <summary>PC の IPv4 設定(DHCP/固定の切替と適用)。</summary>
+    public IpConfigViewModel IpConfig { get; }
+
+    public WifiViewModel Wifi { get; }
+
+    public ReportViewModel Report { get; }
+
+    /// <summary>変更作業の前後確認。このツールの主な使い道。</summary>
+
+    /// <summary>機器の出力（show ip route / show run）を作業前後で見比べる。</summary>
+    public DeviceCompareViewModel DeviceCompare { get; }
+
+    /// <summary>Cisco コマンド出力の CSV 変換。Convert は System.Convert と紛れるので Converter。</summary>
+    public ConvertViewModel Converter { get; }
+
+    /// <summary>Meraki ダッシュボードからの照会。API キーは保存しない。</summary>
+    public MerakiViewModel Meraki { get; }
+
+    /// <summary>業務確認試験。プロキシを切り替えて同じ試験を回せる。</summary>
+    public VerifyViewModel Verify { get; }
+
+    /// <summary>WFP が落とした通信の一覧。管理者のときだけ中身が出る。</summary>
+    public WfpViewModel Wfp { get; }
+
+    /// <summary>Cisco 機器へ入ってコマンド出力を集める。</summary>
+    public CollectViewModel Collect { get; }
+
+    /// <summary>
+    /// 測った結果をすべて捨てて、起動直後の状態へ戻す。
+    ///
+    /// <b>宛先リストだけは残す。</b>次の現場でも同じ宛先を測ることが多く、
+    /// 打ち直す手間の方が大きい。逆に、前の現場の測定結果が残っていると
+    /// 作業前後の比較が狂うので、それ以外は入力欄も含めて戻す。
+    ///
+    /// 保存済みのレポートや作業セッションのファイルには触れない。
+    /// </summary>
+    public async Task ClearAllAsync()
+    {
+        await Monitor.ResetAsync();
+        await Tcp.ResetAsync();
+        DeviceCompare.Reset();
+        Scan.Reset();
+        Subnet.Reset();
+        Ftp.Reset();
+        Tftp.Reset();
+        Sftp.Reset();
+        Syslog.Reset();
+        SnmpGet.Reset();
+        SnmpTrap.Reset();
+        Transfer.Disconnect();
+        Dns.Reset();
+        Trace.Reset();
+        Connections.Reset();
+        Wfp.Reset();
+        IpConfig.Reset();
+        Wifi.Reset();
+        Converter.Reset();
+        Collect.Reset();
+        Meraki.Reset();
+        Verify.Reset();
+        Report.Reset();
+    }
+}

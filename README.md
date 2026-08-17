@@ -1,4 +1,4 @@
-# PingWatcher
+# NetworkToys
 
 ネットワーク変更作業の前後で、疎通を確かめて記録に残すための Windows 向けツール。
 
@@ -233,15 +233,15 @@ HTML とテキストには次が入ります。
 
 | 成果物 | 展開後 | ダウンロード(zip) | 中身 |
 |---|---|---|---|
-| `PingWatcher-win-x64` | 約 125MB | 約 60MB | 単一 exe。.NET のインストール不要。こちらを推奨 |
-| `PingWatcher-win-x64-runtime-required` | 約 5MB | 約 5MB | 軽量版。別途 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要 |
+| `NetworkToys-win-x64` | 約 125MB | 約 60MB | 単一 exe。.NET のインストール不要。こちらを推奨 |
+| `NetworkToys-win-x64-runtime-required` | 約 5MB | 約 5MB | 軽量版。別途 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要 |
 
 **サイズを最優先するなら軽量版**を選んでください（.NET 10 Desktop Runtime の導入が一度だけ必要です。中身はフォント同梱のアプリ本体のみ）。
 
-軽量版の zip には `PingWatcher.exe` の隣に **`PingWatcher.cmd`** が入っています。
+軽量版の zip には `NetworkToys.exe` の隣に **`NetworkToys.cmd`** が入っています。
 ランタイムが入っているかを先に確かめてから起動するもので、入っていなければ
 日本語で案内して入手ページを開きます。**入っていない環境へ配る場合は、こちらから起動してもらってください。**
-`PingWatcher.exe` を直接起動しても構いませんが、ランタイムが無いときは
+`NetworkToys.exe` を直接起動しても構いませんが、ランタイムが無いときは
 Windows 自身が出す英語のダイアログになります（アプリのコードは 1 行も動かないため、
 アプリの中で案内することはできません）。
 
@@ -267,7 +267,7 @@ WPF はトリミングできないため、.NET を同梱すると 125MB にな�
 Release には `SHA256SUMS.txt` を添えてあります。
 
 ```powershell
-Get-FileHash .\PingWatcher-win-x64-v1.0.0.zip -Algorithm SHA256
+Get-FileHash .\NetworkToys-win-x64-v1.0.0.zip -Algorithm SHA256
 ```
 
 出た値が `SHA256SUMS.txt` の値と一致すれば、こちらがビルドしたものと同一です。
@@ -311,18 +311,18 @@ GitHub Actions のログには**ビルドの全工程が残っています**（�
 
 ログは 30 日より古いものを起動時に自動で片付けます（スクリーンショットは消しません）。メニューの「ファイル → 画面を撮って保存」(F12) で、いまの画面を PNG にして `logs\screen-日時.png` へ保存できます。
 
-exe を `Program Files` のような書き込めない場所に置いた場合だけ、`%APPDATA%\PingWatcher\` へ保存します。書けるかどうかは、実際に 1 ファイル書いて消して確かめています。
+exe を `Program Files` のような書き込めない場所に置いた場合だけ、`%APPDATA%\NetworkToys\` へ保存します。書けるかどうかは、実際に 1 ファイル書いて消して確かめています。
 
 ヘッダの「クリア」から、測定結果だけを消すか、宛先リストを残して起動直後の状態へ戻すかを選べます。
 
 ## ビルド
 
 ```
-dotnet test tests/PingWatcher.Core.Tests/PingWatcher.Core.Tests.csproj
-dotnet publish src/PingWatcher.App/PingWatcher.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o publish
+dotnet test tests/NetworkToys.Core.Tests/NetworkToys.Core.Tests.csproj
+dotnet publish src/NetworkToys.App/NetworkToys.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o publish
 ```
 
-`PingWatcher.exe --selftest` で自己診断を実行し、終了コードを返します（CI で使っています）。XAML のエラーは実行して初めて落ちるため、この検査がビルド以外の唯一の確認手段です。
+`NetworkToys.exe --selftest` で自己診断を実行し、終了コードを返します（CI で使っています）。XAML のエラーは実行して初めて落ちるため、この検査がビルド以外の唯一の確認手段です。
 
 - MAC ベンダー名のテーブルを更新する — `python3 tools/oui/build_oui.py`（IEEE の登録簿から生成。CI では取得しません）
 - アイコンを焼き直す — `tools/icon/build_icon.sh`（SVG から 16〜256px の 9 サイズを `.ico` に。ImageMagick が要ります）

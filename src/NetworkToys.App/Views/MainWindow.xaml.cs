@@ -1,0 +1,1566 @@
+using System.ComponentModel;
+using System.IO;
+using System.Reflection;
+using Microsoft.Win32;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using NetworkToys.App.Services;
+using NetworkToys.App.ViewModels;
+using NetworkToys.Core.Storage;
+
+namespace NetworkToys.App.Views;
+
+public partial class MainWindow : Window
+{
+    private readonly ShellViewModel _shell = new();
+
+    public MainWindow() : this(null)
+    {
+    }
+
+    /// <param name="handover">
+    /// 管理者として起動し直したときに前のプロセスから渡された状態。通常起動では null。
+    /// </param>
+    public MainWindow(NetworkToys.Core.Storage.HandoverDocument? handover)
+    {
+        InitializeComponent();
+        DataContext = _shell;
+        UpdateThemeToggle();
+
+        // 最前面固定を覚えている場合は復元する
+        TopmostMenuItem.IsChecked = Settings.Current.Topmost;
+        Topmost = Settings.Current.Topmost;
+
+        UpdateScaleMenu();
+
+        // 文字を大きくしたら列幅も比例させる。文字だけ大きくすると、
+        // 幅がピクセルで決まっている列で文字が切れる
+        UiScale.Changed += ratio =>
+        {
+            ViewModels.ColumnLayout.Instance.Scale(ratio);
+            ViewModels.TableColumns.Instance.Scale(ratio);
+        };
+
+        // メニューに表記したショートカットの実体。表記(InputGestureText)は飾りなので、
+        // ここに足したらメニューの表記も揃えること
+        InputBindings.Add(new KeyBinding(
+            new Mvvm.RelayCommand(StartFromShortcut), new KeyGesture(Key.F5)));
+        InputBindings.Add(new KeyBinding(
+            _shell.Monitor.StopCommand, new KeyGesture(Key.F5, ModifierKeys.Shift)));
+        InputBindings.Add(new KeyBinding(
+            new Mvvm.RelayCommand(() => OnScreenshot(this, new RoutedEventArgs())),
+            new KeyGesture(Key.F12)));
+
+        _shell.DeviceCompare.RequestScrollIntoView += OnScrollDiffIntoView;
+
+        // 「すべて消す」でキーを捨てたら、画面の伏せ字欄も空にする
+        // (PasswordBox は中身をバインドできないので VM から知らせてもらう)
+        _shell.Meraki.ApiKeyCleared += (_, _) => MerakiKeyBox.Clear();
+
+        // 収集タブ: 宛先リストからの取り込みと、収集後の伏せ字欄の後始末
+        _shell.Collect.RequestImport += (_, _) => ImportTargetsIntoCollect();
+        _shell.Collect.SecretsCleared += (_, _) => ClearCollectPasswordBoxes();
+
+        // ひな型の名前を聞くのは画面の仕事（VM から窓を開かない）
+        _shell.Verify.AskTemplateName = initial => TextPromptDialog.Ask(
+            this,
+            "ひな型に残す",
+            "いまの試験項目に名前を付けて残します。同じ名前があれば上書きします。",
+            initial);
+
+        // ファイル転送も窓を開くのは画面の仕事。削除と上書きは取り消せないので必ず聞く
+        _shell.Transfer.Confirm = message => ConfirmDialog.Confirm(
+            this, "ファイル転送", message, okLabel: "実行する");
+
+        _shell.Transfer.Ask = message => TextPromptDialog.Ask(this, "ファイル転送", message);
+
+        // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
+        _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
+            this,
+            "ネットワークイベントの記録を有効にする",
+            "Windows に、遮断を含むネットワークイベントの記録を始めさせます。\n" +
+            "これは PC 全体に効く設定で、他のアプリからも見えます。\n\n" +
+            "NetworkToys を閉じるときに元へ戻します。続けますか？",
+            okLabel: "有効にする");
+
+        if (handover is not null)
+            ApplyHandover(handover);
+    }
+
+    /// <summary>
+    /// 昇格前の状態を書き戻す。宛先リストと設定は settings.json から
+    /// すでに読めているので、ここで扱うのはファイルに残らないものだけ。
+    /// </summary>
+    private void ApplyHandover(NetworkToys.Core.Storage.HandoverDocument handover)
+    {
+        try
+        {
+            Services.HandoverService.Apply(handover, _shell);
+
+            if (handover.WindowWidth > 0 && handover.WindowHeight > 0)
+            {
+                Left = handover.WindowLeft;
+                Top = handover.WindowTop;
+                Width = handover.WindowWidth;
+                Height = handover.WindowHeight;
+                WindowStartupLocation = WindowStartupLocation.Manual;
+            }
+
+            if (handover.WindowMaximized)
+                WindowState = WindowState.Maximized;
+
+            // 束ねたタブも探せるよう内側までたどる。見つからなければ既定のまま
+            if (FindTabByHeader(MainTabs, handover.SelectedTab) is { } saved)
+                Show(saved);
+
+            // 止まっていたなら止まったまま。動いていたなら測り直しではなく続きから
+            if (handover.WasRunning && _shell.Monitor.StartCommand.CanExecute(null))
+                _shell.Monitor.StartCommand.Execute(null);
+
+            if (handover.TcpWasRunning && _shell.Tcp.StartCommand.CanExecute(null))
+                _shell.Tcp.StartCommand.Execute(null);
+        }
+        catch (Exception ex)
+        {
+            // 引き継ぎに失敗しても起動はさせる（引き継げないより起動しない方が困る）
+            CrashLog.Write(ex, "MainWindow.ApplyHandover");
+        }
+    }
+
+    /// <summary>
+    /// API キーを VM へ渡す。<see cref="PasswordBox.Password"/> はバインドできない
+    /// (平文を依存関係プロパティに置かない設計)ので、変更のたびに手で押し込む。
+    /// </summary>
+    private void OnMerakiKeyChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox box)
+            _shell.Meraki.ApiKey = box.Password;
+    }
+
+    /// <summary>F5 での開始。ボタンと同じく、開始できたら Ping タブへ移る。</summary>
+    private void StartFromShortcut()
+    {
+        if (!_shell.Monitor.StartCommand.CanExecute(null)) return;
+
+        _shell.Monitor.StartCommand.Execute(null);
+        Show(PingTab);
+    }
+
+    /// <summary>
+    /// 差分をたどるとき、移った先を見えるところへ持ってくる。
+    ///
+    /// 一覧は仮想化しているので、まだ実体のない行は <see cref="ListBox.ScrollIntoView"/> に
+    /// 任せる（内部でスクロールしてから実体を作ってくれる）。
+    /// </summary>
+    private void OnScrollDiffIntoView(object? sender, int index)
+    {
+        if (index < 0 || index >= DiffList.Items.Count) return;
+
+        DiffList.ScrollIntoView(DiffList.Items[index]);
+    }
+
+    /// <summary>
+    /// タイトルバーの明暗を窓の中身に合わせる。ハンドルができてからでないと効かない。
+    /// </summary>
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        ApplyTitleBar();
+    }
+
+    private void ApplyTitleBar()
+    {
+        IntPtr handle = new WindowInteropHelper(this).Handle;
+        Interop.NativeMethods.SetTitleBarDark(handle, ThemeManager.Current == AppTheme.Dark);
+    }
+
+    /// <summary>開始したら測定の画面へ移る。押した場所がどのタブでも、見たいのは結果。</summary>
+    private void OnStartClicked(object sender, RoutedEventArgs e)
+    {
+        // TCP 側の開始で Ping タブへ飛ばさない(ユーザー指摘)。
+        // ボタンの DataContext がどちらの画面かで見分ける
+        if (sender is FrameworkElement { DataContext: MonitorViewModel { IsTcpScreen: true } }) return;
+
+        Show(PingTab);
+    }
+
+    /// <summary>
+    /// Ping 一覧の列幅ドラッグ。掴んだ列だけを伸縮させ、余りは可変幅の備考列に
+    /// 吸収させる(GridSplitter の「隣の列も動く」挙動を避けるための自前実装)。
+    ///
+    /// 備考(星列)より右の列は、幅を変えても<b>右端は動かず左端が動く</b>。
+    /// そのため RTT/ロス/推移のつまみは左端の境界にあり、符号を反転して
+    /// 「境界を右へ動かす=その列が縮む」にしている。こうすると境界が
+    /// カーソルに 1:1 で追従する(右端につまみを置くとカーソルから離れて
+    /// ドラッグ量が暴走する — 実際に起きた)。
+    /// </summary>
+    private void OnColumnResize(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string column })
+            return;
+
+        ColumnLayout layout = ColumnLayout.Instance;
+
+        GridLength Grow(GridLength current)
+            => new(Math.Clamp(current.Value + e.HorizontalChange, 36, 600));
+
+        GridLength Shrink(GridLength current)
+            => new(Math.Clamp(current.Value - e.HorizontalChange, 36, 600));
+
+        switch (column)
+        {
+            // 星列より左: 右端の境界が幅と一緒に動くので、そのまま足す
+            case "State": layout.State = Grow(layout.State); break;
+            case "Target": layout.Target = Grow(layout.Target); break;
+
+            // 星列より右: 左端の境界を掴んでいるので逆向き
+            case "Rtt": layout.Rtt = Shrink(layout.Rtt); break;
+            case "Loss": layout.Loss = Shrink(layout.Loss); break;
+            case "Spark": layout.Spark = Shrink(layout.Spark); break;
+        }
+    }
+
+    /// <summary>
+    /// Ping 以外の一覧の列幅。Tag は "テーブル名.列番号"。
+    /// 掴んだ境界がカーソルから離れないための符号の判断は
+    /// <see cref="TableColumns"/> の表の宣言 1 か所に閉じてある。
+    /// </summary>
+    private void OnTableColumnResize(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string key })
+            TableColumns.Instance.Drag(key, e.HorizontalChange);
+    }
+
+    /// <summary>
+    /// ファイル転送の左（この PC）でフォルダを開く。
+    /// <b>ダブルクリックは行の上でしか受けない</b> — 一覧の余白を叩いても
+    /// 直前に選んだフォルダへ入ってしまうのを避ける。
+    /// </summary>
+    private void OnLocalFileOpen(object sender, MouseButtonEventArgs e)
+    {
+        if (RowUnder(e) is { } row) _shell.Transfer.OpenLocal(row);
+    }
+
+    /// <summary>ファイル転送の右（接続先）でフォルダを開く。</summary>
+    private void OnRemoteFileOpen(object sender, MouseButtonEventArgs e)
+    {
+        if (RowUnder(e) is { } row) _shell.Transfer.OpenRemote(row);
+    }
+
+    /// <summary>叩かれた場所にある行の VM。行の外なら null。</summary>
+    private static FileRowViewModel? RowUnder(MouseButtonEventArgs e)
+    {
+        for (DependencyObject? node = e.OriginalSource as DependencyObject;
+             node is not null;
+             node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is ListBoxItem { DataContext: FileRowViewModel row }) return row;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 表ごとの「列番号 → 並べ替えに使うプロパティ」。空文字の列は並べ替えない。
+    /// 行テンプレートの Binding と同じ名前でないと効かないので、列を足したらここも直す。
+    /// </summary>
+    private static readonly Dictionary<string, string[]> SortPaths = new()
+    {
+        ["trace"] = ["Ttl", "Address", "HostName", "Rtt", "Note"],
+        ["scan"] = ["Address", "Rtt", "HostName", "Mac", "Vendor", "Ports", ""],
+        ["ftplog"] = ["Time", "Remote", "Text"],
+        ["tftplog"] = ["Time", "Remote", "Text"],
+        ["sftplog"] = ["Time", "Remote", "Text"],
+        // 名前でなく SortKey で並べる。フォルダを常に上に置きたいので
+        ["local"] = ["", "SortKey", "Size", "Modified"],
+        ["remote"] = ["", "SortKey", "Size", "Modified"],
+        ["syslog"] = ["Time", "Remote", "Severity", "Text"],
+        ["snmptrap"] = ["Time", "Remote", "Text"],
+        ["snmpget"] = ["Oid", "Name", "Type", "Value"],
+        ["vres"] = ["Name", "ProxyText", "VerdictText", "ElapsedMs", "Detail"],
+        ["mnet"] = ["Name", "Id", "ProductTypes", "TimeZone", "Tags"],
+        ["mdev"] = ["Name", "Model", "Serial", "Firmware", "Network", "State", "PublicIp", "LanIp"],
+        ["mup"] = ["Network", "Serial", "Interface", "State", "Ip", "Gateway", "PublicIp"],
+        ["mcli"] = ["Description", "Ip", "Mac", "Vlan", "Manufacturer", "Usage", "LastSeen"],
+    };
+
+    /// <summary>
+    /// 見出しの列をクリックして並べ替える（自前の並べ替えを持たない一覧用）。
+    ///
+    /// どの列かは<b>クリックされた X 座標</b>から求める。列ごとに当たり判定の要素を
+    /// 置くとヘッダ 1 つにつき数個ずつ増えるので、見出しの Grid 1 つで受ける。
+    /// 並べ替えは <see cref="ICollectionView.SortDescriptions"/> に任せる（VM を
+    /// 触らずに済み、仮想化も効いたまま）。押すたびに 昇順 → 降順 → 元の並び。
+    /// </summary>
+    private void OnTableHeaderSort(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not Grid { Tag: string table } header
+            || !SortPaths.TryGetValue(table, out string[]? paths))
+            return;
+
+        int column = ColumnAt(header, e.GetPosition(header).X);
+        if (column < 0 || column >= paths.Length || paths[column].Length == 0) return;
+
+        if (FindList(header, table) is not { ItemsSource: { } source }) return;
+
+        ICollectionView view = CollectionViewSource.GetDefaultView(source);
+        string path = paths[column];
+
+        ListSortDirection? current = null;
+        foreach (SortDescription description in view.SortDescriptions)
+        {
+            if (description.PropertyName != path) continue;
+
+            current = description.Direction;
+            break;
+        }
+
+        view.SortDescriptions.Clear();
+
+        // 昇順 → 降順 → 元の並び
+        if (current is null)
+            view.SortDescriptions.Add(new SortDescription(path, ListSortDirection.Ascending));
+        else if (current == ListSortDirection.Ascending)
+            view.SortDescriptions.Add(new SortDescription(path, ListSortDirection.Descending));
+
+        ShowSortMark(header, column, view.SortDescriptions.Count == 0 ? null : view.SortDescriptions[0].Direction);
+    }
+
+    /// <summary>X 座標から列番号を求める。列幅はドラッグで変わるので実測値で見る。</summary>
+    private static int ColumnAt(Grid header, double x)
+    {
+        double left = 0;
+
+        for (int i = 0; i < header.ColumnDefinitions.Count; i++)
+        {
+            double width = header.ColumnDefinitions[i].ActualWidth;
+            if (x >= left && x < left + width) return i;
+
+            left += width;
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// 見出しと同じ入れ物にいる一覧を探す。
+    ///
+    /// <b>見出しと同じ <c>Tag</c> を持つ一覧を優先する。</b>ほとんどの一覧は
+    /// <see cref="ListBox"/> なのでそれで足りるが、経路のホップ一覧だけは
+    /// <see cref="ItemsControl"/> で、ListBox しか見ていなかったころは
+    /// 並べ替えが無反応だった。かといって「最初の ItemsControl」にはできない —
+    /// 経路タブには手前に「何が変わったか」の ItemsControl があり、
+    /// <see cref="ComboBox"/> も ItemsControl なので、別の一覧を掴んでしまう。
+    /// </summary>
+    private static ItemsControl? FindList(DependencyObject header, string table)
+    {
+        DependencyObject? parent = VisualTreeHelper.GetParent(header);
+        if (parent is null) return null;
+
+        return FindDescendant(parent, tagged: true) ?? FindDescendant(parent, tagged: false);
+
+        ItemsControl? FindDescendant(DependencyObject node, bool tagged)
+        {
+            int count = VisualTreeHelper.GetChildrenCount(node);
+
+            for (int i = 0; i < count; i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(node, i);
+
+                // 見出しの Grid 自身や中の TextBlock を拾わないよう、一覧だけを見る
+                if (tagged)
+                {
+                    if (child is ItemsControl { Tag: string tag } list && tag == table) return list;
+                }
+                else if (child is ListBox list)
+                {
+                    return list;
+                }
+
+                if (FindDescendant(child, tagged) is { } found) return found;
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>並べ替えた列の見出しに ▲▼ を付ける。どこで並べ替えているか分かるように。</summary>
+    private static void ShowSortMark(Grid header, int column, ListSortDirection? direction)
+    {
+        foreach (UIElement child in header.Children)
+        {
+            if (child is not TextBlock text) continue;
+
+            string label = text.Text.TrimEnd(' ', '▲', '▼');
+
+            text.Text = Grid.GetColumn(text) == column && direction is { } d
+                ? label + (d == ListSortDirection.Ascending ? " ▲" : " ▼")
+                : label;
+        }
+    }
+
+    /// <summary>一覧の見出しクリックで並べ替える。列名は Tag、対象は DataContext で見分ける。</summary>
+    private void OnListHeaderSort(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string column } element)
+            return;
+
+        switch (element.DataContext)
+        {
+            case MonitorViewModel monitor:
+                monitor.SortBy(column);
+                break;
+            case ConnectionsViewModel connections:
+                connections.SortBy(column);
+                break;
+            case WifiViewModel wifi:
+                wifi.SortAccessPointsBy(column);
+                break;
+            case WfpViewModel wfp:
+                wfp.SortBy(column);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// WFP の記録を有効にする。<b>システム全体に効く設定</b>を変えるので、
+    /// VM から確認ダイアログを出してもらってから実行する。
+    /// </summary>
+    private void OnEnableWfpCollection(object sender, RoutedEventArgs e) => _shell.Wfp.EnableCollection();
+
+    /// <summary>
+    /// 接続タブの通信量(ETW)や遮断一覧のための管理者再起動。asInvoker は変えない方針なので、
+    /// 昇格したい人だけがここから明示的に選ぶ。
+    ///
+    /// いまの状態は引き継ぎファイルに控えて次のプロセスへ渡す。渡せないのは
+    /// 待受中のサーバ(ソケットはプロセスをまたげない)と、進行中の処理だけ。
+    /// </summary>
+    private void OnRelaunchAsAdmin(object sender, RoutedEventArgs e)
+    {
+        bool serversRunning = _shell.Ftp.IsRunning || _shell.Tftp.IsRunning || _shell.Sftp.IsRunning
+                              || _shell.Syslog.IsRunning || _shell.SnmpTrap.IsRunning;
+
+        string caution = serversRunning
+            ? "待受中のサーバは引き継げないので停止します（開き直してください）。\n"
+            : "";
+
+        bool confirmed = ConfirmDialog.Confirm(
+            this,
+            "管理者として再起動",
+            "いったん終了して、管理者権限で起動し直します。\n" +
+            "測定の結果と各画面の入力はそのまま引き継ぎます。\n" +
+            caution +
+            "Meraki の API キーだけは保存しない決まりなので、入れ直してください。\n\n" +
+            "続けますか？",
+            okLabel: "再起動する");
+
+        if (!confirmed) return;
+
+        string handoverPath = HandoverService.NewPath();
+
+        try
+        {
+            // 単一ファイル発行では Assembly.Location が空になるので Environment.ProcessPath を使う
+            string exePath = Environment.ProcessPath
+                ?? throw new InvalidOperationException("実行ファイルの場所が分かりません");
+
+            HandoverDocument document = HandoverService.Capture(_shell);
+
+            document.SelectedTab = MainTabs.SelectedItem is TabItem tab ? tab.Header?.ToString() ?? "" : "";
+            document.WindowMaximized = WindowState == WindowState.Maximized;
+
+            // 最大化中は Left/Width が画面いっぱいの値になるので、元の大きさを控える
+            Rect bounds = WindowState == WindowState.Normal
+                ? new Rect(Left, Top, Width, Height)
+                : RestoreBounds;
+
+            document.WindowLeft = bounds.Left;
+            document.WindowTop = bounds.Top;
+            document.WindowWidth = bounds.Width;
+            document.WindowHeight = bounds.Height;
+
+            HandoverStore.Save(handoverPath, document);
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = $"{HandoverService.Switch} \"{handoverPath}\"",
+                UseShellExecute = true,   // UAC の昇格ダイアログを出すのに必須
+                Verb = "runas",
+                WorkingDirectory = Environment.CurrentDirectory,
+            });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException
+                                      or IOException or UnauthorizedAccessException)
+        {
+            // UAC で「いいえ」が選ばれた(1223)か、起動できなかった。いまの窓のまま続ける。
+            // 控えたファイルは機器の出力を含みうるので必ず消す
+            HandoverStore.Delete(handoverPath);
+            return;
+        }
+
+        Application.Current.Shutdown();
+    }
+
+    /// <summary>
+    /// いまの画面を PNG にして logs フォルダへ残す。証跡は「見たままの画面」が
+    /// 一番説明が早いので、レポートとは別にワンボタンで撮れるようにしている。
+    /// </summary>
+    private void OnScreenshot(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string path = SessionLogService.NewScreenshotPath();
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+
+            using (FileStream stream = File.Create(path))
+                CaptureWindow().Save(stream);
+
+            ShowNotice("✓ 保存しました");
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnScreenshot");
+            ShowNotice("保存できません");
+        }
+    }
+
+    /// <summary>
+    /// ウィンドウの中身を実 DPI で描画して PNG エンコーダに載せる。
+    /// Window そのものを Render すると枠ぶんの余白がずれることがあるため、
+    /// VisualBrush で中身を描き直す。地色は Window 側が持っているので先に敷く。
+    /// </summary>
+    internal PngBitmapEncoder CaptureWindow()
+    {
+        var root = (FrameworkElement)Content;
+        var area = new Rect(new Size(root.ActualWidth, root.ActualHeight));
+
+        var visual = new DrawingVisual();
+        using (DrawingContext context = visual.RenderOpen())
+        {
+            context.DrawRectangle(Background, null, area);
+            context.DrawRectangle(new VisualBrush(root), null, area);
+        }
+
+        DpiScale dpi = VisualTreeHelper.GetDpi(this);
+        var bitmap = new RenderTargetBitmap(
+            (int)Math.Ceiling(area.Width * dpi.DpiScaleX),
+            (int)Math.Ceiling(area.Height * dpi.DpiScaleY),
+            dpi.PixelsPerInchX,
+            dpi.PixelsPerInchY,
+            PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        return encoder;
+    }
+
+    /// <summary>
+    /// IP 設定の適用。自分の足場(この PC の通信)を壊せる操作なので、
+    /// UAC の前に内容の確認を挟む(UAC は「昇格の同意」、こちらは「内容の確認」)。
+    /// </summary>
+    private async void OnApplyIpConfig(object sender, RoutedEventArgs e)
+    {
+        string summary = _shell.IpConfig.ConfirmationSummary();
+        if (summary.Length == 0)
+            return;
+
+        bool confirmed = ConfirmDialog.Confirm(
+            this,
+            "IP 設定の適用",
+            summary + "\n\nこの PC の通信が一時的に切れることがあります。続けますか？",
+            okLabel: "適用する");
+
+        if (!confirmed)
+            return;
+
+        try
+        {
+            await _shell.IpConfig.ApplyAsync();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnApplyIpConfig");
+        }
+    }
+
+    /// <summary>
+    /// ファイルメニューを開くたびに、保存できるかを聞き直す。
+    ///
+    /// 記録の画面を畳んだので（2026-08-16）、判定を見直す機会がここしかない。
+    /// 保存したあとの結果もヘッダの文字で知らせる。
+    /// </summary>
+    private void OnFileMenuOpened(object sender, RoutedEventArgs e)
+        => _shell.Report.RefreshSaveCommands();
+
+    /// <summary>短い知らせをヘッダの文字で 2 秒だけ出す。トーストや別窓は出さない。</summary>
+    private void ShowNotice(string text)
+    {
+        HeaderNotice.Text = text;
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            HeaderNotice.Text = "";
+        };
+        timer.Start();
+    }
+
+    private void OnThemeToggle(object sender, RoutedEventArgs e)
+    {
+        ThemeManager.Toggle();
+        UpdateThemeToggle();
+        ApplyTitleBar();
+    }
+
+    /// <summary>
+    /// ボタンにもメニューにも「切り替えた先」を出す。いまの状態を出すと、
+    /// 押すとどうなるのかが読み取れない。
+    /// </summary>
+    private void UpdateThemeToggle()
+    {
+        bool dark = ThemeManager.Current == AppTheme.Dark;
+
+        ThemeToggle.Content = dark ? "☀ ライト" : "☾ ダーク";
+        ThemeMenuItem.Header = dark ? "☀ ライトモードにする" : "☾ ダークモードにする";
+    }
+
+    /// <summary>
+    /// 文字の大きさを変える。押した項目の <c>Tag</c> が倍率。
+    /// <b>ラジオのように 1 つだけ選ばれた状態</b>にするので、
+    /// 押したものが既に選ばれていても外させない。
+    /// </summary>
+    private void OnScaleMenu(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: string tag }
+            && double.TryParse(tag, System.Globalization.NumberStyles.Float,
+                               System.Globalization.CultureInfo.InvariantCulture, out double scale))
+        {
+            UiScale.Apply(scale);
+        }
+
+        UpdateScaleMenu();
+    }
+
+    /// <summary>いまの大きさにだけチェックを付ける。</summary>
+    private void UpdateScaleMenu()
+    {
+        ScaleSmall.IsChecked = UiScale.Is(0.85);
+        ScaleNormal.IsChecked = UiScale.Is(1.0);
+        ScaleLarge.IsChecked = UiScale.Is(1.25);
+        ScaleExtraLarge.IsChecked = UiScale.Is(1.5);
+    }
+
+    /// <summary>最前面固定。<b>次回起動でも覚える</b>（以前は毎回外れていた）。</summary>
+    private void OnTopmostMenu(object sender, RoutedEventArgs e)
+    {
+        Topmost = TopmostMenuItem.IsChecked;
+
+        try
+        {
+            Settings.Current.Topmost = Topmost;
+            Settings.Save();
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            // 覚えられなくても、いまの固定は効いている
+        }
+    }
+
+    private void OnExit(object sender, RoutedEventArgs e) => Close();
+
+    private void OnOpenDataFolder(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = AppData.Directory(),
+                UseShellExecute = true,   // フォルダはシェル(エクスプローラー)に開かせる
+            });
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnOpenDataFolder");
+        }
+    }
+
+    private void OnOpenUsage(object sender, RoutedEventArgs e)
+        => OpenInBrowser("https://github.com/izenmi/networktoys/blob/main/docs/USAGE.md");
+
+    /// <summary>
+    /// 最新版を確かめる。<b>アプリからは通信しない</b> — 既定のブラウザで
+    /// Releases のページを開くだけ。署名が無くて警告が出る以上、
+    /// 手元の版が古くないかを確かめる導線はあった方がよい。
+    /// </summary>
+    private void OnOpenReleases(object sender, RoutedEventArgs e)
+        => OpenInBrowser("https://github.com/izenmi/networktoys/releases");
+
+    private void OnOpenIssues(object sender, RoutedEventArgs e)
+        => OpenInBrowser("https://github.com/izenmi/networktoys/issues");
+
+    private void OpenInBrowser(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OpenInBrowser");
+        }
+    }
+
+    /// <summary>
+    /// 同梱物の著作権表示とライセンス本文を出す。
+    ///
+    /// <b>exe に埋め込んである</b>ので、zip から exe だけ取り出されていても読める
+    /// （MIT / Apache-2.0 / OFL 1.1 はいずれも再配布時の添付を求めている）。
+    /// </summary>
+    private void OnShowLicenses(object sender, RoutedEventArgs e)
+    {
+        string text = ReadNotices()
+            ?? "ライセンス情報を読み込めませんでした。\n"
+             + "リポジトリの THIRD-PARTY-NOTICES.txt をご覧ください。\n"
+             + "https://github.com/izenmi/networktoys/blob/main/THIRD-PARTY-NOTICES.txt";
+
+        TextViewDialog.Show(this, "ライセンス情報", text);
+    }
+
+    /// <summary>埋め込んだライセンス本文。読めなければ null。</summary>
+    internal static string? ReadNotices()
+    {
+        try
+        {
+            using System.IO.Stream? stream = typeof(MainWindow).Assembly
+                .GetManifestResourceStream("THIRD-PARTY-NOTICES.txt");
+
+            if (stream is null) return null;
+
+            using var reader = new System.IO.StreamReader(stream);
+
+            return reader.ReadToEnd();
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or NotSupportedException)
+        {
+            CrashLog.Write(ex, "MainWindow.ReadNotices");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 列幅を既定に戻す。<b>2 系統あるので両方まとめて</b>戻す
+    /// （Ping / TCP 一覧の <see cref="ViewModels.ColumnLayout"/> と、
+    /// それ以外の表の <see cref="ViewModels.TableColumns"/>）。
+    /// </summary>
+    private void OnResetColumns(object sender, RoutedEventArgs e)
+    {
+        if (!ConfirmDialog.Confirm(
+                this,
+                "列幅を既定に戻す",
+                "すべての一覧の列幅を、はじめの状態に戻します。\n"
+                + "測定の結果や宛先リストには触りません。",
+                "戻す"))
+        {
+            return;
+        }
+
+        ViewModels.ColumnLayout.Instance.Reset();
+        ViewModels.TableColumns.Instance.Reset();
+
+        ShowNotice("✓ 列幅を戻しました");
+    }
+
+    private void OnAbout(object sender, RoutedEventArgs e)
+    {
+        // 単一ファイル発行でも AssemblyInformationalVersion は埋め込まれて読める。
+        // ビルド環境によっては "+コミットID" が付くので表示用に落とす
+        string version = (typeof(MainWindow).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? "不明").Split('+')[0];
+
+        // 設定と記録の置き場所も出す。持ち出して使う前提のアプリなので、
+        // 「どこに残るのか」が見えないと困る（exe の横に書けないときは退避している）
+        string where = AppData.IsBesideExecutable
+            ? "設定と記録の場所（exe と同じフォルダ）:"
+            : "設定と記録の場所（exe の横に書けないため退避しています）:";
+
+        ConfirmDialog.Show(
+            this,
+            "バージョン情報",
+            $"NetworkToys {version}\n\n" +
+            "色々できるネットワーク診断ツール\n" +
+            "https://github.com/izenmi/networktoys\n\n" +
+            $"{where}\n{AppData.Directory()}");
+    }
+
+    /// <summary>
+    /// 測った結果だけを消す。宛先も、作業の記録も、機器の貼り付けも残る。
+    ///
+    /// やり直しの範囲が小さく、Ping タブの「履歴を消去」と同じ重さなので確認は挟まない。
+    /// </summary>
+    private async void OnClearPingResults(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await _shell.Monitor.ResetResultsAsync();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnClearPingResults");
+        }
+    }
+
+    /// <summary>
+    /// 測った結果をすべて捨てて起動直後に戻す。宛先リストだけは残す。
+    ///
+    /// 作業中に誤って押すと、作業前の記録も不通の記録も消えて取り返しがつかない。
+    /// 元に戻す手段が無い操作なので、ここだけは確認を挟む。
+    /// </summary>
+    private async void OnClearAll(object sender, RoutedEventArgs e)
+    {
+        // MessageBox はネイティブ描画で、ダークテーマだとそこだけ白い箱が出る。
+        // アプリの配色で描く自前の確認ダイアログを使う
+        bool confirmed = ConfirmDialog.Confirm(
+            this,
+            "クリア",
+            "測定結果・作業の記録・各画面の入力を、起動直後の状態に戻します。\n" +
+            "宛先リストは残ります。保存済みのレポートやセッションのファイルは消えません。\n\n" +
+            "元に戻せません。実行しますか？",
+            okLabel: "すべて消す");
+
+        if (!confirmed) return;
+
+        try
+        {
+            await _shell.ClearAllAsync();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnClearAll");
+        }
+    }
+
+    /// <summary>
+    /// 右クリックされた行を取り出す。
+    ///
+    /// <see cref="ContextMenu"/> は論理ツリーが本体から切れているため
+    /// 親を辿れない。XAML 側で <c>PlacementTarget</c> の DataContext を
+    /// 引き継いであるので、ここでは送り主の DataContext を見ればよい。
+    /// <b>選択行は使わない</b>（右クリックでは選択が動かないため）。
+    /// </summary>
+    private static TargetRowViewModel? RowOf(object sender)
+        => (sender as FrameworkElement)?.DataContext as TargetRowViewModel;
+
+    /// <summary>
+    /// 落ちている宛先を見つけたとき、そのまま経路を追えるようにする。
+    /// 打ち直しの手間と打ち間違いを無くすのが目的。
+    /// </summary>
+    /// <summary>
+    /// 右クリックした宛先を TCP タブの宛先リストへ足す。
+    ///
+    /// ICMP で見ている相手のポートまで見たくなる場面は多いが、宛先リストは
+    /// 画面ごとに分かれているので打ち直しになっていた。ポートは TCP タブに
+    /// 入っている既定値を使う（宛先ごとに変えたければ後から書き換えられる）。
+    /// </summary>
+    private void OnAddToTcpFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row || row.Host.Length == 0) return;
+
+        string port = _shell.Tcp.TcpPort.Trim();
+        string line = port.Length > 0 ? $"{row.Host}:{port}" : row.Host;
+
+        if (row.Comment.Length > 0)
+            line += "\t" + row.Comment;
+
+        _shell.Tcp.AppendToTargetList([line]);
+        Show(TcpTab);
+    }
+
+    /// <summary>
+    /// FTP / SFTP サーバのパスワードを VM へ渡す。
+    /// <see cref="PasswordBox.Password"/> はバインドできない（平文を依存関係プロパティに
+    /// 置かない設計）ので、変更のたびに手で押し込む。どちらの画面かは Tag で見分ける。
+    /// </summary>
+    private void OnFileServerPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox { Tag: string which } box) return;
+
+        switch (which)
+        {
+            case "ftp": _shell.Ftp.Password = box.Password; break;
+            case "sftp": _shell.Sftp.Password = box.Password; break;
+            case "xfer": _shell.Transfer.Password = box.Password; break;
+        }
+    }
+
+    /// <summary>
+    /// 収集タブのパスワードを行の VM へ渡す。
+    /// <see cref="PasswordBox.Password"/> はバインドできないので、変更のたびに手で押し込む。
+    /// 行は <c>DataTemplate</c> の中にあるので、<c>Style</c> の <c>Setter</c> に
+    /// イベント付き要素を置いたときの事故（起動時 XamlParseException）には当たらない。
+    /// </summary>
+    private void OnCollectPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox { DataContext: CollectRowViewModel row } box) return;
+
+        if (Equals(box.Tag, "enable"))
+            row.EnablePassword = box.Password;
+        else
+            row.Password = box.Password;
+    }
+
+    /// <summary>
+    /// Ping と TCP の宛先から、取り込む相手を選んでもらう。
+    /// 全部入れると使わない機器まで並ぶので、絞り込みつきの選択画面を出す。
+    /// </summary>
+    private void ImportTargetsIntoCollect()
+    {
+        // 同じ宛先が Ping と TCP の両方にあることがあるので、先に畳む
+        Dictionary<string, string> unique = [];
+
+        foreach ((string host, string memo) in
+                 _shell.Monitor.Rows.Select(r => (r.Host, r.Comment))
+                 .Concat(_shell.Tcp.Rows.Select(r => (r.Host, r.Comment))))
+        {
+            if (host.Length == 0) continue;
+
+            if (!unique.TryGetValue(host, out string? existing) || existing.Length == 0)
+                unique[host] = memo;
+        }
+
+        if (unique.Count == 0)
+        {
+            ConfirmDialog.Show(this, "宛先がありません",
+                "Ping と TCP のタブに宛先が登録されていません。先に宛先を登録してください。");
+            return;
+        }
+
+        IReadOnlyList<(string Host, string Memo)> picked = TargetPickerDialog.Pick(
+            this, unique.Select(p => (p.Key, p.Value)));
+
+        if (picked.Count > 0)
+            _shell.Collect.Import(picked);
+    }
+
+    /// <summary>
+    /// 収集が終わったら画面の伏せ字欄も空にする
+    /// （VM 側の値を消しても <see cref="PasswordBox"/> の中身は残るため）。
+    /// </summary>
+    private void ClearCollectPasswordBoxes()
+    {
+        // 起点をウィンドウ全体にする。収集タブを束ねたとき、親が選ばれていないと
+        // タブの中身は実体化しておらず、そこを起点にすると 1 つも見つからない。
+        // 収集の欄は Tag が login / enable（FTP と SFTP は ftp / sftp）
+        foreach (PasswordBox box in FindPasswordBoxes(this))
+        {
+            if (box.Tag is "login" or "enable")
+                box.Clear();
+        }
+    }
+
+    /// <summary>
+    /// 見出しでタブを探す。<b>内側の TabControl までたどる</b>。
+    /// 昇格して起動し直したときに、開いていたタブへ戻すのに使う。
+    /// </summary>
+    private static TabItem? FindTabByHeader(TabControl tabs, string? header)
+    {
+        if (string.IsNullOrEmpty(header)) return null;
+
+        foreach (object? item in tabs.Items)
+        {
+            if (item is not TabItem tab) continue;
+
+            if (Equals(tab.Header, header)) return tab;
+
+            // 中身がまだ実体化していないと子は見つからない。
+            // それでも既定のタブで起動するだけなので、探せる範囲で探す
+            foreach (TabControl inner in FindDescendants<TabControl>(tab))
+            {
+                if (FindTabByHeader(inner, header) is { } found) return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<T> FindDescendants<T>(DependencyObject node) where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(node);
+
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(node, i);
+
+            if (child is T match) yield return match;
+
+            foreach (T found in FindDescendants<T>(child))
+                yield return found;
+        }
+    }
+
+    private static IEnumerable<PasswordBox> FindPasswordBoxes(DependencyObject node)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(node);
+
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(node, i);
+
+            if (child is PasswordBox box)
+            {
+                yield return box;
+                continue;
+            }
+
+            foreach (PasswordBox found in FindPasswordBoxes(child))
+                yield return found;
+        }
+    }
+
+    /// <summary>右クリックした宛先へ Tera Term で SSH 接続する。</summary>
+    private void OnSshFromRow(object sender, RoutedEventArgs e) => ConnectWithTeraTerm(sender, ssh: true);
+
+    /// <summary>右クリックした宛先へ Tera Term で Telnet 接続する。</summary>
+    private void OnTelnetFromRow(object sender, RoutedEventArgs e) => ConnectWithTeraTerm(sender, ssh: false);
+
+    /// <summary>
+    /// Tera Term でつなぐ（ユーザー指示。現場で使い慣れているものを開く）。
+    ///
+    /// 場所は既定の導入先から探し、見つからなければ 1 度だけ選んでもらって覚える。
+    /// TCP 画面の宛先はポートを持っているので、それがあれば優先する。
+    /// </summary>
+    private void ConnectWithTeraTerm(object sender, bool ssh)
+    {
+        if (RowOf(sender) is not { } row || row.Host.Length == 0) return;
+
+        string? exePath = TeraTerm.Locate() ?? AskForTeraTerm();
+        if (exePath is null) return;
+
+        int port = row.Target.Kind == NetworkToys.Core.Models.ProbeKind.Tcp ? row.Target.Port : 0;
+
+        if (TeraTerm.Connect(exePath, row.Host, port, ssh) is { } error)
+        {
+            CrashLog.Write(new InvalidOperationException(error), "MainWindow.ConnectWithTeraTerm");
+            ConfirmDialog.Show(this, "Tera Term を起動できません", error);
+        }
+    }
+
+    /// <summary>見つからないときに場所を選んでもらう。選ばれたら次回から覚えている。</summary>
+    private string? AskForTeraTerm()
+    {
+        ConfirmDialog.Show(
+            this,
+            "Tera Term が見つかりません",
+            "Tera Term (ttermpro.exe) を自動で見つけられませんでした。\n" +
+            "次の画面で ttermpro.exe を選んでください（次回からは覚えています）。");
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "ttermpro.exe を選ぶ",
+            FileName = "ttermpro.exe",
+            Filter = "Tera Term (ttermpro.exe)|ttermpro.exe|プログラム (*.exe)|*.exe",
+            CheckFileExists = true,
+        };
+
+        if (dialog.ShowDialog(this) != true) return null;
+
+        TeraTerm.Remember(dialog.FileName);
+        return dialog.FileName;
+    }
+
+    private void OnTraceFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row) return;
+
+        _shell.Trace.Host = row.Host;
+        Show(TraceTab);
+
+        if (_shell.Trace.TraceCommand.CanExecute(null))
+            _shell.Trace.TraceCommand.Execute(null);
+    }
+
+    private void OnResolveFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row) return;
+
+        _shell.Dns.Name = row.Host;
+        Show(DnsTab);
+
+        if (_shell.Dns.QueryCommand.CanExecute(null))
+            _shell.Dns.QueryCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 解決済みのアドレスを写す。IP で登録した宛先や、まだ引けていない宛先では
+    /// 空になるので、そのときは書いてある文字列をそのまま渡す。
+    /// </summary>
+    private void OnCopyAddressFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row) return;
+
+        CopyText(string.IsNullOrWhiteSpace(row.Address) ? row.Host : row.Address);
+    }
+
+    private void OnCopyHostFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is { } row)
+            CopyText(row.Host);
+    }
+
+    // ===== 一覧から次の道具へ送る（スキャン・接続・遮断・Meraki・syslog・Trap） =====
+    //
+    // 橋が架かっていたのは Ping/TCP の一覧だけで、他のタブで見つけた IP は
+    // 手で打ち直すしかなかった。行の型ごとに「どこがアドレスか」を
+    // AddressOf 1 か所で決め、送り先は既存の 3 本と同じ形で書く。
+
+    /// <summary>
+    /// 右クリックされた行からアドレスを取り出す。
+    ///
+    /// 行の型は一覧ごとに違うので、ここでだけ振り分ける。<b>新しい一覧に
+    /// メニューを付けたらここに 1 行足す</b>（足し忘れると黙って何も起きない）。
+    /// </summary>
+    internal static string AddressOf(object sender)
+    {
+        object? context = (sender as FrameworkElement)?.DataContext;
+
+        string raw = context switch
+        {
+            ScanRowViewModel scan => scan.Address,
+            NetworkToys.Core.Net.ConnectionDetailRow conn => conn.Remote,
+            NetworkToys.Core.Net.WfpBlockedRow wfp => wfp.Remote,
+            NetworkToys.Core.Cloud.MerakiDeviceRow device =>
+                device.LanIp.Length > 0 ? device.LanIp : device.PublicIp,
+            NetworkToys.Core.Cloud.MerakiClientRow client => client.Ip,
+            FileServerLogRow log => log.Remote,
+            _ => string.Empty,
+        };
+
+        return HostOnly(raw);
+    }
+
+    /// <summary>
+    /// <c>1.2.3.4:443</c> や <c>[::1]:443</c> からホストだけ取り出す。
+    ///
+    /// 素の IPv6 を切らないよう、<b>コロンが 1 つのときだけ</b>後ろを落とす
+    /// （<see cref="NetworkToys.Core.Storage.TargetListParser"/> と同じ規則）。
+    /// 角かっこ付きは中身をそのまま使う。
+    /// </summary>
+    internal static string HostOnly(string value)
+    {
+        string text = value.Trim();
+
+        // 「—」はリモートが無い行（LISTEN など）。宛先にはできない
+        if (text.Length == 0 || text == "—") return string.Empty;
+
+        if (text.StartsWith('['))
+        {
+            int close = text.IndexOf(']');
+            return close > 1 ? text[1..close] : string.Empty;
+        }
+
+        int colon = text.LastIndexOf(':');
+        return colon > 0 && text.IndexOf(':') == colon ? text[..colon] : text;
+    }
+
+    private void OnSendToPing(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.Monitor.AppendToTargetList([address]);
+        Show(PingTab);
+    }
+
+    private void OnSendToTcp(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        // ポートは TCP タブの既定値を使う（後から書き換えられる）
+        string port = _shell.Tcp.TcpPort.Trim();
+
+        _shell.Tcp.AppendToTargetList([port.Length > 0 ? $"{address}:{port}" : address]);
+        Show(TcpTab);
+    }
+
+    private void OnSendToCollect(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.Collect.Import([(address, string.Empty)]);
+        Show(CollectTab);
+    }
+
+    private void OnSendToTrace(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.Trace.Host = address;
+        Show(TraceTab);
+
+        if (_shell.Trace.TraceCommand.CanExecute(null))
+            _shell.Trace.TraceCommand.Execute(null);
+    }
+
+    private void OnSendToDns(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.Dns.Name = address;
+        _shell.Dns.SelectedType = "PTR";   // IP を渡すので、名前を知りたいなら逆引き
+        Show(DnsTab);
+
+        if (_shell.Dns.QueryCommand.CanExecute(null))
+            _shell.Dns.QueryCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// SNMP は<b>実行まではしない</b>。コミュニティ名を入れてもらう必要があるので、
+    /// 宛先だけ入れて画面を出す（勝手に投げると public で外れ続ける）。
+    /// </summary>
+    private void OnSendToSnmp(object sender, RoutedEventArgs e)
+    {
+        if (AddressOf(sender) is not { Length: > 0 } address) return;
+
+        _shell.SnmpGet.Host = address;
+        Show(SnmpTab);
+    }
+
+    private void OnCopyRowAddress(object sender, RoutedEventArgs e) => CopyText(AddressOf(sender));
+
+    private static void CopyText(string text) => Services.ClipboardText.Copy(text);
+
+    /// <summary>
+    /// 無線画面は開かれたときに初めて API を叩く。
+    /// Windows 11 24H2 以降はスキャンに位置情報の同意が要るので、
+    /// 起動時に呼ぶと脈絡のないタイミングで許可を求めることになる。
+    /// </summary>
+    /// <summary>
+    /// 自己診断が無線タブの画面を実体化して検査するときに true。
+    /// タブ選択に反応して WLAN API へ触れるのを止める（位置情報の同意を求めないため）。
+    /// </summary>
+    internal bool SuppressWifiActivation;
+
+    private void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // 内側の ListBox などの選択変更が浮上してくるので、TabControl 由来だけを扱う。
+        // 内側の TabControl(サブタブ)の変更もここへ通す — 弾くと、束ねたタブを
+        // 切り替えても OnActivated / OnDeactivated が走らなくなる
+        if (e.OriginalSource is not TabControl) return;
+
+        if (SuppressWifiActivation) return;
+
+        if (IsShowing(WifiTab))
+            _shell.Wifi.OnActivated();
+        else
+            _shell.Wifi.OnDeactivated();
+
+        // 接続一覧もタブが見えている間だけ OS を叩く
+        if (IsShowing(ConnectionsTab))
+            _shell.Connections.OnActivated();
+        else
+            _shell.Connections.OnDeactivated();
+
+        // 遮断一覧も見えている間だけ WFP のエンジンを開く
+        if (IsShowing(WfpTab))
+            _shell.Wfp.OnActivated();
+        else
+            _shell.Wfp.OnDeactivated();
+
+        // 経路の見張り(60 秒ごと)も、見えていないタブで裏を走らせない
+        if (IsShowing(TraceTab))
+            _shell.Trace.OnActivated();
+        else
+            _shell.Trace.OnDeactivated();
+
+        // IP設定はタブを開いたときにアダプタを列挙し直す
+        if (IsShowing(IpConfigTab))
+            _shell.IpConfig.OnActivated();
+
+    }
+
+    /// <summary>
+    /// そのタブが<b>実際に見えているか</b>。
+    ///
+    /// <b><see cref="TabItem.IsSelected"/> だけを見てはいけない。</b>これは
+    /// 「その TabControl の中で選ばれているか」しか表さず、内側の TabControl は
+    /// 生成時に先頭の子を自動で選ぶので、<b>親タブを一度も開いていなくても
+    /// 内側の 1 枚目は true になる</b>。
+    ///
+    /// そのまま <c>OnActivated()</c> を呼ぶと、見えていないタブが OS を叩き始める
+    /// （無線は位置情報の同意を求め、遮断は WFP のエンジンを開き、接続は ETW を回す）。
+    /// 先祖の TabItem をすべてたどって確かめる。
+    /// </summary>
+    /// <summary>
+    /// テキスト欄にファイルを重ねたとき。<b>ファイルのときだけ受ける。</b>
+    ///
+    /// <see cref="TextBox"/> は素で「文字のドラッグ」を扱うので、
+    /// Preview の段で自分の答えを返さないと、既定の動きに先を越される。
+    /// </summary>
+    private void OnTextDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = Services.DroppedText.FilesOf(e).Length > 0
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 放り込まれたファイルを欄に読み込む。
+    ///
+    /// <b>置き換える</b>（足すのではない）。作業前後の貼り付けも設定の貼り付けも、
+    /// 前のものが混ざると気づかないまま誤った差分を見ることになる。
+    /// 複数まとめて放られたら 1 つ目だけを使い、その旨を知らせる。
+    /// </summary>
+    private void OnTextDrop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+
+        if (sender is not TextBox box) return;
+
+        string[] files = Services.DroppedText.FilesOf(e);
+        if (files.Length == 0) return;
+
+        if (Services.DroppedText.TryRead(files[0], out string problem) is not { } text)
+        {
+            ShowNotice(problem);
+            return;
+        }
+
+        box.Text = text;
+        box.Focus();
+
+        ShowNotice(files.Length > 1
+            ? $"{System.IO.Path.GetFileName(files[0])} を読み込みました（1 つ目だけ）。"
+            : $"{System.IO.Path.GetFileName(files[0])} を読み込みました。");
+    }
+
+    /// <summary>試験の項目一覧にファイルを放り込んだとき。書式の解釈は VM に任せる。</summary>
+    private void OnVerifyItemsDrop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+
+        string[] files = Services.DroppedText.FilesOf(e);
+        if (files.Length == 0) return;
+
+        if (Services.DroppedText.TryRead(files[0], out string problem) is not { } text)
+        {
+            ShowNotice(problem);
+            return;
+        }
+
+        _shell.Verify.LoadItemsFrom(text, System.IO.Path.GetFileName(files[0]));
+    }
+
+    /// <summary>一覧に重ねたとき。こちらは既定の動きが無いので DragOver で足りる。</summary>
+    private void OnListDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = Services.DroppedText.FilesOf(e).Length > 0
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// まとめたタブ（見出しに ▾ が付いているもの）を押したら、中身を縦並びのメニューで出す。
+    ///
+    /// 切り替えの帯を横にも縦にも置かない代わりに、<b>押したときだけメニューを降ろす</b>。
+    /// 項目は内側の <see cref="TabControl"/> から組み立てるので、
+    /// 中身を足しても<b>ここは直さなくてよい</b>（見出しの件数だけ直す）。
+    /// </summary>
+    private void OnMainTabsMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source) return;
+
+        // 押されたのが見出しかどうか。中身の上のクリックまで拾わない
+        TabItem? tab = null;
+        for (DependencyObject? node = source; node is not null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is TabItem item) { tab = item; break; }
+            if (node is TabControl) return;   // 見出しの外（中身の側）だった
+        }
+
+        if (tab is null || !ReferenceEquals(ItemsControl.ItemsControlFromItemContainer(tab), MainTabs))
+            return;
+
+        if (InnerTabsOf(tab) is not { } inner || inner.Items.Count == 0) return;
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = tab,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+        };
+
+        // 中身は Tag で分類してある（調べる / NW機器 / 受ける）。
+        // 16 枚を素で並べると探せないので、変わり目に見出しを挟む
+        string group = "";
+
+        foreach (object? item in inner.Items)
+        {
+            if (item is not TabItem child) continue;
+
+            if (child.Tag is string tagged && tagged != group)
+            {
+                group = tagged;
+
+                if (menu.Items.Count > 0) menu.Items.Add(new Separator());
+
+                // 押せない見出し。分類そのものは画面ではないので選ばせない
+                menu.Items.Add(new MenuItem { Header = group, IsEnabled = false });
+            }
+
+            var entry = new MenuItem
+            {
+                Header = child.Header,
+                IsCheckable = true,
+                IsChecked = child.IsSelected && tab.IsSelected,
+            };
+
+            // 選んで初めて画面が変わる。開いただけで飛ばさない（ユーザー指示）。
+            // 中身を先に選んでから親を開く順にすると、親の切り替えで戻されない
+            entry.Click += (_, _) =>
+            {
+                child.IsSelected = true;
+                tab.IsSelected = true;
+            };
+
+            menu.Items.Add(entry);
+        }
+
+        menu.IsOpen = true;
+
+        // タブそのものは選ばない。メニューを閉じただけで画面が変わると、
+        // 「見に行っただけ」のつもりが測定中の画面から飛ばされる
+        e.Handled = true;
+    }
+
+    /// <summary>そのタブが中に持っている切り替え。無ければ null。</summary>
+    private static TabControl? InnerTabsOf(TabItem tab)
+    {
+        if (tab.Content is not DependencyObject node) return null;
+
+        foreach (object? child in LogicalTreeHelper.GetChildren(node))
+        {
+            if (child is TabControl inner) return inner;
+            if (child is DependencyObject deeper && FindInner(deeper) is { } found) return found;
+        }
+
+        return null;
+    }
+
+    private static TabControl? FindInner(DependencyObject node)
+    {
+        foreach (object? child in LogicalTreeHelper.GetChildren(node))
+        {
+            if (child is TabControl inner) return inner;
+            if (child is DependencyObject deeper && FindInner(deeper) is { } found) return found;
+        }
+
+        return null;
+    }
+
+    internal static bool IsShowing(TabItem tab)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+
+        foreach (TabItem item in SelfAndAncestorTabs(tab))
+        {
+            if (!item.IsSelected) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// そのタブ自身と、それを包んでいるタブを内側から順に返す。
+    ///
+    /// <b>視覚ツリーでは遡れない。</b>タブの中身は <see cref="TabItem"/> の下ではなく、
+    /// 親 <see cref="TabControl"/> の <c>ContentPresenter</c> の下に置かれるので、
+    /// 内側のタブから視覚的な親をたどっても外側の <see cref="TabItem"/> を素通りする。
+    /// 論理ツリー（XAML に書いたとおりの入れ子）でたどること。
+    ///
+    /// これを間違えると、<b>右クリックからの遷移で親タブが開かず画面が変わらない</b>し、
+    /// <b>見えていないタブが「見えている」ことになって OS を叩き始める</b>。
+    /// </summary>
+    private static IEnumerable<TabItem> SelfAndAncestorTabs(TabItem tab)
+    {
+        for (DependencyObject? node = tab; node is not null; node = ParentOf(node))
+        {
+            if (node is TabItem item) yield return item;
+        }
+    }
+
+    /// <summary>論理の親。テンプレートの中の要素では切れるので、そのときだけ視覚の親を使う。</summary>
+    private static DependencyObject? ParentOf(DependencyObject node)
+        => LogicalTreeHelper.GetParent(node) ?? VisualTreeHelper.GetParent(node);
+
+    /// <summary>
+    /// そのタブを開く。<b>束ねられていれば先祖もたどって開く</b>。
+    /// <c>IsSelected = true</c> だけでは、親タブが選ばれていないと画面が変わらない。
+    /// </summary>
+    internal static void Show(TabItem tab)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+
+        // 外側から順に選ぶ。先に内側を選んでも親の切り替えで戻されることがある
+        TabItem[] chain = [.. SelfAndAncestorTabs(tab)];
+
+        for (int i = chain.Length - 1; i >= 0; i--)
+            chain[i].IsSelected = true;
+    }
+
+    /// <summary>
+    /// 閉じるときは測定に停止を伝えるだけで、<b>完了は待たない</b>。
+    ///
+    /// 以前は完了を待ってから閉じていたが、名前解決中やタイムアウト待ちの宛先が
+    /// あると終了が数秒固まっていた。設定と宛先リストは編集のたびに保存しているので、
+    /// ここで待って守るものは無い。ソケットはプロセス終了時に OS が片付ける。
+    /// </summary>
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+
+        try
+        {
+            _shell.Monitor.BeginStop();
+            _shell.Tcp.BeginStop();
+            _shell.Wifi.OnDeactivated();
+            _shell.Connections.OnDeactivated();
+            _shell.Wfp.OnDeactivated();
+
+            // 自分で立てた WFP の記録設定を戻す(システム全体に効く設定なので置き去りにしない)
+            _shell.Wfp.RestoreCollectionSetting();
+
+            _shell.Ftp.Reset();
+            _shell.Tftp.Reset();
+            _shell.Sftp.Reset();
+            _shell.Syslog.Reset();
+            _shell.SnmpTrap.Reset();
+            ColumnLayout.Instance.Save();
+            TableColumns.Instance.Save();
+
+            // 収集タブは機器の一覧とコマンドだけ覚える(パスワードは覚えない)
+            _shell.Collect.Save();
+
+            // 試験タブは項目とプロキシの定義だけ覚える(次に開いたとき続きから)
+            _shell.Verify.SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnClosing");
+        }
+    }
+}

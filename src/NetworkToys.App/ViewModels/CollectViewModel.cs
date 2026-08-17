@@ -1,0 +1,473 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.IO;
+using NetworkToys.App.Mvvm;
+using NetworkToys.App.Services;
+using NetworkToys.Core.Terminal;
+
+namespace NetworkToys.App.ViewModels;
+
+/// <summary>収集する機器 1 台ぶんの画面状態。</summary>
+public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
+{
+    private string _host = entry.Host;
+    private bool _useSsh = entry.UseSsh;
+    private string _userName = entry.UserName;
+    private string _memo = entry.Memo;
+    private string _status = "◌ 待機";
+    private string _password = "";
+    private string _enablePassword = "";
+
+    public string Host
+    {
+        get => _host;
+        set => SetProperty(ref _host, value);
+    }
+
+    /// <summary>SSH でつなぐか。外すと Telnet。ポートは方式から決まる。</summary>
+    public bool UseSsh
+    {
+        get => _useSsh;
+        set
+        {
+            if (SetProperty(ref _useSsh, value))
+                OnPropertyChanged(nameof(Method));
+        }
+    }
+
+    /// <summary>コンボに出す選択肢。既定は SSH。</summary>
+    public static IReadOnlyList<string> Methods { get; } = ["SSH", "Telnet"];
+
+    /// <summary>コンボの選択。真偽値のチェックより「どちらを選ぶか」が分かりやすい。</summary>
+    public string Method
+    {
+        get => UseSsh ? "SSH" : "Telnet";
+        set => UseSsh = !string.Equals(value, "Telnet", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public int Port => UseSsh ? DeviceEntry.SshPort : DeviceEntry.TelnetPort;
+
+    public string Memo
+    {
+        get => _memo;
+        set => SetProperty(ref _memo, value);
+    }
+
+    public string UserName
+    {
+        get => _userName;
+        set => SetProperty(ref _userName, value);
+    }
+
+    /// <summary>
+    /// ログインパスワード。<b>設定ファイルにも引き継ぎファイルにも入れない。</b>
+    /// 画面は伏せ字（PasswordBox）で受け、ここへ一方通行で流し込む。
+    /// </summary>
+    public string Password
+    {
+        get => _password;
+        set => SetProperty(ref _password, value);
+    }
+
+    public string EnablePassword
+    {
+        get => _enablePassword;
+        set => SetProperty(ref _enablePassword, value);
+    }
+
+    /// <summary>記号と文字を併記する（色だけで状態を表さない決まり）。</summary>
+    public string Status
+    {
+        get => _status;
+        set => SetProperty(ref _status, value);
+    }
+
+    public void ClearSecrets()
+    {
+        Password = "";
+        EnablePassword = "";
+    }
+
+    public DeviceEntry ToEntry() => new(Host, UseSsh, UserName, Memo);
+}
+
+/// <summary>
+/// Cisco 機器へ入ってコマンド出力を集める画面。
+///
+/// 認証情報は<b>機器ごとに違う</b>ので行ごとに持つ。<b>覚えるのはユーザー名だけ</b>で、
+/// パスワードは毎回入力してもらう（設定ファイルにも、画面の PNG 保存にも、
+/// 管理者昇格の引き継ぎファイルにも残さない）。
+/// </summary>
+public sealed class CollectViewModel : ObservableObject
+{
+    private string _lastImportSummary = "";
+    private string _commandText = RecommendedCommands.Ios;
+    private string _status = "宛先リストから取り込むか、機器を直接書いて「収集を開始」を押します。";
+    private string _notice = "";
+    private bool _isBusy;
+    private int _connectSeconds = 10;
+    private int _idleSeconds = 15;
+    private string _lastFolder = "";
+    private CancellationTokenSource? _cts;
+
+    public CollectViewModel()
+    {
+        Presets = [.. RecommendedCommands.Presets.Select(p => new CollectPreset(p.Name, p.Commands))];
+        _selectedPreset = Presets[0];
+
+        AddDeviceCommand = new RelayCommand(() => AddRow(new DeviceEntry("", true, "", "")));
+        RemoveDeviceCommand = new RelayCommand<CollectRowViewModel>(RemoveRow);
+        ImportFromTargetsCommand = new RelayCommand(() => RequestImport?.Invoke(this, EventArgs.Empty));
+        StartCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && Rows.Count > 0);
+        CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
+        OpenFolderCommand = new RelayCommand(OpenFolder, () => _lastFolder.Length > 0);
+
+        // 前回のコマンドがあれば引き継ぐ。無ければ機種プリセットの初期値のまま
+        if (Settings.Current.CollectCommands.Length > 0)
+            _commandText = Settings.Current.CollectCommands;
+
+        foreach (DeviceEntry entry in DeviceListParser.Parse(Settings.Current.CollectDevices, defaultUseSsh: true).Devices)
+            AddRow(entry);
+    }
+
+    /// <summary>宛先リストから取り込みたい、という合図（実際の取り込みは画面側）。</summary>
+    public event EventHandler? RequestImport;
+
+    /// <summary>収集が終わって伏せ字欄を空にしてほしい、という合図。</summary>
+    public event EventHandler? SecretsCleared;
+
+    public ObservableCollection<CollectRowViewModel> Rows { get; } = [];
+
+    public IReadOnlyList<CollectPreset> Presets { get; }
+
+    private CollectPreset _selectedPreset;
+
+    public CollectPreset SelectedPreset
+    {
+        get => _selectedPreset;
+        set
+        {
+            if (!SetProperty(ref _selectedPreset, value)) return;
+
+            CommandText = value.Commands;
+        }
+    }
+
+    public RelayCommand AddDeviceCommand { get; }
+
+    /// <summary>行の × から呼ばれる。消す行そのものを受け取る。</summary>
+    public RelayCommand<CollectRowViewModel> RemoveDeviceCommand { get; }
+    public RelayCommand ImportFromTargetsCommand { get; }
+    public RelayCommand StartCommand { get; }
+    public RelayCommand CancelCommand { get; }
+    public RelayCommand OpenFolderCommand { get; }
+
+    /// <summary>取り込みの結果を短く伝える。</summary>
+    public string LastImportSummary
+    {
+        get => _lastImportSummary;
+        private set => SetProperty(ref _lastImportSummary, value);
+    }
+
+    public string CommandText
+    {
+        get => _commandText;
+        set
+        {
+            if (SetProperty(ref _commandText, value))
+                OnPropertyChanged(nameof(CommandSummary));
+        }
+    }
+
+    /// <summary>実行するコマンドの本数と、弾いたものの内訳。</summary>
+    public string CommandSummary
+    {
+        get
+        {
+            CommandListParseResult parsed = CommandListParser.Parse(CommandText);
+            int blocked = parsed.Commands.Count(c => c.Risk == CommandRisk.Blocked);
+            int warned = parsed.Commands.Count(c => c.Risk == CommandRisk.Warned);
+
+            string text = $"実行 {parsed.RunnableCount} 本 / 注釈 {parsed.CommentLines} 行";
+
+            if (blocked > 0) text += $"　⛔ 実行しません {blocked} 本";
+            if (warned > 0) text += $"　▲ 確認 {warned} 本";
+
+            return text;
+        }
+    }
+
+    /// <summary>弾いたコマンドの一覧（画面に理由つきで出す）。</summary>
+    public IReadOnlyList<string> BlockedCommands =>
+        [.. CommandListParser.Parse(CommandText).Commands
+            .Where(c => c.Risk == CommandRisk.Blocked)
+            .Select(c => $"⛔ {c.Command} — {c.Reason}")];
+
+    public string Status
+    {
+        get => _status;
+        private set => SetProperty(ref _status, value);
+    }
+
+    public string Notice
+    {
+        get => _notice;
+        private set
+        {
+            if (SetProperty(ref _notice, value))
+                OnPropertyChanged(nameof(HasNotice));
+        }
+    }
+
+    public bool HasNotice => _notice.Length > 0;
+
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set
+        {
+            if (!SetProperty(ref _isBusy, value)) return;
+
+            StartCommand.RaiseCanExecuteChanged();
+            CancelCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    /// <summary>接続の待ち（秒）。</summary>
+    public int ConnectSeconds
+    {
+        get => _connectSeconds;
+        set => SetProperty(ref _connectSeconds, Math.Clamp(value, 3, 120));
+    }
+
+    /// <summary>コマンドの無音の待ち（秒）。</summary>
+    public int IdleSeconds
+    {
+        get => _idleSeconds;
+        set => SetProperty(ref _idleSeconds, Math.Clamp(value, 3, 300));
+    }
+
+    /// <summary>宛先リストから選ばれた分を行として足す（選ぶのは画面側）。</summary>
+    public void Import(IEnumerable<(string Host, string Memo)> targets)
+    {
+        ArgumentNullException.ThrowIfNull(targets);
+
+        HashSet<string> known = [.. Rows.Select(r => r.Host)];
+        int added = 0;
+
+        foreach ((string host, string memo) in targets)
+        {
+            if (host.Length == 0 || !known.Add(host)) continue;
+
+            // 前に使ったユーザー名があれば埋めておく(覚えているのはこれだけ)
+            string user = Settings.Current.CollectUserNames.GetValueOrDefault(host, "");
+
+            AddRow(new DeviceEntry(host, UseSsh: true, user, memo));
+            added++;
+        }
+
+        LastImportSummary = added == 0
+            ? "選んだ宛先はすべて追加済みでした。"
+            : $"{added} 台を追加しました。パスワードを入れてください。";
+
+        Status = LastImportSummary;
+    }
+
+    private void AddRow(DeviceEntry entry)
+    {
+        Rows.Add(new CollectRowViewModel(entry));
+        StartCommand.RaiseCanExecuteChanged();
+    }
+
+    private void RemoveRow(CollectRowViewModel? row)
+    {
+        if (row is null) return;
+
+        Rows.Remove(row);
+        StartCommand.RaiseCanExecuteChanged();
+    }
+
+    private async Task RunAsync()
+    {
+        CommandListParseResult parsed = CommandListParser.Parse(CommandText);
+
+        string[] commands = [.. parsed.Commands
+            .Where(c => c.Risk != CommandRisk.Blocked)
+            .Select(c => c.Command)];
+
+        if (commands.Length == 0)
+        {
+            Status = "実行できるコマンドがありません。";
+            return;
+        }
+
+        CollectRowViewModel[] targets = [.. Rows.Where(r => r.Host.Trim().Length > 0)];
+        if (targets.Length == 0)
+        {
+            Status = "機器が 1 台も入っていません。";
+            return;
+        }
+
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+
+        string folder = Path.Combine(
+            DeviceCollector.RootDirectory,
+            DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
+
+        var options = new CiscoSessionOptions { IdleTimeout = TimeSpan.FromSeconds(IdleSeconds) };
+        var progress = new Progress<CollectProgress>(p =>
+        {
+            foreach (CollectRowViewModel row in Rows.Where(r => r.Host == p.Host))
+                row.Status = "● " + p.Message;
+        });
+
+        int done = 0;
+        int failed = 0;
+
+        try
+        {
+            foreach (CollectRowViewModel row in targets)
+            {
+                _cts.Token.ThrowIfCancellationRequested();
+
+                if (row.Password.Length == 0)
+                {
+                    row.Status = "⛔ パスワード未入力";
+                    failed++;
+                    continue;
+                }
+
+                RememberUserName(row);
+
+                var request = new CollectRequest(
+                    row.Host, row.Port, row.UseSsh,
+                    new DeviceCredentials(row.UserName, row.Password, row.EnablePassword),
+                    row.Memo);
+
+                DeviceCollectionResult result = await DeviceCollector.CollectAsync(
+                    request, commands, options, TimeSpan.FromSeconds(ConnectSeconds),
+                    progress, _cts.Token);
+
+                string? saveError = DeviceCollector.Save(folder, result);
+
+                if (result.FailureMessage is { } failure)
+                {
+                    row.Status = $"✕ 失敗: {failure}";
+                    failed++;
+                }
+                else if (saveError is not null)
+                {
+                    row.Status = $"✕ {saveError}";
+                    failed++;
+                }
+                else
+                {
+                    int problems = result.Commands.Count(c => c.Problem is not null);
+
+                    row.Status = problems == 0
+                        ? $"✔ 完了 {result.Commands.Count} 本"
+                        : $"▲ 一部失敗 {result.Commands.Count - problems}/{result.Commands.Count} 本";
+
+                    done++;
+                }
+
+                Status = $"{done + failed}/{targets.Length} 台（成功 {done} / 失敗 {failed}）";
+            }
+
+            _lastFolder = folder;
+            OpenFolderCommand.RaiseCanExecuteChanged();
+            Status = $"収集しました。{done} 台成功 / {failed} 台失敗　保存先: {folder}";
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。ここまでの結果は保存してあります。";
+
+            foreach (CollectRowViewModel row in targets.Where(r => r.Status.StartsWith('●')))
+                row.Status = "⊘ 中断";
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "CollectViewModel.RunAsync");
+            Status = $"収集に失敗しました: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+
+            // 集め終わったら鍵は捨てる。画面の伏せ字欄も空にしてもらう
+            foreach (CollectRowViewModel row in Rows)
+                row.ClearSecrets();
+
+            SecretsCleared?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>ユーザー名だけ覚える。パスワードは覚えない。</summary>
+    private static void RememberUserName(CollectRowViewModel row)
+    {
+        if (row.UserName.Length == 0) return;
+
+        try
+        {
+            Settings.Current.CollectUserNames[row.Host] = row.UserName;
+            Settings.Save();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 覚えられなくても収集は続く
+        }
+    }
+
+    private void OpenFolder()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = _lastFolder,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "CollectViewModel.OpenFolder");
+        }
+    }
+
+    /// <summary>アプリを閉じるときに、機器の一覧とコマンドだけ覚える。</summary>
+    public void Save()
+    {
+        try
+        {
+            Settings.Current.CollectDevices = DeviceListParser.Format(Rows.Select(r => r.ToEntry()));
+            Settings.Current.CollectCommands = CommandText;
+            Settings.Save();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 覚えられなくても動作には影響しない
+        }
+    }
+
+    public void Reset()
+    {
+        _cts?.Cancel();
+
+        foreach (CollectRowViewModel row in Rows)
+            row.ClearSecrets();
+
+        SecretsCleared?.Invoke(this, EventArgs.Empty);
+
+        Rows.Clear();
+        StartCommand.RaiseCanExecuteChanged();
+        CommandText = RecommendedCommands.Ios;
+        Status = "宛先リストから取り込むか、機器を直接書いて「収集を開始」を押します。";
+        Notice = "";
+    }
+}
+
+/// <summary>コマンドのプリセット（機種ごと）。</summary>
+public sealed record CollectPreset(string Name, string Commands);

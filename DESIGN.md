@@ -1,4 +1,4 @@
-# PingWatcher — Windowsネイティブ ネットワーク診断ツール
+# NetworkToys — Windowsネイティブ ネットワーク診断ツール
 
 ## Context
 
@@ -15,7 +15,7 @@
 | 技術 | C# + WPF + **.NET 10 (LTS)** | Wi-Fi/ICMP/TCP/DNSがすべて標準API・P-Invokeで素直に叩ける。単一プロセスで追加ランタイム不要 |
 | 配布 | self-contained 単一exe + ランタイム別途版 | 起動0.3〜0.6秒、メモリ60〜90MB目標 |
 | ビルド | GitHub Actions `windows-latest` | 開発環境はLinux devcontainerでdotnet SDK未導入 |
-| リポジトリ | `izenmi/pingwatcher` (public) | アプリ名もリポジトリ名も PingWatcher（旧 PastelNet）。旧 URL は GitHub がリダイレクトする |
+| リポジトリ | `izenmi/networktoys` (public) | アプリ名もリポジトリ名も NetworkToys（旧 PingWatcher、その前は PastelNet）。旧 URL は GitHub がリダイレクトする |
 
 **.NET 10 を選ぶ理由**: .NET 9 は2026年11月10日にサポート終了(3ヶ月後)。.NET 10 は LTS で2028年11月まで。
 
@@ -28,7 +28,7 @@
 
 開発コンテナはLinuxで、Windows側ドライブも見えず dotnet SDK も無い。**私はexeを一度も実行できない**。対策を設計に組み込む:
 
-1. **ロジックをWindows非依存プロジェクトに分離** — IP範囲パース、MOS計算、OUI解決、レポート生成など「ネットワークにもUIにも触らない純粋関数」を `PingWatcher.Core` (net10.0) に切り出し、xUnitでCI実行する。バグの大半をここで潰す。
+1. **ロジックをWindows非依存プロジェクトに分離** — IP範囲パース、MOS計算、OUI解決、レポート生成など「ネットワークにもUIにも触らない純粋関数」を `NetworkToys.Core` (net10.0) に切り出し、xUnitでCI実行する。バグの大半をここで潰す。
 2. **CIスモークテスト** — GitHub-hosted の windows-latest はグラフィカルセッションを持つので、publish した exe を実際に起動し、5秒後にプロセスが生きていることを確認して終了させる。さらに `--selftest` 引数で全サービスを初期化して即終了するモードを作り、終了コードで判定する。
 3. **こまめにCIへ通す** — 後述のフェーズごとに必ずグリーンにしてから次へ進む。
 
@@ -63,16 +63,16 @@
 ## プロジェクト構成
 
 ```
-pingwatcher/
-├── PingWatcher.sln
+networktoys/
+├── NetworkToys.sln
 ├── src/
-│   ├── PingWatcher.Core/            # net10.0 — Windows非依存・テスト対象
+│   ├── NetworkToys.Core/            # net10.0 — Windows非依存・テスト対象
 │   │   ├── Addressing/            # IpRangeParser, Cidr, IpMath
 │   │   ├── Quality/               # JitterCalculator, MosScore, LossStats
 │   │   ├── Oui/                   # OuiLookup + oui.tsv.gz(埋め込みリソース)
 │   │   ├── Reporting/             # HtmlReportBuilder, CsvWriter, SvgSparkline
 │   │   └── Models/                # PingSample, Target, ScanResult, Profile …
-│   └── PingWatcher.App/             # net10.0-windows — WPF本体
+│   └── NetworkToys.App/             # net10.0-windows — WPF本体
 │       ├── App.xaml(.cs)          # --selftest 引数の処理もここ
 │       ├── Views/                 # MainWindow + 各タブのView
 │       ├── ViewModels/
@@ -80,11 +80,11 @@ pingwatcher/
 │       ├── Interop/               # NativeMethods(iphlpapi)
 │       └── Resources/             # Palette.xaml, Controls.xaml, Icons.xaml
 ├── tests/
-│   └── PingWatcher.Core.Tests/      # xUnit — CIで必ず実行
+│   └── NetworkToys.Core.Tests/      # xUnit — CIで必ず実行
 └── .github/workflows/build.yml
 ```
 
-`PingWatcher.App` は `PingWatcher.Core` を参照する。逆参照は禁止(Coreがテスト可能であり続けるため)。
+`NetworkToys.App` は `NetworkToys.Core` を参照する。逆参照は禁止(Coreがテスト可能であり続けるため)。
 
 ---
 
@@ -174,7 +174,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 
 ### IPスキャン(範囲指定)
 
-入力欄は1つで、複数の書式を受け付ける(パーサは `PingWatcher.Core` に置きテストする):
+入力欄は1つで、複数の書式を受け付ける(パーサは `NetworkToys.Core` に置きテストする):
 
 ```
 192.168.1.0/24              CIDR
@@ -211,7 +211,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 
 - 宛先リスト / 設定 / プロファイル: JSON。`System.Text.Json` の **source generator** を使いリフレクションを回避(起動速度に効く)
 - 測定結果: セッション単位の **JSONL**(1行1サンプル)。追記のみなので軽く、途中でクラッシュしても壊れない
-- 保存先: **exe と同じフォルダ**。設定は `settings.json` に統合(2026-08-16。旧 `targets.json`/`tcp-targets.json`/`theme.txt`/`columns.txt` は初回起動時に取り込んで片付ける)。作業記録は `sessions\`。書き込めない場所に置かれたときだけ `%APPDATA%\PingWatcher\` へ逃がす
+- 保存先: **exe と同じフォルダ**。設定は `settings.json` に統合(2026-08-16。旧 `targets.json`/`tcp-targets.json`/`theme.txt`/`columns.txt` は初回起動時に取り込んで片付ける)。作業記録は `sessions\`。書き込めない場所に置かれたときだけ `%APPDATA%\NetworkToys\` へ逃がす
 - 古いセッションは既定30日で自動削除(設定可)
 
 ### レポート出力
@@ -354,9 +354,9 @@ GitHub Actions の windows-latest 上で 5 構成を実測した。実機はこ�
 
 `windows-latest` 単一ジョブ構成。既存プロジェクトのPages用ワークフローとは全く別物になる。
 
-1. **test** — `dotnet test tests/PingWatcher.Core.Tests`(ネットワーク非依存の純粋ロジック)
-2. **build** — `dotnet publish src/PingWatcher.App -c Release`(上記の設定)
-3. **smoke** — publishしたexeを起動 → 5秒待機 → プロセス生存確認 → 終了。加えて `PingWatcher.exe --selftest` で全サービスの初期化を通し、終了コード0を確認
+1. **test** — `dotnet test tests/NetworkToys.Core.Tests`(ネットワーク非依存の純粋ロジック)
+2. **build** — `dotnet publish src/NetworkToys.App -c Release`(上記の設定)
+3. **smoke** — publishしたexeを起動 → 5秒待機 → プロセス生存確認 → 終了。加えて `NetworkToys.exe --selftest` で全サービスの初期化を通し、終了コード0を確認
 4. **artifact** — exeをArtifactにアップロード(毎push)
 5. **release** — `v*` タグのpush時のみ、exeを添付してGitHub Releaseを作成
 

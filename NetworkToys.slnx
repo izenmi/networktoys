@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NetworkToys.Core/NetworkToys.Core.csproj" />
+    <Project Path="src/NetworkToys.App/NetworkToys.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NetworkToys.Core.Tests/NetworkToys.Core.Tests.csproj" />
+  </Folder>
+</Solution>

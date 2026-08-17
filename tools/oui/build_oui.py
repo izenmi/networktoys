@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """IEEE の MA-L 登録簿から、MAC 先頭 3 バイト → ベンダー名の最小テーブルを作る。
 
-生成物 (src/PingWatcher.App/Resources/oui.tsv.gz) はリポジトリにコミットして
+生成物 (src/NetworkToys.App/Resources/oui.tsv.gz) はリポジトリにコミットして
 埋め込みリソースとして配布する。CI では IEEE を叩かない — ネットワークに
 依存させるとビルドの再現性が壊れるため。
 
@@ -22,7 +22,7 @@ import sys
 import urllib.request
 
 URL = "https://standards-oui.ieee.org/oui/oui.csv"
-OUT = "src/PingWatcher.App/Resources/oui.tsv.gz"
+OUT = "src/NetworkToys.App/Resources/oui.tsv.gz"
 
 # 会社名の末尾に付く法人格。表示には要らないので落としてサイズを稼ぐ。
 SUFFIXES = re.compile(
@@ -53,7 +53,7 @@ def main() -> int:
     # User-Agent を付けないと 418 で弾かれる
     request = urllib.request.Request(
         URL,
-        headers={"User-Agent": "PingWatcher-oui-builder/1.0 (+https://github.com/izenmi/pingwatcher)"},
+        headers={"User-Agent": "NetworkToys-oui-builder/1.0 (+https://github.com/izenmi/networktoys)"},
     )
     with urllib.request.urlopen(request, timeout=120) as response:
         raw = response.read()

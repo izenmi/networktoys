@@ -1,8 +1,8 @@
-PingWatcher — 同梱物の著作権表示とライセンス
+NetworkToys — 同梱物の著作権表示とライセンス
 ==============================================================================
 
-PingWatcher 本体は MIT ライセンスです（リポジトリ直下の LICENSE）。
-このファイルは、PingWatcher.exe に同梱している他者の成果物についての
+NetworkToys 本体は MIT ライセンスです（リポジトリ直下の LICENSE）。
+このファイルは、NetworkToys.exe に同梱している他者の成果物についての
 著作権表示とライセンス本文です。再配布の条件として添付しています。
 
 内訳:
@@ -46,7 +46,7 @@ https://github.com/Aimeast/FxSsh
 Licensed under the MIT License（本文は後述の [B]）。
 
 ※ SFTP サブシステムの実装はパッケージに含まれないため、
-   src/PingWatcher.App/Vendor/FxSsh/SftpService.cs として取り込んでいます。
+   src/NetworkToys.App/Vendor/FxSsh/SftpService.cs として取り込んでいます。
    こちらも同じ MIT ライセンスに従います。
 
 ==============================================================================
