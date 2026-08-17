@@ -261,6 +261,34 @@ public class AciCatalogTests
     }
 
     [Fact]
+    public void Node_health_is_read_from_topsystem_which_is_where_it_actually_hangs()
+    {
+        // ノードのヘルスは fabricNode ではなく sys(topSystem)にぶら下がる。
+        // dn がそのままポートの絞り込みに使える形(…/sys)なのも topSystem の側
+        const string json = """
+            {"totalCount":"2","imdata":[
+              {"topSystem":{"attributes":{
+                "dn":"topology/pod-1/node-101/sys","name":"LF-101","role":"leaf","id":"101"},
+               "children":[{"healthInst":{"attributes":{"cur":"95"}}}]}},
+              {"topSystem":{"attributes":{
+                "dn":"topology/pod-1/node-1/sys","name":"apic1","role":"controller","id":"1"}}}
+            ]}
+            """;
+
+        IReadOnlyList<AciHealthRow> rows = AciCatalog.ParseHealth("ノード", Mos(json));
+
+        Assert.Equal("LF-101", rows[0].Name);
+        Assert.Equal("95", rows[0].ScoreText);
+        Assert.Equal("● 良好", rows[0].State);
+
+        // ヘルスを持たないものも一覧から落とさない（落とすとノードを選べなくなる）
+        Assert.Equal("apic1", rows[1].Name);
+        Assert.Equal("—", rows[1].ScoreText);
+
+        Assert.Equal("101", AciDn.Value(Mos(json)[0]["dn"], "node"));
+    }
+
+    [Fact]
     public void Fabric_config_keeps_model_serial_and_version()
     {
         IReadOnlyList<AciConfigRow> rows = AciCatalog.ParseFabricConfig(Mos(NodesJson));

@@ -253,7 +253,11 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     private Task FetchBasicsAsync() => RunAsync("ヘルスと Faults", async (client, token) =>
     {
         IReadOnlyList<AciMo> total = await FetchClassAsync(client, "fabricHealthTotal", null, null, token);
-        IReadOnlyList<AciMo> nodes = await FetchClassAsync(client, "fabricNode", Health, null, token);
+
+        // ノードは fabricNode ではなく topSystem から取る。
+        // スイッチのヘルスは fabricNode ではなく sys（＝topSystem）にぶら下がっており、
+        // topSystem の dn はそのままポートの絞り込みに使える形（…/sys）でもある
+        IReadOnlyList<AciMo> nodes = await FetchClassAsync(client, "topSystem", Health, null, token);
         IReadOnlyList<AciMo> tenants = await FetchClassAsync(client, "fvTenant", Health, null, token);
 
         var health = new List<AciHealthRow>();
@@ -340,7 +344,16 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     });
 
     private const string Children = "rsp-subtree=children";
-    private const string Health = "rsp-subtree-include=health,required";
+
+    /// <summary>
+    /// ヘルスを子として付けて引く。
+    ///
+    /// <b><c>required</c> を付けないこと。</b>あれは「ヘルスを持つものだけ返す」という意味で、
+    /// ヘルスの付いていないクラスに使うと<b>1 件も返らない</b>。
+    /// 実際 <c>fabricNode</c> に付けてノードが 1 台も出ず、ポートの画面が使えなかった
+    /// （2026-08-17 に実機で発覚）。持っていないものは「—」で出す方がよい。
+    /// </summary>
+    private const string Health = "rsp-subtree-include=health";
 
     /// <summary>VLAN プールだけは範囲が子に入っているので、そこだけ子を引く。</summary>
     private static string? ChildrenFor(string className) => className == "fvnsVlanInstP" ? Children : null;
@@ -591,10 +604,11 @@ public sealed class AciViewModel : ObservableObject, IDisposable
             string dn = mo["dn"];
             if (dn.Length == 0) continue;
 
-            // ポートは必ずノードで絞る。ファブリック全体の l1PhysIf は数万行になる
+            // ポートは必ずノードで絞る。ファブリック全体の l1PhysIf は数万行になる。
+            // topSystem の dn は既に …/sys なので、そのまま絞り込みに使える
             Nodes.Add(new AciNodeItem(
                 Name: $"{AciCatalog.DescribeNodeRole(mo["role"])} {AciDn.Value(dn, "node")} {mo["name"]}".Trim(),
-                Dn: dn + "/sys"));
+                Dn: dn.EndsWith("/sys", StringComparison.Ordinal) ? dn : dn + "/sys"));
         }
 
         SelectedNode = Nodes.FirstOrDefault(n => n.Dn == keep) ?? Nodes.FirstOrDefault();
