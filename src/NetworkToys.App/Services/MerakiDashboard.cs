@@ -80,18 +80,20 @@ internal sealed class MerakiDashboard : IDisposable
             $"/organizations/{Escape(organizationId)}/appliance/uplinks/usage/byNetwork?timespan={timespanSeconds}",
             apiKey, token);
 
-    /// <summary>利用率の高い MX（組織の要約）。</summary>
-    public Task<IReadOnlyList<string>> TopAppliancesAsync(
-        string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
+    /// <summary>拠点の WAN 使用量の推移（区間ごとの合計バイト）。</summary>
+    public Task<IReadOnlyList<string>> UplinkHistoryAsync(
+        string apiKey, string networkId, int timespanSeconds, int resolutionSeconds, CancellationToken token)
         => GetPagesAsync(
-            $"/organizations/{Escape(organizationId)}/summary/top/appliances/byUtilization?timespan={timespanSeconds}",
+            $"/networks/{Escape(networkId)}/appliance/uplinks/usageHistory"
+            + $"?timespan={timespanSeconds}&resolution={resolutionSeconds}",
             apiKey, token);
 
-    /// <summary>通信量の多い機器（組織の要約）。</summary>
-    public Task<IReadOnlyList<string>> TopDevicesAsync(
-        string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
+    /// <summary>拠点の AP のチャンネル使用率の推移。</summary>
+    public Task<IReadOnlyList<string>> ChannelUtilizationAsync(
+        string apiKey, string networkId, int timespanSeconds, int resolutionSeconds, CancellationToken token)
         => GetPagesAsync(
-            $"/organizations/{Escape(organizationId)}/summary/top/devices/byUsage?timespan={timespanSeconds}",
+            $"/networks/{Escape(networkId)}/networkHealth/channelUtilization"
+            + $"?timespan={timespanSeconds}&resolution={resolutionSeconds}",
             apiKey, token);
 
     /// <summary>組織のアラート。版によっては持っていない（その場合は 404 が返る）。</summary>

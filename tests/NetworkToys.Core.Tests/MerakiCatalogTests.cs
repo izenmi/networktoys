@@ -391,41 +391,58 @@ public class MerakiCatalogTests
     }
 
     [Fact]
-    public void Device_utilisation_reads_the_nested_average_percentage()
+    public void Uplink_history_is_turned_into_bits_per_second_per_interval()
     {
+        // 区間ごとの合計バイト。区間の長さで割って毎秒に直す
         const string json = """
-            [ {"name":"MX-1F","model":"MX68","network":{"name":"本社"},
-               "utilization":{"average":{"percentage":12.5}}},
-              {"name":"MX-2F","model":"MX68","network":{"name":"支社"}} ]
+            [ {"startTime":"2026-08-17T00:00:00Z","endTime":"2026-08-17T00:10:00Z",
+               "byInterface":[{"interface":"wan1","sent":300000,"received":300000}]},
+              {"startTime":"2026-08-17T00:10:00Z","endTime":"2026-08-17T00:20:00Z",
+               "byInterface":[{"interface":"wan1","sent":600000,"received":0}]} ]
             """;
 
-        IReadOnlyList<MerakiUtilizationRow> rows = MerakiCatalog.ParseUtilization([json]);
+        MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseUplinkHistory([json], "本社");
 
-        Assert.Equal("12.5%", rows[0].ValueText);
-        Assert.Equal("本社", rows[0].Network);
-
-        // 入れ子が無くても落とさない（0 として出す）
-        Assert.Equal(0, rows[1].Value);
+        // 600000 B / 600 s = 1000 B/s = 8 kbps
+        Assert.Equal([1000, 1000], series.Values);
+        Assert.Contains("8.0 kbps", series.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Device_usage_is_read_in_kilobytes_and_shown_in_units()
+    public void Channel_utilisation_is_averaged_across_devices_and_bands()
     {
         const string json = """
-            [ {"name":"AP-1","model":"MR46","network":{"name":"本社"},"usage":{"total":2097152}} ]
+            [ {"serial":"Q2AA-1111-AAAA",
+               "wifi0":[{"utilization":10},{"utilization":20}],
+               "wifi1":[{"utilization":30},{"utilization":40}]} ]
             """;
 
-        IReadOnlyList<MerakiUtilizationRow> rows = MerakiCatalog.ParseUsage([json]);
+        MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseChannelUtilization([json], null, "本社");
 
-        Assert.Equal("2.0 GB", rows[0].ValueText);
+        Assert.Equal([20, 30], series.Values);
+        Assert.Equal(100, series.Maximum);
+        Assert.Equal("%", series.Unit);
     }
 
-    [Theory]
-    [InlineData(0, "—")]
-    [InlineData(512, "512 KB")]
-    [InlineData(2048, "2.0 MB")]
-    public void Kilobytes_are_described_in_readable_units(double kilobytes, string expected)
-        => Assert.Equal(expected, MerakiCatalog.DescribeKilobytes(kilobytes));
+    [Fact]
+    public void Channel_utilisation_can_be_limited_to_one_device()
+    {
+        const string json = """
+            [ {"serial":"AAAA","wifi0":[{"utilization":10}]},
+              {"serial":"BBBB","wifi0":[{"utilization":90}]} ]
+            """;
+
+        Assert.Equal([90], MerakiCatalog.ParseChannelUtilization([json], "BBBB", "本社").Values);
+    }
+
+    [Fact]
+    public void A_series_with_nothing_in_it_says_so_instead_of_drawing_zero()
+    {
+        MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseChannelUtilization(["[]"], null, "本社");
+
+        Assert.Empty(series.Values);
+        Assert.Equal("—", series.Summary);
+    }
 
     [Fact]
     public void Bandwidth_is_turned_into_bits_per_second_per_uplink()
