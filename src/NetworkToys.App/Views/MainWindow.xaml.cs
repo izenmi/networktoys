@@ -157,6 +157,20 @@ public partial class MainWindow : Window
             _shell.Aci.Password = box.Password;
     }
 
+    /// <summary>
+    /// 直前に取れた APIC の生の応答を出す。APIC の版で属性名が違うことがあり、
+    /// 「表は空だが通信はできている」の切り分けが実機でしかできないため。
+    /// </summary>
+    private void OnAciShowResponse(object sender, RoutedEventArgs e)
+    {
+        string response = _shell.Aci.LastResponse;
+
+        TextViewDialog.Show(
+            this,
+            "APIC の応答",
+            response.Length > 0 ? response : "まだ何も取得していません。");
+    }
+
     /// <summary>F5 での開始。ボタンと同じく、開始できたら Ping タブへ移る。</summary>
     private void StartFromShortcut()
     {

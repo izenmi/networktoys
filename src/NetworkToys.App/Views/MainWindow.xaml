@@ -5126,7 +5126,11 @@
 
                             <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                            <!-- APIC の版によって属性名が違うことがある。実機で切り分けるための逃げ道 -->
+                            <Button Content="応答を表示" Click="OnAciShowResponse"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
+                                    ToolTip="直前に取れた生の応答(JSON)を出します。表が空のときの切り分け用です。" />
                         </WrapPanel>
 
                         <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"
