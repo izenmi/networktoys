@@ -292,9 +292,7 @@ public static class AciCatalog
             AdminState: DescribeAdminState(mo["adminSt"]),
             OperState: operText,
             OperStateKind: operKind,
-            // 設定値(speed)は "inherit" のことが多く、見ても分からない。
-            // 出すのは<b>いまリンクしている速度</b>だけにする（取れなければ「—」）
-            Speed: actual?["operSpeed"] is { Length: > 0 } speed ? speed : "—",
+            Speed: DescribeSpeed(actual),
             Usage: DescribeUsage(mo["usage"]),
             PortChannel: portChannel,
             Epgs: Join(bound.Select(m => m.Epg)),
@@ -302,6 +300,34 @@ public static class AciCatalog
             Modes: Join(bound.Select(m => m.Mode)),
             Reason: actual?["operStQual"] ?? "",
             LastChange: actual?["lastLinkStChg"] ?? "");
+    }
+
+    /// <summary>
+    /// 速度。<b>設定値ではなく、いまリンクしている速度</b>を出す。
+    ///
+    /// 設定側（<c>l1PhysIf.speed</c>）は <c>inherit</c> のことが多く、見ても分からない。
+    /// 稼働側（<c>ethpmPhysIf</c> / <c>ethpmAggrIf</c>）の <c>operSpeed</c> を読むが、
+    /// <b>版によってはそこにも <c>inherit</c> や <c>unknown</c> が入る</b>ので、
+    /// 中身の無い値はまとめて「—」にする（2026-08-17 に実機で inherit が出ると報告された）。
+    /// 属性名の候補も値の候補も、直すときはここ 1 か所で足りる。
+    /// </summary>
+    private static string DescribeSpeed(AciMo? actual)
+    {
+        if (actual is null) return "—";
+
+        foreach (string name in (string[])["operSpeed", "speed"])
+        {
+            string value = actual[name];
+
+            if (value.Length == 0) continue;
+
+            // 「決まっていない」を意味する値。速度として出しても読む人には何も伝わらない
+            if (value is "inherit" or "unknown" or "auto" or "0" or "unspecified") continue;
+
+            return value;
+        }
+
+        return "—";
     }
 
     /// <summary>その口に載っている EPG。束の口は、束の側に付いたものも自分のものとして数える。</summary>

@@ -273,8 +273,30 @@ public class AciCatalogTests
         Assert.Equal("10G", rows[0].Speed);
 
         // 設定値(speed)は "inherit" のことが多く、見ても分からない。落ちている口は「—」
-        Assert.Equal("unknown", rows[1].Speed);
+        // unknown / inherit のような「決まっていない」値は速度として出さない
+        Assert.Equal("—", rows[1].Speed);
         Assert.Equal("—", rows[2].Speed);
+    }
+
+    /// <summary>
+    /// 稼働側にも <c>inherit</c> が入る版がある（実機で出た）。
+    /// <b>設定値だろうと稼働値だろうと、決まっていない値は画面に出さない。</b>
+    /// </summary>
+    [Fact]
+    public void 速度が_inherit_のときは出さない()
+    {
+        const string json = """
+            {"totalCount":"1","imdata":[
+              {"l1PhysIf":{"attributes":{
+                "dn":"topology/pod-1/node-101/sys/phys-[eth1/3]","id":"eth1/3",
+                "adminSt":"up","speed":"inherit"},
+               "children":[{"ethpmPhysIf":{"attributes":{"operSt":"up","operSpeed":"inherit"}}}]}}
+            ]}
+            """;
+
+        AciPortRow row = Assert.Single(AciCatalog.ParsePorts(AciMoReader.Parse(json)));
+
+        Assert.Equal("—", row.Speed);
     }
 
     [Fact]
