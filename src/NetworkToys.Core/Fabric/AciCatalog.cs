@@ -748,6 +748,20 @@ public static class AciCatalog
         return string.IsNullOrEmpty(options) ? path : $"{path}?{options}";
     }
 
+    /// <summary>
+    /// テナント 1 つの設定を、枝ごと丸ごと引くパス。作業前後の見比べに使う。
+    ///
+    /// <b><c>rsp-prop-include=config-only</c> が肝。</b>これを付けないと稼働値
+    /// （カウンタ・時刻・状態）まで混ざり、<b>設定を何も変えていなくても差分だらけになる</b>
+    /// （show ip route の経過時間と同じ問題）。
+    ///
+    /// <b>ページングは効かない。</b>枝を丸ごと 1 応答で返す問い合わせなので、
+    /// <see cref="PagePath"/> を重ねないこと。
+    /// </summary>
+    public static string TenantExportPath(string tenantName)
+        => $"/api/mo/uni/tn-{Uri.EscapeDataString(tenantName)}.json"
+           + "?rsp-subtree=full&rsp-prop-include=config-only";
+
     /// <summary>ページの指定を足す。すでに絞り込みが付いていれば <c>&amp;</c> で継ぐ。</summary>
     public static string PagePath(string path, int page, int pageSize = PageSize)
         => $"{path}{(path.Contains('?', StringComparison.Ordinal) ? '&' : '?')}page={page}&page-size={pageSize}";

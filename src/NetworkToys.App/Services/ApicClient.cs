@@ -101,6 +101,12 @@ internal sealed class ApicClient : IDisposable
         return pages;
     }
 
+    /// <summary>
+    /// 枝を丸ごと 1 応答で取る（テナントの設定の書き出しなど）。
+    /// <b>ページングは効かない問い合わせ用</b>なので、ページを重ねない。
+    /// </summary>
+    public Task<string> SubtreeAsync(string path, CancellationToken token) => GetAsync(path, token);
+
     /// <summary>ログアウト。失敗しても構わない（トークンは放っておいても寿命で消える）。</summary>
     public async Task LogoutAsync()
     {

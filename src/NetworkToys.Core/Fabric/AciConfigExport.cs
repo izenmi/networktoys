@@ -1,0 +1,80 @@
+using System.Text;
+
+namespace NetworkToys.Core.Fabric;
+
+/// <summary>
+/// テナントの設定を、作業前後で見比べられる形の文字にする。
+///
+/// <b>JSON のまま差分にしない。</b>APIC は子の並び順を約束しておらず、同じ設定でも
+/// 順番が入れ替わるだけで差分だらけになる。だから<b>並べ替えて字下げした行</b>に直す
+/// （行の差分にそのまま乗る形。差分比較タブの「そのまま比較」で読む）。
+///
+/// 取ってくる側は必ず <c>rsp-prop-include=config-only</c> を付けること
+/// （<see cref="AciCatalog.TenantExportPath"/>）。付けないと稼働値まで混ざり、
+/// <b>設定を何も変えていなくても差分になる</b>（show ip route の経過時間と同じ問題）。
+/// </summary>
+public static class AciConfigExport
+{
+    /// <summary>
+    /// 落とす属性。設定ではなく<b>そのときの状態</b>なので、比べると毎回差分になる。
+    ///
+    /// <c>config-only</c> を付ければ大半は返らないが、版によっては混じる。
+    /// <b>実機で余計な差分が出たら、ここへ 1 行足せば直る。</b>
+    /// </summary>
+    public static string[] VolatileAttributes =>
+        ["modTs", "uid", "lcOwn", "childAction", "status", "extMngdBy", "userdom", "rn"];
+
+    /// <summary>
+    /// 見比べるための文字にする。<b>同じ設定なら、並び順が違っても同じ文字になる</b>。
+    ///
+    /// 1 行目に何を書き出したかを添える（後から見て、どのテナントの控えか分かるように）。
+    /// </summary>
+    public static string Render(string label, IEnumerable<AciMo> mos)
+    {
+        var text = new StringBuilder();
+
+        if (label.Length > 0) text.AppendLine($"# {label}");
+
+        foreach (AciMo mo in Order(mos))
+            Write(text, mo, 0);
+
+        return text.ToString();
+    }
+
+    private static void Write(StringBuilder text, AciMo mo, int depth)
+    {
+        string indent = new(' ', depth * 2);
+
+        // 見出しは「クラス dn」。dn があれば、どのオブジェクトの話か 1 行で分かる
+        text.Append(indent).Append(mo.ClassName);
+
+        if (mo["dn"] is { Length: > 0 } dn) text.Append(' ').Append(dn);
+
+        text.AppendLine();
+
+        foreach (KeyValuePair<string, string> attribute in Order(mo.Attributes))
+        {
+            // dn は見出しに出した。二度書かない
+            if (attribute.Key == "dn") continue;
+
+            text.Append(indent).Append("  ").Append(attribute.Key)
+                .Append(" = ").AppendLine(attribute.Value);
+        }
+
+        foreach (AciMo child in Order(mo.Children))
+            Write(text, child, depth + 1);
+    }
+
+    /// <summary>
+    /// 並べ替えの決まり。<b>クラス → dn → 名前</b>の順で、APIC が返した順には頼らない。
+    /// 比べるものどうしで同じ規則にさえなっていればよいので、規則そのものは何でもよい。
+    /// </summary>
+    private static IEnumerable<AciMo> Order(IEnumerable<AciMo> mos)
+        => mos.OrderBy(m => m.ClassName, StringComparer.Ordinal)
+              .ThenBy(m => m["dn"], StringComparer.Ordinal)
+              .ThenBy(m => m["name"], StringComparer.Ordinal);
+
+    private static IEnumerable<KeyValuePair<string, string>> Order(IReadOnlyDictionary<string, string> attributes)
+        => attributes.Where(a => !VolatileAttributes.Contains(a.Key, StringComparer.Ordinal))
+                     .OrderBy(a => a.Key, StringComparer.Ordinal);
+}

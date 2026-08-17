@@ -55,6 +55,8 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     private bool _isBusy;
     private AciNodeItem? _selectedNode;
     private AciEpgRow? _selectedEpg;
+    private string? _selectedTenant;
+    private string _tenantExport = "";
     private AciLogKind _selectedLogKind;
     private AciConfigKind _selectedConfigKind;
     private string _lastResponse = "";
@@ -88,6 +90,8 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         FetchEndpointsCommand = new RelayCommand(() => _ = FetchEndpointsAsync(), CanFetch);
         FetchLogCommand = new RelayCommand(() => _ = FetchLogAsync(), CanFetch);
         FetchConfigCommand = new RelayCommand(() => _ = FetchConfigAsync(), CanFetch);
+        ExportTenantCommand = new RelayCommand(
+            () => _ = ExportTenantAsync(), () => CanFetch() && SelectedTenant is { Length: > 0 });
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
@@ -112,6 +116,9 @@ public sealed class AciViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<AciNodeItem> Nodes { get; } = [];
 
+    /// <summary>テナントの名前。「取得」を押したときに埋まる（ノードと同じ扱い）。</summary>
+    public ObservableCollection<string> Tenants { get; } = [];
+
     public AciLogKind[] LogKinds { get; }
     public AciConfigKind[] ConfigKinds { get; }
 
@@ -123,6 +130,10 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public RelayCommand FetchEndpointsCommand { get; }
     public RelayCommand FetchLogCommand { get; }
     public RelayCommand FetchConfigCommand { get; }
+
+    /// <summary>選んだテナントの設定を、見比べられる形で書き出す。</summary>
+    public RelayCommand ExportTenantCommand { get; }
+
     public RelayCommand CancelCommand { get; }
 
     public RelayCommand<string> SaveCsvCommand { get; }
@@ -209,6 +220,18 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         set { if (SetProperty(ref _selectedNode, value)) FetchPortsCommand.RaiseCanExecuteChanged(); }
     }
 
+    /// <summary>設定を書き出すテナント。「取得」で埋まった一覧から選ぶ。</summary>
+    public string? SelectedTenant
+    {
+        get => _selectedTenant;
+        set { if (SetProperty(ref _selectedTenant, value)) ExportTenantCommand.RaiseCanExecuteChanged(); }
+    }
+
+    /// <summary>
+    /// 書き出したテナントの設定。<b>画面には出さない</b>（差分比較タブへ送るための控え）。
+    /// </summary>
+    public string TenantExport => _tenantExport;
+
     /// <summary>選ばれた EPG。メンバー一覧はこれで絞る（取得のたびに引き直さない）。</summary>
     public AciEpgRow? SelectedEpg
     {
@@ -291,6 +314,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
             : "—";
 
         SyncNodes(nodes);
+        SyncTenants(tenants);
 
         IReadOnlyList<AciMo> faults =
             await FetchClassAsync(client, "faultInst", AciCatalog.FaultFilter, null, token);
@@ -573,14 +597,17 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         _cts?.Cancel();
 
         foreach (var rows in (System.Collections.IList[])
-                 [HealthRows, FaultRows, LogRows, PortRows, EpgRows, MemberRows, EndpointRows, ConfigRows, Nodes])
+                 [HealthRows, FaultRows, LogRows, PortRows, EpgRows, MemberRows, EndpointRows, ConfigRows,
+                  Nodes, Tenants])
         {
             rows.Clear();
         }
 
         _allMembers = [];
         _lastResponse = "";
+        _tenantExport = "";
         SelectedNode = null;
+        SelectedTenant = null;
         SelectedEpg = null;
         FabricHealth = "—";
         Fingerprint = "";
@@ -613,6 +640,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         FetchEndpointsCommand.RaiseCanExecuteChanged();
         FetchLogCommand.RaiseCanExecuteChanged();
         FetchConfigCommand.RaiseCanExecuteChanged();
+        ExportTenantCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshSaveCommands()
@@ -627,6 +655,60 @@ public sealed class AciViewModel : ObservableObject, IDisposable
 
         Replace(MemberRows, [.. _allMembers.Where(m => m.EpgDn == dn)]);
         RefreshSaveCommands();
+    }
+
+    /// <summary>
+    /// テナント 1 つの設定を、枝ごと丸ごと書き出す。
+    ///
+    /// <b>ページングは重ねない</b>（枝を 1 応答で返す問い合わせ）。並び順は APIC 任せなので、
+    /// <see cref="AciConfigExport"/> が並べ替えて字下げした行に直す — そうしないと
+    /// <b>同じ設定でも並びが違うだけで差分だらけになる</b>。
+    /// </summary>
+    private Task ExportTenantAsync() => RunAsync("テナントの設定", async (client, token) =>
+    {
+        if (SelectedTenant is not { Length: > 0 } tenant) return;
+
+        string json = await client.SubtreeAsync(AciCatalog.TenantExportPath(tenant), token)
+            .ConfigureAwait(true);
+
+        _lastResponse = json;
+        OnPropertyChanged(nameof(LastResponse));
+
+        IReadOnlyList<AciMo> mos = AciMoReader.Parse(json);
+
+        if (mos.Count == 0)
+        {
+            _tenantExport = "";
+            OnPropertyChanged(nameof(TenantExport));
+
+            Status = $"{tenant} の設定を読み取れませんでした。";
+            Notice = "⚠ 「応答を表示」で生の応答を確かめてください（権限が足りないことがあります）。";
+            return;
+        }
+
+        _tenantExport = AciConfigExport.Render(
+            $"{Host} / テナント {tenant} / {DateTime.Now:yyyy-MM-dd HH:mm:ss}", mos);
+
+        OnPropertyChanged(nameof(TenantExport));
+
+        int lines = _tenantExport.AsSpan().Count('\n');
+
+        Status = $"{tenant} の設定を書き出しました（{lines} 行）。「作業前へ」か「作業後へ」で送れます。";
+    });
+
+    private void SyncTenants(IEnumerable<AciMo> mos)
+    {
+        string? keep = SelectedTenant;
+
+        Tenants.Clear();
+
+        foreach (string name in mos.Select(m => m["name"]).Where(n => n.Length > 0)
+                     .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            Tenants.Add(name);
+        }
+
+        SelectedTenant = Tenants.FirstOrDefault(t => t == keep) ?? Tenants.FirstOrDefault();
     }
 
     private void SyncNodes(IEnumerable<AciMo> mos)
