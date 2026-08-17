@@ -450,7 +450,21 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
             parse = DnacCatalog.ParseAdvisories;
         }
 
-        string json = await client.GetFirstAsync(paths, token).ConfigureAwait(true);
+        string json;
+
+        try
+        {
+            json = await client.GetFirstAsync(paths, token).ConfigureAwait(true);
+        }
+        catch (DnacApiException ex) when (ex.Message.Contains("403", StringComparison.Ordinal))
+        {
+            // 403 は「宛先が違う」ではなく「見せてもらえない」。次の候補を試しても同じ
+            Replace(LifecycleRows, []);
+
+            Status = $"{SelectedLifecycleKind}は、この利用者では参照できませんでした（403）。";
+            Notice = DeniedHint(SelectedLifecycleKind);
+            return;
+        }
 
         Record(client, json);
 
@@ -524,6 +538,15 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
 
         Status = $"{device.Name} で「{command}」を流しました。「出力を表示」で開けます。";
     });
+
+    /// <summary>
+    /// 見せてもらえなかったときの手がかり。<b>権限とは限らない</b> —
+    /// その機能自体が用意されていないことも多いので、両方を挙げる。
+    /// </summary>
+    private static string DeniedHint(string kind) => kind.StartsWith("脆弱性", StringComparison.Ordinal)
+        ? "⚠ 脆弱性は、参照の権限に加えて Catalyst Center 側の用意が要ります。"
+          + "Cisco.com の資格情報が登録され、スキャンが動いているかを管理者に確認してください。"
+        : "⚠ この利用者に参照の権限が無いか、その機能が有効になっていない可能性があります。";
 
     private static IReadOnlyDictionary<string, string> DeviceNames(IEnumerable<JsonElement> inventory)
     {
