@@ -305,6 +305,10 @@ public partial class MainWindow : Window
         // スコアは数値のまま並べる（表示文字列で並べると 9 が 80 より後ろへ行く）
         ["acihl"] = ["Kind", "Name", "Score", "State"],
         ["aciflt"] = ["Severity", "Code", "Created", "Target", "Description", "Ack"],
+        ["aciport"] = ["Node", "Interface", "AdminState", "OperState", "Speed", "Usage", "Reason", "LastChange"],
+        ["aciepg"] = ["Tenant", "AppProfile", "Name", "BridgeDomain", "Domains", "PathCount"],
+        ["aciepgm"] = ["Node", "Path", "Encap", "Mode"],
+        ["aciep"] = ["Mac", "Ip", "Tenant", "Epg", "Encap", "Node", "Path"],
     };
 
     /// <summary>
@@ -1161,6 +1165,7 @@ public partial class MainWindow : Window
             NetworkToys.Core.Cloud.MerakiDeviceRow device =>
                 device.LanIp.Length > 0 ? device.LanIp : device.PublicIp,
             NetworkToys.Core.Cloud.MerakiClientRow client => client.Ip,
+            NetworkToys.Core.Fabric.AciEndpointRow endpoint => endpoint.Ip,
             FileServerLogRow log => log.Remote,
             _ => string.Empty,
         };

@@ -367,6 +367,60 @@ internal static class TabHelp
         ・「確認」は APIC 側で確認応答済みかどうか。ここからは変えられない
         """;
 
+    /// <summary>Cisco ACI ─ ポート</summary>
+    public const string AciPorts =
+        """
+        Cisco ACI ─ ポート
+
+        この画面ですること
+        ・選んだノードの物理ポートについて、設定と実際の状態を突き合わせる
+
+        知っておくとよいこと
+        ・「✕ 停止」は上げてあるのに落ちている口。「◌ 無効」はわざと落としてある口
+        　（この 2 つを一緒にすると、見たい 1 本が無効ポートの海に埋もれる）
+        ・「理由」は APIC が付けた理由。sfp-absent なら光が刺さっていない
+        ・ノードは必ず選ぶ。ファブリック全体のポートを一度に引くと数万行になる
+
+        できる操作
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
+    /// <summary>Cisco ACI ─ EPG</summary>
+    public const string AciEpgs =
+        """
+        Cisco ACI ─ EPG
+
+        この画面ですること
+        ・EPG の一覧と、選んだ EPG に結び付いている口（静的パス）を見る
+
+        知っておくとよいこと
+        ・「静的パス」が 0 の EPG も出す（EPG が無いのと、口が無いのは別の話）
+        ・vPC の口はノードが 2 台に跨がるので「103-104」のように出る
+        ・モードは「タグ付き／ネイティブ／タグなし」。VLAN の載せ方が変わる
+
+        できる操作
+        ・EPG の一覧と、メンバーの一覧をそれぞれ保存する
+        """;
+
+    /// <summary>Cisco ACI ─ エンドポイント</summary>
+    public const string AciEndpoints =
+        """
+        Cisco ACI ─ エンドポイント
+
+        この画面ですること
+        ・ファブリックが学習した端末（MAC と IP）を、EPG と口ごとに並べる
+
+        こんなときに
+        ・「あの端末はいまどのスイッチのどの口に居るか」を追いたいとき
+
+        知っておくとよいこと
+        ・IP が空の行は、まだ IP を学習していない（MAC だけ見えている）状態
+        ・右クリックから、その IP を Ping や経路などへ送れる
+
+        できる操作
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
     /// <summary>Meraki</summary>
     public const string Meraki =
         """

@@ -697,6 +697,10 @@ internal static class SelfTest
                 (new Core.Cloud.MerakiClientRow(
                     "pc-01", "192.168.128.50", "aa:bb:cc:dd:ee:ff", "10", "Dell", "1 MB", "10:00"), "192.168.128.50"),
 
+                (new Core.Fabric.AciEndpointRow(
+                    "00:50:56:AA:BB:CC", "192.168.10.50", "Prod", "Web", "vlan-100",
+                    "101", "eth1/1"), "192.168.10.50"),
+
                 (new ViewModels.FileServerLogRow("10:00:00", "10.1.1.1", "%LINK-3-UPDOWN", 3), "10.1.1.1"),
 
                 // 見覚えのない型は空。落ちてはいけない
