@@ -398,7 +398,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
                     Remember(host);
                     return;
                 }
-                catch (ApicCertificateException ex)
+                catch (PinnedCertificateException ex)
                 {
                     Fingerprint = ex.Fingerprint;
 

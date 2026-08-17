@@ -1,3 +1,4 @@
+using NetworkToys.Core.Design;
 using NetworkToys.Core.Fabric;
 using NetworkToys.Core.Work;
 using Xunit;
@@ -169,7 +170,7 @@ public class AciCatalogTests
 
         Assert.Equal(2, rows.Count);
         Assert.Equal("✕ 重大", rows[0].Severity);
-        Assert.Equal(AciSeverityKind.Alert, rows[0].SeverityKind);
+        Assert.Equal(SeverityKind.Alert, rows[0].SeverityKind);
         Assert.Equal("F0532", rows[0].Code);
         Assert.Equal("—", rows[0].Ack);
         Assert.Equal("済", rows[1].Ack);
@@ -184,12 +185,12 @@ public class AciCatalogTests
 
         // 上げてあるのに落ちている = 見たいもの
         Assert.Equal("✕ 停止", rows[1].OperState);
-        Assert.Equal(AciSeverityKind.Alert, rows[1].OperStateKind);
+        Assert.Equal(SeverityKind.Alert, rows[1].OperStateKind);
         Assert.Equal("sfp-absent", rows[1].Reason);
 
         // わざと落としてある = 埋もれさせない
         Assert.Equal("◌ 無効", rows[2].OperState);
-        Assert.Equal(AciSeverityKind.Muted, rows[2].OperStateKind);
+        Assert.Equal(SeverityKind.Muted, rows[2].OperStateKind);
         Assert.Equal("102", rows[2].Node);
     }
 
@@ -256,7 +257,7 @@ public class AciCatalogTests
 
         // スコアが無いのと 0 点は違う
         Assert.Equal("—", rows[1].ScoreText);
-        Assert.Equal(AciSeverityKind.Muted, rows[1].StateKind);
+        Assert.Equal(SeverityKind.Muted, rows[1].StateKind);
     }
 
     [Fact]
@@ -331,13 +332,13 @@ public class AciCatalogTests
     // ===== 文字起こし =====
 
     [Theory]
-    [InlineData("critical", AciSeverityKind.Alert)]
-    [InlineData("major", AciSeverityKind.Alert)]
-    [InlineData("minor", AciSeverityKind.Notice)]
-    [InlineData("warning", AciSeverityKind.Notice)]
-    [InlineData("info", AciSeverityKind.Ok)]
-    [InlineData("", AciSeverityKind.Muted)]
-    public void Severity_is_mapped_to_one_of_four_levels(string severity, AciSeverityKind expected)
+    [InlineData("critical", SeverityKind.Alert)]
+    [InlineData("major", SeverityKind.Alert)]
+    [InlineData("minor", SeverityKind.Notice)]
+    [InlineData("warning", SeverityKind.Notice)]
+    [InlineData("info", SeverityKind.Ok)]
+    [InlineData("", SeverityKind.Muted)]
+    public void Severity_is_mapped_to_one_of_four_levels(string severity, SeverityKind expected)
         => Assert.Equal(expected, AciCatalog.DescribeSeverity(severity).Kind);
 
     [Fact]

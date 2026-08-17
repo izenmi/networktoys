@@ -1,28 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
+using NetworkToys.Core.Design;
+using NetworkToys.Core.Net;
 using NetworkToys.Core.Work;
 
 namespace NetworkToys.Core.Fabric;
-
-/// <summary>
-/// 画面での目立たせ方。色だけで表さない決まりなので、文字の側は必ず記号と言葉を伴う。
-/// 接続タブの <c>ConnectionStateKind</c> とは別に持つ — あちらに「危険」が無く、
-/// 足すと既存 3 タブの分岐に手を入れることになる。
-/// </summary>
-public enum AciSeverityKind
-{
-    /// <summary>情報が無い・対象外。</summary>
-    Muted,
-
-    /// <summary>正常。</summary>
-    Ok,
-
-    /// <summary>気に留める程度。</summary>
-    Notice,
-
-    /// <summary>すぐ見るべきもの。</summary>
-    Alert,
-}
 
 /// <summary>ヘルスの 1 行。ファブリック全体・ノード・テナントを同じ形で並べる。</summary>
 public sealed record AciHealthRow(
@@ -31,12 +13,12 @@ public sealed record AciHealthRow(
     int Score,
     string ScoreText,
     string State,
-    AciSeverityKind StateKind);
+    SeverityKind StateKind);
 
 /// <summary>いま出ている障害（faultInst）の 1 行。</summary>
 public sealed record AciFaultRow(
     string Severity,
-    AciSeverityKind SeverityKind,
+    SeverityKind SeverityKind,
     string Code,
     string Target,
     string Description,
@@ -49,7 +31,7 @@ public sealed record AciLogRow(
     string Time,
     string Kind,
     string Severity,
-    AciSeverityKind SeverityKind,
+    SeverityKind SeverityKind,
     string Target,
     string Text);
 
@@ -59,7 +41,7 @@ public sealed record AciPortRow(
     string Interface,
     string AdminState,
     string OperState,
-    AciSeverityKind OperStateKind,
+    SeverityKind OperStateKind,
     string Speed,
     string Usage,
     string Reason,
@@ -125,7 +107,7 @@ public static class AciCatalog
         foreach (AciMo mo in mos)
         {
             int score = Score(mo);
-            (string state, AciSeverityKind stateKind) = DescribeHealth(score);
+            (string state, SeverityKind stateKind) = DescribeHealth(score);
 
             rows.Add(new AciHealthRow(
                 Kind: kind,
@@ -157,12 +139,12 @@ public static class AciCatalog
     }
 
     /// <summary>スコアの読み方。ACI の目安（95 以上は健全、80 未満は要確認）に合わせる。</summary>
-    public static (string Text, AciSeverityKind Kind) DescribeHealth(int score) => score switch
+    public static (string Text, SeverityKind Kind) DescribeHealth(int score) => score switch
     {
-        < 0 => ("—", AciSeverityKind.Muted),
-        >= 95 => ("● 良好", AciSeverityKind.Ok),
-        >= 80 => ("⊘ 注意", AciSeverityKind.Notice),
-        _ => ("✕ 不良", AciSeverityKind.Alert),
+        < 0 => ("—", SeverityKind.Muted),
+        >= 95 => ("● 良好", SeverityKind.Ok),
+        >= 80 => ("⊘ 注意", SeverityKind.Notice),
+        _ => ("✕ 不良", SeverityKind.Alert),
     };
 
     // ===== Faults =====
@@ -173,7 +155,7 @@ public static class AciCatalog
 
         foreach (AciMo mo in mos)
         {
-            (string severity, AciSeverityKind kind) = DescribeSeverity(mo["severity"]);
+            (string severity, SeverityKind kind) = DescribeSeverity(mo["severity"]);
 
             rows.Add(new AciFaultRow(
                 Severity: severity,
@@ -192,16 +174,16 @@ public static class AciCatalog
     /// <summary>
     /// 重大度。<b>知らない値は言い換えずそのまま出す</b>（Meraki と同じ決まり）。
     /// </summary>
-    public static (string Text, AciSeverityKind Kind) DescribeSeverity(string? severity) => severity switch
+    public static (string Text, SeverityKind Kind) DescribeSeverity(string? severity) => severity switch
     {
-        "critical" => ("✕ 重大", AciSeverityKind.Alert),
-        "major" => ("✕ 大", AciSeverityKind.Alert),
-        "minor" => ("⊘ 小", AciSeverityKind.Notice),
-        "warning" => ("⊘ 警告", AciSeverityKind.Notice),
-        "info" => ("● 情報", AciSeverityKind.Ok),
-        "cleared" => ("● 解消", AciSeverityKind.Ok),
-        null or "" => ("—", AciSeverityKind.Muted),
-        _ => (severity, AciSeverityKind.Muted),
+        "critical" => ("✕ 重大", SeverityKind.Alert),
+        "major" => ("✕ 大", SeverityKind.Alert),
+        "minor" => ("⊘ 小", SeverityKind.Notice),
+        "warning" => ("⊘ 警告", SeverityKind.Notice),
+        "info" => ("● 情報", SeverityKind.Ok),
+        "cleared" => ("● 解消", SeverityKind.Ok),
+        null or "" => ("—", SeverityKind.Muted),
+        _ => (severity, SeverityKind.Muted),
     };
 
     /// <summary>重大度の重い順。並べ替えの既定に使う（文字列順では意味を成さない）。</summary>
@@ -224,7 +206,7 @@ public static class AciCatalog
 
         foreach (AciMo mo in mos)
         {
-            (string severity, AciSeverityKind severityKind) = DescribeSeverity(mo["severity"]);
+            (string severity, SeverityKind severityKind) = DescribeSeverity(mo["severity"]);
 
             rows.Add(new AciLogRow(
                 Time: Or(mo["created"], mo["lastTransition"]),
@@ -254,7 +236,7 @@ public static class AciCatalog
             AciMo? actual = mo.FirstChild("ethpmPhysIf");
             string operSt = actual?["operSt"] ?? "";
 
-            (string operText, AciSeverityKind operKind) = DescribeOperState(operSt, mo["adminSt"]);
+            (string operText, SeverityKind operKind) = DescribeOperState(operSt, mo["adminSt"]);
 
             rows.Add(new AciPortRow(
                 Node: AciDn.Node(mo["dn"]),
@@ -283,14 +265,14 @@ public static class AciCatalog
     /// 実際の状態。<b>「落ちている」と「わざと落としてある」を書き分ける</b> —
     /// 一緒にすると、確認したい 1 本が無効ポートの海に埋もれる。
     /// </summary>
-    public static (string Text, AciSeverityKind Kind) DescribeOperState(string? operSt, string? adminSt)
+    public static (string Text, SeverityKind Kind) DescribeOperState(string? operSt, string? adminSt)
         => operSt switch
         {
-            "up" => ("● 稼働", AciSeverityKind.Ok),
-            "down" when adminSt == "down" => ("◌ 無効", AciSeverityKind.Muted),
-            "down" => ("✕ 停止", AciSeverityKind.Alert),
-            null or "" => ("—", AciSeverityKind.Muted),
-            _ => (operSt, AciSeverityKind.Muted),
+            "up" => ("● 稼働", SeverityKind.Ok),
+            "down" when adminSt == "down" => ("◌ 無効", SeverityKind.Muted),
+            "down" => ("✕ 停止", SeverityKind.Alert),
+            null or "" => ("—", SeverityKind.Muted),
+            _ => (operSt, SeverityKind.Muted),
         };
 
     public static string DescribeUsage(string? usage) => usage switch
@@ -644,21 +626,7 @@ public static class AciCatalog
     /// 接続先の書き方を整える。<c>https://</c> を付けて渡されても、末尾に <c>/</c> が
     /// 付いていても同じ形にする（毎回手で打つ欄なので、揺れは受け側で吸収する）。
     /// </summary>
-    public static string NormalizeHost(string? host)
-    {
-        string value = (host ?? "").Trim();
-
-        foreach (string scheme in (string[])["https://", "http://"])
-        {
-            if (value.StartsWith(scheme, StringComparison.OrdinalIgnoreCase))
-            {
-                value = value[scheme.Length..];
-                break;
-            }
-        }
-
-        return value.TrimEnd('/');
-    }
+    public static string NormalizeHost(string? host) => HttpsHost.Normalize(host);
 
     // ===== ログイン =====
 
@@ -700,14 +668,7 @@ public static class AciCatalog
     /// 証明書の指紋を人が見比べられる形にする。APIC の画面に出るのと同じ
     /// 大文字 16 進のコロン区切り。
     /// </summary>
-    public static string FormatFingerprint(byte[]? sha256)
-    {
-        if (sha256 is null || sha256.Length == 0) return "";
-
-        return "SHA256:" + Convert.ToHexString(sha256).Chunk(2)
-            .Select(pair => new string(pair))
-            .Aggregate((left, right) => $"{left}:{right}");
-    }
+    public static string FormatFingerprint(byte[]? sha256) => HttpsHost.Fingerprint(sha256);
 
     // ===== 応答コード =====
 

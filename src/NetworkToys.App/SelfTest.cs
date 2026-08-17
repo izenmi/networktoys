@@ -512,7 +512,7 @@ internal static class SelfTest
             {
                 client.LoginAsync("admin", "pw", "", CancellationToken.None).GetAwaiter().GetResult();
             }
-            catch (Services.ApicCertificateException)
+            catch (Services.PinnedCertificateException)
             {
                 refused = true;
             }

@@ -1,7 +1,4 @@
 using System.Net.Http;
-using System.Net.Security;
-using System.Security.Authentication;
-using System.Security.Cryptography;
 using System.Text;
 using NetworkToys.Core.Fabric;
 
@@ -9,15 +6,6 @@ namespace NetworkToys.App.Services;
 
 /// <summary>取得できなかったことを日本語で伝える。応答本文は読まないので DN や設定は載らない。</summary>
 internal sealed class ApicApiException(string message) : Exception(message);
-
-/// <summary>
-/// 証明書を受け入れていないので繋がない、という失敗。<see cref="Fingerprint"/> を画面に出して
-/// 人に見比べてもらうために、指紋を持って投げる。
-/// </summary>
-internal sealed class ApicCertificateException(string message, string fingerprint) : Exception(message)
-{
-    public string Fingerprint { get; } = fingerprint;
-}
 
 /// <summary>
 /// APIC の REST を叩く。ここだけが HTTP に触れる層で、応答の JSON は解釈せず
@@ -35,18 +23,11 @@ internal sealed class ApicClient : IDisposable
     private const int MaxPages = 20;
 
     private readonly string _baseUrl;
-    private readonly string? _accepted;
+    private readonly PinnedCertificate _pinned;
     private readonly HttpClient _http;
 
     private string _token = "";
     private DateTime _refreshAfter = DateTime.MaxValue;
-
-    /// <summary>
-    /// 相手が出した証明書の指紋。<b>受け入れずに切ったときも控える</b> —
-    /// 出せなければ、人は受け入れようがない。
-    /// 検証はリクエストのスレッドから呼ばれるので volatile。
-    /// </summary>
-    private volatile string _seen = "";
 
     /// <param name="acceptedFingerprint">
     /// 前に受け入れた指紋。null なら未受け入れ（＝正規の証明書でなければ繋がない）。
@@ -57,9 +38,9 @@ internal sealed class ApicClient : IDisposable
     public ApicClient(string host, string? acceptedFingerprint, HttpMessageHandler? handler = null)
     {
         _baseUrl = "https://" + AciCatalog.NormalizeHost(host);
-        _accepted = acceptedFingerprint;
+        _pinned = new PinnedCertificate(acceptedFingerprint);
 
-        _http = new HttpClient(handler ?? BuildHandler(this))
+        _http = new HttpClient(handler ?? _pinned.CreateHandler())
         {
             Timeout = TimeSpan.FromSeconds(30),
         };
@@ -72,28 +53,6 @@ internal sealed class ApicClient : IDisposable
     public bool WasTruncated { get; private set; }
 
     public void ResetTruncation() => WasTruncated = false;
-
-    /// <summary>
-    /// <b>検証は切らない。</b>正規の証明書はそのまま通し、そうでないものは
-    /// 受け入れ済みの指紋と一致したときだけ通す（SSH のホスト鍵と同じ思想）。
-    /// </summary>
-    private static HttpClientHandler BuildHandler(ApicClient owner) => new()
-    {
-        // http へ落とす 302 に黙って従わない（相手が APIC でないかもしれない）
-        AllowAutoRedirect = false,
-
-        ServerCertificateCustomValidationCallback = (_, certificate, _, errors) =>
-        {
-            if (certificate is null) return false;
-
-            owner._seen = AciCatalog.FormatFingerprint(certificate.GetCertHash(HashAlgorithmName.SHA256));
-
-            if (errors == SslPolicyErrors.None) return true;
-
-            return owner._seen.Length > 0
-                   && string.Equals(owner._seen, owner._accepted, StringComparison.Ordinal);
-        },
-    };
 
     /// <summary>ログインしてトークンを預かる。</summary>
     public async Task LoginAsync(string user, string password, string domain, CancellationToken token)
@@ -152,7 +111,7 @@ internal sealed class ApicClient : IDisposable
             await SendAsync(HttpMethod.Post, "/api/aaaLogout.json", "{}", CancellationToken.None)
                 .ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is ApicApiException or ApicCertificateException or HttpRequestException
+        catch (Exception ex) when (ex is ApicApiException or PinnedCertificateException or HttpRequestException
                                       or OperationCanceledException)
         {
             // 出ていくだけなので、失敗を画面に出すほどのことではない
@@ -203,10 +162,10 @@ internal sealed class ApicClient : IDisposable
             response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token)
                 .ConfigureAwait(false);
         }
-        catch (HttpRequestException ex) when (IsCertificateProblem(ex))
+        catch (HttpRequestException ex) when (_pinned.IsProblem(ex))
         {
             // TLS で断られた。指紋を添えて投げ、受け入れるかを人に聞いてもらう
-            throw new ApicCertificateException("証明書を確認できませんでした。", _seen);
+            throw _pinned.Refused();
         }
         catch (HttpRequestException ex)
         {
@@ -221,15 +180,6 @@ internal sealed class ApicClient : IDisposable
             return await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
         }
     }
-
-    /// <summary>
-    /// TLS で断られたのかを見分ける。握手の失敗は
-    /// <see cref="AuthenticationException"/> を内側に持つ形で出てくる。
-    /// 検証コールバックが指紋を控えていれば、それも根拠になる。
-    /// </summary>
-    private bool IsCertificateProblem(HttpRequestException ex)
-        => ex.InnerException is AuthenticationException
-           || (_seen.Length > 0 && !string.Equals(_seen, _accepted, StringComparison.Ordinal));
 
     public void Dispose() => _http.Dispose();
 }
