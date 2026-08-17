@@ -73,6 +73,17 @@ public sealed record MerakiDhcpRow(
     string UsageText,
     SeverityKind UsageKind);
 
+/// <summary>
+/// 機器ごとの使われ具合の 1 行。<c>Value</c> は並べ替えと棒の長さに使う数値、
+/// <c>ValueText</c> は画面に出す文字（単位つき）。
+/// </summary>
+public sealed record MerakiUtilizationRow(
+    string Device,
+    string Model,
+    string Network,
+    double Value,
+    string ValueText);
+
 /// <summary>アラートの 1 行。</summary>
 public sealed record MerakiAlertRow(
     string Severity,
@@ -459,6 +470,79 @@ public static class MerakiCatalog
         _ => ($"{percent}%", SeverityKind.Ok),
     };
 
+    // ===== 機器の使われ具合 =====
+
+    /// <summary>
+    /// 上位機器の利用率（MX）。<c>utilization.average.percentage</c> を読む。
+    /// </summary>
+    public static IReadOnlyList<MerakiUtilizationRow> ParseUtilization(IEnumerable<string> pages)
+    {
+        var rows = new List<MerakiUtilizationRow>();
+
+        foreach (JsonElement item in Items(pages))
+        {
+            double percent = NestedNumber(item, "utilization", "average", "percentage");
+
+            rows.Add(new MerakiUtilizationRow(
+                Device: Or(Str(item, "name"), Str(item, "serial")),
+                Model: Str(item, "model"),
+                Network: Nested(item, "network", "name"),
+                Value: percent,
+                ValueText: percent.ToString("0.0", CultureInfo.InvariantCulture) + "%"));
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// 上位機器の通信量。<c>usage.total</c> は<b>キロバイト</b>で返る。
+    /// </summary>
+    public static IReadOnlyList<MerakiUtilizationRow> ParseUsage(IEnumerable<string> pages)
+    {
+        var rows = new List<MerakiUtilizationRow>();
+
+        foreach (JsonElement item in Items(pages))
+        {
+            double kilobytes = NestedNumber(item, "usage", "total");
+
+            rows.Add(new MerakiUtilizationRow(
+                Device: Or(Str(item, "name"), Str(item, "serial")),
+                Model: Str(item, "model"),
+                Network: Nested(item, "network", "name"),
+                Value: kilobytes,
+                ValueText: DescribeKilobytes(kilobytes)));
+        }
+
+        return rows;
+    }
+
+    /// <summary>キロバイトを読める単位にする（クライアントの通信量と同じ言い方）。</summary>
+    public static string DescribeKilobytes(double kilobytes) => kilobytes switch
+    {
+        <= 0 => "—",
+        < 1024 => $"{kilobytes:0} KB",
+        < 1024 * 1024 => $"{kilobytes / 1024:0.0} MB",
+        _ => $"{kilobytes / 1024 / 1024:0.0} GB",
+    };
+
+    /// <summary>入れ子をたどって数値を取る。無ければ 0。</summary>
+    private static double NestedNumber(JsonElement parent, params string[] path)
+    {
+        JsonElement current = parent;
+
+        for (int i = 0; i < path.Length - 1; i++)
+        {
+            if (current.ValueKind != JsonValueKind.Object
+                || !current.TryGetProperty(path[i], out JsonElement next)
+                || next.ValueKind != JsonValueKind.Object)
+                return 0;
+
+            current = next;
+        }
+
+        return Number(current, path[^1]);
+    }
+
     // ===== アラート =====
 
     public static IReadOnlyList<MerakiAlertRow> ParseAlerts(IEnumerable<string> pages)
@@ -521,6 +605,10 @@ public static class MerakiCatalog
     public static CsvTable ToCsv(IReadOnlyList<MerakiDhcpRow> rows) => new(
         ["拠点", "機器", "VLAN", "サブネット", "払い出し済み", "空き", "使用率"],
         [.. rows.Select(r => new[] { r.Network, r.Device, r.Vlan, r.Subnet, r.UsedText, r.FreeText, r.UsageText })]);
+
+    public static CsvTable ToCsv(IReadOnlyList<MerakiUtilizationRow> rows) => new(
+        ["機器", "型番", "拠点", "値"],
+        [.. rows.Select(r => new[] { r.Device, r.Model, r.Network, r.ValueText })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiAlertRow> rows) => new(
         ["重大度", "種別", "拠点", "機器", "発生", "内容"],

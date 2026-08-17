@@ -73,6 +73,20 @@ internal sealed class MerakiDashboard : IDisposable
     public Task<IReadOnlyList<string>> DhcpSubnetsAsync(string apiKey, string serial, CancellationToken token)
         => GetPagesAsync($"/devices/{Escape(serial)}/appliance/dhcp/subnets", apiKey, token);
 
+    /// <summary>利用率の高い MX（組織の要約）。</summary>
+    public Task<IReadOnlyList<string>> TopAppliancesAsync(
+        string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
+        => GetPagesAsync(
+            $"/organizations/{Escape(organizationId)}/summary/top/appliances/byUtilization?timespan={timespanSeconds}",
+            apiKey, token);
+
+    /// <summary>通信量の多い機器（組織の要約）。</summary>
+    public Task<IReadOnlyList<string>> TopDevicesAsync(
+        string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
+        => GetPagesAsync(
+            $"/organizations/{Escape(organizationId)}/summary/top/devices/byUsage?timespan={timespanSeconds}",
+            apiKey, token);
+
     /// <summary>組織のアラート。版によっては持っていない（その場合は 404 が返る）。</summary>
     public Task<IReadOnlyList<string>> AlertsAsync(string apiKey, string organizationId, CancellationToken token)
         => GetPagesAsync($"/organizations/{Escape(organizationId)}/assurance/alerts?perPage=300", apiKey, token);

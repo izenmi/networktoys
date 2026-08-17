@@ -389,4 +389,41 @@ public class MerakiCatalogTests
             Assert.All(table.Rows, row => Assert.Equal(table.Headers.Count, row.Length));
         }
     }
+
+    [Fact]
+    public void Device_utilisation_reads_the_nested_average_percentage()
+    {
+        const string json = """
+            [ {"name":"MX-1F","model":"MX68","network":{"name":"本社"},
+               "utilization":{"average":{"percentage":12.5}}},
+              {"name":"MX-2F","model":"MX68","network":{"name":"支社"}} ]
+            """;
+
+        IReadOnlyList<MerakiUtilizationRow> rows = MerakiCatalog.ParseUtilization([json]);
+
+        Assert.Equal("12.5%", rows[0].ValueText);
+        Assert.Equal("本社", rows[0].Network);
+
+        // 入れ子が無くても落とさない（0 として出す）
+        Assert.Equal(0, rows[1].Value);
+    }
+
+    [Fact]
+    public void Device_usage_is_read_in_kilobytes_and_shown_in_units()
+    {
+        const string json = """
+            [ {"name":"AP-1","model":"MR46","network":{"name":"本社"},"usage":{"total":2097152}} ]
+            """;
+
+        IReadOnlyList<MerakiUtilizationRow> rows = MerakiCatalog.ParseUsage([json]);
+
+        Assert.Equal("2.0 GB", rows[0].ValueText);
+    }
+
+    [Theory]
+    [InlineData(0, "—")]
+    [InlineData(512, "512 KB")]
+    [InlineData(2048, "2.0 MB")]
+    public void Kilobytes_are_described_in_readable_units(double kilobytes, string expected)
+        => Assert.Equal(expected, MerakiCatalog.DescribeKilobytes(kilobytes));
 }

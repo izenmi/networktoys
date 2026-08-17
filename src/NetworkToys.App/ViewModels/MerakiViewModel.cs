@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using System.IO;
 using System.Text;
 using Microsoft.Win32;
@@ -14,6 +15,39 @@ public sealed record MerakiOrganizationItem(string Id, string Name);
 
 /// <summary>クライアント一覧をどこまでさかのぼるか。</summary>
 public sealed record MerakiTimespan(string Name, int Seconds);
+
+/// <summary>使われ具合の見方。</summary>
+public sealed record MerakiUsageKind(string Name, bool IsUtilization);
+
+/// <summary>
+/// 使われ具合の棒 1 本。<b>幅は星（比率）で持つ</b> — 画面幅を測らずに済み、
+/// 窓を広げてもそのまま伸びる（Wi-Fi のチャンネル棒と同じ手）。
+/// </summary>
+public sealed class MerakiBarViewModel
+{
+    public MerakiBarViewModel(MerakiUtilizationRow row, double max)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+
+        Device = row.Device;
+        Model = row.Model;
+        Network = row.Network;
+        ValueText = row.ValueText;
+
+        double share = max > 0 ? Math.Clamp(row.Value / max, 0, 1) : 0;
+
+        // 0 のときも細く出す。行があるのに何も無いと「取れていない」と読めてしまう
+        Bar = new GridLength(Math.Max(share, 0.004), GridUnitType.Star);
+        Rest = new GridLength(Math.Max(1 - share, 0), GridUnitType.Star);
+    }
+
+    public string Device { get; }
+    public string Model { get; }
+    public string Network { get; }
+    public string ValueText { get; }
+    public GridLength Bar { get; }
+    public GridLength Rest { get; }
+}
 
 /// <summary>
 /// Meraki ダッシュボードから組織配下の情報を引く画面。
@@ -34,6 +68,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     private string _notice = "";
     private string _globalIpText = "—";
     private bool _showConnection = true;
+    private IReadOnlyList<MerakiUtilizationRow> _usageRows = [];
+    private MerakiUsageKind _selectedUsageKind;
     private bool _isBusy;
     private CancellationTokenSource? _cts;
 
@@ -61,6 +97,13 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             () => DhcpRows.Count > 0);
         SaveAlertsCommand = new RelayCommand(() => Save("alerts", MerakiCatalog.ToCsv([.. AlertRows])),
             () => AlertRows.Count > 0);
+
+        FetchUsageCommand = new RelayCommand(() => _ = FetchUsageAsync(),
+            () => !IsBusy && ApiKey.Length > 0 && SelectedOrganization is not null);
+        SaveUsageCommand = new RelayCommand(() => Save("usage", MerakiCatalog.ToCsv(_usageRows)),
+            () => _usageRows.Count > 0);
+
+        _selectedUsageKind = UsageKinds[0];
 
         SaveNetworksCommand = new RelayCommand(
             () => Save("networks", MerakiCatalog.ToCsv(NetworkRows)), () => NetworkRows.Count > 0);
@@ -93,6 +136,15 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     /// <summary>アラート。</summary>
     public ObservableCollection<MerakiAlertRow> AlertRows { get; } = [];
 
+    /// <summary>使われ具合のグラフ（棒）。</summary>
+    public ObservableCollection<MerakiBarViewModel> UsageBars { get; } = [];
+
+    public MerakiUsageKind[] UsageKinds { get; } =
+    [
+        new MerakiUsageKind("利用率（MX）", true),
+        new MerakiUsageKind("通信量（全機器）", false),
+    ];
+
     public IReadOnlyList<MerakiTimespan> Timespans { get; } =
     [
         new("1 時間", 3600),
@@ -117,6 +169,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     /// <summary>組織のアラートを取る。</summary>
     public RelayCommand FetchAlertsCommand { get; }
+
+    public RelayCommand FetchUsageCommand { get; }
+
+    public RelayCommand SaveUsageCommand { get; }
 
     public RelayCommand SaveSitesCommand { get; }
     public RelayCommand SaveDhcpCommand { get; }
@@ -205,6 +261,13 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     public bool HasNotice => _notice.Length > 0;
 
+    /// <summary>利用率で見るか、通信量で見るか。</summary>
+    public MerakiUsageKind SelectedUsageKind
+    {
+        get => _selectedUsageKind;
+        set { if (value is not null) SetProperty(ref _selectedUsageKind, value); }
+    }
+
     /// <summary>アップリンクのグローバル IP をまとめた 1 行。</summary>
     public string GlobalIpText
     {
@@ -224,6 +287,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             FetchSitesCommand.RaiseCanExecuteChanged();
             FetchDhcpCommand.RaiseCanExecuteChanged();
             FetchAlertsCommand.RaiseCanExecuteChanged();
+            FetchUsageCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
         }
     }
@@ -572,6 +636,62 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// 機器の使われ具合。<b>棒の長さは一番大きいものを基準にした比率</b>で持つので、
+    /// 単位（% とバイト）が違っても同じ見た目で読める。
+    /// </summary>
+    private async Task FetchUsageAsync()
+    {
+        if (SelectedOrganization is not { } organization) return;
+
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            bool utilization = SelectedUsageKind.IsUtilization;
+
+            Status = $"{SelectedUsageKind.Name}を取得しています…";
+
+            IReadOnlyList<string> pages = utilization
+                ? await _dashboard.TopAppliancesAsync(ApiKey, organization.Id, SelectedTimespan.Seconds, _cts.Token)
+                : await _dashboard.TopDevicesAsync(ApiKey, organization.Id, SelectedTimespan.Seconds, _cts.Token);
+
+            _usageRows = utilization ? MerakiCatalog.ParseUtilization(pages) : MerakiCatalog.ParseUsage(pages);
+
+            double max = _usageRows.Count > 0 ? _usageRows.Max(r => r.Value) : 0;
+
+            UsageBars.Clear();
+
+            foreach (MerakiUtilizationRow row in _usageRows.OrderByDescending(r => r.Value))
+                UsageBars.Add(new MerakiBarViewModel(row, max));
+
+            Status = _usageRows.Count == 0
+                ? $"{SelectedUsageKind.Name}は取れませんでした（この組織では持っていないことがあります）。"
+                : $"{SelectedUsageKind.Name} {_usageRows.Count} 件（{SelectedTimespan.Name}・{DateTime.Now:HH:mm:ss} 時点）。";
+        }
+        catch (MerakiApiException ex)
+        {
+            Status = ex.Message;
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。";
+        }
+        catch (Exception ex)
+        {
+            Status = $"取得に失敗しました: {ex.Message}";
+            CrashLog.Write(ex, "MerakiViewModel.FetchUsageAsync");
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+            RefreshSaveCommands();
+        }
+    }
+
     private void Save(string kind, CsvTable table)
     {
         if (Services.CsvExport.Save($"meraki-{kind}", table) is { } message)
@@ -591,6 +711,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SiteRows.Clear();
         DhcpRows.Clear();
         AlertRows.Clear();
+        UsageBars.Clear();
+        _usageRows = [];
 
         SelectedOrganization = null;
         SelectedNetwork = null;
@@ -615,6 +737,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SaveSitesCommand.RaiseCanExecuteChanged();
         SaveDhcpCommand.RaiseCanExecuteChanged();
         SaveAlertsCommand.RaiseCanExecuteChanged();
+        SaveUsageCommand.RaiseCanExecuteChanged();
     }
 
     public void Dispose()
