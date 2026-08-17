@@ -61,6 +61,9 @@ public sealed class ShellViewModel
         // WLC も同じ。読み取り専用で、押されたときだけ Catalyst 9800 を見に行く
         Wlc = new WlcViewModel();
 
+        // Catalyst Center も同じ。読み取り専用で、押されたときだけ見に行く
+        Dnac = new DnacViewModel();
+
         // 試験タブ。こちらもタブを開いただけでは外へ出ない
         Verify = new VerifyViewModel();
 
@@ -131,6 +134,9 @@ public sealed class ShellViewModel
     /// <summary>Cisco WLC（Catalyst 9800）からの照会。読み取り専用で、パスワードは保存しない。</summary>
     public WlcViewModel Wlc { get; }
 
+    /// <summary>Cisco Catalyst Center からの照会。読み取り専用で、パスワードは保存しない。</summary>
+    public DnacViewModel Dnac { get; }
+
     /// <summary>業務確認試験。プロキシを切り替えて同じ試験を回せる。</summary>
     public VerifyViewModel Verify { get; }
 
@@ -174,6 +180,7 @@ public sealed class ShellViewModel
         Meraki.Reset();
         Aci.Reset();
         Wlc.Reset();
+        Dnac.Reset();
         Verify.Reset();
         Report.Reset();
     }

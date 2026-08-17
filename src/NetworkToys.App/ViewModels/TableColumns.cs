@@ -138,6 +138,14 @@ public sealed class TableColumns : ObservableObject
 
         // WLC 不正 AP: 0 種別 / 1 SSID(星) / 2 BSSID / 3 メーカー / 4 ch / 5 電波 / 6 検知AP / 7 最終受信 / 8 備考
         new("wlcrog", 1, [(0, 60), (2, 130), (3, 110), (4, 50), (5, 55), (6, 130), (7, 130), (8, 90)]),
+
+        // Catalyst Center 端末: 0 MAC / 1 IP / 2 名前 / 3 接続 / 4 機器(星) / 5 ポート・AP /
+        //                       6 VLAN / 7 SSID / 8 帯域 / 9 健全度 / 10 サイト / 11 更新
+        new("dnccl", 4, [(0, 130), (1, 110), (2, 110), (3, 55), (5, 150), (6, 55),
+                         (7, 100), (8, 60), (9, 90), (10, 150), (11, 130)]),
+
+        // Catalyst Center イベント: 0 時刻 / 1 種別 / 2 結果 / 3 発生元 / 4 詳細(星)
+        new("dncev", 4, [(0, 140), (1, 150), (2, 70), (3, 130)]),
     ];
 
     private readonly Dictionary<string, double> _widths = [];

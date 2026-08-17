@@ -723,6 +723,55 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
+    /// <summary>Cisco Catalyst Center</summary>
+    public const string Dnac =
+        """
+        Cisco Catalyst Center
+
+        この画面ですること
+        ・Catalyst Center が集めている情報を、こちらから読むだけ読む
+
+        出るもの
+        ・端末がどの機器のどのポート（無線ならどの AP）に居るか
+        ・その端末に起きたこと（参加・認証・DHCP などの成否）
+
+        気をつけること
+        ・読み取り専用。設定を書く口は持たない
+        ・パスワードは保存しない（毎回入力・伏せ字）。覚えるのは接続先とユーザー名だけ
+        ・タブを開いただけでは通信しない。押したときだけ取りに行く
+        ・自己署名の証明書は、指紋を画面に出して受け入れてもらってから通す
+        ・取得のたびに 1 回だけログインする。失敗しても自動でやり直さない
+        　（認証の失敗を繰り返すとアカウントが固まるため）
+
+        できる操作
+        ・各一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
+    /// <summary>Cisco Catalyst Center ─ 端末</summary>
+    public const string DnacClients =
+        """
+        Cisco Catalyst Center ─ 端末
+
+        この画面ですること
+        ・IP か MAC から、その端末がどの機器にどう繋がっているかを調べる
+
+        こんなときに
+        ・「この PC はどのスイッチのどのポートか」を機器に入らずに知りたいとき
+        ・「さっきから繋がらない」と言われて、何が失敗したかを見たいとき
+
+        知っておくとよいこと
+        ・入れた文字が IP か MAC かは、こちらで見て決める（打ち分けは要らない）
+        ・MAC は aabb.ccdd.eeff でも AA:BB:… でも aa-bb-… でも当たる
+        ・有線はポートと VLAN、無線は AP と SSID と帯域が埋まる
+        ・健全度は 1〜10 で、10 が最良（8 以上が良好・4 未満は要確認）
+        ・イベントは MAC でしか引けない。IP で調べたときは判明してから取りに行く
+        ・版によってはイベントの一覧が無い。そのときは Assurance の問題を代わりに出す
+
+        できる操作
+        ・行を右クリックして、その IP を Ping や経路へ送る
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
     /// <summary>Meraki</summary>
     public const string Meraki =
         """

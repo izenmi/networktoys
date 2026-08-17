@@ -461,6 +461,37 @@ internal static class SelfTest
                    "証明書の確認が、結線前から「はい」に倒れている");
         });
 
+        Check("Catalyst Center タブのサブタブをすべて表示できる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            object? original = window!.MainTabs.SelectedItem;
+
+            Views.MainWindow.Show(window.DnacTab);
+
+            foreach (object? item in window.DnacSubTabs.Items)
+            {
+                ((System.Windows.Controls.TabItem)item).IsSelected = true;
+                window.UpdateLayout();
+            }
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
+        Check("Catalyst Center: 資格情報が空では取得できない(CI から実機を叩かない)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+
+            Assert(shell.Dnac.Password.Length == 0, "起動直後にパスワードが入っている");
+            Assert(!shell.Dnac.FetchClientCommand.CanExecute(null), "資格情報が空でも取得できてしまう");
+
+            Assert(!new ViewModels.DnacViewModel().ConfirmFingerprint("test"),
+                   "証明書の確認が、結線前から「はい」に倒れている");
+        });
+
         Check("Meraki: キー未入力では取得できない(CI から API を叩かない)", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -893,6 +924,11 @@ internal static class SelfTest
                 (new Core.Wireless.WlcClientRow(
                     "aabb.ccdd.eeff", "192.168.20.31", "Apple", "AP-1F-01", "Corp", "5GHz ch36",
                     -58, "-58", "良い", "34", "866", "● 通信中", Core.Design.SeverityKind.Ok, ""), "192.168.20.31"),
+
+                (new Core.Assurance.DnacConnectionRow(
+                    "AA:BB:CC:DD:EE:01", "10.10.22.98", "pc-1234", "有線", "sw-3f-01", "Gi1/0/13",
+                    "550", "", "", "10 ● 良好", Core.Design.SeverityKind.Ok, "Global/Tokyo/3F",
+                    "2026-08-17 10:00:00"), "10.10.22.98"),
 
                 (new ViewModels.FileServerLogRow("10:00:00", "10.1.1.1", "%LINK-3-UPDOWN", 3), "10.1.1.1"),
 
