@@ -877,6 +877,29 @@ internal static class SelfTest
             dialog.Close();
         });
 
+        Check("文字の上を叩いても落ちない（Run は Visual ではない）", () =>
+        {
+            // 差分の色分けは TextBlock の中に Run を並べる。その上でマウスを押すと
+            // OriginalSource が Run になり、VisualTreeHelper.GetParent に渡した瞬間に
+            // InvalidOperationException でアプリごと落ちた（2026-08-17 のクラッシュ）。
+            // たどり方 1 か所に閉じてあるので、ここが通れば全部の経路が通る。
+            var block = new System.Windows.Controls.TextBlock();
+            var run = new System.Windows.Documents.Run("差分の一部");
+
+            block.Inlines.Add(run);
+
+            var panel = new System.Windows.Controls.StackPanel();
+            panel.Children.Add(block);
+
+            DependencyObject? parent = Views.MainWindow.ClickedParentOf(run);
+
+            Assert(ReferenceEquals(parent, block), "Run の親が、載っている TextBlock にならない");
+
+            // そこから先は視覚の親でたどれる（＝上へ抜けられる）
+            Assert(ReferenceEquals(Views.MainWindow.ClickedParentOf(block), panel),
+                   "TextBlock から上へたどれない");
+        });
+
         Check("差分比較: 機器から取ってくる小窓を表示できる", () =>
         {
             // 窓はコードで組んでいるので、リソースキーの打ち間違いは実行時にしか出ない。

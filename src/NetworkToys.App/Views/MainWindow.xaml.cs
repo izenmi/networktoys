@@ -445,12 +445,31 @@ public partial class MainWindow : Window
         if (RowUnder(e) is { } row) _shell.Transfer.OpenRemote(row);
     }
 
+    /// <summary>
+    /// 叩かれたところから上へたどるときの親。
+    ///
+    /// <b><c>Run</c> は Visual ではない。</b>TextBlock の中を色分けすると
+    /// （差分の色分けがそう）マウスの <c>OriginalSource</c> が <c>Run</c> になり、
+    /// <see cref="VisualTreeHelper.GetParent"/> に渡した瞬間に
+    /// <c>InvalidOperationException</c> でアプリごと落ちる（2026-08-17 に実際に落ちた）。
+    /// <b>ContentElement は論理の親（＝載っている TextBlock）へ上がってから続ける。</b>
+    ///
+    /// クリックの出どころから上へたどるところは、必ずこれを通すこと。
+    /// </summary>
+    internal static DependencyObject? ClickedParentOf(DependencyObject node) => node switch
+    {
+        Visual or System.Windows.Media.Media3D.Visual3D => VisualTreeHelper.GetParent(node),
+        System.Windows.ContentElement content =>
+            System.Windows.Documents.ContentOperations.GetParent(content) ?? LogicalTreeHelper.GetParent(content),
+        _ => LogicalTreeHelper.GetParent(node),
+    };
+
     /// <summary>叩かれた場所にある行の VM。行の外なら null。</summary>
     private static FileRowViewModel? RowUnder(MouseButtonEventArgs e)
     {
         for (DependencyObject? node = e.OriginalSource as DependencyObject;
              node is not null;
-             node = VisualTreeHelper.GetParent(node))
+             node = ClickedParentOf(node))
         {
             if (node is ListBoxItem { DataContext: FileRowViewModel row }) return row;
         }
@@ -1631,7 +1650,7 @@ public partial class MainWindow : Window
 
         // 押されたのが見出しかどうか。中身の上のクリックまで拾わない
         TabItem? tab = null;
-        for (DependencyObject? node = source; node is not null; node = VisualTreeHelper.GetParent(node))
+        for (DependencyObject? node = source; node is not null; node = ClickedParentOf(node))
         {
             if (node is TabItem item) { tab = item; break; }
             if (node is TabControl) return;   // 見出しの外（中身の側）だった
