@@ -68,9 +68,48 @@ public class TextDiffTests
     }
 
     [Fact]
-    public void Huge_input_is_given_up_on()
+    public void Twenty_thousand_lines_are_compared_not_refused()
     {
-        string huge = string.Join('\n', Enumerable.Range(0, 6000));
+        // 2 万行の設定どうし。ところどころ違うのが本番の形
+        string[] lines = [.. Enumerable.Range(0, 20_000).Select(i => $"  set property-{i} value-{i}")];
+
+        string before = string.Join('\n', lines);
+
+        lines[5_000] = "  set property-5000 value-CHANGED";
+        lines[19_000] = "  set property-19000 value-CHANGED";
+
+        string after = string.Join('\n', lines);
+
+        TextDiffResult result = TextDiff.Compare(before, after);
+
+        Assert.False(result.TooLarge);
+
+        // 変わった 2 行が「消えた + 現れた」で 4 行。ほかは動かさない
+        Assert.Equal(2, result.Lines.Count(l => l.Kind == DiffKind.Removed));
+        Assert.Equal(2, result.Lines.Count(l => l.Kind == DiffKind.Added));
+        Assert.Equal(20_000 - 2, result.Lines.Count(l => l.Kind == DiffKind.Unchanged));
+    }
+
+    [Fact]
+    public void Insertions_in_a_large_file_do_not_shift_everything()
+    {
+        // 途中に 3 行入っただけ。後ろが全部ずれて出ると差分として使い物にならない
+        string before = string.Join('\n', Enumerable.Range(0, 10_000).Select(i => $"line {i}"));
+
+        string after = string.Join('\n', Enumerable.Range(0, 10_000)
+            .Select(i => i == 4_000 ? "added A\nadded B\nadded C\nline 4000" : $"line {i}"));
+
+        TextDiffResult result = TextDiff.Compare(before, after);
+
+        Assert.False(result.TooLarge);
+        Assert.Equal(3, result.Lines.Count(l => l.Kind == DiffKind.Added));
+        Assert.Empty(result.Lines.Where(l => l.Kind == DiffKind.Removed));
+    }
+
+    [Fact]
+    public void Absurd_input_is_still_given_up_on()
+    {
+        string huge = string.Join('\n', Enumerable.Range(0, 200_001));
 
         TextDiffResult result = TextDiff.Compare(huge, huge + "\nx");
 
@@ -183,15 +222,17 @@ public class TextDiffTests
     }
 
     [Fact]
-    public void Large_completely_different_inputs_are_given_up_on()
+    public void Completely_different_inputs_are_shown_as_a_full_replacement()
     {
-        // 行数の上限内でも、中身がまるごと違えば DP 表が巨大になる。
-        // 面積で諦めることを確かめる（以前は約 100MB 確保して UI が固まった）
-        string before = string.Join('\n', Enumerable.Range(0, 2000).Select(i => $"before {i}"));
-        string after = string.Join('\n', Enumerable.Range(0, 2000).Select(i => $"after {i}"));
+        // 共通の行が 1 本も無い。行どうしの対応は付けようがないので、
+        // 「まるごと消えて、まるごと現れた」として見せる（諦めて空にしない）
+        string before = string.Join('\n', Enumerable.Range(0, 3000).Select(i => $"before {i}"));
+        string after = string.Join('\n', Enumerable.Range(0, 3000).Select(i => $"after {i}"));
 
         TextDiffResult result = TextDiff.Compare(before, after);
 
-        Assert.True(result.TooLarge);
+        Assert.False(result.TooLarge);
+        Assert.Equal(3000, result.Lines.Count(l => l.Kind == DiffKind.Removed));
+        Assert.Equal(3000, result.Lines.Count(l => l.Kind == DiffKind.Added));
     }
 }

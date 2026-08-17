@@ -18,9 +18,6 @@ public sealed record AciNodeItem(string Name, string Dn);
 /// <summary>ログの種別。</summary>
 public sealed record AciLogKind(string Name, string ClassName);
 
-/// <summary>構成の種別。1 種別につき複数のクラスを順に引く。</summary>
-public sealed record AciConfigKind(string Name, string Kind, string[] Classes);
-
 /// <summary>
 /// Cisco ACI（APIC）を見に行くタブ。<b>読み取り専用</b>で、設定を書く口は持たない。
 ///
@@ -66,7 +63,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     private bool _showFetchedText = true;
     private int _selectedDiffIndex = -1;
     private AciLogKind _selectedLogKind;
-    private AciConfigKind _selectedConfigKind;
     private string _lastResponse = "";
     private bool _showConnection = true;
 
@@ -82,22 +78,12 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         ];
         _selectedLogKind = LogKinds[0];
 
-        ConfigKinds =
-        [
-            new AciConfigKind("テナント構成", "tenant", ["fvTenant", "fvCtx", "fvBD", "fvAEPg", "vzBrCP"]),
-            new AciConfigKind("ファブリック構成", "fabric", ["fabricNode"]),
-            new AciConfigKind("インターフェース関連ポリシー", "interface",
-                ["infraAttEntityP", "physDomP", "fvnsVlanInstP", "infraAccPortGrp"]),
-            new AciConfigKind("設定バックアップ", "backup", ["configSnapshot", "configJob"]),
-        ];
-        _selectedConfigKind = ConfigKinds[0];
-
         FetchCommand = new RelayCommand(() => _ = FetchBasicsAsync(), CanFetch);
         FetchPortsCommand = new RelayCommand(() => _ = FetchPortsAsync(), () => CanFetch() && SelectedNode is not null);
         FetchEpgsCommand = new RelayCommand(() => _ = FetchEpgsAsync(), CanFetch);
         FetchEndpointsCommand = new RelayCommand(() => _ = FetchEndpointsAsync(), CanFetch);
         FetchLogCommand = new RelayCommand(() => _ = FetchLogAsync(), CanFetch);
-        FetchConfigCommand = new RelayCommand(() => _ = FetchConfigAsync(), CanFetch);
+        FetchDevicesCommand = new RelayCommand(() => _ = FetchDevicesAsync(), CanFetch);
         FetchBeforeCommand = new RelayCommand(
             () => _ = FetchTenantConfigAsync(before: true),
             () => CanFetch() && SelectedTenant is { Length: > 0 });
@@ -133,10 +119,14 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public ObservableCollection<AciEpgRow> EpgRows { get; } = [];
     public ObservableCollection<AciEpgMemberRow> MemberRows { get; } = [];
     public ObservableCollection<AciEndpointRow> EndpointRows { get; } = [];
-    public ObservableCollection<AciConfigRow> ConfigRows { get; } = [];
+    public ObservableCollection<AciDeviceRow> DeviceRows { get; } = [];
 
     /// <summary>作業前後の差分（左右に並べた行）。</summary>
-    public ObservableCollection<SideBySideRow> DiffRows { get; } = [];
+    /// <summary>
+    /// 左右に並べた差分。<b>2 万行を 1 行ずつ足すと一覧が測り直され続ける</b>ので、
+    /// まとめて入れ替える（2026-08-17 に「2 万行を比べたい」という指示があった）。
+    /// </summary>
+    public BulkObservableCollection<SideBySideRow> DiffRows { get; } = [];
 
     public ObservableCollection<AciNodeItem> Nodes { get; } = [];
 
@@ -144,8 +134,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> Tenants { get; } = [];
 
     public AciLogKind[] LogKinds { get; }
-    public AciConfigKind[] ConfigKinds { get; }
-
     // ===== コマンド =====
 
     public RelayCommand FetchCommand { get; }
@@ -153,7 +141,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public RelayCommand FetchEpgsCommand { get; }
     public RelayCommand FetchEndpointsCommand { get; }
     public RelayCommand FetchLogCommand { get; }
-    public RelayCommand FetchConfigCommand { get; }
+    public RelayCommand FetchDevicesCommand { get; }
 
     /// <summary>選んだテナントの設定を「作業前」として取る。</summary>
     public RelayCommand FetchBeforeCommand { get; }
@@ -398,12 +386,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         set { if (value is not null) SetProperty(ref _selectedLogKind, value); }
     }
 
-    public AciConfigKind SelectedConfigKind
-    {
-        get => _selectedConfigKind;
-        set { if (value is not null) SetProperty(ref _selectedConfigKind, value); }
-    }
-
     // ===== 状態 =====
 
     public string Status
@@ -533,24 +515,16 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         Status = $"{kind.Name} {LogRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
     });
 
-    private Task FetchConfigAsync() => RunAsync("構成", async (client, token) =>
+    /// <summary>
+    /// ファブリックの機器。<b>型番・シリアル・版は <c>fabricNode</c> にしか無い</b>ので、
+    /// ノードの選択欄（<c>topSystem</c> 由来）とは別に引く。
+    /// </summary>
+    private Task FetchDevicesAsync() => RunAsync("機器一覧", async (client, token) =>
     {
-        AciConfigKind kind = SelectedConfigKind;
-        var mos = new List<AciMo>();
+        IReadOnlyList<AciMo> mos = await FetchClassAsync(client, "fabricNode", null, null, token);
 
-        foreach (string className in kind.Classes)
-            mos.AddRange(await FetchClassAsync(client, className, ChildrenFor(className), null, token));
-
-        IReadOnlyList<AciConfigRow> rows = kind.Kind switch
-        {
-            "tenant" => AciCatalog.ParseTenantConfig(mos),
-            "fabric" => AciCatalog.ParseFabricConfig(mos),
-            "interface" => AciCatalog.ParseInterfacePolicy(mos),
-            _ => AciCatalog.ParseBackupConfig(mos),
-        };
-
-        Replace(ConfigRows, rows);
-        Status = $"{kind.Name} {ConfigRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
+        Replace(DeviceRows, AciCatalog.ParseDevices(mos));
+        Status = $"機器 {DeviceRows.Count} 台（{DateTime.Now:HH:mm:ss}）";
     });
 
     private const string Children = "rsp-subtree=children";
@@ -564,9 +538,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     /// （2026-08-17 に実機で発覚）。持っていないものは「—」で出す方がよい。
     /// </summary>
     private const string Health = "rsp-subtree-include=health";
-
-    /// <summary>VLAN プールだけは範囲が子に入っているので、そこだけ子を引く。</summary>
-    private static string? ChildrenFor(string className) => className == "fvnsVlanInstP" ? Children : null;
 
     private async Task<IReadOnlyList<AciMo>> FetchClassAsync(
         ApicClient client, string className, string? options, string? scopeDn, CancellationToken token)
@@ -690,7 +661,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         "epg" => EpgRows.Count,
         "member" => MemberRows.Count,
         "endpoint" => EndpointRows.Count,
-        "config" => ConfigRows.Count,
+        "device" => DeviceRows.Count,
         _ => 0,
     };
 
@@ -703,7 +674,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         "epg" => AciCatalog.ToCsv([.. EpgRows]),
         "member" => AciCatalog.ToCsv([.. MemberRows]),
         "endpoint" => AciCatalog.ToCsv([.. EndpointRows]),
-        _ => AciCatalog.ToCsv([.. ConfigRows]),
+        _ => AciCatalog.ToCsv([.. DeviceRows]),
     };
 
     private void Save(string? key, bool xlsx)
@@ -750,7 +721,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         _cts?.Cancel();
 
         foreach (var rows in (System.Collections.IList[])
-                 [HealthRows, FaultRows, LogRows, PortRows, EpgRows, MemberRows, EndpointRows, ConfigRows,
+                 [HealthRows, FaultRows, LogRows, PortRows, EpgRows, MemberRows, EndpointRows, DeviceRows,
                   DiffRows, Nodes, Tenants])
         {
             rows.Clear();
@@ -803,7 +774,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         FetchEpgsCommand.RaiseCanExecuteChanged();
         FetchEndpointsCommand.RaiseCanExecuteChanged();
         FetchLogCommand.RaiseCanExecuteChanged();
-        FetchConfigCommand.RaiseCanExecuteChanged();
+        FetchDevicesCommand.RaiseCanExecuteChanged();
         FetchBeforeCommand.RaiseCanExecuteChanged();
         FetchAfterCommand.RaiseCanExecuteChanged();
     }
@@ -890,7 +861,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     {
         SideBySideResult result = SideBySideDiff.Build(_before, _after);
 
-        DiffRows.Clear();
+        DiffRows.Reset([]);
         SelectedDiffIndex = -1;
 
         if (result.TooLarge)
@@ -900,8 +871,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
             return;
         }
 
-        foreach (SideBySideRow row in OnlyDifferences ? SideBySideDiff.OnlyDifferences(result) : result.Rows)
-            DiffRows.Add(row);
+        DiffRows.Reset(OnlyDifferences ? SideBySideDiff.OnlyDifferences(result) : result.Rows);
 
         DiffHeadline = result.HasChanges
             ? $"{result.ChangedCount} 行に違いがあります。"

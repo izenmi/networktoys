@@ -412,53 +412,35 @@ public class AciCatalogTests
     }
 
     [Fact]
-    public void Fabric_config_keeps_model_serial_and_version()
+    public void The_device_list_keeps_model_serial_and_version_in_node_order()
     {
-        IReadOnlyList<AciConfigRow> rows = AciCatalog.ParseFabricConfig(Mos(NodesJson));
+        IReadOnlyList<AciDeviceRow> rows = AciCatalog.ParseDevices(Mos(NodesJson));
 
-        Assert.Equal("リーフ", rows[0].Kind);
+        Assert.Equal("リーフ", rows[0].Role);
         Assert.Equal("leaf-101", rows[0].Name);
-        Assert.Equal("pod-1", rows[0].Parent);
+        Assert.Equal("N9K-C93180YC-EX", rows[0].Model);
+        Assert.Equal("FDO12345678", rows[0].Serial);
+        Assert.Equal("n9000-15.2(4e)", rows[0].Version);
         Assert.Equal("● 稼働", rows[0].State);
-        Assert.Equal("N9K-C93180YC-EX / FDO12345678 / n9000-15.2(4e)", rows[0].Note);
+        Assert.Equal("1", rows[0].Pod);
         Assert.Equal("✕ 停止", rows[1].State);
     }
 
     [Fact]
-    public void Tenant_config_names_the_class_in_japanese()
+    public void The_device_list_is_ordered_by_node_number()
     {
         const string json = """
-            {"totalCount":"2","imdata":[
-              {"fvTenant":{"attributes":{"dn":"uni/tn-Prod","name":"Prod","descr":"本番"}}},
-              {"fvBD":{"attributes":{"dn":"uni/tn-Prod/BD-Web","name":"BD-Web"}}}
+            {"totalCount":"3","imdata":[
+              {"fabricNode":{"attributes":{"dn":"topology/pod-1/node-101","id":"101","role":"leaf"}}},
+              {"fabricNode":{"attributes":{"dn":"topology/pod-1/node-9","id":"9","role":"leaf"}}},
+              {"fabricNode":{"attributes":{"dn":"topology/pod-1/node-1001","id":"1001","role":"spine"}}}
             ]}
             """;
 
-        IReadOnlyList<AciConfigRow> rows = AciCatalog.ParseTenantConfig(Mos(json));
-
-        Assert.Equal("テナント", rows[0].Kind);
-        Assert.Equal("本番", rows[0].Note);
-        Assert.Equal("ブリッジドメイン", rows[1].Kind);
-        Assert.Equal("Prod", rows[1].Parent);
-    }
-
-    [Fact]
-    public void Vlan_pool_ranges_are_shown_because_that_is_what_is_asked()
-    {
-        const string json = """
-            {"totalCount":"1","imdata":[
-              {"fvnsVlanInstP":{"attributes":{"dn":"uni/infra/vlanns-[Pool]-static","name":"Pool",
-                "allocMode":"static"},
-               "children":[
-                 {"fvnsEncapBlk":{"attributes":{"from":"vlan-100","to":"vlan-199"}}},
-                 {"fvnsEncapBlk":{"attributes":{"from":"vlan-300","to":"vlan-300"}}}]}}
-            ]}
-            """;
-
-        IReadOnlyList<AciConfigRow> rows = AciCatalog.ParseInterfacePolicy(Mos(json));
-
-        Assert.Equal("VLAN プール", rows[0].Kind);
-        Assert.Equal("vlan-100〜vlan-199, vlan-300", rows[0].Note);
+        // 文字の並びだと 1001 → 101 → 9 になる
+        Assert.Equal(
+            new[] { "9", "101", "1001" },
+            AciCatalog.ParseDevices(Mos(json)).Select(r => r.Node).ToArray());
     }
 
     [Fact]
@@ -615,7 +597,7 @@ public class AciCatalogTests
             AciCatalog.ToCsv(AciCatalog.ParseEpgs(Mos(EpgsJson))),
             AciCatalog.ToCsv(AciCatalog.ParseEpgMembers(Mos(EpgsJson))),
             AciCatalog.ToCsv(AciCatalog.ParseEndpoints(Mos(EndpointsJson))),
-            AciCatalog.ToCsv(AciCatalog.ParseFabricConfig(Mos(NodesJson))),
+            AciCatalog.ToCsv(AciCatalog.ParseDevices(Mos(NodesJson))),
         ];
 
         foreach (CsvTable table in tables)

@@ -28,15 +28,25 @@ public sealed record TextDiffResult(IReadOnlyList<DiffLine> Lines, int IgnoredLi
 /// </summary>
 public static class TextDiff
 {
-    /// <summary>これを超える行数は差分を諦める。</summary>
-    private const int MaxLines = 5000;
+    /// <summary>
+    /// これを超える行数は差分を諦める。
+    ///
+    /// <b>2 万行の設定を比べたい</b>という用途があるので広く取ってある（2026-08-17 ユーザー指示）。
+    /// 行数そのものは重くない — 重いのは下の LCS の表なので、そちらは
+    /// <see cref="Anchored"/> が小さく割ってから使う。
+    /// </summary>
+    private const int MaxLines = 200_000;
 
     /// <summary>
-    /// LCS の表に許す面積（セル数）。行数だけで判定すると、上限ぎりぎりの
-    /// 中身がまるごと違う 2 本（5,000×5,000 = 約 100MB の表）で
-    /// UI が数十秒固まる。2,000,000 セルなら表は約 8MB で収まる。
+    /// LCS の表に許す面積（セル数）。ここを超える区間は、
+    /// <b>一意な共通行で区切ってから</b>小さく割って解く（patience diff）。
+    /// それでも割れない区間は「まるごと削除 → まるごと追加」で見せる。
+    /// 2,000,000 セルなら表は約 8MB で収まる。
     /// </summary>
     private const long MaxCells = 2_000_000;
+
+    /// <summary>区切りの入れ子の深さの上限。ここを超えたら割るのをやめる。</summary>
+    private const int MaxDepth = 32;
 
     public static TextDiffResult Compare(string? before, string? after, DiffNoiseFilter? filter = null)
     {
@@ -83,10 +93,6 @@ public static class TextDiff
         ReadOnlySpan<string> beforeMiddle = beforeLines.AsSpan(head, beforeLines.Length - head - tail);
         ReadOnlySpan<string> afterMiddle = afterLines.AsSpan(head, afterLines.Length - head - tail);
 
-        // 共通部分を削っても中身が大きく違うものは面積で諦める
-        if ((long)beforeMiddle.Length * afterMiddle.Length > MaxCells)
-            return new TextDiffResult([], ignored, TooLarge: true);
-
         var lines = new List<DiffLine>();
 
         for (int i = 0; i < head; i++)
@@ -100,27 +106,179 @@ public static class TextDiff
         return new TextDiffResult(lines, ignored, TooLarge: false);
     }
 
-    /// <summary>差のある部分だけ最長共通部分列で並べる。</summary>
+    /// <summary>差のある部分を並べる。大きい区間は一意な共通行で割ってから解く。</summary>
     private static List<DiffLine> DiffMiddle(ReadOnlySpan<string> before, ReadOnlySpan<string> after)
     {
         var result = new List<DiffLine>();
+        Fill(before, after, 0, result);
+        return result;
+    }
 
-        if (before.Length == 0 && after.Length == 0)
-            return result;
+    /// <summary>
+    /// 区間を 1 つ解いて <paramref name="result"/> の末尾へ足す。
+    ///
+    /// <b>設定ファイルは同じ行がほとんど</b>なので、まず前後の共通部分を削り、
+    /// それでも大きければ<b>両方に 1 回ずつしか出てこない行</b>を目印にして割る。
+    /// 目印は必ず対応が付くので、そこで切っても差分の質は落ちない。
+    /// </summary>
+    private static void Fill(
+        ReadOnlySpan<string> before, ReadOnlySpan<string> after, int depth, List<DiffLine> result)
+    {
+        // 前後の共通部分（区間ごとにも効く。割ったあとの端はたいてい揃っている）
+        int head = 0;
+        while (head < before.Length && head < after.Length
+               && string.Equals(before[head], after[head], StringComparison.Ordinal))
+        {
+            result.Add(new DiffLine(DiffKind.Unchanged, before[head]));
+            head++;
+        }
+
+        before = before[head..];
+        after = after[head..];
+
+        int tail = 0;
+        while (tail < before.Length && tail < after.Length
+               && string.Equals(before[^(tail + 1)], after[^(tail + 1)], StringComparison.Ordinal))
+        {
+            tail++;
+        }
+
+        ReadOnlySpan<string> tailLines = before[(before.Length - tail)..];
+        before = before[..(before.Length - tail)];
+        after = after[..(after.Length - tail)];
 
         if (before.Length == 0)
         {
             foreach (string line in after)
                 result.Add(new DiffLine(DiffKind.Added, line));
-            return result;
         }
-
-        if (after.Length == 0)
+        else if (after.Length == 0)
         {
             foreach (string line in before)
                 result.Add(new DiffLine(DiffKind.Removed, line));
-            return result;
         }
+        else if ((long)before.Length * after.Length <= MaxCells)
+        {
+            result.AddRange(Lcs(before, after));
+        }
+        else if (depth < MaxDepth && Anchored(before, after, depth, result))
+        {
+            // Anchored が中で足した
+        }
+        else
+        {
+            // 目印が 1 つも無い（総入れ替え）。行ごとの対応は付けようがないので、
+            // まるごと差し替えとして見せる — 諦めて何も出さないより読める
+            foreach (string line in before)
+                result.Add(new DiffLine(DiffKind.Removed, line));
+
+            foreach (string line in after)
+                result.Add(new DiffLine(DiffKind.Added, line));
+        }
+
+        foreach (string line in tailLines)
+            result.Add(new DiffLine(DiffKind.Unchanged, line));
+    }
+
+    /// <summary>
+    /// 両方に 1 回ずつしか出てこない行を目印にして区間を割る（patience diff）。
+    /// 目印が取れなければ <c>false</c>。
+    /// </summary>
+    private static bool Anchored(
+        ReadOnlySpan<string> before, ReadOnlySpan<string> after, int depth, List<DiffLine> result)
+    {
+        Dictionary<string, int> beforeCount = new(StringComparer.Ordinal);
+        Dictionary<string, int> afterCount = new(StringComparer.Ordinal);
+        Dictionary<string, int> beforeAt = new(StringComparer.Ordinal);
+        Dictionary<string, int> afterAt = new(StringComparer.Ordinal);
+
+        for (int i = 0; i < before.Length; i++)
+        {
+            beforeCount[before[i]] = beforeCount.GetValueOrDefault(before[i]) + 1;
+            beforeAt[before[i]] = i;
+        }
+
+        for (int i = 0; i < after.Length; i++)
+        {
+            afterCount[after[i]] = afterCount.GetValueOrDefault(after[i]) + 1;
+            afterAt[after[i]] = i;
+        }
+
+        // after の並び順に、一意な共通行を拾う
+        var pairs = new List<(int Before, int After)>();
+
+        for (int i = 0; i < after.Length; i++)
+        {
+            string line = after[i];
+
+            if (afterCount[line] == 1 && beforeCount.GetValueOrDefault(line) == 1)
+                pairs.Add((beforeAt[line], i));
+        }
+
+        if (pairs.Count == 0) return false;
+
+        // 目印どうしが交差していると割れないので、before 側が増える並びだけ残す
+        int[] anchors = LongestIncreasing([.. pairs.Select(p => p.Before)]);
+
+        if (anchors.Length == 0) return false;
+
+        int x = 0, y = 0;
+
+        foreach (int index in anchors)
+        {
+            (int beforeAtIndex, int afterAtIndex) = pairs[index];
+
+            Fill(before[x..beforeAtIndex], after[y..afterAtIndex], depth + 1, result);
+
+            result.Add(new DiffLine(DiffKind.Unchanged, before[beforeAtIndex]));
+
+            x = beforeAtIndex + 1;
+            y = afterAtIndex + 1;
+        }
+
+        Fill(before[x..], after[y..], depth + 1, result);
+
+        return true;
+    }
+
+    /// <summary>最長増加部分列の<b>添字</b>を返す。目印を交差しない形に間引くために使う。</summary>
+    private static int[] LongestIncreasing(int[] values)
+    {
+        if (values.Length == 0) return [];
+
+        var tails = new List<int>();          // tails[k] = 長さ k+1 の列の末尾の添字
+        int[] previous = new int[values.Length];
+
+        for (int i = 0; i < values.Length; i++)
+        {
+            int low = 0, high = tails.Count;
+
+            while (low < high)
+            {
+                int mid = (low + high) / 2;
+
+                if (values[tails[mid]] < values[i]) low = mid + 1;
+                else high = mid;
+            }
+
+            previous[i] = low > 0 ? tails[low - 1] : -1;
+
+            if (low == tails.Count) tails.Add(i);
+            else tails[low] = i;
+        }
+
+        var result = new int[tails.Count];
+
+        for (int i = tails.Count - 1, at = tails[^1]; i >= 0; i--, at = previous[at])
+            result[i] = at;
+
+        return result;
+    }
+
+    /// <summary>小さい区間を最長共通部分列で並べる。</summary>
+    private static List<DiffLine> Lcs(ReadOnlySpan<string> before, ReadOnlySpan<string> after)
+    {
+        var result = new List<DiffLine>();
 
         int[,] lengths = new int[before.Length + 1, after.Length + 1];
 

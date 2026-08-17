@@ -118,7 +118,11 @@ public sealed class DeviceCompareViewModel : ObservableObject
     }
 
     /// <summary>左右に並べた差分。</summary>
-    public ObservableCollection<SideBySideRow> Rows { get; } = [];
+    /// <summary>
+    /// 左右に並べた差分。<b>行数が多いときは 1 行ずつ足さない</b>
+    /// （足すたびに一覧が測り直される。ACI の差分比較と同じ扱い）。
+    /// </summary>
+    public BulkObservableCollection<SideBySideRow> Rows { get; } = [];
 
     /// <summary>構造として比べたときの変化。対象によっては空（show run など）。</summary>
     public ObservableCollection<DeviceChange> Changes { get; } = [];
@@ -516,10 +520,7 @@ public sealed class DeviceCompareViewModel : ObservableObject
             return;
         }
 
-        IEnumerable<SideBySideRow> rows = OnlyDifferences ? SideBySideDiff.OnlyDifferences(result) : result.Rows;
-
-        foreach (SideBySideRow row in rows)
-            Rows.Add(row);
+        Rows.Reset(OnlyDifferences ? SideBySideDiff.OnlyDifferences(result) : result.Rows);
 
         DeviceCompareOutcome? outcome = DeviceComparison.Compare(_mode, BeforeText, AfterText);
 

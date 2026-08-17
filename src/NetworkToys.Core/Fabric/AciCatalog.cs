@@ -88,13 +88,20 @@ public sealed record AciEndpointRow(
     string Node,
     string Path);
 
-/// <summary>構成一覧の 1 行。4 種の種別を同じ 5 列で見せる。</summary>
-public sealed record AciConfigRow(
-    string Kind,
+/// <summary>機器一覧の 1 行（<c>fabricNode</c> 1 台ぶん）。台帳として使えるだけの項目を持つ。</summary>
+public sealed record AciDeviceRow(
+    string Node,
     string Name,
-    string Parent,
+    string Role,
+    string Model,
+    string Serial,
+    string Version,
     string State,
-    string Note);
+    string Pod)
+{
+    /// <summary>並べ替え用の鍵。ノード番号は数字なので、文字のままだと 101 が 9 より前に来る。</summary>
+    public string NodeKey => AciCatalog.PortSortKey(Node, "");
+}
 
 /// <summary>
 /// APIC の応答を画面と CSV の行に変換する。
@@ -603,60 +610,33 @@ public static class AciCatalog
         return rows;
     }
 
-    // ===== 構成（4 種を同じ 5 列に寄せる） =====
+    // ===== 機器一覧 =====
 
-    /// <summary>テナント構成。fvTenant / fvCtx / fvBD / fvAEPg / vzBrCP を 1 つの表にする。</summary>
-    public static IReadOnlyList<AciConfigRow> ParseTenantConfig(IEnumerable<AciMo> mos)
+    /// <summary>
+    /// ファブリックの機器（<c>fabricNode</c>）。<b>型番・シリアル・版はここにしか無い</b>
+    /// （<c>topSystem</c> はヘルスとポートの絞り込み向け。用途を混ぜない）。
+    /// <b>ノード番号順</b>に並べる — 応答の順は APIC 任せ。
+    /// </summary>
+    public static IReadOnlyList<AciDeviceRow> ParseDevices(IEnumerable<AciMo> mos)
     {
-        var rows = new List<AciConfigRow>();
-
-        foreach (AciMo mo in mos)
-        {
-            string dn = mo["dn"];
-            string tenant = AciDn.Value(dn, "tn");
-
-            (string kind, string parent) = mo.ClassName switch
-            {
-                "fvTenant" => ("テナント", ""),
-                "fvCtx" => ("VRF", tenant),
-                "fvBD" => ("ブリッジドメイン", tenant),
-                "fvAEPg" => ("EPG", $"{tenant} / {AciDn.Value(dn, "ap")}"),
-                "vzBrCP" => ("契約", tenant),
-                _ => (mo.ClassName, tenant),
-            };
-
-            rows.Add(new AciConfigRow(
-                Kind: kind,
-                Name: Or(mo["name"], dn),
-                Parent: parent,
-                State: mo["configIssues"],
-                Note: mo["descr"]));
-        }
-
-        return rows;
-    }
-
-    /// <summary>ファブリック構成。台帳として使えるよう型番・シリアル・版を備考に入れる。</summary>
-    public static IReadOnlyList<AciConfigRow> ParseFabricConfig(IEnumerable<AciMo> mos)
-    {
-        var rows = new List<AciConfigRow>();
+        var rows = new List<AciDeviceRow>();
 
         foreach (AciMo mo in mos)
         {
             string dn = mo["dn"];
 
-            string[] parts = [mo["model"], mo["serial"], Or(mo["version"], mo["fwVer"])];
-            string note = string.Join(" / ", parts.Where(part => part.Length > 0));
-
-            rows.Add(new AciConfigRow(
-                Kind: DescribeNodeRole(mo["role"]),
-                Name: Or(mo["name"], AciDn.Value(dn, "node")),
-                Parent: $"pod-{AciDn.Value(dn, "pod")}",
+            rows.Add(new AciDeviceRow(
+                Node: Or(mo["id"], AciDn.Value(dn, "node")),
+                Name: mo["name"],
+                Role: DescribeNodeRole(mo["role"]),
+                Model: mo["model"],
+                Serial: mo["serial"],
+                Version: Or(mo["version"], mo["fwVer"]),
                 State: DescribeFabricState(mo["fabricSt"]),
-                Note: note));
+                Pod: AciDn.Value(dn, "pod")));
         }
 
-        return rows;
+        return [.. rows.OrderBy(r => r.NodeKey, StringComparer.Ordinal)];
     }
 
     public static string DescribeNodeRole(string? role) => role switch
@@ -679,67 +659,7 @@ public static class AciCatalog
         _ => state,
     };
 
-    /// <summary>インターフェース関連のポリシー。「なぜこの口でこの VLAN が通らないか」を辿る用。</summary>
-    public static IReadOnlyList<AciConfigRow> ParseInterfacePolicy(IEnumerable<AciMo> mos)
-    {
-        var rows = new List<AciConfigRow>();
 
-        foreach (AciMo mo in mos)
-        {
-            string dn = mo["dn"];
-
-            string kind = mo.ClassName switch
-            {
-                "infraAttEntityP" => "AEP",
-                "physDomP" => "物理ドメイン",
-                "l3extDomP" => "外部 L3 ドメイン",
-                "fvnsVlanInstP" => "VLAN プール",
-                "infraAccPortGrp" => "ポートグループ",
-                "infraAccBndlGrp" => "束ねたポートグループ",
-                _ => mo.ClassName,
-            };
-
-            // VLAN プールは範囲が子に入っている。ここが知りたいところなので備考に出す
-            string note = string.Join(", ", mo.ChildrenOf("fvnsEncapBlk")
-                .Select(b => Range(b["from"], b["to"]))
-                .Where(r => r.Length > 0));
-
-            rows.Add(new AciConfigRow(
-                Kind: kind,
-                Name: Or(mo["name"], dn),
-                Parent: mo["allocMode"],
-                State: "",
-                Note: Or(note, mo["descr"])));
-        }
-
-        return rows;
-    }
-
-    /// <summary>設定のバックアップ（スナップショットと書き出しジョブ）。</summary>
-    public static IReadOnlyList<AciConfigRow> ParseBackupConfig(IEnumerable<AciMo> mos)
-    {
-        var rows = new List<AciConfigRow>();
-
-        foreach (AciMo mo in mos)
-        {
-            string kind = mo.ClassName switch
-            {
-                "configSnapshot" => "スナップショット",
-                "configJob" => "書き出しジョブ",
-                "configExportP" => "書き出し設定",
-                _ => mo.ClassName,
-            };
-
-            rows.Add(new AciConfigRow(
-                Kind: kind,
-                Name: Or(mo["fileName"], mo["name"]),
-                Parent: Or(mo["createTime"], mo["lastStepTime"]),
-                State: DescribeJobState(mo["operSt"]),
-                Note: Or(mo["descr"], mo["details"])));
-        }
-
-        return rows;
-    }
 
     public static string DescribeJobState(string? state) => state switch
     {
@@ -789,9 +709,12 @@ public static class AciCatalog
         ["MAC", "IP", "テナント", "EPG", "VLAN", "ノード", "パス"],
         [.. rows.Select(r => new[] { r.Mac, r.Ip, r.Tenant, r.Epg, r.Encap, r.Node, r.Path })]);
 
-    public static CsvTable ToCsv(IReadOnlyList<AciConfigRow> rows) => new(
-        ["種別", "名前", "親", "状態", "備考"],
-        [.. rows.Select(r => new[] { r.Kind, r.Name, r.Parent, r.State, r.Note })]);
+    public static CsvTable ToCsv(IReadOnlyList<AciDeviceRow> rows) => new(
+        ["ノード", "名前", "役割", "型番", "シリアル", "版", "状態", "Pod"],
+        [.. rows.Select(r => new[]
+        {
+            r.Node, r.Name, r.Role, r.Model, r.Serial, r.Version, r.State, r.Pod,
+        })]);
 
     // ===== 問い合わせ先の組み立て（HTTP そのものには触らない） =====
 

@@ -6631,70 +6631,68 @@
                             </Border>
                         </TabItem>
 
-                        <TabItem Header="構成">
+                        <!-- ファブリックの機器（台帳として使う。型番・シリアル・版は fabricNode にしか無い） -->
+                        <TabItem Header="機器一覧">
                             <Border Style="{StaticResource Card}">
                                 <DockPanel>
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                                   ToolTip="{x:Static help:TabHelp.AciConfig}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="テナントやファブリックの設定内容を一覧にします。" />
+                                                   ToolTip="{x:Static help:TabHelp.AciDevices}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="ファブリックにある機器を、型番・シリアル・版つきで一覧にします。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <TextBlock Text="種別" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <ComboBox Width="220" Margin="0,0,6,0"
-                                                  ItemsSource="{Binding ConfigKinds}"
-                                                  SelectedItem="{Binding SelectedConfigKind}"
-                                                  ToolTip="見たい設定の種類を選びます。">
-                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                        <Button Content="構成を取得" Command="{Binding FetchConfigCommand}" Margin="0,0,12,0" />
+                                        <Button Content="機器一覧を取得" Command="{Binding FetchDevicesCommand}" Margin="0,0,12,0" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
-                                                CommandParameter="config" Margin="0,0,6,0"
+                                                CommandParameter="device" Margin="0,0,6,0"
                                                 ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveCsvCommand}"
-                                                CommandParameter="config" Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                                                CommandParameter="device" Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
                                     </StackPanel>
 
                                 <Border Background="{DynamicResource Brush.Surface}"
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acicfg" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acidev" MouseLeftButtonDown="OnTableHeaderSort">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acicfg.0]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.0]}" />
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acicfg.2]}" />
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acicfg.3]}" />
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acicfg.4]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.2]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.3]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.4]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.5]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.6]}" />
                                             </Grid.ColumnDefinitions>
                                             <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                             <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                             <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                             <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                            <TextBlock Grid.Column="0" Text="種別" Style="{StaticResource Caption}" />
+                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <TextBlock Grid.Column="0" Text="ノード" Style="{StaticResource Caption}" />
                                             <TextBlock Grid.Column="1" Text="名前" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="2" Text="親" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="3" Text="状態" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="4" Text="備考" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="2" Text="役割" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="3" Text="型番" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="4" Text="シリアル" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="5" Text="版" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="6" Text="状態" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="acicfg.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                   Tag="acidev.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="acicfg.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                   Tag="acidev.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="acicfg.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                   Tag="acidev.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="acicfg.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                   Tag="acidev.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="acidev.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="acidev.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                        <ListBox ItemsSource="{Binding ConfigRows}"
+                                        <ListBox ItemsSource="{Binding DeviceRows}"
                                                  ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                  Background="Transparent" BorderThickness="0"
                                                  HorizontalContentAlignment="Stretch"
@@ -6706,31 +6704,44 @@
                                                 <DataTemplate>
                                             <Grid Height="{DynamicResource Size.RowHeight.Wide}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acicfg.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.0]}" />
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acicfg.2]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acicfg.3]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acicfg.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.6]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="{Binding Kind}"
-                                                           FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                                           FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Parent}"
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Node}"
+                                                           Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="3" Text="{Binding State}"
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="4" Text="{Binding Note}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Role}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Note}" />
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Model}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="4" Text="{Binding Serial}"
+                                                           Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="5" Text="{Binding Version}"
+                                                           Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="6" Text="{Binding State}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                             </Grid>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>

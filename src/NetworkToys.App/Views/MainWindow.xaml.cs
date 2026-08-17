@@ -533,7 +533,8 @@ public partial class MainWindow : Window
         ["aciepgm"] = ["Node", "Path", "Encap", "Mode"],
         ["aciep"] = ["Mac", "Ip", "Tenant", "Epg", "Encap", "Node", "Path"],
         ["acilog"] = ["Time", "Kind", "Severity", "Target", "Text"],
-        ["acicfg"] = ["Kind", "Name", "Parent", "State", "Note"],
+        // ノードの列は NodeKey で並べる（101 が 9 より前に来ないように）
+        ["acidev"] = ["NodeKey", "Name", "Role", "Model", "Serial", "Version", "State"],
         // RSSI は数値のまま並べる（表示文字列で並べると -100 が -58 より強いことになる）
         ["wlccl"] = ["Mac", "Ip", "Vendor", "ApName", "Ssid", "Radio", "Rssi", "Quality", "Speed", "State"],
         ["dnccl"] = ["Mac", "Ip", "HostName", "Kind", "Device", "Port", "Vlan", "Ssid", "Band",
