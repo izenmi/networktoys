@@ -358,6 +358,49 @@ internal static class SelfTest
             log.AppendLine($"        見合わせた見出し: {headers} 個");
         });
 
+        Check("DockPanel の途中の子に向きを書き忘れていない", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // DockPanel は Dock を書かない子を「左」に置く。上から積むつもりの行で 1 つ
+            // 書き忘れると、その行が左端に立ち、以降のすべてが右へずれる
+            // （ファイル転送の「接続先 ▾」で実際に起きた。2026-08-17 にユーザーが実機で発見）。
+            // 最後の子だけは残りを埋める役なので、書いていなくてよい。
+            object? original = window!.MainTabs.SelectedItem;
+            var problems = new List<string>();
+            int panels = 0;
+
+            VisitTabs(window, window.MainTabs, _ =>
+            {
+                foreach (System.Windows.Controls.DockPanel panel in FindDockPanels(window))
+                {
+                    panels++;
+
+                    for (int i = 0; i < panel.Children.Count - 1; i++)
+                    {
+                        UIElement child = panel.Children[i];
+
+                        if (DependencyPropertyHelper.GetValueSource(
+                                child, System.Windows.Controls.DockPanel.DockProperty).BaseValueSource
+                            != BaseValueSource.Default)
+                        {
+                            continue;
+                        }
+
+                        problems.Add($"{child.GetType().Name}（{panel.Children.Count} 個中 {i + 1} 番目）");
+                    }
+                }
+            });
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+
+            Assert(problems.Count == 0,
+                   "DockPanel.Dock を書いていない子がある: " + string.Join(" / ", problems.Distinct()));
+
+            log.AppendLine($"        見合わせた DockPanel: {panels} 個");
+        });
+
         Check("見えていないタブは動き出さない", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -2510,6 +2553,19 @@ internal static class SelfTest
             }
 
             foreach (System.Windows.Controls.TabControl found in FindInnerTabs(child))
+                yield return found;
+        }
+    }
+
+    private static IEnumerable<System.Windows.Controls.DockPanel> FindDockPanels(DependencyObject root)
+    {
+        if (root is System.Windows.Controls.DockPanel panel) yield return panel;
+
+        int count = VisualTreeHelper.GetChildrenCount(root);
+
+        for (int i = 0; i < count; i++)
+        {
+            foreach (System.Windows.Controls.DockPanel found in FindDockPanels(VisualTreeHelper.GetChild(root, i)))
                 yield return found;
         }
     }

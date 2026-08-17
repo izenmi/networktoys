@@ -5132,8 +5132,9 @@
                         </DockPanel>
 
                         <!-- 接続先 -->
-                        <!-- 畳めるログイン欄。取れたら畳んで、一覧に画面を使う -->
-                        <WrapPanel Margin="0,0,0,2">
+                        <!-- 畳めるログイン欄。取れたら畳んで、一覧に画面を使う。
+                             DockPanel.Dock を書かないと左端に立って、以降が丸ごと右へずれる -->
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,2">
                             <Button Content="{Binding ConnectionToggleText}" Command="{Binding ToggleConnectionCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,8,0"
                                     ToolTip="接続先の入力欄を開いたり畳んだりします。" />
