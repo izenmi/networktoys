@@ -309,6 +309,8 @@ public partial class MainWindow : Window
         ["aciepg"] = ["Tenant", "AppProfile", "Name", "BridgeDomain", "Domains", "PathCount"],
         ["aciepgm"] = ["Node", "Path", "Encap", "Mode"],
         ["aciep"] = ["Mac", "Ip", "Tenant", "Epg", "Encap", "Node", "Path"],
+        ["acilog"] = ["Time", "Kind", "Severity", "Target", "Text"],
+        ["acicfg"] = ["Kind", "Name", "Parent", "State", "Note"],
     };
 
     /// <summary>

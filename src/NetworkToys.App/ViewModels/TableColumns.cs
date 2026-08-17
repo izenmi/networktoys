@@ -106,6 +106,12 @@ public sealed class TableColumns : ObservableObject
 
         // ACI エンドポイント: 0 MAC / 1 IP / 2 テナント / 3 EPG(星) / 4 VLAN / 5 ノード / 6 パス
         new("aciep", 3, [(0, 140), (1, 130), (2, 110), (4, 90), (5, 70), (6, 160)]),
+
+        // ACI ログ: 0 時刻 / 1 種別 / 2 重大度 / 3 対象 / 4 内容(星)
+        new("acilog", 4, [(0, 140), (1, 110), (2, 80), (3, 200)]),
+
+        // ACI 構成: 0 種別 / 1 名前(星) / 2 親 / 3 状態 / 4 備考
+        new("acicfg", 1, [(0, 130), (2, 150), (3, 90), (4, 260)]),
     ];
 
     private readonly Dictionary<string, double> _widths = [];
