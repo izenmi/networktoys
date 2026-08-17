@@ -504,7 +504,7 @@ internal static class SelfTest
 
         Check("ACI: 証明書を受け入れていない相手には繋がない", () =>
         {
-            using var client = new Services.ApicClient("apic.selftest.invalid", null, new RefusingApic());
+            using var client = new Services.ApicClient("apic.selftest.invalid", null, new RefusingHost());
 
             bool refused = false;
 
@@ -517,6 +517,76 @@ internal static class SelfTest
                 refused = true;
             }
             catch (Services.ApicApiException)
+            {
+                // 証明書の失敗として扱えていない
+            }
+
+            Assert(refused, "TLS で断られたのに、証明書の失敗として扱っていない");
+        });
+
+        Check("WLC: 偽の WLC と RESTCONF を往復できる", () =>
+        {
+            var fake = new FakeWlc();
+
+            using (var client = new Services.WlcClient(
+                       "wlc.selftest.invalid", "admin", "pw", null, fake))
+            {
+                string clients = client
+                    .GetAsync(Core.Wireless.WlcCatalog.ClientCommonPaths[0], CancellationToken.None)
+                    .GetAwaiter().GetResult();
+
+                Assert(Core.Wireless.WlcYang.Rows(clients).Count == 1,
+                       "クライアントの応答を読めていない");
+
+                // モジュール名は版で割れる。1 本目が 404 なら 2 本目へ行くこと
+                string rrm = client
+                    .GetFirstAsync(Core.Wireless.WlcCatalog.RrmPaths, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+
+                Assert(Core.Wireless.WlcYang.Rows(rrm).Count == 1, "候補の 2 本目へ進んでいない");
+
+                // 204 No Content は「0 件」であって失敗ではない
+                string empty = client
+                    .GetAsync(Core.Wireless.WlcCatalog.ApTagPaths[0], CancellationToken.None)
+                    .GetAwaiter().GetResult();
+
+                Assert(Core.Wireless.WlcYang.Rows(empty).Count == 0, "204 を 0 件として扱えていない");
+            }
+
+            Assert(fake.Paths.Count >= 4, $"要求が少なすぎる: {fake.Paths.Count} 本");
+
+            // 読み取り専用。GET 以外は 1 度も出さない
+            Assert(fake.Methods.All(m => m == "GET"),
+                   $"GET 以外を投げている: {string.Join(" / ", fake.Methods.Distinct())}");
+
+            Assert(fake.Paths.All(p => p.StartsWith("/restconf/data/", StringComparison.Ordinal)),
+                   $"RESTCONF 以外の宛先へ行っている: {string.Join(" / ", fake.Paths)}");
+
+            // Basic 認証と Accept は毎回付く（Accept が無いと実機は 406 を返す）
+            Assert(fake.Authorizations.All(a => a.StartsWith("Basic ", StringComparison.Ordinal)),
+                   "Basic 認証が付いていない要求がある");
+
+            Assert(fake.Accepts.All(a => a.Contains("yang-data+json", StringComparison.Ordinal)),
+                   $"Accept が RESTCONF の形式になっていない: {string.Join(" / ", fake.Accepts.Distinct())}");
+        });
+
+        Check("WLC: 証明書を受け入れていない相手には繋がない", () =>
+        {
+            using var client = new Services.WlcClient(
+                "wlc.selftest.invalid", "admin", "pw", null, new RefusingHost());
+
+            bool refused = false;
+
+            try
+            {
+                client.GetAsync(Core.Wireless.WlcCatalog.ApCapwapPaths[0], CancellationToken.None)
+                    .GetAwaiter().GetResult();
+            }
+            catch (Services.PinnedCertificateException)
+            {
+                refused = true;
+            }
+            catch (Services.WlcApiException)
             {
                 // 証明書の失敗として扱えていない
             }
@@ -2353,8 +2423,56 @@ internal static class SelfTest
         }
     }
 
-    /// <summary>証明書で断られる相手。指紋を受け入れていないときの経路を踏む。</summary>
-    private sealed class RefusingApic : System.Net.Http.HttpMessageHandler
+    /// <summary>
+    /// 偽の Catalyst 9800。RESTCONF は取得のたびに 1 本ずつ GET するだけなので、
+    /// 見るのは「GET だけか」「Basic 認証と Accept が毎回付くか」「候補の 2 本目へ進むか」
+    /// 「204 を 0 件として扱うか」の 4 つ。
+    /// </summary>
+    private sealed class FakeWlc : System.Net.Http.HttpMessageHandler
+    {
+        private const string Clients =
+            """{"Cisco-IOS-XE-wireless-client-oper:common-oper-data":[{"client-mac":"aabb.ccdd.eeff","ap-name":"AP-1"}]}""";
+
+        private const string Rrm =
+            """{"Cisco-IOS-XE-wireless-rrm-global-oper:rrm-measurement":[{"wtp-mac":"00aa.bb11.2200"}]}""";
+
+        public List<string> Paths { get; } = [];
+
+        public List<string> Methods { get; } = [];
+
+        public List<string> Authorizations { get; } = [];
+
+        public List<string> Accepts { get; } = [];
+
+        protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(
+            System.Net.Http.HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            string path = request.RequestUri?.AbsolutePath ?? "";
+
+            Paths.Add(path);
+            Methods.Add(request.Method.Method);
+            Authorizations.Add(request.Headers.Authorization?.ToString() ?? "");
+            Accepts.Add(string.Join(",", request.Headers.Accept.Select(a => a.MediaType)));
+
+            // 1 本目の RRM は「このモジュールは無い」。2 本目へ進めるかを見る
+            if (path.Contains("rrm-oper", StringComparison.Ordinal))
+                return Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+
+            // 設定側の AP 一覧は空（タグを当てた AP が 1 台も無い現場がある）
+            if (path.Contains("ap-cfg", StringComparison.Ordinal))
+                return Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.NoContent));
+
+            string body = path.Contains("rrm", StringComparison.Ordinal) ? Rrm : Clients;
+
+            return Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/yang-data+json"),
+            });
+        }
+    }
+
+    /// <summary>証明書で断られる相手（APIC でも WLC でも使う）。指紋が未受け入れの経路を踏む。</summary>
+    private sealed class RefusingHost : System.Net.Http.HttpMessageHandler
     {
         protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(
             System.Net.Http.HttpRequestMessage request, CancellationToken cancellationToken)

@@ -72,6 +72,18 @@ public sealed class AppSettingsDocument
     /// </summary>
     public Dictionary<string, string> AciFingerprints { get; set; } = [];
 
+    /// <summary>WLC タブの接続先（Catalyst 9800 のホスト名か IP）。1 行 1 件。</summary>
+    public string WlcHosts { get; set; } = "";
+
+    /// <summary>
+    /// WLC タブで前に使ったユーザー名（ホストがキー）。
+    /// <b>パスワードはここに入れない</b>（収集タブ・ACI と同じ決まり）。
+    /// </summary>
+    public Dictionary<string, string> WlcUserNames { get; set; } = [];
+
+    /// <summary>受け入れた WLC の証明書の指紋（ホストがキー）。ACI と同じ扱い。</summary>
+    public Dictionary<string, string> WlcFingerprints { get; set; } = [];
+
     /// <summary>
     /// ウィンドウを最前面に固定するか。
     ///
