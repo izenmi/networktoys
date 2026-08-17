@@ -153,6 +153,15 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - 保存は `Services/CsvExport.cs` の 1 か所。**BOM 付き UTF-8**（無いと日本語版 Excel が化ける）。取り消されたら `null` を返すので、呼ぶ側は `if (... is { } message) Status = message;` と書く。
 - ファイル名は `DeviceReport.Sanitize` を通す。宛先を混ぜる画面（経路の `trace-<宛先>`）があり、IPv6 を入れられるとコロンだらけになる。**`Path.GetInvalidFileNameChars()` は使わない**（Linux では `/` と NUL しか返さず、開発機と CI で結果が変わる）。
 
+### Excel ブック（.xlsx）の書き出し
+
+- **ライブラリを足していない。** xlsx は zip に XML を数枚入れただけのもので、必要なのは 5 パーツ（`[Content_Types].xml` / `_rels/.rels` / `xl/workbook.xml` / `xl/_rels/workbook.xml.rels` / `xl/worksheets/sheet1.xml`）。標準の `ZipArchive` で足りる。**ClosedXML / EPPlus を再提案しないこと**（単一ファイル発行との相性をローカルで確かめられず、EPPlus はライセンスの都合もある）。生成は `Core/Reporting/XlsxWriter.cs` の 1 か所。
+- **シートの要素は順番が決まっている**（`dimension` → `sheetViews` → `sheetData` → `autoFilter`）。入れ替えると Excel は「読めない内容」と言って**ファイルごと開かない**。
+- **文字列は `inlineStr` で書く。** `sharedStrings.xml` が要らず、**数式として評価されない**ので CSV のような無害化（`'` を足す）も不要。逆に、数値として入れたいものは `<v>` で書く — 文字列のままだと並べ替えも数値の絞り込みも文字列として振る舞う。
+- **数値とみなす判定は狭く取る。** `007` を `7` にすると戻せない。先頭 0・16 桁以上・区切りが 2 つ以上（IP / MAC）は文字列のまま（`XlsxWriter.IsPlainNumber`）。
+- **制御文字は落とす。** 機器の出力には混じることがあり、1 文字通すだけで Excel はファイルごと開けなくなる。
+- **見た目は CI でも確かめられない**（ランナーに Excel は無い）。xUnit が守れるのは zip の中身と XML の形まで。ここを触ったら**実機で 1 度開いて確認する**こと。
+
 ### 試験タブ（業務確認試験）
 
 - **プロキシは `HttpClientHandler.Proxy` を明示して作り分ける。Windows の設定は書き換えない。** システム設定は**プロセス起動時に読まれて固定される**ので、切り替えながら試すこと自体ができない。書き換える方式はほかのアプリを巻き込み、戻し忘れの事故にもなる。

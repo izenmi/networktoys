@@ -30,7 +30,7 @@ ping のほかに TCP 接続・DNS・traceroute・IP スキャン・無線 LAN�
 
 - **Cisco 機器へ SSH/Telnet で入り、`show` の出力を自動収集**。複数台をまとめて 1 台 1 ファイルに
 - **機器の出力を作業前後で見比べる**。`show ip route` は行の差分ではなく構造として突き合わせる
-- **Cisco の出力を CSV に変換**（経路表・インターフェース・CDP・MAC テーブルなど 8 種。種類は自動判定）
+- **Cisco の出力を Excel / CSV に変換**（経路表・インターフェース・CDP・MAC テーブルなど 8 種。種類は自動判定）。xlsx は絞り込みと見出し固定が付いた状態で開く
 - **SNMP で値を取る**（GET・ウォーク）
 - **Meraki ダッシュボードから機器やアップリンクの状況を取る**
 
@@ -103,7 +103,7 @@ ping のほかに TCP 接続・DNS・traceroute・IP スキャン・無線 LAN�
 | その他 → 受ける → **syslog** | 機器からの syslog を受けて一覧表示。`logging <このPCのIP>` を機器に入れるだけ。**重大度の列と「warning 以上 / err 以上」の絞り込み**つき。`logs\` にも保存 |
 | その他 → 受ける → **SNMP Trap** | SNMP Trap の受信（UDP/162）。varbind は件数で打ち切らず、長い行は全文を ToolTip に出します |
 | その他 → NW機器 → **ログ採取** | Cisco 機器へ SSH/Telnet で入り、`show` の出力を自動収集して 1 台 1 ファイルに保存。機種（IOS / IOS-XE・ASA・NX-OS）を選ぶとコマンド一式が入ります。宛先リストから対象を取り込める。パスワードは保存しない。危険なコマンドは実行前に弾く |
-| その他 → NW機器 → **showコマンド整形** | Cisco コマンドの出力(show ip route / interfaces status / inventory / version / logging など 8 種)を貼り付けると CSV に変換。種類は自動判定 |
+| その他 → NW機器 → **showコマンド整形** | Cisco コマンドの出力(show ip route / interfaces status / inventory / version / logging など 8 種)を貼り付けると表に変換。xlsx(絞り込み付き)か CSV で保存。種類は自動判定 |
 | その他 → NW機器 → **ファイル転送** | FTP / SFTP の**クライアント**（WinSCP 風の 2 ペイン）。左が この PC、右が 接続先。取得・送信・フォルダ作成・改名・削除。転送は必ずバイナリなので設定ファイルが壊れません。SFTP は相手の鍵の指紋を画面に出します。パスワードは保存しない |
 | その他 → NW機器 → **SNMP Get** | v1/v2c の GET・ウォーク。sysDescr など主要 OID のプリセットつき（Trap の受信は「受ける」側） |
 | その他 → NW機器 → **Meraki** | ダッシュボード API から ネットワーク / 機器(シリアル・ファーム) / MX のアップリンクとグローバル IP / クライアント を取得。各一覧を CSV 保存。API キーは保存しない(毎回入力・伏せ字) |

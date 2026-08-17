@@ -297,10 +297,14 @@ internal static class TabHelp
         showコマンド整形
 
         この画面ですること
-        ・機器のコマンド出力を貼り付けると、表計算で扱える CSV に変換する
+        ・機器のコマンド出力を貼り付けると、表計算で扱える表に変換する
 
         こんなときに
         ・経路表やインターフェース一覧を台帳へ貼りたい → 目で拾う代わりに
+
+        できる操作
+        ・Excel で保存 — 絞り込み(オートフィルタ)と見出し行の固定を付けた .xlsx
+        ・CSV で保存 — ただのテキスト。書式は持てないので絞り込みは付かない
 
         対応するコマンド（8 種。種類は自動で判定する）
         ・show ip route ／ show ip interface brief ／ show cdp neighbors
@@ -308,7 +312,8 @@ internal static class TabHelp
         ・show inventory ／ show version ／ show logging
 
         知っておくとよいこと
-        ・BOM 付き UTF-8 で保存するので、日本語版 Excel でそのまま開ける
+        ・CSV は BOM 付き UTF-8 なので、日本語版 Excel でそのまま開ける
+        ・数字だけの欄は数値として入れる。ただし 007 のような表記はそのまま残す
         ・欄にファイルを放り込んでも読み込める
         """;
 

@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using NetworkToys.App.Mvvm;
+using NetworkToys.Core.Reporting;
 using NetworkToys.Core.Work;
 
 namespace NetworkToys.App.ViewModels;
@@ -12,9 +13,9 @@ namespace NetworkToys.App.ViewModels;
 public sealed record ConvertModeViewModel(CiscoCommandKind? Kind, string Name);
 
 /// <summary>
-/// 変換タブ。Cisco コマンドの出力を貼り付けると CSV にして返す。
-/// パースと整形はすべて Core(<see cref="CiscoCsvConverter"/>)側で、
-/// ここは貼り付けのデバウンスと保存・コピーだけを持つ。
+/// 変換タブ。Cisco コマンドの出力を貼り付けると表にして返す。
+/// パースと整形は Core(<see cref="CiscoCsvConverter"/>)、xlsx の組み立ても
+/// Core(<see cref="XlsxWriter"/>)で、ここは貼り付けのデバウンスと保存・コピーだけを持つ。
 /// </summary>
 public sealed class ConvertViewModel : ObservableObject
 {
@@ -23,6 +24,10 @@ public sealed class ConvertViewModel : ObservableObject
     private readonly DispatcherTimer _debounce;
 
     private ConvertModeViewModel _selectedMode;
+
+    /// <summary>xlsx はセル単位で書くのでプレビューの CSV 文字列からは戻せない。表のまま持つ。</summary>
+    private CsvTable? _table;
+
     private string _inputText = "";
     private string _preview = "";
     private string _status = "Cisco コマンドの出力を貼り付けると、CSV に変換して下に表示します。";
@@ -44,6 +49,7 @@ public sealed class ConvertViewModel : ObservableObject
         _selectedMode = Modes[0];
 
         SaveCommand = new RelayCommand(Save, () => Preview.Length > 0);
+        SaveXlsxCommand = new RelayCommand(SaveXlsx, () => _table is not null);
         CopyCommand = new RelayCommand(Copy, () => Preview.Length > 0);
 
         // 貼り付け直後に 1 文字ごとのパースが走らないよう、打ち終わりを待つ
@@ -58,6 +64,7 @@ public sealed class ConvertViewModel : ObservableObject
     public ConvertModeViewModel[] Modes { get; }
 
     public RelayCommand SaveCommand { get; }
+    public RelayCommand SaveXlsxCommand { get; }
     public RelayCommand CopyCommand { get; }
 
     public ConvertModeViewModel SelectedMode
@@ -91,6 +98,7 @@ public sealed class ConvertViewModel : ObservableObject
             if (SetProperty(ref _preview, value))
             {
                 SaveCommand.RaiseCanExecuteChanged();
+                SaveXlsxCommand.RaiseCanExecuteChanged();
                 CopyCommand.RaiseCanExecuteChanged();
             }
         }
@@ -107,7 +115,7 @@ public sealed class ConvertViewModel : ObservableObject
         _debounce.Stop();
         InputText = "";
         SelectedMode = Modes[0];
-        Preview = "";
+        Show(null);
         Status = "Cisco コマンドの出力を貼り付けると、CSV に変換して下に表示します。";
     }
 
@@ -115,7 +123,7 @@ public sealed class ConvertViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(InputText))
         {
-            Preview = "";
+            Show(null);
             Status = "Cisco コマンドの出力を貼り付けると、CSV に変換して下に表示します。";
             return;
         }
@@ -123,7 +131,7 @@ public sealed class ConvertViewModel : ObservableObject
         CiscoCommandKind? kind = SelectedMode.Kind ?? CiscoCsvConverter.Detect(InputText);
         if (kind is not { } resolved)
         {
-            Preview = "";
+            Show(null);
             Status = "コマンドの種類を判定できませんでした。上の一覧から種別を選んでください。";
             return;
         }
@@ -133,15 +141,25 @@ public sealed class ConvertViewModel : ObservableObject
 
         if (table.Rows.Count == 0)
         {
-            Preview = "";
+            Show(null);
             Status = $"{name} として読みましたが、行を読み取れませんでした。出力の形を確かめてください。";
             return;
         }
 
-        Preview = table.ToCsv();
+        Show(table);
         Status = SelectedMode.Kind is null
             ? $"{name} と判定 — {table.Rows.Count} 行を変換しました。"
             : $"{name} — {table.Rows.Count} 行を変換しました。";
+    }
+
+    /// <summary>
+    /// 変換結果を画面に出す。表とプレビューは必ず同時に入れ替える
+    /// （片方だけ更新すると、前の表を xlsx で保存できてしまう）。
+    /// </summary>
+    private void Show(CsvTable? table)
+    {
+        _table = table;
+        Preview = table?.ToCsv() ?? "";
     }
 
     private void Save()
@@ -162,6 +180,40 @@ public sealed class ConvertViewModel : ObservableObject
             // BOM 付き。無いと日本語版 Excel で文字化けする(既存の CSV 出力と同じ)
             File.WriteAllText(dialog.FileName, Preview, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
             Status = $"{Path.GetFileName(dialog.FileName)} に保存しました。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"保存できませんでした: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Excel ブックで保存する。CSV と違い、オートフィルタと見出し行の固定が付いた状態で開く。
+    /// 生成は Core(<see cref="XlsxWriter"/>)側。ここは保存先を聞いて流し込むだけ。
+    /// </summary>
+    private void SaveXlsx()
+    {
+        if (_table is not { } table) return;
+
+        var dialog = new SaveFileDialog
+        {
+            FileName = $"convert-{DateTime.Now:yyyyMMdd-HHmm}.xlsx",
+            DefaultExt = "xlsx",
+            Filter = "Excel ブック (*.xlsx)|*.xlsx|すべてのファイル (*.*)|*.*",
+            AddExtension = true,
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            using (FileStream file = File.Create(dialog.FileName))
+            {
+                XlsxWriter.Write(file, table);
+            }
+
+            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました（フィルタ設定済み）。";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

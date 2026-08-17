@@ -830,6 +830,35 @@ internal static class SelfTest
                    $"説明が無いタブ: {string.Join(" / ", missing)}");
         });
 
+        Check("showコマンド整形: 保存ボタンが 2 つとも VM に繋がっている", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            System.Windows.Controls.TabItem? tab = AllTabs(window!.MainTabs)
+                .FirstOrDefault(t => Equals(t.Header, "showコマンド整形"));
+
+            Assert(tab is not null, "showコマンド整形タブが見つからない");
+
+            // 束縛先の綴りを間違えてもビルドも起動も通り、「押せないボタン」として
+            // 黙って残る。実際に押せるかは実機でしか見られないので、
+            // せめて束縛先の名前が VM にあることだけは機械で突き合わせる
+            foreach (string label in new[] { "Excel で保存", "CSV で保存" })
+            {
+                System.Windows.Controls.Button? button =
+                    FindIn<System.Windows.Controls.Button>(tab!.Content)
+                        .FirstOrDefault(b => Equals(b.Content, label));
+
+                Assert(button is not null, $"「{label}」ボタンが無い");
+
+                string? path = System.Windows.Data.BindingOperations
+                    .GetBinding(button!, ButtonBase.CommandProperty)?.Path.Path;
+
+                Assert(path is not null, $"「{label}」に Command の束縛が無い");
+                Assert(typeof(ViewModels.ConvertViewModel).GetProperty(path!) is not null,
+                       $"「{label}」の束縛先 {path} が ConvertViewModel に無い");
+            }
+        });
+
         Check("タブ: まとめた中身は分類されている", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

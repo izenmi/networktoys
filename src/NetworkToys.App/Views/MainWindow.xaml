@@ -4039,7 +4039,7 @@
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                        ToolTip="{x:Static help:TabHelp.Convert}" />
-                            <TextBlock Style="{StaticResource TabIntro}" Text="機器のコマンド出力を貼り付けると CSV に変換します。" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="機器のコマンド出力を貼り付けて Excel / CSV に変換します。" />
                         </DockPanel>
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -4056,7 +4056,11 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}" Margin="0,0,6,0" />
+                            <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}" Margin="0,0,6,0"
+                                    ToolTip="絞り込み(オートフィルタ)と見出し行の固定を付けた .xlsx で保存します。" />
+                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0"
+                                    ToolTip="BOM 付き UTF-8 のテキスト。書式は付きません。" />
                             <Button Content="コピー" Command="{Binding CopyCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,12,0"
                                     ToolTip="CSV テキストをクリップボードへコピーします。" />
