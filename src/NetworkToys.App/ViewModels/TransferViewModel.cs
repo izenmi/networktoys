@@ -82,6 +82,7 @@ public sealed class TransferViewModel : ObservableObject
     private double _progressPercent;
     private bool _isBusy;
     private bool _isConnected;
+    private bool _showConnection = true;
 
     /// <summary>
     /// 取り消せない操作の確認。<b>画面が結線するまでは「いいえ」</b>
@@ -97,6 +98,7 @@ public sealed class TransferViewModel : ObservableObject
         // コマンドを先に作る。状態を先に組むと setter が未生成のコマンドを触って落ちる
         ConnectCommand = new RelayCommand(() => _ = ConnectAsync(), () => !IsBusy && !IsConnected && Host.Length > 0);
         DisconnectCommand = new RelayCommand(Disconnect, () => IsConnected);
+        ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
 
         UploadCommand = new RelayCommand(() => _ = UploadAsync(), () => IsConnected && !IsBusy && SelectedLocal is { IsParent: false });
@@ -195,8 +197,35 @@ public sealed class TransferViewModel : ObservableObject
     public bool IsConnected
     {
         get => _isConnected;
-        private set { if (SetProperty(ref _isConnected, value)) RaiseAll(); }
+        private set
+        {
+            if (!SetProperty(ref _isConnected, value)) return;
+
+            RaiseAll();
+
+            // 繋がったら接続の欄を畳む（2 ペインに画面を使いたい）。切れたら戻す
+            ShowConnection = !value;
+            OnPropertyChanged(nameof(ConnectionSummary));
+        }
     }
+
+    /// <summary>接続の欄を開いているか。<b>繋がったら畳む</b>。押せば戻る。</summary>
+    public bool ShowConnection
+    {
+        get => _showConnection;
+        private set
+        {
+            if (SetProperty(ref _showConnection, value)) OnPropertyChanged(nameof(ConnectionToggleText));
+        }
+    }
+
+    /// <summary>畳んでいる間も、どこへ何で繋いだかは 1 行で見えるようにしておく。</summary>
+    public string ConnectionSummary
+        => Host.Length > 0 ? $"{(IsSftp ? "SFTP" : "FTP")}　{Host}／{UserName}" : "未接続";
+
+    public string ConnectionToggleText => ShowConnection ? "接続先 ▴" : "接続先 ▾";
+
+    public RelayCommand ToggleConnectionCommand { get; }
 
     private FileRowViewModel? _selectedLocal;
     private FileRowViewModel? _selectedRemote;

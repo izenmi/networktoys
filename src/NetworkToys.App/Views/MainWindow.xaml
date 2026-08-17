@@ -4118,7 +4118,15 @@
 
                     <!-- 操作行はサブタブ共通。API キーは伏せ字(画面を PNG 保存できるため) -->
                     <StackPanel DockPanel.Dock="Top" Margin="2,2,0,6">
-                        <WrapPanel>
+                        <!-- 畳めるログイン欄。取れたら畳んで、一覧に画面を使う -->
+                        <WrapPanel Margin="0,0,0,2">
+                            <Button Content="{Binding ConnectionToggleText}" Command="{Binding ToggleConnectionCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,8,0"
+                                    ToolTip="接続先の入力欄を開いたり畳んだりします。" />
+                            <TextBlock Text="{Binding ConnectionSummary}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </WrapPanel>
+                        <WrapPanel Visibility="{Binding ShowConnection, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="API キー" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
                             <PasswordBox x:Name="MerakiKeyBox" Width="230" Margin="0,0,12,2"
@@ -4721,7 +4729,15 @@
                         </DockPanel>
 
                         <!-- 接続先 -->
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                        <!-- 畳めるログイン欄。取れたら畳んで、一覧に画面を使う -->
+                        <WrapPanel Margin="0,0,0,2">
+                            <Button Content="{Binding ConnectionToggleText}" Command="{Binding ToggleConnectionCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,8,0"
+                                    ToolTip="接続先の入力欄を開いたり畳んだりします。" />
+                            <TextBlock Text="{Binding ConnectionSummary}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </WrapPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6" Visibility="{Binding ShowConnection, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="接続先" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="150" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
                                      FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0"
@@ -5098,7 +5114,15 @@
 
                     <!-- 操作行はサブタブ共通。パスワードは伏せ字（画面を PNG 保存できるため） -->
                     <StackPanel DockPanel.Dock="Top" Margin="2,2,0,6">
-                        <WrapPanel>
+                        <!-- 畳めるログイン欄。取れたら畳んで、一覧に画面を使う -->
+                        <WrapPanel Margin="0,0,0,2">
+                            <Button Content="{Binding ConnectionToggleText}" Command="{Binding ToggleConnectionCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,8,0"
+                                    ToolTip="接続先の入力欄を開いたり畳んだりします。" />
+                            <TextBlock Text="{Binding ConnectionSummary}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </WrapPanel>
+                        <WrapPanel Visibility="{Binding ShowConnection, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="APIC" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
                             <!-- 素のテキスト欄。ComboBox の IsEditable はこのアプリでは使えない
@@ -5138,7 +5162,8 @@
                                    FontSize="{DynamicResource Size.Caption}"
                                    Foreground="{DynamicResource Brush.TextMuted}"
                                    TextTrimming="CharacterEllipsis" Margin="0,2,0,0"
-                                   ToolTip="接続した APIC の証明書の指紋。APIC の画面と見比べるためのものです。" />
+                                   ToolTip="接続した APIC の証明書の指紋。APIC の画面と見比べるためのものです。"
+                                   Visibility="{Binding ShowConnection, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <!-- 中の切り替えも主タブと同じ見た目にする（Meraki と同じ扱い） -->
@@ -6134,7 +6159,15 @@
 
                     <!-- 操作行はサブタブ共通。パスワードは伏せ字（画面を PNG 保存できるため） -->
                     <StackPanel DockPanel.Dock="Top" Margin="2,2,0,6">
-                        <WrapPanel>
+                        <!-- 畳めるログイン欄。取れたら畳んで、一覧に画面を使う -->
+                        <WrapPanel Margin="0,0,0,2">
+                            <Button Content="{Binding ConnectionToggleText}" Command="{Binding ToggleConnectionCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,8,0"
+                                    ToolTip="接続先の入力欄を開いたり畳んだりします。" />
+                            <TextBlock Text="{Binding ConnectionSummary}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </WrapPanel>
+                        <WrapPanel Visibility="{Binding ShowConnection, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="WLC" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
                             <!-- 素のテキスト欄。ComboBox の IsEditable はこのアプリでは使えない -->
@@ -6180,7 +6213,8 @@
                                    FontSize="{DynamicResource Size.Caption}"
                                    Foreground="{DynamicResource Brush.TextMuted}"
                                    TextTrimming="CharacterEllipsis" Margin="0,2,0,0"
-                                   ToolTip="接続した WLC の証明書の指紋。WLC の画面と見比べるためのものです。" />
+                                   ToolTip="接続した WLC の証明書の指紋。WLC の画面と見比べるためのものです。"
+                                   Visibility="{Binding ShowConnection, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <!-- 中の切り替えも主タブと同じ見た目にする（ACI と同じ扱い） -->

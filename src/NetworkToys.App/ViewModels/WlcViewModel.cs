@@ -67,6 +67,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     private string _lastResponse = "";
     private string _lastUrl = "";
     private string _lastShow = "";
+    private bool _showConnection = true;
 
     /// <param name="handler">自己診断が偽の WLC を挿すための口。既定は本物。</param>
     public WlcViewModel(HttpMessageHandler? handler = null)
@@ -80,6 +81,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         FetchSsidsCommand = new RelayCommand(() => _ = FetchSsidsAsync(), CanFetch);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         FetchShowCommand = new RelayCommand(() => _ = RunShowAsync(), CanFetch);
+        ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
         SortWeakestCommand = new RelayCommand(SortWeakest, () => ClientRows.Count > 0);
 
@@ -133,6 +135,33 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
 
     /// <summary>画面の <c>PasswordBox</c> を空にしてもらう合図。</summary>
     public event EventHandler? PasswordCleared;
+
+    /// <summary>
+    /// 接続の欄を開いているか。<b>取得できたら畳む</b> — 一覧に画面を使いたいので。
+    /// もう一度出したいときは「接続先」を押す。
+    /// </summary>
+    public bool ShowConnection
+    {
+        get => _showConnection;
+        private set
+        {
+            if (SetProperty(ref _showConnection, value)) OnPropertyChanged(nameof(ConnectionToggleText));
+        }
+    }
+
+    /// <summary>畳んでいる間も、どこへ何で繋いだかは 1 行で見えるようにしておく。</summary>
+    public string ConnectionSummary => Host.Trim().Length > 0 ? $"{Host}／{UserName}" : "未接続";
+
+    public string ConnectionToggleText => ShowConnection ? "接続先 ▴" : "接続先 ▾";
+
+    public RelayCommand ToggleConnectionCommand { get; }
+
+    /// <summary>取得できたら接続の欄を畳む。押せば戻る。</summary>
+    private void Collapse()
+    {
+        ShowConnection = false;
+        OnPropertyChanged(nameof(ConnectionSummary));
+    }
 
     // ===== 入力 =====
 
@@ -337,6 +366,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
                     await work(client, _cts.Token).ConfigureAwait(true);
 
                     Remember(host);
+                    Collapse();
                     return;
                 }
                 catch (PinnedCertificateException ex)
@@ -553,6 +583,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         Notice = "";
         Status = Ready;
 
+        ShowConnection = true;
         RefreshSaveCommands();
     }
 
