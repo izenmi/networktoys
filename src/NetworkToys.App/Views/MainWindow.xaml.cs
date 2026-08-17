@@ -87,6 +87,11 @@ public partial class MainWindow : Window
         // VM から PasswordBox の中身は書けないので、消す合図だけ受け取る
         _shell.Aci.PasswordCleared += (_, _) => AciPasswordBox.Clear();
 
+        _shell.Wlc.ConfirmFingerprint = message => ConfirmDialog.Confirm(
+            this, "WLC の証明書を確認", message, okLabel: "この指紋を受け入れる");
+
+        _shell.Wlc.PasswordCleared += (_, _) => WlcPasswordBox.Clear();
+
         // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
         _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
             this,
@@ -155,6 +160,24 @@ public partial class MainWindow : Window
     {
         if (sender is PasswordBox box)
             _shell.Aci.Password = box.Password;
+    }
+
+    /// <summary>APIC のパスワードと同じ扱い。<b>VM の中だけに置く</b>。</summary>
+    private void OnWlcPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox box)
+            _shell.Wlc.Password = box.Password;
+    }
+
+    /// <summary>直前に取れた WLC の生の応答（と投げた URL）を出す。</summary>
+    private void OnWlcShowResponse(object sender, RoutedEventArgs e)
+    {
+        string response = _shell.Wlc.LastResponse;
+
+        TextViewDialog.Show(
+            this,
+            "WLC の応答",
+            response.Length > 0 ? response : "まだ何も取得していません。");
     }
 
     /// <summary>
@@ -325,6 +348,9 @@ public partial class MainWindow : Window
         ["aciep"] = ["Mac", "Ip", "Tenant", "Epg", "Encap", "Node", "Path"],
         ["acilog"] = ["Time", "Kind", "Severity", "Target", "Text"],
         ["acicfg"] = ["Kind", "Name", "Parent", "State", "Note"],
+        // RSSI は数値のまま並べる（表示文字列で並べると -100 が -58 より強いことになる）
+        ["wlccl"] = ["Mac", "Ip", "Vendor", "ApName", "Ssid", "Radio", "Rssi", "Quality", "Speed", "State"],
+        ["wlcap"] = ["State", "Name", "Ip", "Mac", "Model", "Version", "Radios", "Clients", "Tags"],
     };
 
     /// <summary>
@@ -1182,6 +1208,8 @@ public partial class MainWindow : Window
                 device.LanIp.Length > 0 ? device.LanIp : device.PublicIp,
             NetworkToys.Core.Cloud.MerakiClientRow client => client.Ip,
             NetworkToys.Core.Fabric.AciEndpointRow endpoint => endpoint.Ip,
+            NetworkToys.Core.Wireless.WlcClientRow wireless => wireless.Ip,
+            NetworkToys.Core.Wireless.WlcApRow ap => ap.Ip,
             FileServerLogRow log => log.Remote,
             _ => string.Empty,
         };

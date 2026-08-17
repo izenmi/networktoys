@@ -463,6 +463,71 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
+    /// <summary>Cisco WLC</summary>
+    public const string Wlc =
+        """
+        Cisco WLC
+
+        この画面ですること
+        ・Catalyst 9800 から、無線の「いまの状態」を読み取る
+
+        出るもの
+        ・端末（どの AP に居るか）／AP（繋がっていないものも）
+        ・参加と切断 ／ 電波の混み具合 ／ 不正 AP ／ SSID ごとの内訳
+
+        気をつけること
+        ・読み取り専用。設定は書かない（AP の再起動なども持たない）
+        ・パスワードは保存しない（毎回入力・伏せ字）。覚えるのは接続先とユーザー名だけ
+        ・タブを開いただけでは通信しない。押したときだけ取りに行く
+        ・自己署名の証明書は、指紋を画面に出して受け入れてもらってから通す
+        ・WLC 側で RESTCONF が有効になっている必要がある
+
+        できる操作
+        ・各一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
+    /// <summary>Cisco WLC ─ 端末</summary>
+    public const string WlcClients =
+        """
+        Cisco WLC ─ 端末
+
+        この画面ですること
+        ・IP か MAC から、その端末がどの AP に繋がっているかを調べる
+
+        こんなときに
+        ・「あの PC がどこに居るか分からない」と言われたとき
+        ・「無線が遅い」の相手を電波の弱い順に並べたいとき
+
+        知っておくとよいこと
+        ・探す欄は IP・MAC・AP 名・SSID のどれでもよい（打ち直しても通信しない）
+        ・MAC は aabb.ccdd.eeff でも AA:BB:… でも aa-bb-… でも当たる
+        ・IP は WLC が学習していないと出ない（空欄は「まだ分からない」）
+        ・見出しを押すと並べ替わる。RSSI は数値の弱い順に並ぶ
+
+        できる操作
+        ・行を右クリックして、その IP を Ping や経路へ送る
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
+    /// <summary>Cisco WLC ─ AP</summary>
+    public const string WlcAps =
+        """
+        Cisco WLC ─ AP
+
+        この画面ですること
+        ・AP の一覧を出す。いま繋がっていない AP も同じ表に混ぜる
+
+        知っておくとよいこと
+        ・「✕ 未接続」は、WLC が知っているのに繋がっていない AP
+        　（設定にも参加記録にも無い AP は、WLC 自身が知らないので出せない）
+        ・「未接続だけ」を押すと、その AP だけに絞れる
+        ・台数は端末の一覧から数えている。先に「取得」を押していないと「—」になる
+
+        できる操作
+        ・行を右クリックして、その AP の IP を Ping や経路へ送る
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
     /// <summary>Meraki</summary>
     public const string Meraki =
         """

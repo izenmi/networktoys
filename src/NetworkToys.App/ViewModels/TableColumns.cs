@@ -112,6 +112,12 @@ public sealed class TableColumns : ObservableObject
 
         // ACI 構成: 0 種別 / 1 名前(星) / 2 親 / 3 状態 / 4 備考
         new("acicfg", 1, [(0, 130), (2, 150), (3, 90), (4, 260)]),
+
+        // WLC 端末: 0 MAC / 1 IP / 2 メーカー / 3 AP(星) / 4 SSID / 5 電波 / 6 RSSI / 7 品質 / 8 速度 / 9 状態
+        new("wlccl", 3, [(0, 130), (1, 120), (2, 110), (4, 110), (5, 110), (6, 55), (7, 70), (8, 60), (9, 80)]),
+
+        // WLC AP: 0 状態 / 1 AP(星) / 2 IP / 3 MAC / 4 型番 / 5 版 / 6 無線 / 7 台数 / 8 タグ
+        new("wlcap", 1, [(0, 80), (2, 110), (3, 130), (4, 120), (5, 80), (6, 160), (7, 50), (8, 130)]),
     ];
 
     private readonly Dictionary<string, double> _widths = [];

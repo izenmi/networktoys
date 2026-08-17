@@ -377,7 +377,7 @@ internal static class SelfTest
             // タブを開いただけで本番の API を叩き始める
             System.Windows.Controls.TabItem[] mustBeHidden =
                 [window.WifiTab, window.WfpTab, window.ConnectionsTab, window.TraceTab,
-                 window.IpConfigTab, window.MerakiTab, window.AciTab];
+                 window.IpConfigTab, window.MerakiTab, window.AciTab, window.WlcTab];
 
             foreach (System.Windows.Controls.TabItem tab in mustBeHidden)
             {
@@ -427,6 +427,38 @@ internal static class SelfTest
 
             window.MainTabs.SelectedItem = original;
             window.UpdateLayout();
+        });
+
+        Check("WLC タブのサブタブをすべて表示できる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            object? original = window!.MainTabs.SelectedItem;
+
+            Views.MainWindow.Show(window.WlcTab);
+
+            foreach (object? item in window.WlcSubTabs.Items)
+            {
+                ((System.Windows.Controls.TabItem)item).IsSelected = true;
+                window.UpdateLayout();
+            }
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
+        Check("WLC: 資格情報が空では取得できない(CI から WLC を叩かない)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+
+            Assert(shell.Wlc.Password.Length == 0, "起動直後にパスワードが入っている");
+            Assert(!shell.Wlc.FetchCommand.CanExecute(null), "資格情報が空でも取得できてしまう");
+            Assert(!shell.Wlc.FetchRoguesCommand.CanExecute(null), "資格情報が空でも不正 AP を取得できてしまう");
+
+            Assert(!new ViewModels.WlcViewModel().ConfirmFingerprint("test"),
+                   "証明書の確認が、結線前から「はい」に倒れている");
         });
 
         Check("Meraki: キー未入力では取得できない(CI から API を叩かない)", () =>
@@ -770,6 +802,10 @@ internal static class SelfTest
                 (new Core.Fabric.AciEndpointRow(
                     "00:50:56:AA:BB:CC", "192.168.10.50", "Prod", "Web", "vlan-100",
                     "101", "eth1/1"), "192.168.10.50"),
+
+                (new Core.Wireless.WlcClientRow(
+                    "aabb.ccdd.eeff", "192.168.20.31", "Apple", "AP-1F-01", "Corp", "5GHz ch36",
+                    -58, "-58", "良い", "34", "866", "● 通信中", Core.Design.SeverityKind.Ok, ""), "192.168.20.31"),
 
                 (new ViewModels.FileServerLogRow("10:00:00", "10.1.1.1", "%LINK-3-UPDOWN", 3), "10.1.1.1"),
 
