@@ -203,6 +203,12 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **MX の LAN/WAN ポートの速度・全二重はダッシュボード API に無い**（画面の Appliance status にしかない）。MS は `/devices/{serial}/switch/ports/statuses` で `speed`（「1 Gbps」）と `duplex` が取れる。**無いものを推測で埋めない** — 導入時確認では MX のぶんを「目視で確認」の行として人に渡している。
 - **どの WAN を使う設定かは `/devices/{serial}/appliance/uplinks/settings` にしかない。** 状態（`appliance/uplink/statuses`）には使っていない WAN2 も「not connected」で出てくるので、状態だけで「全部リンクアップ」を判定すると**単線の拠点が必ず不合格になる**。
 - **`status` は `active` と `ready` が両方とも「リンクアップ」**（ready は冗長側の待機）。`connecting` はまだリンクアップしていない。表示用の文字（`◌ 待機` / `◌ 接続中`）では区別が付かないので、`MerakiUplinkRow.RawStatus` に生の値を持たせてある。
+- **MX の LAN IP は組織まとめの応答に無い。** `organizations/{id}/devices` にも `devices/statuses` にも入っておらず（あちらの `lanIp` はスイッチや AP の管理アドレス）、拠点ごとに `networks/{id}/appliance/vlans` を引く。**VLAN を使っていない拠点は 400 が返る**ので `appliance/singleLan` へ落とす（**応答は前者が配列・後者がオブジェクト 1 つ**）。取れない拠点は空欄のままにする。
+- **拠点のセグメントは VLAN で切ってあるのが普通。** スタティックルートはその先に別のルータがある拠点にしか無いので、ルートだけを見ると**大半の拠点が空欄**になる（2026-08-17 に実機で発覚）。VLAN のサブネットとルートの和で見る。
+- **`firmware` には版が入らないことがある。** 設定と違う版で動いている機器には **`Not running configured version` という英文が版の代わりに返る**。実際の版は `organizations/{id}/firmware/upgrades/byDevice` の**完了した更新の `toVersion`** から補う（進行中・取り消しは信用しない）。補えないときは版を騙らず「⚠ 設定と違う版」とだけ出す。
+- **`appliance/uplinks/usage/byNetwork` の `sent`/`received` はキロバイトで、期間内の合計。** 毎秒に直して bps として出していたが、2026-08-17 にユーザー指示で**流れた量のまま**出すことにした（`usageHistory` の推移も同じ単位に揃えてある）。
+- **停止している機器の回線は一覧に出さない**（切れているのが分かりきっているため。2026-08-17 ユーザー指示）。**導入時確認だけは落とさない** — あちらは「取れなかった」と「切れている」を区別する必要があるので、VM が絞り込み前の一覧（`_allUplinks`）を持っている。
+- **全拠点ぶんの取得は打ち切らない**（2026-08-17 ユーザー指示。以前は 40 拠点で打ち切っていた）。代わりに**始める前に待ち時間の断りを出し、取り終わったら消す**（`SlowNotice` / `ClearSlowNotice`）。
 
 ### 外部 API（Cisco ACI / APIC）
 
