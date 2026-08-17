@@ -59,6 +59,18 @@
             <MenuItem Header="アドレスをコピー" Click="OnCopyRowAddress" />
         </ContextMenu>
 
+        <!-- 1 行の説明と ⓘ を出すかどうか。最大化のときだけ Collapsed に差し替える -->
+        <Visibility x:Key="Visibility.TabIntro">Visible</Visibility>
+
+        <!--
+            表示領域を最大化しているあいだ、主タブの見出しを畳む。
+            <b>ItemContainerStyle として当てる</b> — TabControl.Resources に置くと、
+            中のサブタブまで巻き添えで消える（CLAUDE.md の入れ子の罠）。
+        -->
+        <Style x:Key="HiddenTabHeader" TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+            <Setter Property="Visibility" Value="Collapsed" />
+        </Style>
+
         <!--
             各タブの先頭に置く 1 行の説明と、その左の ⓘ。
             「何をする画面か」は開いた瞬間に分かる必要がある（タブ名だけでは足りない）。
@@ -67,10 +79,13 @@
         <Style x:Key="TabIntro" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <!-- 「表示領域を最大化」のときだけ畳む。値は MainWindow が入れ替える -->
+            <Setter Property="Visibility" Value="{DynamicResource Visibility.TabIntro}" />
         </Style>
 
         <Style x:Key="TabInfoMark" TargetType="TextBlock">
             <Setter Property="Text" Value="ⓘ" />
+            <Setter Property="Visibility" Value="{DynamicResource Visibility.TabIntro}" />
             <!-- 本文と同じ大きさだと、目印としても当たり判定としても小さい -->
             <Setter Property="FontSize" Value="{DynamicResource Size.Heading}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
@@ -540,6 +555,9 @@
                 <MenuItem x:Name="ThemeMenuItem" Click="OnThemeToggle" />
                 <MenuItem x:Name="TopmostMenuItem" Header="最前面に固定" IsCheckable="True"
                           Click="OnTopmostMenu" />
+                <!-- 見ているものだけを窓いっぱいに出す。メニューごと畳むので F11 で戻す -->
+                <MenuItem x:Name="MaximizeViewMenuItem" Header="表示領域を最大化" IsCheckable="True"
+                          InputGestureText="F11" Click="OnToggleMaximizedView" />
                 <Separator />
                 <!-- 文字の大きさ。サブメニューは作れない作りなので並べる。
                      Tag が倍率で、選ばれているものにチェックが付く -->
@@ -1259,6 +1277,10 @@
                                 <Button Content="貼り付けに戻る" Command="{Binding EditCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                         ToolTip="結果を閉じて貼り付け欄に戻ります。貼り付けた内容は残ります。" />
+                                <Button x:Name="DiffMaximizeButton" Content="⤢ 最大化"
+                                        Click="OnToggleMaximizedView"
+                                        Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                        ToolTip="メニューの帯とタブの見出しを畳んで、この画面を窓いっぱいに出します（F11 で戻せます）。" />
                                 <Button Content="CSV で保存" Command="{Binding SaveChangesCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                         ToolTip="「何が変わったか」を書き出します。" />
@@ -6740,8 +6762,12 @@
 
                                         <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,6,2" />
                                         <Button Content="取得内容に戻る" Command="{Binding ShowFetchedCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                                 ToolTip="結果を閉じて、取ってきた設定そのものに戻ります。" />
+                                        <Button x:Name="AciDiffMaximizeButton" Content="⤢ 最大化"
+                                                Click="OnToggleMaximizedView"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
+                                                ToolTip="メニューの帯とタブの見出しを畳んで、この画面を窓いっぱいに出します（F11 で戻せます）。" />
 
                                         <Button Content="◀ 前の差分" Command="{Binding PreviousDifferenceCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />

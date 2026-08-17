@@ -912,6 +912,34 @@ internal static class SelfTest
             dialog.Close();
         });
 
+        Check("表示領域を最大化して、元に戻せる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 畳むのは周りの飾りだけ。戻す道（F11 と画面の中のボタン）が必ず残ること
+            window!.SetMaximizedViewForTest(true);
+            window.UpdateLayout();
+
+            Assert(window.MainMenu.Visibility == System.Windows.Visibility.Collapsed,
+                   "最大化してもメニューの帯が畳まれていない");
+            Assert(window.MainTabs.ItemContainerStyle is not null,
+                   "最大化しても主タブの見出しが畳まれていない");
+            Assert(window.MainTabs.SelectedItem is not null, "最大化したら中身まで消えた");
+
+            window.SetMaximizedViewForTest(false);
+            window.UpdateLayout();
+
+            Assert(window.MainMenu.Visibility == System.Windows.Visibility.Visible,
+                   "元に戻してもメニューの帯が出てこない");
+            Assert(window.MainTabs.ItemContainerStyle is null,
+                   "元に戻しても主タブの見出しが畳まれたまま");
+
+            // 鍵盤からも戻せること（メニューを畳むので、ここが唯一の逃げ道になる）
+            Assert(window.InputBindings.OfType<System.Windows.Input.KeyBinding>()
+                       .Any(b => b.Key == System.Windows.Input.Key.F11),
+                   "F11 で最大化を切り替えられない");
+        });
+
         Check("差分比較: 結果を出していないときは「貼り付けに戻る」を押せない", () =>
         {
             // 常に押せるままだと、貼り付け欄を出している間に押しても何も起きず、
