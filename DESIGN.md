@@ -264,7 +264,7 @@ DnsQuery_W の P/Invoke でも実装できるが、DnsClient.NET を推す理由
 **押すと分類ごとに並んだメニューが降りてくる**(`MainWindow.OnMainTabsMouseDown` が
 内側の TabControl から組み立てる。分類は各 `TabItem` の `Tag`)。
 
-**帯には「いま開いているもの」だけを出す。** 16 枚を素で並べると名前が読めない。
+**帯には「いま開いているもの」だけを出す。** 19 枚を素で並べると名前が読めない。
 `ItemContainerStyle` に「選ばれていなければ `Collapsed`」を当てる —
 `TabControl.Resources` に暗黙スタイルとして置くと、**Meraki の中のサブタブまで
 巻き添えで隠れる**ので必ず `ItemContainerStyle` 側に置くこと。
