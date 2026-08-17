@@ -2291,12 +2291,15 @@ internal static class SelfTest
 
         private const string Empty = """{"totalCount":"0","imdata":[]}""";
 
-        /// <summary>2 件目まで取れて、総数は 3。＝2 ページ目が要る。</summary>
+        /// <summary>
+        /// 総数が 1 ページ(200 件)に収まらないと言う。＝2 ページ目を取りに行くはず。
+        /// 中身の件数は検査に要るぶんだけ（実機は 1 ページ 200 件で返す）。
+        /// </summary>
         private const string Page0 =
-            """{"totalCount":"3","imdata":[{"faultInst":{"attributes":{"severity":"critical","code":"F1","dn":"a"}}},{"faultInst":{"attributes":{"severity":"minor","code":"F2","dn":"b"}}}]}""";
+            """{"totalCount":"201","imdata":[{"faultInst":{"attributes":{"severity":"critical","code":"F1","dn":"a"}}},{"faultInst":{"attributes":{"severity":"minor","code":"F2","dn":"b"}}}]}""";
 
         private const string Page1 =
-            """{"totalCount":"3","imdata":[{"faultInst":{"attributes":{"severity":"warning","code":"F3","dn":"c"}}}]}""";
+            """{"totalCount":"201","imdata":[{"faultInst":{"attributes":{"severity":"warning","code":"F3","dn":"c"}}}]}""";
 
         public List<string> Paths { get; } = [];
 
