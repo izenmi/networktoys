@@ -64,7 +64,9 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
         _handler = handler;
         _selectedTimespan = Timespans[1];
 
+        LoginCommand = new RelayCommand(() => _ = LoginAsync(), CanFetch);
         FetchClientCommand = new RelayCommand(() => _ = FetchClientAsync(), CanFetch);
+        FetchClientListCommand = new RelayCommand(() => _ = FetchClientListAsync(), CanFetch);
         FetchDevicesCommand = new RelayCommand(() => _ = FetchDevicesAsync(), CanFetch);
         FetchLifecycleCommand = new RelayCommand(() => _ = FetchLifecycleAsync(), CanFetch);
         FetchCommandChoicesCommand = new RelayCommand(() => _ = FetchCommandChoicesAsync(), CanFetch);
@@ -83,6 +85,9 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     // ===== 一覧 =====
 
     public ObservableCollection<DnacConnectionRow> ConnectionRows { get; } = [];
+
+    /// <summary>端末の一覧（1 台を調べるのとは別の表）。</summary>
+    public ObservableCollection<DnacConnectionRow> ClientRows { get; } = [];
     public ObservableCollection<DnacEventRow> EventRows { get; } = [];
     public ObservableCollection<DnacDeviceRow> DeviceRows { get; } = [];
     public ObservableCollection<DnacLifecycleRow> LifecycleRows { get; } = [];
@@ -92,7 +97,13 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
 
     // ===== コマンド =====
 
+    /// <summary>接続できるかだけを確かめる。<b>つないでみないと分からない</b>ので入口を分けた。</summary>
+    public RelayCommand LoginCommand { get; }
+
     public RelayCommand FetchClientCommand { get; }
+
+    /// <summary>端末の一覧を取る（1 台を調べるのとは別の入口）。</summary>
+    public RelayCommand FetchClientListCommand { get; }
     public RelayCommand FetchDevicesCommand { get; }
     public RelayCommand FetchLifecycleCommand { get; }
     public RelayCommand FetchCommandChoicesCommand { get; }
@@ -120,7 +131,8 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     /// 保守と適合で見るもの。<b>3 つを 1 枚の表に寄せる</b> —
     /// どれも「機器ごとに 1 行、状態と日付と一言」で、列が同じになるため。
     /// </summary>
-    public IReadOnlyList<string> LifecycleKinds { get; } = ["EoX（保守終了）", "適合性", "ライセンス"];
+    public IReadOnlyList<string> LifecycleKinds { get; } =
+        ["EoX（保守終了）", "適合性", "ライセンス", "脆弱性（PSIRT）"];
 
     public string SelectedLifecycleKind
     {
@@ -263,6 +275,38 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     /// <b>MAC が分からないとイベントは引けない</b>（Catalyst Center の索引が MAC だけ）。
     /// IP で引いて MAC が判明したら、そこから続ける。
     /// </summary>
+    /// <summary>
+    /// ログインだけしてみる。<b>取得の前に、資格情報と証明書を確かめられる</b>ようにするための入口。
+    /// （取得のたびに 1 回ログインする作りは変えていない。ここで預かったトークンは持ち回さない）
+    /// </summary>
+    private Task LoginAsync() => RunAsync("ログイン", (_, _) =>
+    {
+        Status = $"{Host} にログインできました（{DateTime.Now:HH:mm:ss}）。";
+
+        return Task.CompletedTask;
+    });
+
+    /// <summary>
+    /// 端末の一覧。<b>期間で絞る</b>（その間に見えた端末）。
+    /// 1 台を調べる「調べる」とは別で、こちらは丸ごと並べる。
+    /// </summary>
+    private Task FetchClientListAsync() => RunAsync("端末の一覧", async (client, token) =>
+    {
+        long end = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        long start = end - ((long)SelectedTimespan.Seconds * 1000);
+
+        IReadOnlyList<string> pages = await client.ClientsAsync(start, end, token).ConfigureAwait(true);
+
+        Record(client, pages.Count > 0 ? pages[^1] : "");
+
+        Replace(ClientRows, DnacCatalog.ParseClients(pages.SelectMany(DnacJson.Rows)));
+
+        Status = $"端末 {ClientRows.Count} 台（直近{SelectedTimespan.Name}・{DateTime.Now:HH:mm:ss}）";
+
+        if (ClientRows.Count == 0)
+            Notice = "⚠ 1 台も返りませんでした。期間を広げるか、この版に端末の一覧があるかを確かめてください。";
+    });
+
     private Task FetchClientAsync() => RunAsync("端末", async (client, token) =>
     {
         DnacEntityKind kind = DnacCatalog.EntityKindOf(Query);
@@ -399,6 +443,11 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
         {
             paths = DnacCatalog.LicensePaths;
             parse = DnacCatalog.ParseLicenses;
+        }
+        else if (SelectedLifecycleKind.StartsWith("脆弱性", StringComparison.Ordinal))
+        {
+            paths = DnacCatalog.AdvisoryPaths;
+            parse = DnacCatalog.ParseAdvisories;
         }
 
         string json = await client.GetFirstAsync(paths, token).ConfigureAwait(true);
@@ -596,6 +645,7 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     private int RowCount(string? key) => key switch
     {
         "conn" => ConnectionRows.Count,
+        "client" => ClientRows.Count,
         "event" => EventRows.Count,
         "dev" => DeviceRows.Count,
         "life" => LifecycleRows.Count,
@@ -605,6 +655,7 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     private CsvTable TableOf(string? key) => key switch
     {
         "conn" => DnacCatalog.ToCsv([.. ConnectionRows]),
+        "client" => DnacCatalog.ToCsv([.. ClientRows]),
         "dev" => DnacCatalog.ToCsv([.. DeviceRows]),
         "life" => DnacCatalog.ToCsv([.. LifecycleRows]),
         _ => DnacCatalog.ToCsv([.. EventRows]),
@@ -654,6 +705,7 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
         _cts?.Cancel();
 
         ConnectionRows.Clear();
+        ClientRows.Clear();
         EventRows.Clear();
         DeviceRows.Clear();
         LifecycleRows.Clear();
@@ -696,7 +748,9 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
 
     private void RefreshFetchCommands()
     {
+        LoginCommand.RaiseCanExecuteChanged();
         FetchClientCommand.RaiseCanExecuteChanged();
+        FetchClientListCommand.RaiseCanExecuteChanged();
         FetchDevicesCommand.RaiseCanExecuteChanged();
         FetchLifecycleCommand.RaiseCanExecuteChanged();
         FetchCommandChoicesCommand.RaiseCanExecuteChanged();

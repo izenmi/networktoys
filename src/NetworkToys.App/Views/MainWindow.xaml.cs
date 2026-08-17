@@ -538,6 +538,7 @@ public partial class MainWindow : Window
                      "Health", "Site", "Updated"],
         ["dncev"] = ["Time", "Name", "Status", "Source", "Detail"],
         ["dncdev"] = ["Name", "Model", "Serial", "Version", "Ip", "Site", "Role", "Reachability", "Health"],
+        ["dnccll"] = ["Mac", "Ip", "HostName", "Kind", "Device", "Port", "Ssid", "Band", "Health", "Site"],
         ["dnclc"] = ["Device", "Kind", "State", "Date", "Note"],
         ["wlcap"] = ["State", "Name", "Ip", "Mac", "Model", "Version", "Radios", "Clients", "Tags"],
         ["wlcjoin"] = ["State", "Name", "Mac", "LastJoin", "LastDisconnect", "Reason", "Joins", "Failures"],

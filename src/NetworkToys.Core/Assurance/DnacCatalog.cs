@@ -101,9 +101,30 @@ public static class DnacCatalog
 
     public static string[] DeviceHealthPaths => [$"{Data}/networkDevices", $"{Intent}/network-health"];
 
+    /// <summary>端末の一覧。<b>期間で絞る</b>（いつ見えた端末か）。offset は 1 始まり。</summary>
+    public static string ClientsPath(long startMs, long endMs, int page, int limit)
+        => $"{Data}/clients?startTime={startMs}&endTime={endMs}"
+           + $"&offset={(page * limit) + 1}&limit={limit}";
+
+    /// <summary>脆弱性（PSIRT）。手持ちの機器が対象になっている勧告が返る。</summary>
+    public static string[] AdvisoryPaths =>
+    [
+        $"{Intent}/security-advisory/advisory",
+        $"{Intent}/security-advisories/results/advisories",
+    ];
+
     public static string[] EoxPaths => [$"{Intent}/eox-status/device"];
     public static string[] CompliancePaths => [$"{Intent}/compliance"];
-    public static string[] LicensePaths => [$"{Intent}/licenses/device/summary"];
+
+    /// <summary>
+    /// ライセンス。<b>page_number / limit / order は必須</b>で、付けないと 400 が返る
+    /// （2026-08-17 に実機で確認）。付けない形は、版が違うときのために後ろへ残してある。
+    /// </summary>
+    public static string[] LicensePaths =>
+    [
+        $"{Intent}/licenses/device/summary?page_number=1&limit=500&order=asc",
+        $"{Intent}/licenses/device/summary",
+    ];
 
     public static string[] LegitReadsPaths => [$"{Intent}/network-device-poller/cli/legit-reads"];
     public const string ReadRequestPath = $"{Intent}/network-device-poller/cli/read-request";
@@ -294,6 +315,40 @@ public static class DnacCatalog
                 Site: DnacJson.First(detail, "location", "siteHierarchy"),
                 Updated: DescribeTime(DnacJson.Long(detail, "lastUpdated", "timestamp"))),
         ];
+    }
+
+    /// <summary>
+    /// 端末の一覧。<c>client-enrichment-details</c> と違って<b>1 件が平らな形</b>で返るので、
+    /// 同じ行の型に寄せて読む（画面の表を 2 つ作らずに済む）。
+    /// </summary>
+    public static IReadOnlyList<DnacConnectionRow> ParseClients(IEnumerable<JsonElement> rows)
+    {
+        var list = new List<DnacConnectionRow>();
+
+        foreach (JsonElement row in rows)
+        {
+            int? score = DnacJson.Int(row, "health/overallScore", "healthScore/score", "overallHealth", "health");
+            (string health, SeverityKind healthKind) = DescribeHealth(score);
+
+            list.Add(new DnacConnectionRow(
+                Mac: DnacJson.First(row, "macAddress", "mac", "id"),
+                Ip: DnacJson.First(row, "ipv4Address", "hostIpV4", "ipAddress"),
+                HostName: DnacJson.First(row, "name", "hostName", "userId"),
+                Kind: DescribeConnection(DnacJson.First(row, "type", "hostType", "connectionType")),
+                Device: DnacJson.First(row, "connectedNetworkDevice/connectedNetworkDeviceName",
+                                       "connectedNetworkDeviceName", "clientConnection", "apName"),
+                Port: DnacJson.First(row, "connectedNetworkDevice/connectedInterfaceName",
+                                     "connectedInterfaceName", "port"),
+                Vlan: DnacJson.First(row, "vlanId", "vnid"),
+                Ssid: DnacJson.First(row, "ssid", "connection/ssid"),
+                Band: DescribeBand(DnacJson.First(row, "band", "frequency", "connection/band")),
+                Health: health,
+                HealthKind: healthKind,
+                Site: DnacJson.First(row, "siteHierarchy", "location", "siteId"),
+                Updated: DescribeTime(DnacJson.Long(row, "lastUpdatedTime", "lastUpdated", "timestamp"))));
+        }
+
+        return list;
     }
 
     /// <summary>有線か無線か。<b>知らない値はそのまま出す</b>。</summary>
@@ -530,6 +585,56 @@ public static class DnacCatalog
         null or "" => ("—", SeverityKind.Muted),
         _ => (status, SeverityKind.Muted),
     };
+
+    /// <summary>
+    /// 脆弱性（PSIRT）。<b>1 件が「勧告 1 本」</b>で、機器ごとではなく対象台数で返る。
+    ///
+    /// 共通の 5 列には「機器＝対象台数 / 種別＝勧告の番号 / 状態＝重大度 / 日付＝直る版 /
+    /// 備考＝CVE と参照先」で寄せる。<b>この表のために列を増やさない</b>（ほかの 3 種と同じ形で見る）。
+    /// </summary>
+    public static IReadOnlyList<DnacLifecycleRow> ParseAdvisories(IEnumerable<JsonElement> rows)
+    {
+        var list = new List<DnacLifecycleRow>();
+
+        foreach (JsonElement row in rows)
+        {
+            (string text, SeverityKind kind) =
+                DescribeAdvisorySeverity(DnacJson.First(row, "sir", "severity", "securityImpactRating"));
+
+            string score = DnacJson.First(row, "cvssBaseScore", "cvssScore");
+            string devices = DnacJson.First(row, "deviceCount", "totalDeviceCount");
+
+            list.Add(new DnacLifecycleRow(
+                Device: devices.Length > 0
+                    ? $"対象 {devices} 台"
+                    : DnacJson.First(row, "deviceHostName", "deviceId"),
+                Kind: Or(DnacJson.First(row, "advisoryId", "id"), "脆弱性"),
+                State: score.Length > 0 ? $"{text}　CVSS {score}" : text,
+                StateKind: kind,
+                Date: Join(DnacJson.Children(row, "fixedVersions", "firstFixedVersionsList")),
+                Note: Or(Join(DnacJson.Children(row, "cves")),
+                         DnacJson.First(row, "publicationUrl", "detailUrl"))));
+        }
+
+        return list;
+    }
+
+    /// <summary>勧告の重大度（Cisco の SIR）。<b>知らない値はそのまま出す</b>。</summary>
+    public static (string Text, SeverityKind Kind) DescribeAdvisorySeverity(string? severity) => severity switch
+    {
+        "Critical" or "CRITICAL" => ("✕ 緊急", SeverityKind.Alert),
+        "High" or "HIGH" => ("✕ 重大", SeverityKind.Alert),
+        "Medium" or "MEDIUM" => ("⊘ 中", SeverityKind.Notice),
+        "Low" or "LOW" or "Informational" or "INFORMATIONAL" => ("● 低", SeverityKind.Ok),
+        null or "" => ("—", SeverityKind.Muted),
+        _ => (severity, SeverityKind.Muted),
+    };
+
+    /// <summary>配列を読める 1 行にする。長いものは画面側で省く（全文は ToolTip）。</summary>
+    private static string Join(IReadOnlyList<JsonElement> values)
+        => string.Join(" / ", values
+            .Select(v => v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : v.ToString())
+            .Where(v => v.Length > 0));
 
     public static IReadOnlyList<DnacLifecycleRow> ParseLicenses(IEnumerable<JsonElement> rows)
     {

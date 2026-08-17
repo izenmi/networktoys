@@ -168,6 +168,28 @@ internal sealed class DnacClient : IDisposable
     }
 
     /// <summary>
+    /// 端末の一覧を取り切る。<b>offset は 1 始まり</b>（<see cref="DnacCatalog.ClientsPath"/> が面倒を見る）。
+    /// </summary>
+    public async Task<IReadOnlyList<string>> ClientsAsync(long startMs, long endMs, CancellationToken token)
+    {
+        var pages = new List<string>();
+
+        for (int page = 0; page < MaxPages; page++)
+        {
+            string json = await GetAsync(DnacCatalog.ClientsPath(startMs, endMs, page, PageSize), token)
+                .ConfigureAwait(false);
+
+            pages.Add(json);
+
+            if (DnacJson.Rows(json).Count < PageSize) return pages;
+        }
+
+        WasTruncated = true;
+
+        return pages;
+    }
+
+    /// <summary>
     /// 参照コマンドを流して出力を受け取る。
     ///
     /// <b>投げるコマンドを組み立てるのは呼び出し側の仕事</b>（Catalyst Center 自身の許可一覧と
