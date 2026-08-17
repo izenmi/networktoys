@@ -6124,8 +6124,15 @@
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
                             <!-- IOS-XE の版でリーフ名が違うことがある。実機で切り分けるための逃げ道 -->
                             <Button Content="応答を表示" Click="OnWlcShowResponse"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
                                     ToolTip="直前に取れた生の応答(JSON)と、投げた URL を出します。" />
+
+                            <!-- RESTCONF が無効な WLC のための保険。表にはしないでそのまま見せる -->
+                            <Button Content="SSH で取得" Command="{Binding FetchShowCommand}" Margin="0,0,6,2"
+                                    ToolTip="RESTCONF が使えないときに、SSH で show を流します（表にはしません）。" />
+                            <Button Content="SSH の出力" Click="OnWlcShowSsh"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
+                                    ToolTip="SSH で取ってきた出力をそのまま開きます。" />
                         </WrapPanel>
 
                         <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"

@@ -181,6 +181,20 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// SSH で取ってきた出力をそのまま出す。<b>表にはしない</b> —
+    /// 17.x の桁揃えは版で列が動き、解釈を書くと「表は出るが中身がずれている」になる。
+    /// </summary>
+    private void OnWlcShowSsh(object sender, RoutedEventArgs e)
+    {
+        string output = _shell.Wlc.LastShowOutput;
+
+        TextViewDialog.Show(
+            this,
+            "WLC の show 出力",
+            output.Length > 0 ? output : "まだ SSH で取得していません。");
+    }
+
+    /// <summary>
     /// 直前に取れた APIC の生の応答を出す。APIC の版で属性名が違うことがあり、
     /// 「表は空だが通信はできている」の切り分けが実機でしかできないため。
     /// </summary>

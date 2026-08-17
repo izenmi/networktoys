@@ -27,6 +27,28 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
 {
     private const string Ready = "WLC のアドレスとユーザーを入れて「取得」を押すと、端末と AP を取ってきます。";
 
+    /// <summary>
+    /// RESTCONF が無効な WLC のための保険。SSH で入って <c>show</c> を流す。
+    ///
+    /// <b>出力は解釈しない（そのまま見せる）。</b>17.x の桁揃えは版で列が動くうえ、
+    /// 実機でも CI でも確かめられないので、解釈を書くと「表は出るが中身がずれている」
+    /// という一番たちの悪い壊れ方をする。桁揃えの出力は人が読めば答えになっている。
+    ///
+    /// 版で名前が割れるものは両方投げて失敗を無視する（ページャ無効化と同じ
+    /// 「判定の誤りより無害な失敗」）。
+    /// </summary>
+    private static readonly string[] ShowCommands =
+    [
+        "show ap summary",
+        "show ap join stats summary",
+        "show wireless client summary",
+        "show wireless wlan summary",
+        "show ap dot11 24ghz summary",
+        "show ap dot11 5ghz summary",
+        "show rogue ap summary",
+        "show wireless wps rogue ap summary",
+    ];
+
     private readonly HttpMessageHandler? _handler;
 
     private CancellationTokenSource? _cts;
@@ -44,6 +66,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     private bool _isBusy;
     private string _lastResponse = "";
     private string _lastUrl = "";
+    private string _lastShow = "";
 
     /// <param name="handler">自己診断が偽の WLC を挿すための口。既定は本物。</param>
     public WlcViewModel(HttpMessageHandler? handler = null)
@@ -56,6 +79,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         FetchRoguesCommand = new RelayCommand(() => _ = FetchRoguesAsync(), CanFetch);
         FetchSsidsCommand = new RelayCommand(() => _ = FetchSsidsAsync(), CanFetch);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
+        FetchShowCommand = new RelayCommand(() => _ = RunShowAsync(), CanFetch);
 
         SortWeakestCommand = new RelayCommand(SortWeakest, () => ClientRows.Count > 0);
 
@@ -88,6 +112,9 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     public RelayCommand CancelCommand { get; }
     public RelayCommand SortWeakestCommand { get; }
 
+    /// <summary>RESTCONF が使えないときの保険。SSH で show を流すだけ。</summary>
+    public RelayCommand FetchShowCommand { get; }
+
     public RelayCommand<string> SaveCsvCommand { get; }
     public RelayCommand<string> SaveXlsxCommand { get; }
 
@@ -96,6 +123,9 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     /// リーフ名の思い違いは実機でしか分からず、どのパスを叩いたかが要るため。
     /// </summary>
     public string LastResponse => _lastUrl.Length > 0 ? $"{_lastUrl}\n\n{_lastResponse}" : _lastResponse;
+
+    /// <summary>SSH で取ってきた生の出力。解釈しないでそのまま見せる。</summary>
+    public string LastShowOutput => _lastShow;
 
     /// <summary>
     /// 証明書の指紋を見せて受け入れるかを聞く。画面が結線する。
@@ -356,6 +386,60 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// SSH で show を流す。既存の収集タブの仕組み（<see cref="DeviceCollector"/>）を
+    /// そのまま使うので、ページャ無効化・プロンプトの学習・パスワード 2 回で中断は
+    /// あちらが面倒を見てくれる。<b>出力は解釈せず、そのまま画面に出す。</b>
+    /// </summary>
+    private async Task RunShowAsync()
+    {
+        if (IsBusy) return;
+
+        IsBusy = true;
+        Notice = "";
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            Status = "SSH で取得しています…（少し時間がかかります）";
+
+            var request = new CollectRequest(
+                Host: HttpsHost.Normalize(Host),
+                Port: 22,
+                UseSsh: true,
+                Credentials: new DeviceCredentials(UserName.Trim(), Password, ""),
+                Memo: "WLC");
+
+            DeviceCollectionResult result = await DeviceCollector.CollectAsync(
+                request, ShowCommands, new CiscoSessionOptions(),
+                TimeSpan.FromSeconds(15), null, _cts.Token).ConfigureAwait(true);
+
+            _lastShow = DeviceReport.Render(result);
+            OnPropertyChanged(nameof(LastShowOutput));
+
+            Status = result.FailureMessage is { Length: > 0 } failure
+                ? failure
+                : $"SSH で {result.Commands.Count} 本ぶん取れました。「SSH の出力」で開けます。";
+
+            Notice = "⚠ SSH の出力は表にしていません（版によって桁がずれるため）。そのまま読んでください。";
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。";
+        }
+        catch (Exception ex)
+        {
+            Status = "SSH で取得できませんでした。";
+            CrashLog.Write(ex, "WlcViewModel.RunShowAsync");
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+        }
+    }
+
     private static string FingerprintQuestion(string host, string fingerprint, string? accepted)
     {
         string head = accepted is { Length: > 0 }
@@ -462,6 +546,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         _allAps = [];
         _lastResponse = "";
         _lastUrl = "";
+        _lastShow = "";
         ClientQuery = "";
         OnlyDisconnected = false;
         Fingerprint = "";
@@ -492,6 +577,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         FetchRrmCommand.RaiseCanExecuteChanged();
         FetchRoguesCommand.RaiseCanExecuteChanged();
         FetchSsidsCommand.RaiseCanExecuteChanged();
+        FetchShowCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshSaveCommands()
