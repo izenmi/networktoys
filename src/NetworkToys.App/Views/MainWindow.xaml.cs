@@ -460,7 +460,7 @@ public partial class MainWindow : Window
     {
         Visual or System.Windows.Media.Media3D.Visual3D => VisualTreeHelper.GetParent(node),
         System.Windows.ContentElement content =>
-            System.Windows.Documents.ContentOperations.GetParent(content) ?? LogicalTreeHelper.GetParent(content),
+            ContentOperations.GetParent(content) ?? LogicalTreeHelper.GetParent(content),
         _ => LogicalTreeHelper.GetParent(node),
     };
 
