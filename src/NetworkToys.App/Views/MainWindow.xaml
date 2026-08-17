@@ -238,7 +238,7 @@
                            HorizontalAlignment="Right" Margin="0,0,6,0" />
 
                 <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け) -->
-                <Border x:Name="Cell" Grid.Column="1" Padding="4,1"
+                <Border x:Name="Cell" Grid.Column="1" Padding="4,0"
                         CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
                     <controls:DiffText Segments="{Binding LeftSegments}"
                                        ChangedBrush="{DynamicResource Brush.Error.Bg}"
@@ -276,7 +276,7 @@
                            HorizontalAlignment="Right" Margin="0,0,6,0" />
 
                 <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け) -->
-                <Border x:Name="Cell" Grid.Column="1" Padding="4,1"
+                <Border x:Name="Cell" Grid.Column="1" Padding="4,0"
                         CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
                     <controls:DiffText Segments="{Binding RightSegments}"
                                        ChangedBrush="{DynamicResource Brush.Ok.Bg}"
@@ -296,15 +296,23 @@
             </DataTemplate.Triggers>
         </DataTemplate>
 
+        <!--
+            差分の行の入れ物。<b>余白を足さない</b> — 貼り付け欄（素の TextBox）と
+            同じ行間で読めるようにするため（2026-08-17 ユーザー指示で詰めた）。
+            選択の枠は 1px だけ持つ。行の地色は差分の色に使っているので、
+            選択を地色で示すと色がぶつかる。
+        -->
         <Style x:Key="PlainCompactContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Sel"
                                 BorderBrush="Transparent"
-                                BorderThickness="1.5"
+                                BorderThickness="1"
                                 CornerRadius="{DynamicResource Radius.Control}"
-                                Margin="0,0,3,3">
+                                Margin="0">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
