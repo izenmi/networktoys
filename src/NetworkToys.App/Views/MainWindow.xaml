@@ -4165,108 +4165,6 @@
                          暗黙の TabItem スタイルに任せるので、ここでは何も当てない -->
                     <TabControl x:Name="MerakiSubTabs" BorderThickness="0" Padding="0">
 
-                        <!-- ネットワーク -->
-                        <TabItem Header="ネットワーク">
-                            <Border Style="{StaticResource Card}">
-                                <DockPanel>
-                                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
-                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
-                                                   ToolTip="{x:Static help:TabHelp.MerakiNetworks}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="組織の拠点を一覧にします。まずここで選びます。" />
-                                    </DockPanel>
-
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="CSV で保存" Command="{Binding SaveNetworksCommand}" />
-                                    </StackPanel>
-
-                                    <Border Background="{DynamicResource Brush.Surface}"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mnet" MouseLeftButtonDown="OnTableHeaderSort">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.2]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.3]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.4]}" />
-                                                </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="ネットワーク" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="1" Text="ID" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="2" Text="製品" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="3" Text="タイムゾーン" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="4" Text="タグ" Style="{StaticResource Caption}" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                            </Grid>
-                                            <Border DockPanel.Dock="Top" Height="1"
-                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-
-                                            <ListBox ItemsSource="{Binding NetworkRows}"
-                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     HorizontalContentAlignment="Stretch"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                     VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid Height="{DynamicResource Size.RowHeight.Wide}">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.1]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.2]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.3]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mnet.4]}" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Id}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding ProductTypes}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding TimeZone}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="4" Text="{Binding Tags}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
-                                    </Border>
-                                </DockPanel>
-                            </Border>
-                        </TabItem>
 
                         <!-- 機器 -->
                         <TabItem Header="機器">
@@ -4564,30 +4462,31 @@
                         <TabItem Header="クライアント">
                             <Border Style="{StaticResource Card}">
                                 <DockPanel>
-                                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiClients}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点に繋がっている端末を一覧にします。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="拠点を選ぶか全拠点かで、端末を一覧にします。" />
                                     </DockPanel>
-
-                                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                        <TextBlock Text="ネットワーク" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <ComboBox Width="180" Margin="0,0,12,2"
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <TextBlock Text="拠点" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="180" Margin="0,0,6,0"
                                                   ItemsSource="{Binding NetworkRows}"
                                                   SelectedItem="{Binding SelectedNetwork}"
-                                                  ToolTip="クライアントは 1 ネットワークずつ取得します。">
+                                                  ToolTip="拠点を 1 つ選びます。「全拠点」を入れると、こちらは使いません。">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding Name}" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
-
+                                        <CheckBox Content="全拠点" IsChecked="{Binding AllNetworks}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"
+                                                  ToolTip="拠点の数だけ問い合わせるので時間がかかります（40 拠点で打ち切り）。" />
                                         <TextBlock Text="期間" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <ComboBox Width="90" Margin="0,0,12,2"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="90" Margin="0,0,12,0"
                                                   ItemsSource="{Binding Timespans}"
                                                   SelectedItem="{Binding SelectedTimespan}"
                                                   ToolTip="どこまでさかのぼるか。長いほど台数が増えます。">
@@ -4597,120 +4496,117 @@
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
-
-                                        <Button Content="クライアントを取得" Command="{Binding FetchClientsCommand}"
-                                                Margin="0,0,6,2" />
+                                        <Button Content="クライアントを取得" Command="{Binding FetchClientsCommand}" Margin="0,0,6,0" />
                                         <Button Content="CSV で保存" Command="{Binding SaveClientsCommand}"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
-                                    </WrapPanel>
-
-                                    <Border Background="{DynamicResource Brush.Surface}"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                        <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort">
+                                                Style="{StaticResource Button.Subtle}" />
+                                    </StackPanel>
+                                <Border Background="{DynamicResource Brush.Surface}"
+                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                    <DockPanel>
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.0]}" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.7]}" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <TextBlock Grid.Column="0" Text="拠点" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="1" Text="名前" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="2" Text="IP" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="3" Text="MAC" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="4" Text="VLAN" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="5" Text="メーカー" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="6" Text="通信量" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="7" Text="最終確認" Style="{StaticResource Caption}" />
+                                            <!-- 星列より左は右端、右は左端の境界につまみを置く -->
+                                            <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mcli.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mcli.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mcli.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mcli.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mcli.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mcli.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mcli.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                        </Grid>
+                                        <Border DockPanel.Dock="Top" Height="1"
+                                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                        <ListBox ItemsSource="{Binding ClientRows}"
+                                                 ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 VirtualizingPanel.IsVirtualizing="True"
+                                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight.Wide}"
+                                                  ContextMenu="{StaticResource RowMenu.Address}">
                                                 <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.0]}" />
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.7]}" />
                                                 </Grid.ColumnDefinitions>
-                                                <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
                                                 <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <TextBlock Grid.Column="0" Text="名前" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="1" Text="IP" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="2" Text="MAC" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="3" Text="VLAN" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="4" Text="メーカー" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="5" Text="通信量" Style="{StaticResource Caption}" />
-                                                <TextBlock Grid.Column="6" Text="最終確認" Style="{StaticResource Caption}" />
-                                                <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
-                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                                <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                                <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Network}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Description}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Ip}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Mac}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="4" Text="{Binding Vlan}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="5" Text="{Binding Manufacturer}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="6" Text="{Binding Usage}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="7" Text="{Binding LastSeen}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                             </Grid>
-                                            <Border DockPanel.Dock="Top" Height="1"
-                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-
-                                            <ListBox ItemsSource="{Binding ClientRows}"
-                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     HorizontalContentAlignment="Stretch"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                     VirtualizingPanel.IsVirtualizing="True"
-                                                     VirtualizingPanel.VirtualizationMode="Recycling"
-                                         ScrollViewer.VerticalScrollBarVisibility="Visible">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid Height="{DynamicResource Size.RowHeight.Wide}"
-                                                              ContextMenu="{StaticResource RowMenu.Address}">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.1]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.2]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.3]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.4]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.5]}" />
-                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.6]}" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
-                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                            <TextBlock Grid.Column="0" Text="{Binding Description}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Ip}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding Mac}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding Vlan}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="4" Text="{Binding Manufacturer}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="5" Text="{Binding Usage}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       HorizontalAlignment="Right" />
-                                                            <TextBlock Grid.Column="6" Text="{Binding LastSeen}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
-                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DockPanel>
+                                </Border>
                                 </DockPanel>
                             </Border>
                         </TabItem>

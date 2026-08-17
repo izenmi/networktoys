@@ -797,7 +797,8 @@ internal static class SelfTest
                     Core.Net.ConnectionStateKind.Ok, "203.0.113.1", "192.168.128.1"), "192.168.128.1"),
 
                 (new Core.Cloud.MerakiClientRow(
-                    "pc-01", "192.168.128.50", "aa:bb:cc:dd:ee:ff", "10", "Dell", "1 MB", "10:00"), "192.168.128.50"),
+                    "本社", "pc-01", "192.168.128.50", "aa:bb:cc:dd:ee:ff", "10", "Dell", "1 MB", "10:00"),
+                 "192.168.128.50"),
 
                 (new Core.Fabric.AciEndpointRow(
                     "00:50:56:AA:BB:CC", "192.168.10.50", "Prod", "Web", "vlan-100",

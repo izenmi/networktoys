@@ -382,10 +382,9 @@ public partial class MainWindow : Window
         ["snmptrap"] = ["Time", "Remote", "Text"],
         ["snmpget"] = ["Oid", "Name", "Type", "Value"],
         ["vres"] = ["Name", "ProxyText", "VerdictText", "ElapsedMs", "Detail"],
-        ["mnet"] = ["Name", "Id", "ProductTypes", "TimeZone", "Tags"],
         ["mdev"] = ["Name", "Model", "Serial", "Firmware", "Network", "State", "PublicIp", "LanIp"],
         ["mup"] = ["Network", "Serial", "Interface", "State", "Ip", "Gateway", "PublicIp"],
-        ["mcli"] = ["Description", "Ip", "Mac", "Vlan", "Manufacturer", "Usage", "LastSeen"],
+        ["mcli"] = ["Network", "Description", "Ip", "Mac", "Vlan", "Manufacturer", "Usage", "LastSeen"],
         // スコアは数値のまま並べる（表示文字列で並べると 9 が 80 より後ろへ行く）
         ["mrsite"] = ["Network", "Clients", "Segments", "Note"],
         ["mrdhcp"] = ["Network", "Device", "Vlan", "Subnet", "Used", "Free", "UsagePercent"],

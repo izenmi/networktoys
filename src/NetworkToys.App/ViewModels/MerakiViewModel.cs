@@ -67,6 +67,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     private string _notice = "";
     private string _globalIpText = "—";
     private bool _showConnection = true;
+    private bool _allNetworks;
     private IReadOnlyList<double> _usageSeries = [];
     private double _usageMaximum = 100;
     private string _usageUnit = "%";
@@ -83,7 +84,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         FetchCommand = new RelayCommand(() => _ = FetchAsync(), () => !IsBusy && ApiKey.Length > 0);
         FetchClientsCommand = new RelayCommand(
             () => _ = FetchClientsAsync(),
-            () => !IsBusy && ApiKey.Length > 0 && SelectedNetwork is not null);
+            () => !IsBusy && ApiKey.Length > 0 && (AllNetworks || SelectedNetwork is not null));
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
@@ -110,8 +111,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
         _selectedUsageKind = UsageKinds[0];
 
-        SaveNetworksCommand = new RelayCommand(
-            () => Save("networks", MerakiCatalog.ToCsv(NetworkRows)), () => NetworkRows.Count > 0);
         SaveDevicesCommand = new RelayCommand(
             () => Save("devices", MerakiCatalog.ToCsv(DeviceRows)), () => DeviceRows.Count > 0);
         SaveUplinksCommand = new RelayCommand(
@@ -188,7 +187,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     public RelayCommand FetchCommand { get; }
     public RelayCommand FetchClientsCommand { get; }
     public RelayCommand CancelCommand { get; }
-    public RelayCommand SaveNetworksCommand { get; }
     public RelayCommand SaveDevicesCommand { get; }
     public RelayCommand SaveUplinksCommand { get; }
     public RelayCommand SaveClientsCommand { get; }
@@ -294,6 +292,16 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     }
 
     public bool HasNotice => _notice.Length > 0;
+
+    /// <summary>
+    /// クライアントを全拠点から取るか。<b>拠点の数だけ呼び出しが増える</b>ので、
+    /// 既定は選んだ拠点だけ。
+    /// </summary>
+    public bool AllNetworks
+    {
+        get => _allNetworks;
+        set { if (SetProperty(ref _allNetworks, value)) FetchClientsCommand.RaiseCanExecuteChanged(); }
+    }
 
     /// <summary>利用率で見るか、通信量で見るか。</summary>
     public MerakiUsageKind SelectedUsageKind
@@ -416,7 +424,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     private async Task FetchClientsAsync()
     {
-        if (SelectedNetwork is not { } network) return;
+        if (!AllNetworks && SelectedNetwork is null) return;
 
         IsBusy = true;
         _cts = new CancellationTokenSource();
@@ -424,17 +432,39 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
         try
         {
-            Status = $"「{network.Name}」のクライアントを取得しています…";
+            MerakiTimespan timespan = SelectedTimespan;
 
-            IReadOnlyList<string> pages = await _dashboard.ClientsAsync(
-                ApiKey, network.Id, SelectedTimespan.Seconds, _cts.Token);
+            // 全拠点は拠点の数だけ呼び出しが増えるので、拠点の一覧と同じ上限で打ち切る
+            MerakiNetworkRow[] targets = AllNetworks
+                ? [.. NetworkRows.Take(MaxSites)]
+                : [SelectedNetwork!];
 
-            Replace(ClientRows, MerakiCatalog.ParseClients(pages));
+            var clients = new List<MerakiClientRow>();
 
-            Status = $"「{network.Name}」で {ClientRows.Count} 台（直近 {SelectedTimespan.Name}）。";
+            for (int i = 0; i < targets.Length; i++)
+            {
+                MerakiNetworkRow network = targets[i];
+
+                Status = targets.Length == 1
+                    ? $"「{network.Name}」のクライアントを取得しています…"
+                    : $"クライアントを取得しています… {i + 1}/{targets.Length}（{network.Name}）";
+
+                clients.AddRange(MerakiCatalog.ParseClients(
+                    await _dashboard.ClientsAsync(ApiKey, network.Id, timespan.Seconds, _cts.Token),
+                    network.Name));
+            }
+
+            Replace(ClientRows, clients);
+
+            Status = targets.Length == 1
+                ? $"「{targets[0].Name}」で {ClientRows.Count} 台（直近 {timespan.Name}）。"
+                : $"{targets.Length} 拠点で {ClientRows.Count} 台（直近 {timespan.Name}）。";
 
             if (_dashboard.WasTruncated)
                 Notice = "⚠ 台数が多いため途中までしか取得できていません。期間を短くして試してください。";
+
+            if (AllNetworks && NetworkRows.Count > targets.Length)
+                Notice = $"⚠ 拠点が多いため {targets.Length} 件で打ち切りました（全 {NetworkRows.Count} 件）。";
         }
         catch (MerakiApiException ex)
         {
@@ -839,7 +869,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     private void RefreshSaveCommands()
     {
-        SaveNetworksCommand.RaiseCanExecuteChanged();
         SaveDevicesCommand.RaiseCanExecuteChanged();
         SaveUplinksCommand.RaiseCanExecuteChanged();
         SaveClientsCommand.RaiseCanExecuteChanged();
