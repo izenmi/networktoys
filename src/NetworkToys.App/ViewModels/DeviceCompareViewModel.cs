@@ -42,7 +42,9 @@ public sealed class DeviceCompareViewModel : ObservableObject
         Devices.Add(_selectedDevice);
 
         CompareCommand = new RelayCommand(Compare, () => BeforeText.Length > 0 || AfterText.Length > 0);
-        EditCommand = new RelayCommand(() => IsEditing = true);
+        // 貼り付け欄を出している間は押しても何も起きない。
+        // 押せるままにしておくと「押しても効かない」と読まれる（実際にそう報告された）
+        EditCommand = new RelayCommand(() => IsEditing = true, () => !IsEditing);
         LoadBeforeCommand = new RelayCommand(() => LoadInto(before: true));
         LoadAfterCommand = new RelayCommand(() => LoadInto(before: false));
         SaveBeforeCommand = new RelayCommand(() => SaveFrom(before: true), () => BeforeText.Length > 0);
@@ -486,7 +488,10 @@ public sealed class DeviceCompareViewModel : ObservableObject
     public bool IsEditing
     {
         get => _isEditing;
-        private set => SetProperty(ref _isEditing, value);
+        private set
+        {
+            if (SetProperty(ref _isEditing, value)) EditCommand.RaiseCanExecuteChanged();
+        }
     }
 
     private void Compare()

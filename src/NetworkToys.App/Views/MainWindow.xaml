@@ -1172,9 +1172,9 @@
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
                                 <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,6,2" />
-                                <Button Content="比較を停止" Command="{Binding EditCommand}"
+                                <Button Content="貼り付けに戻る" Command="{Binding EditCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
-                                        ToolTip="比較をやめて貼り付け欄に戻ります。貼り付けた内容は残ります。" />
+                                        ToolTip="結果を閉じて貼り付け欄に戻ります。貼り付けた内容は残ります。" />
                                 <Button Content="CSV で保存" Command="{Binding SaveChangesCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                         ToolTip="「何が変わったか」を書き出します。" />

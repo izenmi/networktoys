@@ -877,6 +877,28 @@ internal static class SelfTest
             dialog.Close();
         });
 
+        Check("差分比較: 結果を出していないときは「貼り付けに戻る」を押せない", () =>
+        {
+            // 常に押せるままだと、貼り付け欄を出している間に押しても何も起きず、
+            // 「押しても効かない」と読まれる（2026-08-17 にそう報告された）
+            var compare = new ViewModels.DeviceCompareViewModel();
+
+            Assert(compare.IsEditing, "起動直後に貼り付け欄が出ていない");
+            Assert(!compare.EditCommand.CanExecute(null), "結果が無いのに「貼り付けに戻る」を押せる");
+
+            compare.BeforeText = "hostname a";
+            compare.AfterText = "hostname b";
+            compare.CompareCommand.Execute(null);
+
+            Assert(!compare.IsEditing, "比較しても結果に切り替わらない");
+            Assert(compare.EditCommand.CanExecute(null), "結果を出しているのに戻れない");
+
+            compare.EditCommand.Execute(null);
+
+            Assert(compare.IsEditing, "「貼り付けに戻る」で貼り付け欄に戻らない");
+            Assert(!compare.EditCommand.CanExecute(null), "戻った後もまだ押せる");
+        });
+
         Check("文字の上を叩いても落ちない（Run は Visual ではない）", () =>
         {
             // 差分の色分けは TextBlock の中に Run を並べる。その上でマウスを押すと
