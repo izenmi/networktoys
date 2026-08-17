@@ -5101,22 +5101,17 @@
                         <WrapPanel>
                             <TextBlock Text="APIC" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="200" Margin="0,0,12,2" IsEditable="True"
-                                      ItemsSource="{Binding KnownHosts}"
-                                      Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                      ToolTip="APIC のアドレス。https:// は付けても付けなくても構いません。" />
+                            <!-- 素のテキスト欄。ComboBox の IsEditable はこのアプリでは使えない
+                                 （テンプレートに PART_EditableTextBox が無く、入力欄が描かれない） -->
+                            <TextBox Width="200" Margin="0,0,12,2"
+                                     Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="APIC の IP かホスト名。https:// は付けても付けなくても構いません。前回の接続先が入っています。" />
 
                             <TextBlock Text="ユーザー" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
                             <TextBox Width="110" Margin="0,0,12,2"
                                      Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="読み取りだけできるユーザーで十分です。" />
-
-                            <TextBlock Text="ドメイン" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <TextBox Width="90" Margin="0,0,12,2"
-                                     Text="{Binding Domain, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="ローカル認証なら空のまま。RADIUS などを使うときだけ入れます。" />
 
                             <TextBlock Text="パスワード" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
@@ -6102,10 +6097,10 @@
                         <WrapPanel>
                             <TextBlock Text="WLC" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="200" Margin="0,0,12,2" IsEditable="True"
-                                      ItemsSource="{Binding KnownHosts}"
-                                      Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                      ToolTip="Catalyst 9800 のアドレス。https:// は付けても付けなくても構いません。" />
+                            <!-- 素のテキスト欄。ComboBox の IsEditable はこのアプリでは使えない -->
+                            <TextBox Width="200" Margin="0,0,12,2"
+                                     Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Catalyst 9800 の IP かホスト名。前回の接続先が入っています。" />
 
                             <TextBlock Text="ユーザー" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />

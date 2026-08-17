@@ -1069,6 +1069,27 @@ internal static class SelfTest
             }
         });
 
+        Check("編集できる ComboBox を置いていない", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // ComboBox のテンプレートを置き換えてあり、PART_EditableTextBox を持たない。
+            // IsEditable にすると入力欄が描かれず、選んでも表示が空のままになる
+            var editable = new List<string>();
+
+            foreach (System.Windows.Controls.TabItem tab in AllTabs(window!.MainTabs))
+            {
+                foreach (System.Windows.Controls.ComboBox box in
+                         FindIn<System.Windows.Controls.ComboBox>(tab.Content))
+                {
+                    if (box.IsEditable) editable.Add(tab.Header?.ToString() ?? "?");
+                }
+            }
+
+            Assert(editable.Count == 0,
+                   $"編集できる ComboBox がある（素の TextBox にすること）: {string.Join(" / ", editable.Distinct())}");
+        });
+
         Check("タブ: まとめた中身は分類されている", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

@@ -86,8 +86,8 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         SaveCsvCommand = new RelayCommand<string>(key => Save(key, xlsx: false), key => RowCount(key) > 0);
         SaveXlsxCommand = new RelayCommand<string>(key => Save(key, xlsx: true), key => RowCount(key) > 0);
 
-        KnownHosts = [.. HostHistory()];
-        _host = KnownHosts.Count > 0 ? KnownHosts[0] : "";
+        // 前に繋いだ相手を出しておく
+        _host = HostHistory().FirstOrDefault() ?? "";
         _userName = RememberedUser(_host);
     }
 
@@ -99,8 +99,6 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     public ObservableCollection<WlcRrmRow> RrmRows { get; } = [];
     public ObservableCollection<WlcRogueRow> RogueRows { get; } = [];
     public ObservableCollection<WlcSsidRow> SsidRows { get; } = [];
-
-    public ObservableCollection<string> KnownHosts { get; }
 
     // ===== コマンド =====
 
@@ -615,7 +613,5 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         Settings.Current.WlcHosts = string.Join('\n', hosts.Take(8));
         Settings.Current.WlcUserNames[host] = UserName.Trim();
         Settings.Save();
-
-        if (!KnownHosts.Contains(host)) KnownHosts.Insert(0, host);
     }
 }

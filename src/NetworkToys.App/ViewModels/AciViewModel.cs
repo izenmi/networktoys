@@ -47,7 +47,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
 
     private string _host = "";
     private string _userName = "";
-    private string _domain = "";
     private string _password = "";
     private string _fingerprint = "";
     private string _status = Ready;
@@ -93,8 +92,8 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         SaveCsvCommand = new RelayCommand<string>(key => Save(key, xlsx: false), key => RowCount(key) > 0);
         SaveXlsxCommand = new RelayCommand<string>(key => Save(key, xlsx: true), key => RowCount(key) > 0);
 
-        KnownHosts = [.. HostHistory(), SandboxHost];
-        _host = KnownHosts.Count > 0 ? KnownHosts[0] : "";
+        // 前に繋いだ相手を出しておく。無ければ練習用の公開 APIC
+        _host = HostHistory().FirstOrDefault() ?? SandboxHost;
         _userName = RememberedUser(_host);
     }
 
@@ -110,7 +109,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public ObservableCollection<AciConfigRow> ConfigRows { get; } = [];
 
     public ObservableCollection<AciNodeItem> Nodes { get; } = [];
-    public ObservableCollection<string> KnownHosts { get; }
 
     public AciLogKind[] LogKinds { get; }
     public AciConfigKind[] ConfigKinds { get; }
@@ -160,13 +158,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     {
         get => _userName;
         set { if (SetProperty(ref _userName, value)) RefreshFetchCommands(); }
-    }
-
-    /// <summary>ログインドメイン。空ならローカル認証。</summary>
-    public string Domain
-    {
-        get => _domain;
-        set => SetProperty(ref _domain, value);
     }
 
     /// <summary><b>どこにも保存しない。</b>画面の PasswordBox から流し込まれるだけ。</summary>
@@ -400,7 +391,9 @@ public sealed class AciViewModel : ObservableObject, IDisposable
 
                     using var client = new ApicClient(host, accepted, _handler);
 
-                    await client.LoginAsync(UserName, Password, Domain, _cts.Token).ConfigureAwait(true);
+                    // ログインドメインは使わない（2026-08-17 ユーザー指示で欄ごと外した）。
+                    // 必要になったら AciCatalog.LoginName が apic:ドメイン\ユーザー を組み立てる
+                    await client.LoginAsync(UserName, Password, "", _cts.Token).ConfigureAwait(true);
                     await work(client, _cts.Token).ConfigureAwait(true);
 
                     if (client.WasTruncated)
@@ -548,7 +541,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         SelectedEpg = null;
         FabricHealth = "—";
         Fingerprint = "";
-        Domain = "";
         Password = "";
         PasswordCleared?.Invoke(this, EventArgs.Empty);
         Notice = "";
@@ -641,7 +633,5 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         Settings.Current.AciHosts = string.Join('\n', hosts.Take(8));
         Settings.Current.AciUserNames[host] = UserName.Trim();
         Settings.Save();
-
-        if (!KnownHosts.Contains(host)) KnownHosts.Insert(0, host);
     }
 }

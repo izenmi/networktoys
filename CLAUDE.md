@@ -329,6 +329,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **既定スタイルを持つコントロールは、色を継承してくれない。** `ListBox` / `ListView` の既定スタイルは `Foreground` にシステム色（＝黒）を入れるため、暗い配色にしても行の中の `TextBlock` だけ黒く残る（`ItemsControl` は既定スタイルを持たないので継承される）。暗黙スタイルで上書きすること。**キー付きスタイルは暗黙スタイルを継承しない**ので、`BasedOn="{StaticResource {x:Type ListBox}}"` を明示する。`ContextMenu` / `MenuItem` / `ToolTip` も同様にシステム色で描かれる。
 - **`TargetListBox` スタイルは Ping 用の `ItemTemplate` を既定で当ててくる。** 型別の暗黙 DataTemplate で出し分ける一覧(接続タブ)にこのスタイルを使うときは、`ItemTemplate="{x:Null}"` で明示的に外すこと。外し忘れるとスタイル側のテンプレートが暗黙テンプレートより優先され、**全行が Ping の「◌ 待機」バッジで描かれる**(バインドは静かに失敗するのでビルドも selftest も通ってしまう。実機で発覚した)。
 - **既定のテンプレートが敷いている装飾は、色を指定しても消えない。** `ContextMenu` は左端にアイコン用の白い帯を持っており、`Background` を変えても残る。項目を自前で描くならテンプレートごと差し替えること。**メニュー内の区切り線は `{x:Static MenuItem.SeparatorStyleKey}` という専用のキーで引かれる**ので、`Separator` の暗黙スタイルは当たらない。
+- **`ComboBox` に `IsEditable="True"` を使わない。** このアプリは `ComboBox` のテンプレートを置き換えており、**`PART_EditableTextBox` を持っていない**。付けると入力欄が描かれず、**選んでも表示は空のまま**になる（ACI タブの接続先で実際にやった。2026-08-17 にユーザーが実機で発見）。手で打つ欄は素の `TextBox` にする。自己診断が全タブの `ComboBox` を見て捕まえる。
 - **`ComboBox` の閉じているときの表示に `DisplayMemberPath` は効かない。** 選択中の項目は `SelectionBoxItemTemplate` 経由で描かれるため、**型名がそのまま出る**。ドロップダウンを開いたときだけ正しく見えるので気づきにくい。`ItemTemplate` を明示すること。
 - **測定結果ごとに `Dispatcher.Invoke` しない。** 500 宛先 × 1Hz = 500 通知/秒で UI が溶ける。`Channel<T>` に積んで 10Hz の単一ポンプでまとめて適用する。
 - `ObservableCollection` の**構造変化は宛先の追加/削除時のみ**。測定結果は既存の行 VM のプロパティ更新として流す。
