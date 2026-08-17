@@ -344,12 +344,15 @@ public static class AciCatalog
                     .Where(p => p.Length > 0),
             ];
 
+            // 静的パスは番号(po1)でも名前(ポリシーグループ名)でも指してくる
+            string[] names = [id, name];
+
             list.Add(new AciBundle(
                 Mo: aggregate,
                 Node: node,
                 Id: id,
                 Label: label,
-                Names: [.. (string[])[id, name].Where(n => n.Length > 0)],
+                Names: [.. names.Where(n => n.Length > 0)],
                 Members: memberPorts));
         }
 
