@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using NetworkToys.Core.Design;
+using NetworkToys.Core.Terminal;
 using NetworkToys.Core.Work;
 
 namespace NetworkToys.Core.Assurance;
@@ -41,6 +42,7 @@ public sealed record DnacEventRow(
 
 /// <summary>機器の 1 行。在庫と健全度を 1 行に畳む。</summary>
 public sealed record DnacDeviceRow(
+    string Id,
     string Name,
     string Model,
     string Serial,
@@ -107,6 +109,31 @@ public static class DnacCatalog
     public const string ReadRequestPath = $"{Intent}/network-device-poller/cli/read-request";
     public static string TaskPath(string taskId) => $"{Intent}/task/{Uri.EscapeDataString(taskId)}";
     public static string FilePath(string fileId) => $"{Intent}/file/{Uri.EscapeDataString(fileId)}";
+
+    /// <summary>
+    /// 画面に並べる読み取りコマンド。
+    ///
+    /// <c>legit-reads</c> が返すのは <c>show</c> のような<b>語</b>なので、そのままでは流せない。
+    /// よく使う形をこちらで用意し、<b>許可一覧に前方一致するものだけ</b>を出す。
+    /// 自由入力にはしない（打ち間違いより、選ばせる方が安全で速い）。
+    /// </summary>
+    public static string[] CommonReads =>
+    [
+        "show version",
+        "show inventory",
+        "show ip interface brief",
+        "show interfaces status",
+        "show mac address-table",
+        "show ip arp",
+        "show cdp neighbors detail",
+        "show lldp neighbors detail",
+        "show vlan brief",
+        "show ip route",
+        "show spanning-tree summary",
+        "show processes cpu sorted",
+        "show environment",
+        "show logging",
+    ];
 
     // ===== リーフ名の候補（版で動く。ここに 1 行足せば直る） =====
 
@@ -400,6 +427,8 @@ public static class DnacCatalog
             (string reachText, SeverityKind reachKind) = DescribeReachability(reachability);
 
             rows.Add(new DnacDeviceRow(
+                // 表には出さないが、CLI を流すときの宛先はこの uuid で指す
+                Id: DnacJson.First(device, "id", "instanceUuid", "deviceId"),
                 Name: DnacJson.First(device, DeviceNameLeaf),
                 Model: DnacJson.First(device, "platformId", "type", "series"),
                 Serial: DnacJson.First(device, "serialNumber", "serial"),
@@ -545,6 +574,38 @@ public static class DnacCatalog
         }
 
         return [.. commands.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal)];
+    }
+
+    /// <summary>
+    /// 流してよいコマンドか。<b>二重の網</b>にしてある:
+    /// ①Catalyst Center 自身が「読み取り」と認めた語に<b>前方一致</b>すること
+    /// （<c>legit-reads</c> は <c>show</c> のような語で返るので、完全一致にすると
+    /// <c>show version</c> すら通らない）
+    /// ②<see cref="CiscoCommandGuard"/> が <c>Blocked</c> と言わないこと（収集タブと同じ物差し）。
+    ///
+    /// 許可一覧が空（この版に無い・権限が足りない）のときは、②だけで見る。
+    /// </summary>
+    public static bool IsReadOnlyCommand(string? command, IReadOnlyList<string> legitReads)
+    {
+        string text = (command ?? "").Trim();
+
+        if (text.Length == 0) return false;
+
+        if (CiscoCommandGuard.Classify(text).Risk == CommandRisk.Blocked) return false;
+
+        if (legitReads.Count == 0) return true;
+
+        return legitReads.Any(word => StartsWithWord(text, word));
+    }
+
+    /// <summary><b>語の切れ目で</b>見る（<c>shows</c> を <c>show</c> の仲間にしない）。</summary>
+    private static bool StartsWithWord(string command, string word)
+    {
+        string head = word.Trim();
+
+        if (head.Length == 0 || !command.StartsWith(head, StringComparison.OrdinalIgnoreCase)) return false;
+
+        return command.Length == head.Length || command[head.Length] == ' ';
     }
 
     /// <summary>読み取り要求の本文。<b>機器とコマンドだけ</b>を渡す。</summary>

@@ -381,6 +381,34 @@ public class DnacCatalogTests
     }
 
     [Fact]
+    public void 流してよいコマンドは二重の網で見る()
+    {
+        string[] legit = ["show", "dir"];
+
+        // Catalyst Center が認めた語に前方一致すれば通す（完全一致にすると show version が通らない）
+        Assert.True(DnacCatalog.IsReadOnlyCommand("show version", legit));
+        Assert.True(DnacCatalog.IsReadOnlyCommand("dir", legit));
+
+        // 語の切れ目で見る。showdown は show の仲間ではない
+        Assert.False(DnacCatalog.IsReadOnlyCommand("showdown", legit));
+
+        // 一覧に無いものは投げない
+        Assert.False(DnacCatalog.IsReadOnlyCommand("ping 10.1.1.1", legit));
+
+        // 一覧にあっても、危ないものは収集タブと同じ物差しで弾く
+        Assert.False(DnacCatalog.IsReadOnlyCommand("reload", ["reload", "show"]));
+
+        // 許可一覧が取れないときは、危険判定だけで見る
+        Assert.True(DnacCatalog.IsReadOnlyCommand("show ip interface brief", []));
+        Assert.False(DnacCatalog.IsReadOnlyCommand("configure terminal", []));
+        Assert.False(DnacCatalog.IsReadOnlyCommand("  ", legit));
+    }
+
+    [Fact]
+    public void 画面に並べるコマンドは全部読み取りである()
+        => Assert.All(DnacCatalog.CommonReads, c => Assert.True(DnacCatalog.IsReadOnlyCommand(c, ["show"])));
+
+    [Fact]
     public void 読み取り要求には機器とコマンドだけを載せる()
     {
         string body = DnacCatalog.ReadRequestBody(["uuid-1"], ["show version"]);

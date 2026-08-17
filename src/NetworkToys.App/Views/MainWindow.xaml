@@ -8158,6 +8158,62 @@
                             </Border>
                         </TabItem>
 
+
+                        <TabItem Header="CLI 実行">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="{x:Static help:TabHelp.DnacCli}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="参照コマンドを 1 台へ流して、出力をそのまま見ます。" />
+                                    </DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="コマンド一覧を取得" Command="{Binding FetchCommandChoicesCommand}"
+                                                Margin="0,0,12,0"
+                                                ToolTip="Catalyst Center 自身が「読み取り」と認めている語を聞いて、流せる形に組み立てます。" />
+
+                                        <TextBlock Text="機器" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <!-- 閉じているときの表示に DisplayMemberPath は効かない。ItemTemplate を明示する -->
+                                        <ComboBox Width="170" Margin="0,0,12,0"
+                                                  ItemsSource="{Binding DeviceRows}"
+                                                  SelectedItem="{Binding SelectedDevice}"
+                                                  ToolTip="「機器」タブで取った一覧から選びます。先にあちらを取得してください。">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+
+                                        <TextBlock Text="コマンド" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="200" Margin="0,0,12,0"
+                                                  ItemsSource="{Binding CommandChoices}"
+                                                  SelectedItem="{Binding SelectedCommand}"
+                                                  ToolTip="読み取りだけのコマンドです。打ち込む欄は持ちません。" />
+
+                                        <Button Content="実行" Command="{Binding RunCliCommand}" Margin="0,0,6,0"
+                                                ToolTip="1 台に 1 本だけ流します。終わるまで最大 1 分ほど待ちます。" />
+                                        <Button Content="出力を表示" Click="OnDnacShowCli"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,0,0"
+                                                ToolTip="取れた出力をそのまま開きます（表にはしません）。" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="8">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Auto">
+                                            <TextBlock Text="{Binding CliOutput}" Style="{StaticResource Mono}"
+                                                       FontSize="{DynamicResource Size.Caption}"
+                                                       TextWrapping="NoWrap" />
+                                        </ScrollViewer>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
                     </TabControl>
                 </DockPanel>
             </TabItem>

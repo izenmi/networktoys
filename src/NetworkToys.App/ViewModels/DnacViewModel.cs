@@ -44,6 +44,12 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     private string _lastUrl = "";
     private bool _showConnection = true;
     private string _lifecycleKind = "EoX（保守終了）";
+    private string _cliOutput = "";
+    private DnacDeviceRow? _selectedDevice;
+    private string? _selectedCommand;
+
+    /// <summary>Catalyst Center 自身が認めた読み取りコマンド。取れていなければ空。</summary>
+    private IReadOnlyList<string> _legitReads = [];
 
     /// <summary>機器の uuid → 名前。保守と適合の表は uuid しか返さないので、これで置き換える。</summary>
     private IReadOnlyDictionary<string, string> _deviceNames =
@@ -61,6 +67,8 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
         FetchClientCommand = new RelayCommand(() => _ = FetchClientAsync(), CanFetch);
         FetchDevicesCommand = new RelayCommand(() => _ = FetchDevicesAsync(), CanFetch);
         FetchLifecycleCommand = new RelayCommand(() => _ = FetchLifecycleAsync(), CanFetch);
+        FetchCommandChoicesCommand = new RelayCommand(() => _ = FetchCommandChoicesAsync(), CanFetch);
+        RunCliCommand = new RelayCommand(() => _ = RunCliAsync(), CanRunCli);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
@@ -79,13 +87,34 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     public ObservableCollection<DnacDeviceRow> DeviceRows { get; } = [];
     public ObservableCollection<DnacLifecycleRow> LifecycleRows { get; } = [];
 
+    /// <summary>Catalyst Center が「読み取り」と認めたコマンド。<b>自由入力にしない。</b></summary>
+    public ObservableCollection<string> CommandChoices { get; } = [];
+
     // ===== コマンド =====
 
     public RelayCommand FetchClientCommand { get; }
     public RelayCommand FetchDevicesCommand { get; }
     public RelayCommand FetchLifecycleCommand { get; }
+    public RelayCommand FetchCommandChoicesCommand { get; }
+    public RelayCommand RunCliCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand ToggleConnectionCommand { get; }
+
+    /// <summary>コマンドを流す先。<b>「機器」タブで取った一覧から選ぶ</b>（打ち込ませない）。</summary>
+    public DnacDeviceRow? SelectedDevice
+    {
+        get => _selectedDevice;
+        set { if (SetProperty(ref _selectedDevice, value)) RunCliCommand.RaiseCanExecuteChanged(); }
+    }
+
+    public string? SelectedCommand
+    {
+        get => _selectedCommand;
+        set { if (SetProperty(ref _selectedCommand, value)) RunCliCommand.RaiseCanExecuteChanged(); }
+    }
+
+    /// <summary>CLI の出力。<b>表にしない</b>（版で桁が動くものを表にすると、ずれたまま気づけない）。</summary>
+    public string CliOutput => _cliOutput;
 
     /// <summary>
     /// 保守と適合で見るもの。<b>3 つを 1 枚の表に寄せる</b> —
@@ -390,6 +419,63 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
             Notice = "⚠ 先に「機器」を取っておくと、機器の欄が uuid ではなく名前になります。";
     });
 
+    /// <summary>Catalyst Center 自身に「読み取りとして認めているコマンド」を聞く。</summary>
+    private Task FetchCommandChoicesAsync() => RunAsync("コマンドの一覧", async (client, token) =>
+    {
+        string json = await client.GetFirstAsync(DnacCatalog.LegitReadsPaths, token).ConfigureAwait(true);
+
+        Record(client, json);
+
+        _legitReads = DnacCatalog.ParseLegitReads(DnacJson.Rows(json));
+
+        CommandChoices.Clear();
+
+        // 一覧は語（show など）で返るので、そのままでは流せない。よく使う形にして並べる
+        foreach (string command in DnacCatalog.CommonReads.Where(c => DnacCatalog.IsReadOnlyCommand(c, _legitReads)))
+            CommandChoices.Add(command);
+
+        SelectedCommand = CommandChoices.FirstOrDefault();
+
+        Status = _legitReads.Count > 0
+            ? $"この Catalyst Center が認めている語 {_legitReads.Count} 個から、"
+              + $"流せるコマンドを {CommandChoices.Count} 本用意しました。"
+            : $"許可一覧は取れませんでした。危険なコマンドを弾く判定だけで {CommandChoices.Count} 本を出しています。";
+    });
+
+    /// <summary>
+    /// 選んだコマンドを 1 台へ流す。<b>出力は解釈せずそのまま見せる。</b>
+    ///
+    /// <b>中断できるのはこちらが待つのをやめることだけ</b>で、機器での実行は取り消せない。
+    /// </summary>
+    private Task RunCliAsync() => RunAsync("コマンドの実行", async (client, token) =>
+    {
+        if (SelectedDevice is not { } device || SelectedCommand is not { Length: > 0 } command) return;
+
+        if (!DnacCatalog.IsReadOnlyCommand(command, _legitReads))
+        {
+            Status = "このコマンドは流せません（読み取り専用のものだけを扱います）。";
+            return;
+        }
+
+        if (device.Id.Length == 0)
+        {
+            Status = "この機器は Catalyst Center 上の識別子を持っていないので、流せません。";
+            return;
+        }
+
+        Notice = "⚠ 中断できるのは、こちらが待つのをやめることだけです。"
+                 + "コマンドは機器で実行され、結果は Catalyst Center 側に残ります。";
+
+        string json = await client.ReadRequestAsync([device.Id], [command], token).ConfigureAwait(true);
+
+        Record(client, json);
+
+        _cliOutput = DnacCatalog.RenderCliOutput(json);
+        OnPropertyChanged(nameof(CliOutput));
+
+        Status = $"{device.Name} で「{command}」を流しました。「出力を表示」で開けます。";
+    });
+
     private static IReadOnlyDictionary<string, string> DeviceNames(IEnumerable<JsonElement> inventory)
     {
         Dictionary<string, string> names = new(StringComparer.OrdinalIgnoreCase);
@@ -574,6 +660,12 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
 
         _deviceNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        CommandChoices.Clear();
+        _legitReads = [];
+        _cliOutput = "";
+        SelectedDevice = null;
+        SelectedCommand = null;
+
         _lastResponse = "";
         _lastUrl = "";
         Query = "";
@@ -599,11 +691,16 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     private bool CanFetch()
         => !IsBusy && Host.Trim().Length > 0 && UserName.Trim().Length > 0 && Password.Length > 0;
 
+    private bool CanRunCli()
+        => CanFetch() && SelectedDevice is not null && SelectedCommand is { Length: > 0 };
+
     private void RefreshFetchCommands()
     {
         FetchClientCommand.RaiseCanExecuteChanged();
         FetchDevicesCommand.RaiseCanExecuteChanged();
         FetchLifecycleCommand.RaiseCanExecuteChanged();
+        FetchCommandChoicesCommand.RaiseCanExecuteChanged();
+        RunCliCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshSaveCommands()
