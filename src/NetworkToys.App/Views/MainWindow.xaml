@@ -2276,7 +2276,7 @@
             </TabItem>
 
             <!-- ===== その他（たまにしか使わない道具。押すとメニューが出る） ===== -->
-            <TabItem x:Name="OtherTab" Header="その他　16 ▾">
+            <TabItem x:Name="OtherTab" Header="その他　17 ▾">
                 <DockPanel>
                     <!--
                         このタブには 1 行の説明も ⓘ も置かない（2026-08-16 ユーザー指示）。
@@ -5084,6 +5084,311 @@
                         </Border>
                     </DockPanel>
                 </Border>
+            </TabItem>
+
+            <!-- ===== Cisco ACI(APIC の REST から読むだけ) ===== -->
+            <TabItem Tag="NW機器" x:Name="AciTab" Header="Cisco ACI" DataContext="{Binding Aci}">
+                <DockPanel>
+                    <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                   ToolTip="{x:Static help:TabHelp.Aci}" />
+                        <TextBlock Style="{StaticResource TabIntro}" Text="APIC からファブリックの状態を読み取ります。" />
+                    </DockPanel>
+
+                    <!-- 操作行はサブタブ共通。パスワードは伏せ字（画面を PNG 保存できるため） -->
+                    <StackPanel DockPanel.Dock="Top" Margin="2,2,0,6">
+                        <WrapPanel>
+                            <TextBlock Text="APIC" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <ComboBox Width="200" Margin="0,0,12,2" IsEditable="True"
+                                      ItemsSource="{Binding KnownHosts}"
+                                      Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="APIC のアドレス。https:// は付けても付けなくても構いません。" />
+
+                            <TextBlock Text="ユーザー" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <TextBox Width="110" Margin="0,0,12,2"
+                                     Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="読み取りだけできるユーザーで十分です。" />
+
+                            <TextBlock Text="ドメイン" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <TextBox Width="90" Margin="0,0,12,2"
+                                     Text="{Binding Domain, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="ローカル認証なら空のまま。RADIUS などを使うときだけ入れます。" />
+
+                            <TextBlock Text="パスワード" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" Margin="0,0,5,2" />
+                            <PasswordBox x:Name="AciPasswordBox" Width="130" Margin="0,0,12,2"
+                                         PasswordChanged="OnAciPasswordChanged"
+                                         ToolTip="保存しません。起動するたびに入れ直してください。" />
+
+                            <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                        </WrapPanel>
+
+                        <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"
+                                   Foreground="{DynamicResource Brush.Warn.Fg}" TextWrapping="Wrap"
+                                   Margin="0,4,0,0"
+                                   Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBlock Text="{Binding Fingerprint}" Style="{StaticResource Mono}"
+                                   FontSize="{DynamicResource Size.Caption}"
+                                   Foreground="{DynamicResource Brush.TextMuted}"
+                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0"
+                                   ToolTip="接続した APIC の証明書の指紋。APIC の画面と見比べるためのものです。" />
+                    </StackPanel>
+
+                    <!-- 中の切り替えも主タブと同じ見た目にする（Meraki と同じ扱い） -->
+                    <TabControl x:Name="AciSubTabs" BorderThickness="0" Padding="0">
+
+                        <!-- ヘルス -->
+                        <TabItem Header="ヘルス">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="{x:Static help:TabHelp.AciHealth}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="ファブリック・ノード・テナントの健全度を並べます。" />
+                                    </DockPanel>
+
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <TextBlock Text="ファブリック全体" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBlock Text="{Binding FabricHealth}" VerticalAlignment="Center"
+                                                   FontSize="{DynamicResource Size.Heading}" Margin="0,0,16,0" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="health" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveCsvCommand}"
+                                                CommandParameter="health" Style="{StaticResource Button.Subtle}" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acihl" MouseLeftButtonDown="OnTableHeaderSort">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acihl.0]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acihl.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acihl.3]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="種別" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="名前" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="スコア" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="状態" Style="{StaticResource Caption}" />
+                                                <!-- 星列より左は右端、右は左端の境界につまみを置く -->
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="acihl.0" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="acihl.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="acihl.3" DragDelta="OnTableColumnResize" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding HealthRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="{DynamicResource Size.RowHeight.Wide}">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acihl.0]}" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acihl.2]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acihl.3]}" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <TextBlock Grid.Column="0" Text="{Binding Kind}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding ScoreText}" Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Right" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding State}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Ok">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Notice">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding StateKind}" Value="Alert">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <!-- Faults -->
+                        <TabItem Header="フォールト">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="{x:Static help:TabHelp.AciFaults}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="いま出ている障害を重い順に並べます。" />
+                                    </DockPanel>
+
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="faults" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveCsvCommand}"
+                                                CommandParameter="faults" Style="{StaticResource Button.Subtle}" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                            CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciflt" MouseLeftButtonDown="OnTableHeaderSort">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.2]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.5]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="重大度" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="1" Text="コード" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="2" Text="発生" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="3" Text="対象" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="4" Text="説明" Style="{StaticResource Caption}" />
+                                                <TextBlock Grid.Column="5" Text="確認" Style="{StaticResource Caption}" />
+                                                <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="aciflt.0" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="aciflt.1" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                       Tag="aciflt.2" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="aciflt.4" DragDelta="OnTableColumnResize" />
+                                                <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                       Tag="aciflt.5" DragDelta="OnTableColumnResize" />
+                                            </Grid>
+                                            <Border DockPanel.Dock="Top" Height="1"
+                                                    Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+
+                                            <ListBox ItemsSource="{Binding FaultRows}"
+                                                     ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="{DynamicResource Size.RowHeight.Wide}">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.0]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.1]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.2]}" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.4]}" />
+                                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.5]}" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                            <TextBlock Grid.Column="0" Text="{Binding Severity}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding SeverityKind}" Value="Ok">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding SeverityKind}" Value="Notice">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding SeverityKind}" Value="Alert">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Code}" Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding Created}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding Target}" Style="{StaticResource Mono}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       ToolTip="{Binding Target}" />
+                                                            <TextBlock Grid.Column="4" Text="{Binding Description}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       ToolTip="{Binding Description}" />
+                                                            <TextBlock Grid.Column="5" Text="{Binding Ack}"
+                                                                       FontSize="{DynamicResource Size.Caption}"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                    </TabControl>
+                </DockPanel>
             </TabItem>
 
                     </TabControl>

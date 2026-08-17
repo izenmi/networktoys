@@ -80,6 +80,13 @@ public partial class MainWindow : Window
 
         _shell.Transfer.Ask = message => TextPromptDialog.Ask(this, "ファイル転送", message);
 
+        // APIC の証明書を受け入れるかも画面の仕事。指紋を見比べてもらってから通す
+        _shell.Aci.ConfirmFingerprint = message => ConfirmDialog.Confirm(
+            this, "APIC の証明書を確認", message, okLabel: "この指紋を受け入れる");
+
+        // VM から PasswordBox の中身は書けないので、消す合図だけ受け取る
+        _shell.Aci.PasswordCleared += (_, _) => AciPasswordBox.Clear();
+
         // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
         _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
             this,
@@ -141,6 +148,13 @@ public partial class MainWindow : Window
     {
         if (sender is PasswordBox box)
             _shell.Meraki.ApiKey = box.Password;
+    }
+
+    /// <summary>APIC のパスワード。<b>VM の中だけに置く</b>（設定にも引き継ぎにも書かない）。</summary>
+    private void OnAciPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox box)
+            _shell.Aci.Password = box.Password;
     }
 
     /// <summary>F5 での開始。ボタンと同じく、開始できたら Ping タブへ移る。</summary>
@@ -288,6 +302,9 @@ public partial class MainWindow : Window
         ["mdev"] = ["Name", "Model", "Serial", "Firmware", "Network", "State", "PublicIp", "LanIp"],
         ["mup"] = ["Network", "Serial", "Interface", "State", "Ip", "Gateway", "PublicIp"],
         ["mcli"] = ["Description", "Ip", "Mac", "Vlan", "Manufacturer", "Usage", "LastSeen"],
+        // スコアは数値のまま並べる（表示文字列で並べると 9 が 80 より後ろへ行く）
+        ["acihl"] = ["Kind", "Name", "Score", "State"],
+        ["aciflt"] = ["Severity", "Code", "Created", "Target", "Description", "Ack"],
     };
 
     /// <summary>

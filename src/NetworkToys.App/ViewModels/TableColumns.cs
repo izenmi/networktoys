@@ -88,6 +88,12 @@ public sealed class TableColumns : ObservableObject
 
         // Meraki クライアント: 0 名前(星) / 1 IP / 2 MAC / 3 VLAN / 4 メーカー / 5 通信量 / 6 最終確認
         new("mcli", 0, [(1, 120), (2, 130), (3, 55), (4, 110), (5, 90), (6, 150)]),
+
+        // ACI ヘルス: 0 種別 / 1 名前(星) / 2 スコア / 3 状態
+        new("acihl", 1, [(0, 90), (2, 60), (3, 80)]),
+
+        // ACI フォールト: 0 重大度 / 1 コード / 2 発生 / 3 対象(星) / 4 説明 / 5 確認
+        new("aciflt", 3, [(0, 80), (1, 70), (2, 140), (4, 300), (5, 50)]),
     ];
 
     private readonly Dictionary<string, double> _widths = [];

@@ -377,7 +377,7 @@ internal static class SelfTest
             // タブを開いただけで本番の API を叩き始める
             System.Windows.Controls.TabItem[] mustBeHidden =
                 [window.WifiTab, window.WfpTab, window.ConnectionsTab, window.TraceTab,
-                 window.IpConfigTab, window.MerakiTab];
+                 window.IpConfigTab, window.MerakiTab, window.AciTab];
 
             foreach (System.Windows.Controls.TabItem tab in mustBeHidden)
             {
@@ -402,6 +402,24 @@ internal static class SelfTest
             Views.MainWindow.Show(window.MerakiTab);
 
             foreach (object? item in window.MerakiSubTabs.Items)
+            {
+                ((System.Windows.Controls.TabItem)item).IsSelected = true;
+                window.UpdateLayout();
+            }
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+        });
+
+        Check("ACI タブのサブタブをすべて表示できる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            object? original = window!.MainTabs.SelectedItem;
+
+            Views.MainWindow.Show(window.AciTab);
+
+            foreach (object? item in window.AciSubTabs.Items)
             {
                 ((System.Windows.Controls.TabItem)item).IsSelected = true;
                 window.UpdateLayout();
