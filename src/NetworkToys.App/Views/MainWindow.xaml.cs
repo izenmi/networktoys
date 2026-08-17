@@ -387,6 +387,9 @@ public partial class MainWindow : Window
         ["mup"] = ["Network", "Serial", "Interface", "State", "Ip", "Gateway", "PublicIp"],
         ["mcli"] = ["Description", "Ip", "Mac", "Vlan", "Manufacturer", "Usage", "LastSeen"],
         // スコアは数値のまま並べる（表示文字列で並べると 9 が 80 より後ろへ行く）
+        ["mrsite"] = ["Network", "Clients", "Segments", "Note"],
+        ["mrdhcp"] = ["Network", "Device", "Vlan", "Subnet", "Used", "Free", "UsagePercent"],
+        ["mralert"] = ["Severity", "Type", "Network", "Device", "StartedAt", "Detail"],
         ["acihl"] = ["Kind", "Name", "Score", "State"],
         ["aciflt"] = ["Severity", "Code", "Created", "Target", "Description", "Ack"],
         ["aciport"] = ["Node", "Interface", "AdminState", "OperState", "Speed", "Usage", "PortChannel",

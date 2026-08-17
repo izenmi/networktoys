@@ -48,6 +48,20 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
+        FetchSitesCommand = new RelayCommand(() => _ = FetchSitesAsync(),
+            () => !IsBusy && ApiKey.Length > 0 && NetworkRows.Count > 0);
+        FetchDhcpCommand = new RelayCommand(() => _ = FetchDhcpAsync(),
+            () => !IsBusy && ApiKey.Length > 0 && DeviceRows.Count > 0);
+        FetchAlertsCommand = new RelayCommand(() => _ = FetchAlertsAsync(),
+            () => !IsBusy && ApiKey.Length > 0 && SelectedOrganization is not null);
+
+        SaveSitesCommand = new RelayCommand(() => Save("sites", MerakiCatalog.ToCsv([.. SiteRows])),
+            () => SiteRows.Count > 0);
+        SaveDhcpCommand = new RelayCommand(() => Save("dhcp", MerakiCatalog.ToCsv([.. DhcpRows])),
+            () => DhcpRows.Count > 0);
+        SaveAlertsCommand = new RelayCommand(() => Save("alerts", MerakiCatalog.ToCsv([.. AlertRows])),
+            () => AlertRows.Count > 0);
+
         SaveNetworksCommand = new RelayCommand(
             () => Save("networks", MerakiCatalog.ToCsv(NetworkRows)), () => NetworkRows.Count > 0);
         SaveDevicesCommand = new RelayCommand(
@@ -70,6 +84,15 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     public ObservableCollection<MerakiUplinkRow> UplinkRows { get; } = [];
     public ObservableCollection<MerakiClientRow> ClientRows { get; } = [];
 
+    /// <summary>拠点ごとの内訳（クライアント数とセグメント）。</summary>
+    public ObservableCollection<MerakiSiteRow> SiteRows { get; } = [];
+
+    /// <summary>DHCP の払い出し状況。</summary>
+    public ObservableCollection<MerakiDhcpRow> DhcpRows { get; } = [];
+
+    /// <summary>アラート。</summary>
+    public ObservableCollection<MerakiAlertRow> AlertRows { get; } = [];
+
     public IReadOnlyList<MerakiTimespan> Timespans { get; } =
     [
         new("1 時間", 3600),
@@ -85,6 +108,19 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     public RelayCommand SaveDevicesCommand { get; }
     public RelayCommand SaveUplinksCommand { get; }
     public RelayCommand SaveClientsCommand { get; }
+
+    /// <summary>拠点ごとの内訳を取る。クライアント数の期間は 30 日で固定。</summary>
+    public RelayCommand FetchSitesCommand { get; }
+
+    /// <summary>MX の DHCP 払い出し状況を取る。</summary>
+    public RelayCommand FetchDhcpCommand { get; }
+
+    /// <summary>組織のアラートを取る。</summary>
+    public RelayCommand FetchAlertsCommand { get; }
+
+    public RelayCommand SaveSitesCommand { get; }
+    public RelayCommand SaveDhcpCommand { get; }
+    public RelayCommand SaveAlertsCommand { get; }
 
     /// <summary>伏せ字欄から流し込まれる。ここ以外のどこにも書き出さない。</summary>
     public string ApiKey
@@ -185,6 +221,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
             FetchCommand.RaiseCanExecuteChanged();
             FetchClientsCommand.RaiseCanExecuteChanged();
+            FetchSitesCommand.RaiseCanExecuteChanged();
+            FetchDhcpCommand.RaiseCanExecuteChanged();
+            FetchAlertsCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
         }
     }
@@ -339,6 +378,200 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             target.Add(row);
     }
 
+    /// <summary>1 か月ぶんのクライアント数と、実際に使われているセグメントを拠点ごとに数える。</summary>
+    private const int SiteTimespanSeconds = 30 * 24 * 60 * 60;
+
+    /// <summary>拠点の数だけ呼ぶので、多すぎる組織では途中で止める。</summary>
+    private const int MaxSites = 40;
+
+    /// <summary>
+    /// 拠点ごとの内訳。<b>拠点の数だけ呼び出しが増える</b>ので、
+    /// 取れたところまでで打ち切り、打ち切ったことは画面に出す。
+    ///
+    /// ついでに機器一覧の LAN IP へ、その拠点のセグメント（クライアントが居るものだけ）を足す。
+    /// </summary>
+    private async Task FetchSitesAsync()
+    {
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        _dashboard.ResetTruncation();
+
+        try
+        {
+            CancellationToken token = _cts.Token;
+
+            var sites = new List<MerakiSiteRow>();
+            var segments = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            MerakiNetworkRow[] targets = [.. NetworkRows.Take(MaxSites)];
+
+            for (int i = 0; i < targets.Length; i++)
+            {
+                MerakiNetworkRow network = targets[i];
+
+                Status = $"拠点を数えています… {i + 1}/{targets.Length}（{network.Name}）";
+
+                IReadOnlyList<MerakiClientRow> clients = MerakiCatalog.ParseClients(
+                    await _dashboard.ClientsAsync(ApiKey, network.Id, SiteTimespanSeconds, token));
+
+                // スタティックルートは MX のある拠点にしか無い。無ければ 404 になるので、
+                // そこで取得全体を止めない
+                IReadOnlyList<string> routes = [];
+
+                try
+                {
+                    routes = MerakiCatalog.ParseStaticRouteSubnets(
+                        await _dashboard.StaticRoutesAsync(ApiKey, network.Id, token));
+                }
+                catch (MerakiApiException)
+                {
+                    // その拠点に MX が無い、というだけ
+                }
+
+                IReadOnlyList<string> used = MerakiCatalog.SegmentsWithClients(
+                    routes, clients.Select(c => c.Ip));
+
+                if (used.Count > 0) segments[network.Name] = string.Join(" / ", used);
+
+                string note = routes.Count > used.Count
+                    ? $"クライアントの居ないセグメント {routes.Count - used.Count} 件は省略"
+                    : "";
+
+                sites.Add(MerakiCatalog.SiteRow(network, clients.Count, used, note));
+            }
+
+            Replace(SiteRows, sites);
+
+            // 機器一覧の LAN IP にセグメントを足す（足すのは MX だけ）
+            Replace(DeviceRows, MerakiCatalog.WithSegments(DeviceRows, segments));
+
+            Status = $"拠点 {SiteRows.Count} 件を数えました（過去 30 日・{DateTime.Now:HH:mm:ss} 時点）。";
+
+            if (NetworkRows.Count > targets.Length)
+                Notice = $"⚠ 拠点が多いため {targets.Length} 件で打ち切りました（全 {NetworkRows.Count} 件）。";
+        }
+        catch (MerakiApiException ex)
+        {
+            Status = ex.Message;
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。";
+        }
+        catch (Exception ex)
+        {
+            Status = $"取得に失敗しました: {ex.Message}";
+            CrashLog.Write(ex, "MerakiViewModel.FetchSitesAsync");
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+            RefreshSaveCommands();
+        }
+    }
+
+    /// <summary>MX ごとの DHCP 払い出し状況。機器一覧から MX を拾って回る。</summary>
+    private async Task FetchDhcpAsync()
+    {
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            CancellationToken token = _cts.Token;
+
+            MerakiDeviceRow[] appliances =
+            [
+                .. DeviceRows.Where(d => d.Model.StartsWith("MX", StringComparison.OrdinalIgnoreCase)
+                                         && d.Serial.Length > 0).Take(MaxSites),
+            ];
+
+            var rows = new List<MerakiDhcpRow>();
+
+            for (int i = 0; i < appliances.Length; i++)
+            {
+                MerakiDeviceRow device = appliances[i];
+
+                Status = $"DHCP を確認しています… {i + 1}/{appliances.Length}（{device.Name}）";
+
+                try
+                {
+                    rows.AddRange(MerakiCatalog.ParseDhcp(
+                        await _dashboard.DhcpSubnetsAsync(ApiKey, device.Serial, token),
+                        device.Network,
+                        device.Name.Length > 0 ? device.Name : device.Serial));
+                }
+                catch (MerakiApiException)
+                {
+                    // DHCP を持たせていない MX もある。その 1 台で全体を止めない
+                }
+            }
+
+            Replace(DhcpRows, rows);
+
+            Status = appliances.Length == 0
+                ? "MX が見つかりませんでした（先に「取得」を押してください）。"
+                : $"DHCP {DhcpRows.Count} 件（{DateTime.Now:HH:mm:ss} 時点）。";
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。";
+        }
+        catch (Exception ex)
+        {
+            Status = $"取得に失敗しました: {ex.Message}";
+            CrashLog.Write(ex, "MerakiViewModel.FetchDhcpAsync");
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+            RefreshSaveCommands();
+        }
+    }
+
+    /// <summary>組織のアラート。版によっては持っていないので、その旨を画面に出す。</summary>
+    private async Task FetchAlertsAsync()
+    {
+        if (SelectedOrganization is not { } organization) return;
+
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            Status = "アラートを取得しています…";
+
+            Replace(AlertRows, MerakiCatalog.ParseAlerts(
+                await _dashboard.AlertsAsync(ApiKey, organization.Id, _cts.Token)));
+
+            Status = $"アラート {AlertRows.Count} 件（{DateTime.Now:HH:mm:ss} 時点）。";
+        }
+        catch (MerakiApiException ex)
+        {
+            Status = ex.Message + "（この組織ではアラートの一覧を持っていないことがあります）";
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。";
+        }
+        catch (Exception ex)
+        {
+            Status = $"取得に失敗しました: {ex.Message}";
+            CrashLog.Write(ex, "MerakiViewModel.FetchAlertsAsync");
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+            RefreshSaveCommands();
+        }
+    }
+
     private void Save(string kind, CsvTable table)
     {
         if (Services.CsvExport.Save($"meraki-{kind}", table) is { } message)
@@ -355,6 +588,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         DeviceRows.Clear();
         UplinkRows.Clear();
         ClientRows.Clear();
+        SiteRows.Clear();
+        DhcpRows.Clear();
+        AlertRows.Clear();
 
         SelectedOrganization = null;
         SelectedNetwork = null;
@@ -376,6 +612,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SaveDevicesCommand.RaiseCanExecuteChanged();
         SaveUplinksCommand.RaiseCanExecuteChanged();
         SaveClientsCommand.RaiseCanExecuteChanged();
+        SaveSitesCommand.RaiseCanExecuteChanged();
+        SaveDhcpCommand.RaiseCanExecuteChanged();
+        SaveAlertsCommand.RaiseCanExecuteChanged();
     }
 
     public void Dispose()

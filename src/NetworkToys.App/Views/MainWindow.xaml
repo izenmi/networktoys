@@ -4714,6 +4714,342 @@
                                 </DockPanel>
                             </Border>
                         </TabItem>
+
+                        <TabItem Header="拠点">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="{x:Static help:TabHelp.MerakiSites}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="拠点ごとのクライアント数と、使われているセグメントを並べます。" />
+                                    </DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="拠点ごとに数える" Command="{Binding FetchSitesCommand}" Margin="0,0,12,0"
+                                                ToolTip="拠点の数だけ問い合わせるので、少し時間がかかります。" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveSitesCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                                    </StackPanel>
+                                <Border Background="{DynamicResource Brush.Surface}"
+                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                    <DockPanel>
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrsite" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrsite.1]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrsite.2]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrsite.3]}" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <TextBlock Grid.Column="0" Text="拠点" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="1" Text="クライアント数" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="2" Text="セグメント" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="3" Text="備考" Style="{StaticResource Caption}" />
+                                            <!-- 星列より左は右端、右は左端の境界につまみを置く -->
+                                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mrsite.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mrsite.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mrsite.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                        </Grid>
+                                        <Border DockPanel.Dock="Top" Height="1"
+                                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                        <ListBox ItemsSource="{Binding SiteRows}"
+                                                 ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 VirtualizingPanel.IsVirtualizing="True"
+                                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight.Wide}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrsite.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrsite.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrsite.3]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Network}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding ClientsText}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Segments}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Segments}" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Note}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DockPanel>
+                                </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <TabItem Header="DHCP">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="{x:Static help:TabHelp.MerakiDhcp}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="MX ごとの DHCP の払い出し状況を並べます。" />
+                                    </DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="DHCP を確認" Command="{Binding FetchDhcpCommand}" Margin="0,0,12,0"
+                                                ToolTip="機器一覧にある MX を順に見ます。先に「取得」を押してください。" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveDhcpCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                                    </StackPanel>
+                                <Border Background="{DynamicResource Brush.Surface}"
+                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                    <DockPanel>
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrdhcp" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.0]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.1]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.2]}" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.4]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.5]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.6]}" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <TextBlock Grid.Column="0" Text="拠点" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="1" Text="機器" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="2" Text="VLAN" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="3" Text="サブネット" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="4" Text="払い出し済み" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="5" Text="空き" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="6" Text="使用率" Style="{StaticResource Caption}" />
+                                            <!-- 星列より左は右端、右は左端の境界につまみを置く -->
+                                            <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mrdhcp.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mrdhcp.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mrdhcp.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mrdhcp.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mrdhcp.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                                   Tag="mrdhcp.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                        </Grid>
+                                        <Border DockPanel.Dock="Top" Height="1"
+                                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                        <ListBox ItemsSource="{Binding DhcpRows}"
+                                                 ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 VirtualizingPanel.IsVirtualizing="True"
+                                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight.Wide}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.2]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.4]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.5]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.6]}" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="5" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Network}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Device}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Vlan}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Subnet}" Style="{StaticResource Mono}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="4" Text="{Binding UsedText}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="5" Text="{Binding FreeText}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                <TextBlock Grid.Column="6" Text="{Binding UsageText}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding UsageKind}" Value="Ok">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding UsageKind}" Value="Notice">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding UsageKind}" Value="Alert">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DockPanel>
+                                </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <TabItem Header="アラート">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="{x:Static help:TabHelp.MerakiAlerts}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="組織で出ているアラートを並べます。" />
+                                    </DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="アラートを取得" Command="{Binding FetchAlertsCommand}" Margin="0,0,12,0" />
+                                        <Button Content="CSV で保存" Command="{Binding SaveAlertsCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                                    </StackPanel>
+                                <Border Background="{DynamicResource Brush.Surface}"
+                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                    <DockPanel>
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mralert" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.0]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.1]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.2]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.3]}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.4]}" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                            <TextBlock Grid.Column="0" Text="重大度" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="1" Text="種別" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="2" Text="拠点" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="3" Text="機器" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="4" Text="発生" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="5" Text="内容" Style="{StaticResource Caption}" />
+                                            <!-- 星列より左は右端、右は左端の境界につまみを置く -->
+                                            <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mralert.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mralert.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mralert.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mralert.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                            <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                                   Tag="mralert.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                        </Grid>
+                                        <Border DockPanel.Dock="Top" Height="1"
+                                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
+                                        <ListBox ItemsSource="{Binding AlertRows}"
+                                                 ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 VirtualizingPanel.IsVirtualizing="True"
+                                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                            <Grid Height="{DynamicResource Size.RowHeight.Wide}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.0]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.1]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.2]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.3]}" />
+                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.4]}" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                <TextBlock Grid.Column="0" Text="{Binding Severity}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SeverityKind}" Value="Ok">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SeverityKind}" Value="Notice">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SeverityKind}" Value="Alert">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Grid.Column="1" Text="{Binding Type}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Network}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Device}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="4" Text="{Binding StartedAt}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="5" Text="{Binding Detail}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}" />
+                                            </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DockPanel>
+                                </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
                     </TabControl>
                 </DockPanel>
             </TabItem>
