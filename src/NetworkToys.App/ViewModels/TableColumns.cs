@@ -118,6 +118,12 @@ public sealed class TableColumns : ObservableObject
 
         // WLC AP: 0 状態 / 1 AP(星) / 2 IP / 3 MAC / 4 型番 / 5 版 / 6 無線 / 7 台数 / 8 タグ
         new("wlcap", 1, [(0, 80), (2, 110), (3, 130), (4, 120), (5, 80), (6, 160), (7, 50), (8, 130)]),
+
+        // WLC 参加・切断: 0 状態 / 1 AP(星) / 2 MAC / 3 最終参加 / 4 最終切断 / 5 理由 / 6 参加 / 7 失敗
+        new("wlcjoin", 1, [(0, 80), (2, 130), (3, 150), (4, 150), (5, 180), (6, 50), (7, 50)]),
+
+        // WLC SSID: 0 SSID(星) / 1 プロファイル / 2 ID / 3 状態 / 4 台数 / 5 2.4G / 6 5G / 7 6G
+        new("wlcssid", 0, [(1, 150), (2, 50), (3, 80), (4, 60), (5, 70), (6, 70), (7, 70)]),
     ];
 
     private readonly Dictionary<string, double> _widths = [];

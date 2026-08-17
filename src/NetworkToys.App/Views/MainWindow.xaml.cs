@@ -351,6 +351,8 @@ public partial class MainWindow : Window
         // RSSI は数値のまま並べる（表示文字列で並べると -100 が -58 より強いことになる）
         ["wlccl"] = ["Mac", "Ip", "Vendor", "ApName", "Ssid", "Radio", "Rssi", "Quality", "Speed", "State"],
         ["wlcap"] = ["State", "Name", "Ip", "Mac", "Model", "Version", "Radios", "Clients", "Tags"],
+        ["wlcjoin"] = ["State", "Name", "Mac", "LastJoin", "LastDisconnect", "Reason", "Joins", "Failures"],
+        ["wlcssid"] = ["Ssid", "Profile", "Id", "State", "Clients", "Band24", "Band5", "Band6"],
     };
 
     /// <summary>

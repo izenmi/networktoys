@@ -528,6 +528,47 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
+    /// <summary>Cisco WLC ─ 参加・切断</summary>
+    public const string WlcJoins =
+        """
+        Cisco WLC ─ 参加・切断
+
+        この画面ですること
+        ・AP ごとに、最後に参加した時刻・最後に切れた時刻とその理由を並べる
+
+        こんなときに
+        ・「あの AP、いつから落ちてる？」に答えるとき
+        ・特定の AP だけ何度も落ちていないかを見るとき（参加の回数で分かる）
+
+        知っておくとよいこと
+        ・WLC が持っているのは直近の 1 回ぶんだけ。それより前の履歴は残っていない
+        　（何度も落ちる AP を追いたいときは、WLC の syslog を受ける方が向く）
+        ・「—」や空欄は、その項目を WLC が持っていないという意味
+
+        できる操作
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
+    /// <summary>Cisco WLC ─ SSID</summary>
+    public const string WlcSsids =
+        """
+        Cisco WLC ─ SSID
+
+        この画面ですること
+        ・SSID(WLAN) の一覧に、いま繋がっている台数と帯域別の内訳を添える
+
+        こんなときに
+        ・2.4GHz に偏っていないかを見るとき
+        ・使われていない SSID が残っていないかを見るとき
+
+        知っておくとよいこと
+        ・台数は端末の一覧から数えている。先に「取得」を押していないと 0 になる
+        ・帯域は端末側の情報から判定する（取れないものは内訳に入らない）
+
+        できる操作
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
     /// <summary>Meraki</summary>
     public const string Meraki =
         """
