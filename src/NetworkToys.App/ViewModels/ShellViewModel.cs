@@ -55,6 +55,9 @@ public sealed class ShellViewModel
         // Meraki もタブを開いただけでは何もしない（API キーを入れて押されて初めて通信する）
         Meraki = new MerakiViewModel();
 
+        // ACI も同じ。読み取り専用で、押されたときだけ APIC を見に行く
+        Aci = new AciViewModel();
+
         // 試験タブ。こちらもタブを開いただけでは外へ出ない
         Verify = new VerifyViewModel();
 
@@ -119,6 +122,9 @@ public sealed class ShellViewModel
     /// <summary>Meraki ダッシュボードからの照会。API キーは保存しない。</summary>
     public MerakiViewModel Meraki { get; }
 
+    /// <summary>Cisco ACI（APIC）からの照会。読み取り専用で、パスワードは保存しない。</summary>
+    public AciViewModel Aci { get; }
+
     /// <summary>業務確認試験。プロキシを切り替えて同じ試験を回せる。</summary>
     public VerifyViewModel Verify { get; }
 
@@ -160,6 +166,7 @@ public sealed class ShellViewModel
         Converter.Reset();
         Collect.Reset();
         Meraki.Reset();
+        Aci.Reset();
         Verify.Reset();
         Report.Reset();
     }

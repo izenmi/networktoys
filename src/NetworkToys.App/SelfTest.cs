@@ -424,6 +424,88 @@ internal static class SelfTest
             Assert(!shell.Meraki.FetchClientsCommand.CanExecute(null), "キー未入力でもクライアントを取得できてしまう");
         });
 
+        Check("ACI: 資格情報が空では取得できない(CI から APIC を叩かない)", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+
+            // タブを開くだけでは通信しない作り（OnActivated を持たない）。
+            // 念のため、パスワードが空の間はどの取得も動かないことを確かめておく
+            Assert(shell.Aci.Password.Length == 0, "起動直後にパスワードが入っている");
+            Assert(!shell.Aci.FetchCommand.CanExecute(null), "資格情報が空でも取得できてしまう");
+            Assert(!shell.Aci.FetchEndpointsCommand.CanExecute(null),
+                   "資格情報が空でもエンドポイントを取得できてしまう");
+
+            // 窓を開くのは画面の仕事。結線し忘れたら「受け入れない」に倒れること
+            Assert(!new ViewModels.AciViewModel().ConfirmFingerprint("test"),
+                   "証明書の確認が、結線前から「はい」に倒れている");
+        });
+
+        Check("ACI: 偽の APIC と login→取得→ページング→logout を往復できる", () =>
+        {
+            var fake = new FakeApic();
+
+            using (var client = new Services.ApicClient("apic.selftest.invalid", null, fake))
+            {
+                client.LoginAsync("admin", "pw", "", CancellationToken.None).GetAwaiter().GetResult();
+
+                IReadOnlyList<string> pages = client
+                    .ClassAsync("faultInst", Core.Fabric.AciCatalog.FaultFilter, null, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+
+                client.LogoutAsync().GetAwaiter().GetResult();
+
+                // totalCount が 3 なので 2 ページ目まで取りに行く
+                Assert(pages.Count == 2, $"ページを取り切れていない: {pages.Count} ページ");
+
+                IReadOnlyList<Core.Fabric.AciFaultRow> rows =
+                    Core.Fabric.AciCatalog.ParseFaults(Core.Fabric.AciMoReader.Parse(pages));
+
+                Assert(rows.Count == 3, $"行に変換できていない: {rows.Count} 件");
+                Assert(rows[0].Severity.StartsWith('✕'), $"重大度が記号付きになっていない: {rows[0].Severity}");
+            }
+
+            Assert(fake.Paths.Contains("/api/aaaLogin.json"), "ログインしていない");
+            Assert(fake.Paths.Contains("/api/aaaLogout.json"), "ログアウトしていない");
+
+            // 取得のたびにトークンを付け直しているか（Cookie の入れ物に任せていない）
+            for (int i = 0; i < fake.Paths.Count; i++)
+            {
+                if (fake.Paths[i] == "/api/aaaLogin.json") continue;
+
+                Assert(fake.Cookies[i] == "APIC-cookie=T1",
+                       $"{fake.Paths[i]} にトークンが付いていない: 「{fake.Cookies[i]}」");
+            }
+
+            // 読み取り専用。設定を書く口へは 1 度も行かない
+            Assert(fake.Paths.All(p => p.StartsWith("/api/aaa", StringComparison.Ordinal)
+                                       || p.StartsWith("/api/node/class/", StringComparison.Ordinal)),
+                   $"見覚えのない宛先へ要求している: {string.Join(" / ", fake.Paths)}");
+        });
+
+        Check("ACI: 証明書を受け入れていない相手には繋がない", () =>
+        {
+            using var client = new Services.ApicClient("apic.selftest.invalid", null, new RefusingApic());
+
+            bool refused = false;
+
+            try
+            {
+                client.LoginAsync("admin", "pw", "", CancellationToken.None).GetAwaiter().GetResult();
+            }
+            catch (Services.ApicCertificateException)
+            {
+                refused = true;
+            }
+            catch (Services.ApicApiException)
+            {
+                // 証明書の失敗として扱えていない
+            }
+
+            Assert(refused, "TLS で断られたのに、証明書の失敗として扱っていない");
+        });
+
         Check("Core: Meraki の応答を一覧の行に変換できる", () =>
         {
             const string uplinks = """
@@ -2196,5 +2278,62 @@ internal static class SelfTest
         var dictionary = new ResourceDictionary { Source = new Uri(relativeSource, UriKind.Relative) };
 
         return [.. dictionary.Keys.OfType<string>()];
+    }
+
+    /// <summary>
+    /// 偽の APIC。<b>ソケットを 1 本も開かない</b>（偽の Cisco 機器・偽の STUN と同じ手）。
+    /// ログイン → 2 ページに分かれた取得 → ログアウトまでを、実機なしで通す。
+    /// </summary>
+    private sealed class FakeApic : System.Net.Http.HttpMessageHandler
+    {
+        private const string LoginJson =
+            """{"totalCount":"1","imdata":[{"aaaLogin":{"attributes":{"token":"T1","refreshTimeoutSeconds":"600"}}}]}""";
+
+        private const string Empty = """{"totalCount":"0","imdata":[]}""";
+
+        /// <summary>2 件目まで取れて、総数は 3。＝2 ページ目が要る。</summary>
+        private const string Page0 =
+            """{"totalCount":"3","imdata":[{"faultInst":{"attributes":{"severity":"critical","code":"F1","dn":"a"}}},{"faultInst":{"attributes":{"severity":"minor","code":"F2","dn":"b"}}}]}""";
+
+        private const string Page1 =
+            """{"totalCount":"3","imdata":[{"faultInst":{"attributes":{"severity":"warning","code":"F3","dn":"c"}}}]}""";
+
+        public List<string> Paths { get; } = [];
+
+        public List<string> Cookies { get; } = [];
+
+        protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(
+            System.Net.Http.HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            string path = request.RequestUri?.PathAndQuery ?? "";
+
+            Paths.Add(path);
+            Cookies.Add(request.Headers.TryGetValues("Cookie", out IEnumerable<string>? values)
+                ? string.Join(";", values)
+                : "");
+
+            string body = path switch
+            {
+                "/api/aaaLogin.json" => LoginJson,
+                "/api/aaaLogout.json" => Empty,
+                _ when path.Contains("page=0", StringComparison.Ordinal) => Page0,
+                _ when path.Contains("page=1", StringComparison.Ordinal) => Page1,
+                _ => Empty,
+            };
+
+            return Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json"),
+            });
+        }
+    }
+
+    /// <summary>証明書で断られる相手。指紋を受け入れていないときの経路を踏む。</summary>
+    private sealed class RefusingApic : System.Net.Http.HttpMessageHandler
+    {
+        protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(
+            System.Net.Http.HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw new System.Net.Http.HttpRequestException(
+                "TLS", new System.Security.Authentication.AuthenticationException("証明書を検証できません"));
     }
 }

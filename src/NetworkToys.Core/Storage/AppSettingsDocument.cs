@@ -54,6 +54,24 @@ public sealed class AppSettingsDocument
     /// </summary>
     public Dictionary<string, string> CollectUserNames { get; set; } = [];
 
+    /// <summary>ACI タブの接続先（APIC のホスト名か IP）。1 行 1 件。</summary>
+    public string AciHosts { get; set; } = "";
+
+    /// <summary>
+    /// ACI タブで前に使ったユーザー名（ホストがキー）。
+    /// <b>パスワードはここに入れない</b>（収集タブと同じ決まり）。
+    /// </summary>
+    public Dictionary<string, string> AciUserNames { get; set; } = [];
+
+    /// <summary>
+    /// 受け入れた APIC の証明書の指紋（ホストがキー、値は <c>SHA256:…</c>）。
+    ///
+    /// 指紋は秘密ではないので保存してよい（SSH の known_hosts と同じ）。
+    /// <b>ここに入るのは人が画面で見比べて受け入れたものだけ。</b>
+    /// 勝手に足すと、証明書のすり替わりに気づけなくなる。
+    /// </summary>
+    public Dictionary<string, string> AciFingerprints { get; set; } = [];
+
     /// <summary>
     /// ウィンドウを最前面に固定するか。
     ///
