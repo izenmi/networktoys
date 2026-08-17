@@ -460,9 +460,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             target.Add(row);
     }
 
-    /// <summary>1 か月ぶんのクライアント数と、実際に使われているセグメントを拠点ごとに数える。</summary>
-    private const int SiteTimespanSeconds = 30 * 24 * 60 * 60;
-
     /// <summary>拠点の数だけ呼ぶので、多すぎる組織では途中で止める。</summary>
     private const int MaxSites = 40;
 
@@ -482,6 +479,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         {
             CancellationToken token = _cts.Token;
 
+            // 期間は取得の途中で変えられても困るので、始めに固定する
+            MerakiTimespan timespan = SelectedTimespan;
+
             var sites = new List<MerakiSiteRow>();
             var segments = new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -494,7 +494,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
                 Status = $"拠点を数えています… {i + 1}/{targets.Length}（{network.Name}）";
 
                 IReadOnlyList<MerakiClientRow> clients = MerakiCatalog.ParseClients(
-                    await _dashboard.ClientsAsync(ApiKey, network.Id, SiteTimespanSeconds, token));
+                    await _dashboard.ClientsAsync(ApiKey, network.Id, timespan.Seconds, token));
 
                 // スタティックルートは MX のある拠点にしか無い。無ければ 404 になるので、
                 // そこで取得全体を止めない
@@ -527,7 +527,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             // 機器一覧の LAN IP にセグメントを足す（足すのは MX だけ）
             Replace(DeviceRows, MerakiCatalog.WithSegments(DeviceRows, segments));
 
-            Status = $"拠点 {SiteRows.Count} 件を数えました（過去 30 日・{DateTime.Now:HH:mm:ss} 時点）。";
+            Status = $"拠点 {SiteRows.Count} 件を数えました（{timespan.Name}・{DateTime.Now:HH:mm:ss} 時点）。";
 
             if (NetworkRows.Count > targets.Length)
                 Notice = $"⚠ 拠点が多いため {targets.Length} 件で打ち切りました（全 {NetworkRows.Count} 件）。";

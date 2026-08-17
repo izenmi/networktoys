@@ -4724,6 +4724,19 @@
                                         <TextBlock Style="{StaticResource TabIntro}" Text="拠点ごとのクライアント数と、使われているセグメントを並べます。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <TextBlock Text="期間" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="110" Margin="0,0,6,0"
+                                                  ItemsSource="{Binding Timespans}"
+                                                  SelectedItem="{Binding SelectedTimespan}"
+                                                  ToolTip="この期間に見えたクライアントを数えます。">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
                                         <Button Content="拠点ごとに数える" Command="{Binding FetchSitesCommand}" Margin="0,0,12,0"
                                                 ToolTip="拠点の数だけ問い合わせるので、少し時間がかかります。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveSitesCommand}"
