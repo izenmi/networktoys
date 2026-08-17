@@ -20,6 +20,9 @@ public partial class MainWindow : Window
 {
     private readonly ShellViewModel _shell = new();
 
+    /// <summary>差分の左右で縦スクロールを写している最中か（写した先の通知で往復しないため）。</summary>
+    private bool _syncingDiffPanes;
+
     public MainWindow() : this(null)
     {
     }
@@ -316,6 +319,50 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 左右の一覧の縦スクロールを互いに合わせる。
+    ///
+    /// <b>横は合わせない</b> — 長い行を左右それぞれで追えるように、別々の一覧にしてある
+    /// （1 つの一覧に収めていたときは、片側が長いともう片側まで一緒に流れて読めなかった）。
+    /// 縦がずれると見比べにならないので、こちらだけ写す。行数も行の高さも同じなので
+    /// offset をそのまま渡せば揃う。
+    /// </summary>
+    private void OnDiffPaneScrolled(object sender, ScrollChangedEventArgs e)
+    {
+        // 写した先がまた通知してくる。1 往復で止める
+        if (_syncingDiffPanes || e.VerticalChange == 0) return;
+
+        ListBox other = ReferenceEquals(sender, DiffList) ? DiffListAfter : DiffList;
+
+        if (ScrollViewerOf(other) is not { } viewer) return;
+
+        _syncingDiffPanes = true;
+
+        try
+        {
+            viewer.ScrollToVerticalOffset(e.VerticalOffset);
+        }
+        finally
+        {
+            _syncingDiffPanes = false;
+        }
+    }
+
+    /// <summary>一覧が内側に持っているスクロールの入れ物。テンプレートの中なので視覚ツリーで探す。</summary>
+    private static ScrollViewer? ScrollViewerOf(DependencyObject root)
+    {
+        if (root is ScrollViewer found) return found;
+
+        int count = VisualTreeHelper.GetChildrenCount(root);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (ScrollViewerOf(VisualTreeHelper.GetChild(root, i)) is { } viewer) return viewer;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// 差分をたどるとき、移った先を見えるところへ持ってくる。
     ///
     /// 一覧は仮想化しているので、まだ実体のない行は <see cref="ListBox.ScrollIntoView"/> に
@@ -325,6 +372,7 @@ public partial class MainWindow : Window
     {
         if (index < 0 || index >= DiffList.Items.Count) return;
 
+        // 片方を動かせば、もう片方は縦スクロールの合わせ込みで追いかける
         DiffList.ScrollIntoView(DiffList.Items[index]);
     }
 

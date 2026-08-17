@@ -1345,86 +1345,134 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- 左右の見出し -->
+                                <!-- 左右の見出し。区切りの罫線は下の一覧と同じ位置に置く -->
                                 <Grid DockPanel.Dock="Top" Margin="0,0,0,3">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="42" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="42" />
+                                        <ColumnDefinition Width="1" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="1" Text="作業前" Style="{StaticResource Caption}" />
-                                    <TextBlock Grid.Column="3" Text="作業後" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="0" Text="作業前" Style="{StaticResource Caption}" Margin="42,0,0,0" />
+                                    <TextBlock Grid.Column="2" Text="作業後" Style="{StaticResource Caption}" Margin="42,0,0,0" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1"
                                         Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
-                                <!-- 左右並置。1 つのスクロールに収めるので、左右がずれない -->
-                                <ListBox x:Name="DiffList"
-                                         ItemsSource="{Binding Rows}"
-                                         ItemContainerStyle="{StaticResource PlainCompactContainer}"
-                                         SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
-                                         Background="Transparent" BorderThickness="0"
-                                         HorizontalContentAlignment="Stretch"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                         VirtualizingStackPanel.IsVirtualizing="True"
-                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="42" />
-                                                    <ColumnDefinition Width="*" MinWidth="200" />
-                                                    <ColumnDefinition Width="42" />
-                                                    <ColumnDefinition Width="*" MinWidth="200" />
-                                                </Grid.ColumnDefinitions>
+                                <!--
+                                    左右は別々の一覧にして、それぞれで横スクロールする（長い行のため）。
+                                    縦だけは code-behind で互いに合わせる — ずれると見比べにならない。
+                                    行数も行の高さも同じなので、offset をそのまま写せば揃う。
+                                -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="1" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                                                <TextBlock Grid.Column="0" Text="{Binding LeftNumberText}"
-                                                           Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}"
-                                                           Foreground="{DynamicResource Brush.TextMuted}"
-                                                           HorizontalAlignment="Right" Margin="0,0,6,0" />
+                                        <ListBox x:Name="DiffList"
+                                                 Grid.Column="0"
+                                                 ItemsSource="{Binding Rows}"
+                                                 ItemContainerStyle="{StaticResource PlainCompactContainer}"
+                                                 SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                                 ScrollViewer.ScrollChanged="OnDiffPaneScrolled"
+                                                 VirtualizingStackPanel.IsVirtualizing="True"
+                                                 VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="42" />
+                                                            <ColumnDefinition Width="*" MinWidth="200" />
+                                                        </Grid.ColumnDefinitions>
 
-                                                <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け)。
-                                                     消えた側は Error.Bg、増えた側は Ok.Bg — 行全体の色と同じ語彙 -->
-                                                <Border x:Name="LeftCell" Grid.Column="1" Padding="4,1" CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
-                                                    <controls:DiffText Segments="{Binding LeftSegments}"
-                                                                       ChangedBrush="{DynamicResource Brush.Error.Bg}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       TextWrapping="NoWrap" />
-                                                </Border>
+                                                        <TextBlock Grid.Column="0" Text="{Binding LeftNumberText}"
+                                                                   Style="{StaticResource Mono}"
+                                                                   FontSize="{DynamicResource Size.Caption}"
+                                                                   Foreground="{DynamicResource Brush.TextMuted}"
+                                                                   HorizontalAlignment="Right" Margin="0,0,6,0" />
 
-                                                <TextBlock Grid.Column="2" Text="{Binding RightNumberText}"
-                                                           Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}"
-                                                           Foreground="{DynamicResource Brush.TextMuted}"
-                                                           HorizontalAlignment="Right" Margin="0,0,6,0" />
+                                                        <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け)。
+                                                             消えた側は Error.Bg、増えた側は Ok.Bg — 行全体の色と同じ語彙 -->
+                                                        <Border x:Name="Cell" Grid.Column="1" Padding="4,1"
+                                                                CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
+                                                            <controls:DiffText Segments="{Binding LeftSegments}"
+                                                                               ChangedBrush="{DynamicResource Brush.Error.Bg}"
+                                                                               Style="{StaticResource Mono}"
+                                                                               FontSize="{DynamicResource Size.Caption}"
+                                                                               TextWrapping="NoWrap" />
+                                                        </Border>
+                                                    </Grid>
 
-                                                <Border x:Name="RightCell" Grid.Column="3" Padding="4,1" CornerRadius="{DynamicResource Radius.Chip}">
-                                                    <controls:DiffText Segments="{Binding RightSegments}"
-                                                                       ChangedBrush="{DynamicResource Brush.Ok.Bg}"
-                                                                       Style="{StaticResource Mono}"
-                                                                       FontSize="{DynamicResource Size.Caption}"
-                                                                       TextWrapping="NoWrap" />
-                                                </Border>
-                                            </Grid>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="Changed">
+                                                            <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="LeftOnly">
+                                                            <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
 
-                                            <DataTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding Kind}" Value="Changed">
-                                                    <Setter TargetName="LeftCell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                                                    <Setter TargetName="RightCell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="LeftOnly">
-                                                    <Setter TargetName="LeftCell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="RightOnly">
-                                                    <Setter TargetName="RightCell" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
-                                                </DataTrigger>
-                                            </DataTemplate.Triggers>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
+                                    <!-- 作業前と作業後の区切り -->
+                                    <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" />
+
+                                        <ListBox x:Name="DiffListAfter"
+                                                 Grid.Column="2"
+                                                 ItemsSource="{Binding Rows}"
+                                                 ItemContainerStyle="{StaticResource PlainCompactContainer}"
+                                                 SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                                 ScrollViewer.ScrollChanged="OnDiffPaneScrolled"
+                                                 VirtualizingStackPanel.IsVirtualizing="True"
+                                                 VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="42" />
+                                                            <ColumnDefinition Width="*" MinWidth="200" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Grid.Column="0" Text="{Binding RightNumberText}"
+                                                                   Style="{StaticResource Mono}"
+                                                                   FontSize="{DynamicResource Size.Caption}"
+                                                                   Foreground="{DynamicResource Brush.TextMuted}"
+                                                                   HorizontalAlignment="Right" Margin="0,0,6,0" />
+
+                                                        <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け)。
+                                                             消えた側は Error.Bg、増えた側は Ok.Bg — 行全体の色と同じ語彙 -->
+                                                        <Border x:Name="Cell" Grid.Column="1" Padding="4,1"
+                                                                CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
+                                                            <controls:DiffText Segments="{Binding RightSegments}"
+                                                                               ChangedBrush="{DynamicResource Brush.Ok.Bg}"
+                                                                               Style="{StaticResource Mono}"
+                                                                               FontSize="{DynamicResource Size.Caption}"
+                                                                               TextWrapping="NoWrap" />
+                                                        </Border>
+                                                    </Grid>
+
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="Changed">
+                                                            <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="RightOnly">
+                                                            <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                </Grid>
                             </DockPanel>
                         </Grid>
                     </DockPanel>
