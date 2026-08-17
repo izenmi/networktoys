@@ -2276,7 +2276,7 @@
             </TabItem>
 
             <!-- ===== その他（たまにしか使わない道具。押すとメニューが出る） ===== -->
-            <TabItem x:Name="OtherTab" Header="その他　15 ▾">
+            <TabItem x:Name="OtherTab" Header="その他　16 ▾">
                 <DockPanel>
                     <!--
                         このタブには 1 行の説明も ⓘ も置かない（2026-08-16 ユーザー指示）。
@@ -2284,7 +2284,7 @@
                         自己診断の「どのタブにも説明がある」検査からも外してある。
                     -->
                     <!--
-                        中身は 15 枚あるので、帯には「いま開いているもの」だけを出す。
+                        中身は 16 枚あるので、帯には「いま開いているもの」だけを出す。
                         全部並べると名前が読めなくなる。切り替えはタブの見出しを押して
                         出るメニューから（MainWindow.OnMainTabsMouseDown が Tag で分類する）。
 
@@ -4703,6 +4703,272 @@
                         </TabItem>
                     </TabControl>
                 </DockPanel>
+            </TabItem>
+
+            <!-- ===== ファイル転送（FTP / SFTP のクライアント。2 ペイン） ===== -->
+            <TabItem Tag="NW機器" x:Name="TransferTab" Header="ファイル転送" DataContext="{Binding Transfer}">
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <!-- この画面が何をするものか。詳しい話は ⓘ の ToolTip へ -->
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                       ToolTip="{x:Static help:TabHelp.Transfer}" />
+                            <TextBlock Style="{StaticResource TabIntro}" Text="FTP / SFTP のサーバへ繋いで、ファイルを取ってくる・置いてくる。" />
+                        </DockPanel>
+
+                        <!-- 接続先 -->
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="接続先" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="150" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0"
+                                     ToolTip="サーバや機器の IP、またはホスト名。" />
+                            <RadioButton Content="SFTP" IsChecked="{Binding IsSftp}" GroupName="XferKind"
+                                         VerticalAlignment="Center" Margin="0,0,8,0"
+                                         ToolTip="SSH の上で運ぶ。経路が暗号化される。" />
+                            <RadioButton Content="FTP" IsChecked="{Binding IsFtp}" GroupName="XferKind"
+                                         VerticalAlignment="Center" Margin="0,0,10,0"
+                                         ToolTip="暗号化されない。古い機器はこちらしか持っていないことがある。" />
+                            <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="52" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0" />
+                            <TextBlock Text="ユーザー" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBox Width="110" Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,10,0" />
+                            <TextBlock Text="パスワード" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <!-- TextBox にしない。F12 の画面保存に平文が焼き込まれる -->
+                            <PasswordBox Width="110" Tag="xfer" PasswordChanged="OnFileServerPasswordChanged"
+                                         Height="{DynamicResource Size.RowHeight.Input}" Margin="0,0,10,0"
+                                         ToolTip="保存しません。閉じると消えます。" />
+                            <Button Content="接続" Command="{Binding ConnectCommand}" Margin="0,0,6,0" />
+                            <Button Content="切断" Command="{Binding DisconnectCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="中断" Command="{Binding CancelCommand}"
+                                    Style="{StaticResource Button.Subtle}"
+                                    ToolTip="いま走っている転送を止めます。" />
+                        </StackPanel>
+
+                        <!-- 状態と鍵の指紋。証跡として残せるよう選択可にする -->
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}"
+                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,4" />
+                        <TextBox DockPanel.Dock="Top" Text="{Binding Fingerprint, Mode=OneWay}"
+                                 IsReadOnly="True" BorderThickness="0" Background="Transparent"
+                                 FontFamily="{DynamicResource Font.Mono}"
+                                 FontSize="{DynamicResource Size.Caption}"
+                                 Foreground="{DynamicResource Brush.TextMuted}"
+                                 Margin="0,0,0,6"
+                                 ToolTip="繋いだ相手のホスト鍵の指紋。前と違っていたら、相手が入れ替わっている疑いがあります。">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                    <Style.Triggers>
+                                        <!-- FTP には鍵が無いので、空のときは行ごと畳む -->
+                                        <DataTrigger Binding="{Binding Fingerprint}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+
+                        <!-- 進捗。転送していないときは畳んで場所を空ける -->
+                        <StackPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <!-- RangeBase.Value は既定が TwoWay。読み取り専用プロパティに繋ぐので OneWay を明示する -->
+                            <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100" />
+                            <TextBlock Text="{Binding ProgressText}" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                        </StackPanel>
+
+                        <!-- 操作のボタン。ドラッグ＆ドロップは作らない（この幅では狙いにくく誤操作が怖い） -->
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button Content="→ 送る" Command="{Binding UploadCommand}" Margin="0,0,6,0"
+                                    ToolTip="左で選んだファイルを、右のいまの場所へ置きます。" />
+                            <Button Content="← 取ってくる" Command="{Binding DownloadCommand}" Margin="0,0,16,0"
+                                    ToolTip="右で選んだファイルを、左のいまの場所へ持ってきます。" />
+                            <Button Content="新しいフォルダ" Command="{Binding MakeDirectoryCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="名前を変更" Command="{Binding RenameCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
+                            <Button Content="削除" Command="{Binding DeleteCommand}"
+                                    Style="{StaticResource Button.Subtle}"
+                                    ToolTip="接続先のファイルを消します。元に戻せません。" />
+                        </StackPanel>
+
+                        <!-- 2 ペイン。左がこの PC、右が接続先 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- ===== 左: この PC ===== -->
+                            <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}"
+                                    BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,5">
+                                        <TextBlock DockPanel.Dock="Left" Text="この PC" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <Button DockPanel.Dock="Right" Content="更新" Command="{Binding RefreshLocalCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="6,0,0,0" />
+                                        <TextBox Text="{Binding LocalPath, UpdateSourceTrigger=LostFocus}"
+                                                 FontFamily="{DynamicResource Font.Mono}"
+                                                 FontSize="{DynamicResource Size.Caption}"
+                                                 ToolTip="場所を直接書き換えて Tab を押すと移れます。" />
+                                    </DockPanel>
+
+                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="local" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[local.0]}" />
+                                            <ColumnDefinition Width="*" MinWidth="90" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[local.2]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[local.3]}" />
+                                        </Grid.ColumnDefinitions>
+                                        <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                        <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <TextBlock Grid.Column="1" Text="名前"     Style="{StaticResource Caption}" Margin="6,0,0,0" />
+                                        <TextBlock Grid.Column="2" Text="サイズ"   Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="3" Text="更新日時" Style="{StaticResource Caption}" Margin="6,0,0,0" />
+                                        <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                        <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                               Tag="local.0" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="local.2" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="local.3" DragDelta="OnTableColumnResize" />
+                                    </Grid>
+                                    <Border DockPanel.Dock="Top" Height="1"
+                                            Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                                    <ListBox ItemsSource="{Binding LocalRows}" Tag="local"
+                                             SelectedItem="{Binding SelectedLocal}"
+                                             ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             HorizontalContentAlignment="Stretch"
+                                             MouseDoubleClick="OnLocalFileOpen"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             VirtualizingStackPanel.IsVirtualizing="True"
+                                             VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                             ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Height="{DynamicResource Size.RowHeight}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[local.0]}" />
+                                                        <ColumnDefinition Width="*" MinWidth="90" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[local.2]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[local.3]}" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <TextBlock Grid.Column="0" Text="{Binding Icon}" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
+                                                               Margin="6,0,0,0" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding SizeText}" Style="{StaticResource Mono}"
+                                                               VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding ModifiedText}" Style="{StaticResource Mono}"
+                                                               VerticalAlignment="Center" Margin="6,0,0,0" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- ===== 右: 接続先 ===== -->
+                            <Border Grid.Column="2" Background="{DynamicResource Brush.Surface}"
+                                    BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
+                                    CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,5">
+                                        <TextBlock DockPanel.Dock="Left" Text="接続先" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <Button DockPanel.Dock="Right" Content="更新" Command="{Binding RefreshRemoteCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="6,0,0,0" />
+                                        <TextBox Text="{Binding RemotePathText, Mode=OneWay}" IsReadOnly="True"
+                                                 FontFamily="{DynamicResource Font.Mono}"
+                                                 FontSize="{DynamicResource Size.Caption}"
+                                                 ToolTip="いま見ている場所。フォルダをダブルクリックして移ります。" />
+                                    </DockPanel>
+
+                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="remote" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[remote.0]}" />
+                                            <ColumnDefinition Width="*" MinWidth="90" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[remote.2]}" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[remote.3]}" />
+                                        </Grid.ColumnDefinitions>
+                                        <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                        <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                        <TextBlock Grid.Column="1" Text="名前"     Style="{StaticResource Caption}" Margin="6,0,0,0" />
+                                        <TextBlock Grid.Column="2" Text="サイズ"   Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="3" Text="更新日時" Style="{StaticResource Caption}" Margin="6,0,0,0" />
+                                        <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
+                                        <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                               Tag="remote.0" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="remote.2" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="remote.3" DragDelta="OnTableColumnResize" />
+                                    </Grid>
+                                    <Border DockPanel.Dock="Top" Height="1"
+                                            Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+                                    <ListBox ItemsSource="{Binding RemoteRows}" Tag="remote"
+                                             SelectedItem="{Binding SelectedRemote}"
+                                             ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             HorizontalContentAlignment="Stretch"
+                                             MouseDoubleClick="OnRemoteFileOpen"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             VirtualizingStackPanel.IsVirtualizing="True"
+                                             VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                             ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Height="{DynamicResource Size.RowHeight}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[remote.0]}" />
+                                                        <ColumnDefinition Width="*" MinWidth="90" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[remote.2]}" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[remote.3]}" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <!-- 列の縦罫線。文字より先に置いて背面に敷く(当たり判定は持たせない) -->
+                                                    <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
+                                                    <TextBlock Grid.Column="0" Text="{Binding Icon}" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
+                                                               Margin="6,0,0,0" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding SizeText}" Style="{StaticResource Mono}"
+                                                               VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding ModifiedText}" Style="{StaticResource Mono}"
+                                                               VerticalAlignment="Center" Margin="6,0,0,0" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </Border>
             </TabItem>
 
             <!-- ===== SNMP（GET / ウォーク） ===== -->

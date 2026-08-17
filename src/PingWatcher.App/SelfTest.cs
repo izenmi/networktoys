@@ -793,7 +793,7 @@ internal static class SelfTest
                 if (ReferenceEquals(tab, window.OtherTab)) continue;
 
                 string header = tab.Header?.ToString() ?? "";
-                string name = header.Split('　')[0];   // 「その他　15 ▾」→「その他」
+                string name = header.Split('　')[0];   // 「その他　16 ▾」→「その他」
 
                 // ⓘ は Style ごと引くので、Text ではなく ToolTip の有無で見る
                 System.Windows.Controls.TextBlock[] blocks =
@@ -907,7 +907,7 @@ internal static class SelfTest
                            $"「{header}」の見出しの件数が中身({actual} 本)と合っていない");
 
                     // 帯には「いま開いているもの」だけを出す決まり。
-                    // 15 枚を素で並べると名前が読めない（ユーザー指示）
+                    // 16 枚を素で並べると名前が読めない（ユーザー指示）
                     Assert(inner[0].ItemContainerStyle is { } style
                            && style.Setters.OfType<Setter>().Any(x =>
                                   x.Property == UIElement.VisibilityProperty

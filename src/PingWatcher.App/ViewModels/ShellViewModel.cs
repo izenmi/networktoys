@@ -31,6 +31,9 @@ public sealed class ShellViewModel
         SnmpGet = new SnmpGetViewModel(Monitor.GatewayText is "—" ? null : Monitor.GatewayText);
         SnmpTrap = new SnmpTrapViewModel(Monitor.LocalAddress);
 
+        // ファイル転送のクライアント（FTP / SFTP）。こちらもタブを開いただけでは繋がない
+        Transfer = new TransferViewModel();
+
         // 接続一覧もタブが開かれている間だけ OS を叩く
         Connections = new ConnectionsViewModel();
 
@@ -92,6 +95,9 @@ public sealed class ShellViewModel
     /// <summary>SNMP Trap の受信。</summary>
     public SnmpTrapViewModel SnmpTrap { get; }
 
+    /// <summary>FTP / SFTP のクライアント（2 ペイン）。パスワードは覚えない。</summary>
+    public TransferViewModel Transfer { get; }
+
     /// <summary>PC 上の TCP/UDP 接続一覧。</summary>
     public ConnectionsViewModel Connections { get; }
 
@@ -144,6 +150,7 @@ public sealed class ShellViewModel
         Syslog.Reset();
         SnmpGet.Reset();
         SnmpTrap.Reset();
+        Transfer.Disconnect();
         Dns.Reset();
         Trace.Reset();
         Connections.Reset();

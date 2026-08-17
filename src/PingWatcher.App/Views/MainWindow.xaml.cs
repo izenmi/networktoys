@@ -74,6 +74,12 @@ public partial class MainWindow : Window
             "いまの試験項目に名前を付けて残します。同じ名前があれば上書きします。",
             initial);
 
+        // ファイル転送も窓を開くのは画面の仕事。削除と上書きは取り消せないので必ず聞く
+        _shell.Transfer.Confirm = message => ConfirmDialog.Confirm(
+            this, "ファイル転送", message, okLabel: "実行する");
+
+        _shell.Transfer.Ask = message => TextPromptDialog.Ask(this, "ファイル転送", message);
+
         // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
         _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
             this,
@@ -232,6 +238,35 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// ファイル転送の左（この PC）でフォルダを開く。
+    /// <b>ダブルクリックは行の上でしか受けない</b> — 一覧の余白を叩いても
+    /// 直前に選んだフォルダへ入ってしまうのを避ける。
+    /// </summary>
+    private void OnLocalFileOpen(object sender, MouseButtonEventArgs e)
+    {
+        if (RowUnder(e) is { } row) _shell.Transfer.OpenLocal(row);
+    }
+
+    /// <summary>ファイル転送の右（接続先）でフォルダを開く。</summary>
+    private void OnRemoteFileOpen(object sender, MouseButtonEventArgs e)
+    {
+        if (RowUnder(e) is { } row) _shell.Transfer.OpenRemote(row);
+    }
+
+    /// <summary>叩かれた場所にある行の VM。行の外なら null。</summary>
+    private static FileRowViewModel? RowUnder(MouseButtonEventArgs e)
+    {
+        for (DependencyObject? node = e.OriginalSource as DependencyObject;
+             node is not null;
+             node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is ListBoxItem { DataContext: FileRowViewModel row }) return row;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// 表ごとの「列番号 → 並べ替えに使うプロパティ」。空文字の列は並べ替えない。
     /// 行テンプレートの Binding と同じ名前でないと効かないので、列を足したらここも直す。
     /// </summary>
@@ -242,6 +277,9 @@ public partial class MainWindow : Window
         ["ftplog"] = ["Time", "Remote", "Text"],
         ["tftplog"] = ["Time", "Remote", "Text"],
         ["sftplog"] = ["Time", "Remote", "Text"],
+        // 名前でなく SortKey で並べる。フォルダを常に上に置きたいので
+        ["local"] = ["", "SortKey", "Size", "Modified"],
+        ["remote"] = ["", "SortKey", "Size", "Modified"],
         ["syslog"] = ["Time", "Remote", "Severity", "Text"],
         ["snmptrap"] = ["Time", "Remote", "Text"],
         ["snmpget"] = ["Oid", "Name", "Type", "Value"],
@@ -864,6 +902,7 @@ public partial class MainWindow : Window
         {
             case "ftp": _shell.Ftp.Password = box.Password; break;
             case "sftp": _shell.Sftp.Password = box.Password; break;
+            case "xfer": _shell.Transfer.Password = box.Password; break;
         }
     }
 
@@ -1366,7 +1405,7 @@ public partial class MainWindow : Window
         };
 
         // 中身は Tag で分類してある（調べる / NW機器 / 受ける）。
-        // 15 枚を素で並べると探せないので、変わり目に見出しを挟む
+        // 16 枚を素で並べると探せないので、変わり目に見出しを挟む
         string group = "";
 
         foreach (object? item in inner.Items)
