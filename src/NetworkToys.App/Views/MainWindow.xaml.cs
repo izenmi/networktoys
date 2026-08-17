@@ -65,6 +65,7 @@ public partial class MainWindow : Window
             new KeyGesture(Key.F12)));
 
         _shell.DeviceCompare.RequestScrollIntoView += OnScrollDiffIntoView;
+        _shell.Aci.RequestScrollIntoView += (_, index) => ScrollIntoView(AciDiffBefore, index);
 
         // 「すべて消す」でキーを捨てたら、画面の伏せ字欄も空にする
         // (PasswordBox は中身をバインドできないので VM から知らせてもらう)
@@ -337,12 +338,14 @@ public partial class MainWindow : Window
     /// 一覧は仮想化しているので、まだ実体のない行は <see cref="ListBox.ScrollIntoView"/> に
     /// 任せる（内部でスクロールしてから実体を作ってくれる）。
     /// </summary>
-    private void OnScrollDiffIntoView(object? sender, int index)
-    {
-        if (index < 0 || index >= DiffList.Items.Count) return;
+    private void OnScrollDiffIntoView(object? sender, int index) => ScrollIntoView(DiffList, index);
 
-        // 片方を動かせば、もう片方は縦スクロールの合わせ込みで追いかける
-        DiffList.ScrollIntoView(DiffList.Items[index]);
+    /// <summary>片方を動かせば、もう片方は縦スクロールの合わせ込みで追いかける。</summary>
+    private static void ScrollIntoView(ListBox pane, int index)
+    {
+        if (index < 0 || index >= pane.Items.Count) return;
+
+        pane.ScrollIntoView(pane.Items[index]);
     }
 
     /// <summary>

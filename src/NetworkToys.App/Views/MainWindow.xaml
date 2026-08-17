@@ -6730,7 +6730,17 @@
                                                 Margin="0,0,12,2"
                                                 ToolTip="作業を終えてから押します。同じテナントをもう一度取ります。" />
 
-                                        <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,12,2" />
+                                        <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,6,2" />
+                                        <Button Content="取得内容に戻る" Command="{Binding ShowFetchedCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
+                                                ToolTip="結果を閉じて、取ってきた設定そのものに戻ります。" />
+
+                                        <Button Content="◀ 前の差分" Command="{Binding PreviousDifferenceCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                                        <Button Content="次の差分 ▶" Command="{Binding NextDifferenceCommand}"
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
+                                        <TextBlock Text="{Binding PositionText}" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,12,2" />
 
                                         <CheckBox Content="異なる行だけ" IsChecked="{Binding OnlyDifferences}"
                                                   VerticalAlignment="Center" Margin="0,0,12,2" />
@@ -6738,66 +6748,137 @@
                                                    VerticalAlignment="Center" />
                                     </WrapPanel>
 
-                                    <!--
-                                        左右は別々の一覧にして、それぞれで横スクロールする（長い行のため）。
-                                        縦だけは code-behind で互いに合わせる。相手は Tag で持たせてある
-                                    -->
                                     <Grid>
+                                        <!-- 取ってきたものそのもの。押した結果が空でないことを、その場で見せる -->
+                                        <Grid>
+                                            <Grid.Style>
+                                                <Style TargetType="Grid">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ShowFetchedText}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Grid.Style>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="11" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
-                                        <DockPanel Grid.Column="0">
-                                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
-                                                       Margin="42,0,0,3" TextTrimming="CharacterEllipsis"
-                                                       Text="{Binding BeforeLabel}" />
-                                            <Border DockPanel.Dock="Top" Height="1" Margin="0,0,0,2"
-                                                    Background="{DynamicResource Brush.Border}" />
-                                            <ListBox x:Name="AciDiffBefore"
-                                                     Tag="{Binding ElementName=AciDiffAfter}"
-                                                     ItemsSource="{Binding DiffRows}"
-                                                     ItemContainerStyle="{StaticResource PlainCompactContainer}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     HorizontalContentAlignment="Stretch"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                                     ScrollViewer.VerticalScrollBarVisibility="Hidden"
-                                                     ScrollViewer.ScrollChanged="OnDiffPaneScrolled"
-                                                     VirtualizingStackPanel.IsVirtualizing="True"
-                                                     VirtualizingStackPanel.VirtualizationMode="Recycling">
-                                                <ListBox.ItemTemplate>
-                                                    <StaticResource ResourceKey="DiffRow.Left" />
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
+                                            <DockPanel Grid.Column="0">
+                                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                                           Margin="0,0,0,3" TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding BeforeLabel}" />
+                                                <Border DockPanel.Dock="Top" Height="1" Margin="0,0,0,2"
+                                                        Background="{DynamicResource Brush.Border}" />
+                                                <!-- 読むだけ。取れたことがその場で見えるように出している -->
+                                                <TextBox Text="{Binding BeforeText, Mode=OneWay}"
+                                                         IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                         FontFamily="{DynamicResource Font.Mono}"
+                                                         FontSize="{DynamicResource Size.Caption}"
+                                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         HorizontalScrollBarVisibility="Auto"
+                                                         VerticalContentAlignment="Top" />
+                                            </DockPanel>
 
-                                        <!-- 作業前と作業後の区切り。左右の余白は差分比較タブと同じ 5px -->
-                                        <Border Grid.Column="1" Width="1" Margin="5,0"
-                                                Background="{DynamicResource Brush.Border}" />
-
-                                        <DockPanel Grid.Column="2">
-                                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
-                                                       Margin="42,0,0,3" TextTrimming="CharacterEllipsis"
-                                                       Text="{Binding AfterLabel}" />
-                                            <Border DockPanel.Dock="Top" Height="1" Margin="0,0,0,2"
+                                            <!-- 作業前と作業後の区切り。左右の余白は差分比較タブと同じ 5px -->
+                                            <Border Grid.Column="1" Width="1" Margin="5,0"
                                                     Background="{DynamicResource Brush.Border}" />
-                                            <ListBox x:Name="AciDiffAfter"
-                                                     Tag="{Binding ElementName=AciDiffBefore}"
-                                                     ItemsSource="{Binding DiffRows}"
-                                                     ItemContainerStyle="{StaticResource PlainCompactContainer}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     HorizontalContentAlignment="Stretch"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
-                                                     ScrollViewer.ScrollChanged="OnDiffPaneScrolled"
-                                                     VirtualizingStackPanel.IsVirtualizing="True"
-                                                     VirtualizingStackPanel.VirtualizationMode="Recycling">
-                                                <ListBox.ItemTemplate>
-                                                    <StaticResource ResourceKey="DiffRow.Right" />
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </DockPanel>
+
+                                            <DockPanel Grid.Column="2">
+                                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                                           Margin="0,0,0,3" TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding AfterLabel}" />
+                                                <Border DockPanel.Dock="Top" Height="1" Margin="0,0,0,2"
+                                                        Background="{DynamicResource Brush.Border}" />
+                                                <!-- 読むだけ。取れたことがその場で見えるように出している -->
+                                                <TextBox Text="{Binding AfterText, Mode=OneWay}"
+                                                         IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                         FontFamily="{DynamicResource Font.Mono}"
+                                                         FontSize="{DynamicResource Size.Caption}"
+                                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         HorizontalScrollBarVisibility="Auto"
+                                                         VerticalContentAlignment="Top" />
+                                            </DockPanel>
+                                        </Grid>
+
+                                        <!--
+                                            比べた結果。左右は別々の一覧にして、それぞれで横スクロールする
+                                            （長い行のため）。縦だけは code-behind で互いに合わせる
+                                        -->
+                                        <Grid>
+                                            <Grid.Style>
+                                                <Style TargetType="Grid">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ShowFetchedText}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Grid.Style>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="11" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                            <DockPanel Grid.Column="0">
+                                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                                           Margin="42,0,0,3" TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding BeforeLabel}" />
+                                                <Border DockPanel.Dock="Top" Height="1" Margin="0,0,0,2"
+                                                        Background="{DynamicResource Brush.Border}" />
+                                                <ListBox x:Name="AciDiffBefore"
+                                                         Tag="{Binding ElementName=AciDiffAfter}"
+                                                         ItemsSource="{Binding DiffRows}"
+                                                         ItemContainerStyle="{StaticResource PlainCompactContainer}"
+                                                         SelectedIndex="{Binding SelectedDiffIndex, Mode=TwoWay}"
+                                                         Background="Transparent" BorderThickness="0"
+                                                         HorizontalContentAlignment="Stretch"
+                                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                         ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                                         ScrollViewer.ScrollChanged="OnDiffPaneScrolled"
+                                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                                    <ListBox.ItemTemplate>
+                                                        <StaticResource ResourceKey="DiffRow.Left" />
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </DockPanel>
+
+                                            <!-- 作業前と作業後の区切り。左右の余白は差分比較タブと同じ 5px -->
+                                            <Border Grid.Column="1" Width="1" Margin="5,0"
+                                                    Background="{DynamicResource Brush.Border}" />
+
+                                            <DockPanel Grid.Column="2">
+                                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                                           Margin="42,0,0,3" TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding AfterLabel}" />
+                                                <Border DockPanel.Dock="Top" Height="1" Margin="0,0,0,2"
+                                                        Background="{DynamicResource Brush.Border}" />
+                                                <ListBox x:Name="AciDiffAfter"
+                                                         Tag="{Binding ElementName=AciDiffBefore}"
+                                                         ItemsSource="{Binding DiffRows}"
+                                                         ItemContainerStyle="{StaticResource PlainCompactContainer}"
+                                                         SelectedIndex="{Binding SelectedDiffIndex, Mode=TwoWay}"
+                                                         Background="Transparent" BorderThickness="0"
+                                                         HorizontalContentAlignment="Stretch"
+                                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                         ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                                         ScrollViewer.ScrollChanged="OnDiffPaneScrolled"
+                                                         VirtualizingStackPanel.IsVirtualizing="True"
+                                                         VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                                    <ListBox.ItemTemplate>
+                                                        <StaticResource ResourceKey="DiffRow.Right" />
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </DockPanel>
+                                        </Grid>
                                     </Grid>
                                 </DockPanel>
                             </Border>

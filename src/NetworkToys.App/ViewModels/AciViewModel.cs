@@ -62,6 +62,8 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     private string _afterLabel = "まだ取っていません";
     private string _diffHeadline = "";
     private bool _onlyDifferences;
+    private bool _showFetchedText = true;
+    private int _selectedDiffIndex = -1;
     private AciLogKind _selectedLogKind;
     private AciConfigKind _selectedConfigKind;
     private string _lastResponse = "";
@@ -104,6 +106,12 @@ public sealed class AciViewModel : ObservableObject, IDisposable
             () => CanFetch() && SelectedTenant is { Length: > 0 });
 
         CompareCommand = new RelayCommand(Compare, () => _before.Length > 0 && _after.Length > 0);
+
+        // 結果を出していない間は押しても何も起きない。押せるままにしない
+        ShowFetchedCommand = new RelayCommand(() => ShowFetchedText = true, () => !ShowFetchedText);
+
+        NextDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: true), () => DifferenceCount > 0);
+        PreviousDifferenceCommand = new RelayCommand(() => MoveToDifference(forward: false), () => DifferenceCount > 0);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
@@ -154,6 +162,17 @@ public sealed class AciViewModel : ObservableObject, IDisposable
 
     /// <summary>取った 2 つを見比べる。</summary>
     public RelayCommand CompareCommand { get; }
+
+    /// <summary>比較の結果を閉じて、取ってきた設定そのものに戻る。</summary>
+    public RelayCommand ShowFetchedCommand { get; }
+
+    /// <summary>違うところだけを順に見ていく。</summary>
+    public RelayCommand NextDifferenceCommand { get; }
+
+    public RelayCommand PreviousDifferenceCommand { get; }
+
+    /// <summary>見つけた行を画面に出してもらう合図（一覧は仮想化しているので画面側に任せる）。</summary>
+    public event EventHandler<int>? RequestScrollIntoView;
 
     public RelayCommand CancelCommand { get; }
 
@@ -254,16 +273,108 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>見比べる 2 つ。<b>いつ・どのテナントを取ったか</b>を見出しに出す。</summary>
+    /// <summary>見比べる 2 つ。<b>いつ・どのテナントを・何行取ったか</b>を見出しに出す。</summary>
     public string BeforeLabel => _beforeLabel;
 
     public string AfterLabel => _afterLabel;
+
+    /// <summary>
+    /// 取ってきた設定そのもの。<b>取れたことがその場で見えるように画面に出す</b>
+    /// （出さずに比較だけ押させると、取れているのか分からない）。
+    /// </summary>
+    public string BeforeText => _before;
+
+    public string AfterText => _after;
+
+    /// <summary>
+    /// 取ってきた設定を出しているか。比較したら結果に切り替え、「取得内容に戻る」で戻る。
+    /// </summary>
+    public bool ShowFetchedText
+    {
+        get => _showFetchedText;
+        private set
+        {
+            if (SetProperty(ref _showFetchedText, value)) ShowFetchedCommand.RaiseCanExecuteChanged();
+        }
+    }
 
     /// <summary>差分の要約（違いの数）。</summary>
     public string DiffHeadline
     {
         get => _diffHeadline;
         private set => SetProperty(ref _diffHeadline, value);
+    }
+
+    /// <summary>
+    /// 選んでいる行。左右の一覧が両方これを見るので、<b>どちらにも同じ行に印が付く</b>。
+    /// </summary>
+    public int SelectedDiffIndex
+    {
+        get => _selectedDiffIndex;
+        set
+        {
+            if (SetProperty(ref _selectedDiffIndex, value)) OnPropertyChanged(nameof(PositionText));
+        }
+    }
+
+    /// <summary>出している行のうち、差のあるものの数。</summary>
+    public int DifferenceCount => DiffRows.Count(r => r.IsDifferent);
+
+    /// <summary>「3 / 12 か所目」のような現在位置。どこまで見たかが分かる。</summary>
+    public string PositionText
+    {
+        get
+        {
+            int total = DifferenceCount;
+
+            if (total == 0) return "";
+
+            if (SelectedDiffIndex < 0 || SelectedDiffIndex >= DiffRows.Count
+                || !DiffRows[SelectedDiffIndex].IsDifferent)
+            {
+                return $"差分 {total} か所";
+            }
+
+            int ordinal = 0;
+
+            for (int i = 0; i <= SelectedDiffIndex; i++)
+            {
+                if (DiffRows[i].IsDifferent) ordinal++;
+            }
+
+            return $"{ordinal} / {total} か所目";
+        }
+    }
+
+    /// <summary>
+    /// 次（前）の違うところへ移る。<b>端まで来たら反対の端へ回る</b>
+    /// （差分比較タブと同じ動き）。
+    /// </summary>
+    private void MoveToDifference(bool forward)
+    {
+        if (DiffRows.Count == 0) return;
+
+        int step = forward ? 1 : -1;
+        int start = SelectedDiffIndex < 0 ? (forward ? -1 : DiffRows.Count) : SelectedDiffIndex;
+
+        for (int offset = 1; offset <= DiffRows.Count; offset++)
+        {
+            int index = (((start + (step * offset)) % DiffRows.Count) + DiffRows.Count) % DiffRows.Count;
+
+            if (!DiffRows[index].IsDifferent) continue;
+
+            SelectedDiffIndex = index;
+            RequestScrollIntoView?.Invoke(this, index);
+            return;
+        }
+    }
+
+    private void RefreshDifferenceState()
+    {
+        OnPropertyChanged(nameof(DifferenceCount));
+        OnPropertyChanged(nameof(PositionText));
+        NextDifferenceCommand.RaiseCanExecuteChanged();
+        PreviousDifferenceCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>違う行だけを出すか。切り替えたら、取り直さずに並べ直す。</summary>
@@ -653,6 +764,11 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(BeforeLabel));
         OnPropertyChanged(nameof(AfterLabel));
         DiffHeadline = "";
+        SelectedDiffIndex = -1;
+        ShowFetchedText = true;
+        RefreshDifferenceState();
+        OnPropertyChanged(nameof(BeforeText));
+        OnPropertyChanged(nameof(AfterText));
         SelectedNode = null;
         SelectedTenant = null;
         SelectedEpg = null;
@@ -735,22 +851,29 @@ public sealed class AciViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            string label = $"{tenant}（{DateTime.Now:MM-dd HH:mm:ss}）";
-            string text = AciConfigExport.Render($"{Host} / テナント {label}", mos);
+            string stamp = $"{tenant}（{DateTime.Now:MM-dd HH:mm:ss}）";
+            string text = AciConfigExport.Render($"{Host} / テナント {stamp}", mos);
+
+            // 何行取れたかを見出しに添える。空でないことがその場で分かる
+            string label = $"{stamp}　{text.AsSpan().Count('\n'):N0} 行";
 
             if (before)
             {
                 _before = text;
                 _beforeLabel = label;
                 OnPropertyChanged(nameof(BeforeLabel));
+                OnPropertyChanged(nameof(BeforeText));
             }
             else
             {
                 _after = text;
                 _afterLabel = label;
                 OnPropertyChanged(nameof(AfterLabel));
+                OnPropertyChanged(nameof(AfterText));
             }
 
+            // 取ったものをその場で見せる（比較はそのあと）
+            ShowFetchedText = true;
             CompareCommand.RaiseCanExecuteChanged();
 
             Status = _before.Length > 0 && _after.Length > 0
@@ -767,6 +890,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         SideBySideResult result = SideBySideDiff.Build(_before, _after);
 
         DiffRows.Clear();
+        SelectedDiffIndex = -1;
 
         if (result.TooLarge)
         {
@@ -781,6 +905,9 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         DiffHeadline = result.HasChanges
             ? $"{result.ChangedCount} 行に違いがあります。"
             : "違いはありません。";
+
+        ShowFetchedText = false;
+        RefreshDifferenceState();
 
         Status = $"{_beforeLabel} と {_afterLabel} を見比べました。";
     }
