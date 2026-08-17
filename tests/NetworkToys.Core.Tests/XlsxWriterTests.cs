@@ -54,7 +54,8 @@ public class XlsxWriterTests
             "xl/worksheets/sheet1.xml",
         ];
 
-        Assert.Equal(expected, Parts(Sample).Keys.Order().ToArray());
+        // 並べ替えは序数で。既定の比較は文化圏によって '[' と '_' の前後が入れ替わる
+        Assert.Equal(expected, Parts(Sample).Keys.Order(StringComparer.Ordinal).ToArray());
     }
 
     [Fact]
