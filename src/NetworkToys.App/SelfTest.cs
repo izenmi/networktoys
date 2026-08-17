@@ -877,6 +877,92 @@ internal static class SelfTest
             }
         });
 
+        Check("IP設定: プリセットは何度でも入れ直せる", () =>
+        {
+            // コンボボックスは同じ項目を選び直しても通知を出さない。
+            // そのため「値をいじった後にプリセットへ戻す」ができなかった（2026-08-17 指摘）。
+            var config = new ViewModels.IpConfigViewModel();
+
+            Assert(!config.LoadPresetCommand.CanExecute(null), "何も選んでいないのに入れ直せる");
+
+            var preset = new Core.Storage.IpPreset
+            {
+                Name = "検査用", Dhcp = false, Address = "192.168.10.5",
+                Mask = "255.255.255.0", Gateway = "192.168.10.1", Dns1 = "8.8.8.8", Dns2 = "",
+            };
+
+            config.Presets.Add(preset);
+            config.SelectedPreset = preset;
+
+            Assert(config.Address == "192.168.10.5", "選んでも入力欄に入らない");
+            Assert(config.LoadPresetCommand.CanExecute(null), "選んでいるのに入れ直せない");
+
+            // 現場での操作: 値をいじってから、元に戻したくなる
+            config.Address = "10.0.0.9";
+            config.UseDhcp = true;
+
+            config.LoadPresetCommand.Execute(null);
+
+            Assert(config.Address == "192.168.10.5", "入れ直してもアドレスが戻らない");
+            Assert(!config.UseDhcp, "入れ直しても DHCP の指定が戻らない");
+
+            // 何度でも戻せること（1 度きりの仕掛けになっていないか）
+            config.Address = "10.0.0.9";
+            config.LoadPresetCommand.Execute(null);
+
+            Assert(config.Address == "192.168.10.5", "2 度目の入れ直しが効かない");
+        });
+
+        Check("配色: 暗い配色にパレット外（＝既定の黒）の文字が残っていない", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 既定スタイルを持つコントロールは Foreground にシステム色（＝黒）を入れる。
+            // 明るい配色では気づけず、暗い配色にした瞬間そこだけ読めなくなる。
+            // ListBox・ListView・ContextMenu・ToolTip で踏み、RadioButton でも踏んだ
+            // （2026-08-17「差分比較の SSH / Telnet の文字が見えない」）。
+            //
+            // 色は Palette.*.xaml が唯一の出どころなので、**パレットに無い色で
+            // 文字が描かれていたら、それは拾い損ねている**とみなせる。
+            HashSet<Color> allowed = ColorsOf("Resources/Palette.Dark.xaml");
+
+            AppTheme original = ThemeManager.Current;
+            ThemeManager.Apply(AppTheme.Dark);
+            window!.UpdateLayout();
+
+            var problems = new HashSet<string>(StringComparer.Ordinal);
+            int inspected = 0;
+
+            void Scan(DependencyObject root)
+            {
+                foreach ((string where, Color color) in TextColorsOf(root))
+                {
+                    inspected++;
+
+                    if (!allowed.Contains(color))
+                        problems.Add($"{where} が #{color.R:X2}{color.G:X2}{color.B:X2}");
+                }
+            }
+
+            VisitTabs(window, window.MainTabs, _ => Scan(window!));
+
+            // コードで組んだ窓も同じ罠を踏む（RadioButton がまさにそれだった）
+            var dialog = new Views.DeviceFetchDialog("検査用", "show version");
+            dialog.Show();
+            dialog.UpdateLayout();
+            Scan(dialog);
+            dialog.Close();
+
+            ThemeManager.Apply(original);
+            window.UpdateLayout();
+
+            log.AppendLine($"        文字を描く要素 {inspected} 個を確認");
+
+            Assert(inspected > 100, $"確認できた要素が少なすぎる（{inspected} 個）。走査が届いていない");
+            Assert(problems.Count == 0,
+                   "パレットに無い色の文字がある: " + string.Join(" / ", problems.Take(8)));
+        });
+
         Check("配色を切り替えても表示し直せる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -2707,6 +2793,57 @@ internal static class SelfTest
 
             return false;
         }
+    }
+
+    /// <summary>パレットに入っている色。ブラシではなく色で持つ（実体は差し替えられる）。</summary>
+    private static HashSet<Color> ColorsOf(string relativeSource)
+    {
+        var dictionary = new ResourceDictionary { Source = new Uri(relativeSource, UriKind.Relative) };
+
+        return [.. dictionary.Values.OfType<SolidColorBrush>().Select(brush => brush.Color)];
+    }
+
+    /// <summary>
+    /// 実際に文字を描いている要素と、その文字色。
+    ///
+    /// <b>「文字が入っているもの」だけを見る。</b>スクロールバーの部品のように
+    /// 中身を持たないコントロールまで拾うと、見えない黒で毎回落ちる。
+    /// 一覧の行は中の <see cref="System.Windows.Controls.TextBlock"/> が
+    /// 親から色を継承するので、そちらで捕まる（ListBox の事故がまさにこれ）。
+    /// </summary>
+    private static IEnumerable<(string Where, Color Color)> TextColorsOf(DependencyObject root)
+    {
+        (string Where, Color Color)? found = root switch
+        {
+            System.Windows.Controls.TextBlock { Text.Length: > 0 } text
+                => (Describe(text, text.Text), ColorOf(text.Foreground)),
+            System.Windows.Controls.HeaderedItemsControl { Header: string header } headered
+                when header.Length > 0
+                => (Describe(headered, header), ColorOf(headered.Foreground)),
+            System.Windows.Controls.ContentControl { Content: string content } control
+                when content.Length > 0
+                => (Describe(control, content), ColorOf(control.Foreground)),
+            _ => null,
+        };
+
+        // 透明（＝色を持たないブラシ）は判定しない
+        if (found is { } hit && hit.Color.A > 0)
+            yield return hit;
+
+        int count = VisualTreeHelper.GetChildrenCount(root);
+
+        for (int i = 0; i < count; i++)
+        {
+            foreach ((string, Color) each in TextColorsOf(VisualTreeHelper.GetChild(root, i)))
+                yield return each;
+        }
+
+        // 色を持たない（グラデーションなど）ものは判定しない。透明として飛ばす
+        static Color ColorOf(Brush? brush)
+            => brush is SolidColorBrush solid ? solid.Color : Colors.Transparent;
+
+        static string Describe(DependencyObject node, string text)
+            => $"{node.GetType().Name}「{(text.Length > 12 ? text[..12] + "…" : text)}」";
     }
 
     private static HashSet<string> KeysOf(string relativeSource)

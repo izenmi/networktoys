@@ -485,6 +485,58 @@
         </Setter>
     </Style>
 
+    <!--
+        ===== ラジオボタン =====
+
+        CheckBox とまったく同じ理由で暗黙スタイルが要る。**既定の RadioButton は
+        Foreground にシステム色（＝黒）を入れる**ので、指定しないと暗い配色で
+        文字が地に沈んで読めなくなる。差分比較の「機器から」の SSH / Telnet と
+        ファイル転送の SFTP / FTP が実際にそうなっていた（2026-08-17 に報告）。
+
+        丸の中身以外は CheckBox と同じ作りにしてある（並んだときに揃うように）。
+    -->
+    <Style TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="FontSize" Value="{DynamicResource Size.Body}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <!-- 15px の枠に半径 8 で真円にする（CheckBox と同じ大きさ） -->
+                        <Border x:Name="Box"
+                                Width="15" Height="15"
+                                CornerRadius="8"
+                                Background="{DynamicResource Brush.Surface}"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="1"
+                                VerticalAlignment="Center">
+                            <Ellipse x:Name="Dot"
+                                     Width="7" Height="7"
+                                     Fill="{DynamicResource Brush.Accent.Fg}"
+                                     Visibility="Collapsed" />
+                        </Border>
+                        <ContentPresenter Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Bg}" />
+                            <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <!-- Tab キーでの現在地。既定の FocusVisualStyle はテンプレート置換で消えている -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ===== 進捗バー ===== -->
     <Style TargetType="ProgressBar">
         <Setter Property="Height" Value="4" />

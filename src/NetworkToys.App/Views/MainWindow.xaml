@@ -355,6 +355,7 @@
                                                            RelativeSource={RelativeSource Self}}">
                                     <MenuItem Header="SSH で接続" Click="OnSshFromRow" />
                                     <MenuItem Header="Telnet で接続" Click="OnTelnetFromRow" />
+                                    <MenuItem Header="ログ採取の機器に追加" Click="OnCollectFromRow" />
                                     <Separator />
                                     <MenuItem Header="Traceroute を実施" Click="OnTraceFromRow" />
                                     <MenuItem Header="DNS 解決" Click="OnResolveFromRow" />
@@ -409,6 +410,7 @@
                                                            RelativeSource={RelativeSource Self}}">
                                     <MenuItem Header="SSH で接続" Click="OnSshFromRow" />
                                     <MenuItem Header="Telnet で接続" Click="OnTelnetFromRow" />
+                                    <MenuItem Header="ログ採取の機器に追加" Click="OnCollectFromRow" />
                                     <Separator />
                                     <MenuItem Header="Traceroute を実施" Click="OnTraceFromRow" />
                                     <MenuItem Header="DNS 解決" Click="OnResolveFromRow" />
@@ -1783,7 +1785,7 @@
                             <ComboBox Width="160"
                                       ItemsSource="{Binding Presets}"
                                       SelectedItem="{Binding SelectedPreset}"
-                                      Margin="0,0,8,2"
+                                      Margin="0,0,5,2"
                                       ToolTip="選ぶと内容が入力欄に入ります(適用はされません)。">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
@@ -1791,6 +1793,10 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                            <!-- 同じものを選び直しても通知は飛ばないので、入れ直す口を分けてある -->
+                            <Button Content="入れ直す" Command="{Binding LoadPresetCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,8,2"
+                                    ToolTip="入力欄を、選んでいるプリセットの値に戻します(適用はされません)。" />
                             <TextBlock Text="名前" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
                             <TextBox Width="120" Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}"
                                      Margin="0,0,6,2" ToolTip="現場名など(例: 現場A)。同じ名前は上書きされます。" />
@@ -3167,7 +3173,9 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="252" />
+                                <!-- 早見表の幅は中身に決めさせる。px で決め打つと
+                                     文字サイズを大きくしたときにマスクが切れる -->
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <!-- 計算結果と分割案 -->
@@ -3176,7 +3184,8 @@
                                 <StackPanel>
                                     <Grid Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibility}}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="130" />
+                                            <!-- 見出しの幅も px で決めない（同上） -->
+                                            <ColumnDefinition Width="Auto" MinWidth="130" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
@@ -3184,15 +3193,15 @@
                                             <RowDefinition /><RowDefinition />
                                         </Grid.RowDefinitions>
 
-                                        <TextBlock Grid.Row="0" Text="ネットワーク" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                        <TextBlock Grid.Row="0" Text="ネットワーク" Style="{StaticResource Caption}" Margin="0,0,10,3" />
                                         <TextBox   Grid.Row="0" Grid.Column="1" Style="{StaticResource CopyableValue}" Text="{Binding NetworkText, Mode=OneWay}" />
-                                        <TextBlock Grid.Row="1" Text="ブロードキャスト" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                        <TextBlock Grid.Row="1" Text="ブロードキャスト" Style="{StaticResource Caption}" Margin="0,0,10,3" />
                                         <TextBox   Grid.Row="1" Grid.Column="1" Style="{StaticResource CopyableValue}" Text="{Binding BroadcastText, Mode=OneWay}" />
-                                        <TextBlock Grid.Row="2" Text="マスク" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                        <TextBlock Grid.Row="2" Text="マスク" Style="{StaticResource Caption}" Margin="0,0,10,3" />
                                         <TextBox   Grid.Row="2" Grid.Column="1" Style="{StaticResource CopyableValue}" Text="{Binding MaskText, Mode=OneWay}" />
-                                        <TextBlock Grid.Row="3" Text="ホスト範囲" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                        <TextBlock Grid.Row="3" Text="ホスト範囲" Style="{StaticResource Caption}" Margin="0,0,10,3" />
                                         <TextBox   Grid.Row="3" Grid.Column="1" Style="{StaticResource CopyableValue}" Text="{Binding RangeText, Mode=OneWay}" />
-                                        <TextBlock Grid.Row="4" Text="使えるホスト数" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                        <TextBlock Grid.Row="4" Text="使えるホスト数" Style="{StaticResource Caption}" Margin="0,0,10,3" />
                                         <TextBox   Grid.Row="4" Grid.Column="1" Style="{StaticResource CopyableValue}" Text="{Binding HostCountText, Mode=OneWay}" />
                                     </Grid>
 
@@ -3224,17 +3233,23 @@
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource Brush.Border}"
                                     CornerRadius="{DynamicResource Radius.Card}" Padding="8,6">
-                                <DockPanel>
+                                <!--
+                                    列幅は px で決めない。文字サイズを「大」以上にすると
+                                    マスクもホスト数も枠から切れる（2026-08-17 に報告された）。
+                                    見出しと行は別の Grid なので、SharedSizeGroup で
+                                    幅を共有させて中身に合わせる。
+                                -->
+                                <DockPanel Grid.IsSharedSizeScope="True">
                                     <TextBlock DockPanel.Dock="Top" Text="早見表"
                                                Style="{StaticResource Caption}" Margin="0,0,0,4" />
                                     <Grid DockPanel.Dock="Top" Margin="0,0,0,2">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="42" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CheatPrefix" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="76" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CheatHosts" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="長さ" Style="{StaticResource Caption}" />
-                                        <TextBlock Grid.Column="1" Text="マスク" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="長さ" Style="{StaticResource Caption}" Margin="0,0,10,0" />
+                                        <TextBlock Grid.Column="1" Text="マスク" Style="{StaticResource Caption}" Margin="0,0,10,0" />
                                         <TextBlock Grid.Column="2" Text="ホスト数" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                                     </Grid>
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -3243,12 +3258,12 @@
                                                 <DataTemplate>
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="42" />
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CheatPrefix" />
                                                             <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="76" />
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CheatHosts" />
                                                         </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding Prefix}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" />
-                                                        <TextBlock Grid.Column="1" Text="{Binding Mask}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" />
+                                                        <TextBlock Text="{Binding Prefix}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" Margin="0,0,10,0" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding Mask}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" Margin="0,0,10,0" />
                                                         <TextBlock Grid.Column="2" Text="{Binding Hosts}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" HorizontalAlignment="Right" />
                                                     </Grid>
                                                 </DataTemplate>

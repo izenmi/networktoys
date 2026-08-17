@@ -1150,6 +1150,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Ping / TCP の行から、その相手をログ採取の機器に足す。
+    /// <b>備考はそのまま持っていく</b>（採取したファイルの名前に効く）。
+    /// </summary>
+    private void OnCollectFromRow(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row || row.Host.Length == 0) return;
+
+        _shell.Collect.Import([(row.Host, row.Comment)]);
+        Show(CollectTab);
+    }
+
+    /// <summary>
     /// FTP / SFTP サーバのパスワードを VM へ渡す。
     /// <see cref="PasswordBox.Password"/> はバインドできない（平文を依存関係プロパティに
     /// 置かない設計）ので、変更のたびに手で押し込む。どちらの画面かは Tag で見分ける。

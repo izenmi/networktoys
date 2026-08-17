@@ -40,6 +40,8 @@ public sealed class IpConfigViewModel : ObservableObject
 
         SavePresetCommand = new RelayCommand(SavePreset, () => PresetName.Trim().Length > 0);
         DeletePresetCommand = new RelayCommand(DeletePreset, () => SelectedPreset is not null);
+        LoadPresetCommand = new RelayCommand(
+            () => Expand(SelectedPreset), () => SelectedPreset is not null);
         RefreshCommand = new RelayCommand(() => RefreshAdapters());
 
         foreach (IpPreset preset in Settings.Current.IpPresets)
@@ -62,6 +64,15 @@ public sealed class IpConfigViewModel : ObservableObject
 
     public RelayCommand SavePresetCommand { get; }
     public RelayCommand DeletePresetCommand { get; }
+
+    /// <summary>
+    /// 選んでいるプリセットを入力欄へ入れ直す。
+    ///
+    /// <b>コンボボックスは同じ項目を選び直しても何も起きない</b>（選択が変わらないので
+    /// 通知が飛ばない）。入力欄をいじったあとに「プリセットの値に戻したい」が
+    /// できなかったので、押せば何度でも戻せる口を分けてある（2026-08-17 指摘）。
+    /// </summary>
+    public RelayCommand LoadPresetCommand { get; }
     public RelayCommand RefreshCommand { get; }
 
     /// <summary>プリセット選択で入力欄へ展開するか。読み込み中の一時抑止に使う。</summary>
@@ -135,20 +146,31 @@ public sealed class IpConfigViewModel : ObservableObject
                 return;
 
             DeletePresetCommand.RaiseCanExecuteChanged();
+            LoadPresetCommand.RaiseCanExecuteChanged();
 
-            if (value is null || !ApplyPresetToFields)
+            if (!ApplyPresetToFields)
                 return;
 
-            // 展開するだけで適用はしない(適用は必ず「適用」ボタンから)
-            PresetName = value.Name;
-            UseDhcp = value.Dhcp;
-            Address = value.Address;
-            Mask = value.Mask;
-            Gateway = value.Gateway;
-            Dns1 = value.Dns1;
-            Dns2 = value.Dns2;
-            Validate();
+            Expand(value);
         }
+    }
+
+    /// <summary>
+    /// プリセットの中身を入力欄へ展開する。<b>展開するだけで適用はしない</b>
+    /// （適用は必ず「適用」ボタンから）。
+    /// </summary>
+    private void Expand(IpPreset? preset)
+    {
+        if (preset is null) return;
+
+        PresetName = preset.Name;
+        UseDhcp = preset.Dhcp;
+        Address = preset.Address;
+        Mask = preset.Mask;
+        Gateway = preset.Gateway;
+        Dns1 = preset.Dns1;
+        Dns2 = preset.Dns2;
+        Validate();
     }
 
     public string PresetName
