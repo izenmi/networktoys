@@ -1517,6 +1517,25 @@ internal static class SelfTest
             window.UpdateLayout();
         });
 
+        Check("タブ: サブタブを持つ主タブは押したら切り替わる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // メニューを降ろすのは「その他」だけ。ここを「中に切り替えを持つタブ」で
+            // 拾うと、Meraki を押してもメニューが出るだけで画面が変わらない
+            // （2026-08-17 にユーザーが実機で指摘）
+            var args = new System.Windows.Input.MouseButtonEventArgs(
+                System.Windows.Input.Mouse.PrimaryDevice, 0, System.Windows.Input.MouseButton.Left)
+            {
+                RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent,
+            };
+
+            window!.MerakiTab.RaiseEvent(args);
+
+            Assert(!args.Handled,
+                   "Meraki の見出しを押すと、切り替えではなくメニューが出る作りになっている");
+        });
+
         Check("タブ: まとめたタブの見出しの件数が中身と合っている", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

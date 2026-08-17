@@ -1694,6 +1694,11 @@ public partial class MainWindow : Window
         if (tab is null || !ReferenceEquals(ItemsControl.ItemsControlFromItemContainer(tab), MainTabs))
             return;
 
+        // メニューを出すのは「その他」だけ。サブタブを持つ主タブ（Meraki）は
+        // 帯をそのまま見せるので、ここで捕まえると押しても切り替わらなくなる
+        // （2026-08-17 ユーザー指摘）
+        if (!ReferenceEquals(tab, OtherTab)) return;
+
         if (InnerTabsOf(tab) is not { } inner || inner.Items.Count == 0) return;
 
         var menu = new ContextMenu
