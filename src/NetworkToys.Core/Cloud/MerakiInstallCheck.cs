@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
-using NetworkToys.Core.Design;
+using NetworkToys.Core.Net;
 using NetworkToys.Core.Verify;
 using NetworkToys.Core.Work;
 

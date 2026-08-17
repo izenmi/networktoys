@@ -1,5 +1,5 @@
 using NetworkToys.Core.Cloud;
-using NetworkToys.Core.Design;
+using NetworkToys.Core.Net;
 using NetworkToys.Core.Verify;
 using NetworkToys.Core.Work;
 using Xunit;
