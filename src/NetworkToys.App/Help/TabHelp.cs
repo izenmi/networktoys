@@ -772,6 +772,50 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
+    /// <summary>Cisco Catalyst Center ─ 機器</summary>
+    public const string DnacDevices =
+        """
+        Cisco Catalyst Center ─ 機器
+
+        この画面ですること
+        ・Catalyst Center が管理している機器を、健全度と一緒に一覧にする
+
+        こんなときに
+        ・棚卸しをするとき（型番・シリアル・版がそのまま出る）
+        ・「どこか調子が悪い」と言われて、当たりを付けたいとき
+
+        知っておくとよいこと
+        ・健全度は 1〜10 で、10 が最良。取れない機器は「—」（0 点ではない）
+        ・到達性は Catalyst Center から見た状態。ping だけ通る状態も区別して出す
+        ・機器が多い環境では途中で打ち切ることがある。そのときは必ず断りを出す
+
+        できる操作
+        ・行を右クリックして、その IP を Ping や経路へ送る
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
+    /// <summary>Cisco Catalyst Center ─ 保守と適合</summary>
+    public const string DnacLifecycle =
+        """
+        Cisco Catalyst Center ─ 保守と適合
+
+        この画面ですること
+        ・EoX（保守終了）・適合性・ライセンスを、同じ形の表で見る
+
+        こんなときに
+        ・保守が切れる機器を洗い出すとき
+        ・設定が基準から外れている機器を探すとき
+
+        知っておくとよいこと
+        ・種別を選んでから取得する。3 つとも「機器・種別・状態・日付・備考」で出る
+        ・EoX は「対象なし」と「まだスキャンしていない」を書き分ける
+        ・機器の名前は uuid でしか返らないことがある。先に「機器」を取ると名前になる
+        ・環境や権限によっては使えない機能がある（その場合はその旨を出す）
+
+        できる操作
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
     /// <summary>Meraki</summary>
     public const string Meraki =
         """

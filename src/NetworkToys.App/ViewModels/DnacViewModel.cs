@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Net.Http;
+using System.Text.Json;
 using Microsoft.Win32;
 using NetworkToys.App.Mvvm;
 using NetworkToys.App.Services;
@@ -42,6 +43,11 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     private string _lastResponse = "";
     private string _lastUrl = "";
     private bool _showConnection = true;
+    private string _lifecycleKind = "EoX（保守終了）";
+
+    /// <summary>機器の uuid → 名前。保守と適合の表は uuid しか返さないので、これで置き換える。</summary>
+    private IReadOnlyDictionary<string, string> _deviceNames =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     // 期間の選択肢は Meraki と同じ形。同じものを 2 つ作らない
     private MerakiTimespan _selectedTimespan;
@@ -53,6 +59,8 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
         _selectedTimespan = Timespans[1];
 
         FetchClientCommand = new RelayCommand(() => _ = FetchClientAsync(), CanFetch);
+        FetchDevicesCommand = new RelayCommand(() => _ = FetchDevicesAsync(), CanFetch);
+        FetchLifecycleCommand = new RelayCommand(() => _ = FetchLifecycleAsync(), CanFetch);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
@@ -68,12 +76,28 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<DnacConnectionRow> ConnectionRows { get; } = [];
     public ObservableCollection<DnacEventRow> EventRows { get; } = [];
+    public ObservableCollection<DnacDeviceRow> DeviceRows { get; } = [];
+    public ObservableCollection<DnacLifecycleRow> LifecycleRows { get; } = [];
 
     // ===== コマンド =====
 
     public RelayCommand FetchClientCommand { get; }
+    public RelayCommand FetchDevicesCommand { get; }
+    public RelayCommand FetchLifecycleCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand ToggleConnectionCommand { get; }
+
+    /// <summary>
+    /// 保守と適合で見るもの。<b>3 つを 1 枚の表に寄せる</b> —
+    /// どれも「機器ごとに 1 行、状態と日付と一言」で、列が同じになるため。
+    /// </summary>
+    public IReadOnlyList<string> LifecycleKinds { get; } = ["EoX（保守終了）", "適合性", "ライセンス"];
+
+    public string SelectedLifecycleKind
+    {
+        get => _lifecycleKind;
+        set => SetProperty(ref _lifecycleKind, value);
+    }
 
     public RelayCommand<string> SaveCsvCommand { get; }
     public RelayCommand<string> SaveXlsxCommand { get; }
@@ -296,6 +320,85 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
         Notice = "⚠ この版にはイベントの一覧がありません。代わりに Assurance が挙げている問題を出しています。";
     }
 
+    /// <summary>
+    /// 機器の一覧。在庫を取り切ってから健全度を重ねる。
+    /// <b>健全度が取れなくても在庫だけは必ず出す</b>（在庫に居るのに消えると「その機器は無い」と誤読される）。
+    /// </summary>
+    private Task FetchDevicesAsync() => RunAsync("機器", async (client, token) =>
+    {
+        IReadOnlyList<string> pages = await client.DevicesAsync(token).ConfigureAwait(true);
+
+        Record(client, pages.Count > 0 ? pages[^1] : "");
+
+        List<JsonElement> inventory = [.. pages.SelectMany(DnacJson.Rows)];
+        IReadOnlyList<JsonElement> health = [];
+
+        try
+        {
+            string json = await client.GetFirstAsync(DnacCatalog.DeviceHealthPaths, token).ConfigureAwait(true);
+
+            health = DnacJson.Rows(json);
+        }
+        catch (DnacApiException)
+        {
+            // 健全度の在り処は版で違う。取れなくても在庫は出す
+            Notice = "⚠ 健全度は取れませんでした（この版には無い問い合わせ先のようです）。";
+        }
+
+        Replace(DeviceRows, DnacCatalog.ParseDevices(inventory, health));
+
+        _deviceNames = DeviceNames(inventory);
+
+        Status = $"機器 {DeviceRows.Count} 台（{DateTime.Now:HH:mm:ss}）";
+    });
+
+    /// <summary>
+    /// 保守と適合。<b>EoX・適合性・ライセンスを同じ 5 列に寄せる</b>（種別で選ぶ）。
+    /// 機器の名前は uuid でしか返らないので、先に取った機器の一覧で置き換える。
+    /// </summary>
+    private Task FetchLifecycleAsync() => RunAsync(SelectedLifecycleKind, async (client, token) =>
+    {
+        (IReadOnlyList<string> paths, Func<IEnumerable<JsonElement>, IReadOnlyList<DnacLifecycleRow>> parse) =
+            SelectedLifecycleKind switch
+            {
+                "適合性" => (DnacCatalog.CompliancePaths, DnacCatalog.ParseCompliance),
+                "ライセンス" => (DnacCatalog.LicensePaths, DnacCatalog.ParseLicenses),
+                _ => (DnacCatalog.EoxPaths, DnacCatalog.ParseEox),
+            };
+
+        string json = await client.GetFirstAsync(paths, token).ConfigureAwait(true);
+
+        Record(client, json);
+
+        IReadOnlyList<DnacLifecycleRow> rows = parse(DnacJson.Rows(json));
+
+        // uuid のままでは読めないので、分かるものだけ名前にする
+        Replace(LifecycleRows, [.. rows.Select(r =>
+            _deviceNames.TryGetValue(r.Device, out string? name) ? r with { Device = name } : r)]);
+
+        Status = $"{SelectedLifecycleKind} {LifecycleRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
+
+        if (LifecycleRows.Count == 0)
+            Notice = "⚠ 1 件も返りませんでした。この環境では使えない機能か、まだスキャンしていない可能性があります。";
+        else if (_deviceNames.Count == 0)
+            Notice = "⚠ 先に「機器」を取っておくと、機器の欄が uuid ではなく名前になります。";
+    });
+
+    private static IReadOnlyDictionary<string, string> DeviceNames(IEnumerable<JsonElement> inventory)
+    {
+        Dictionary<string, string> names = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (JsonElement device in inventory)
+        {
+            string id = DnacJson.First(device, "id", "instanceUuid");
+            string name = DnacJson.First(device, "hostname", "name");
+
+            if (id.Length > 0 && name.Length > 0) names[id] = name;
+        }
+
+        return names;
+    }
+
     /// <summary>「応答を表示」のための控え。大きすぎるものは頭だけ。</summary>
     private void Record(DnacClient client, string body)
     {
@@ -402,12 +505,16 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     {
         "conn" => ConnectionRows.Count,
         "event" => EventRows.Count,
+        "dev" => DeviceRows.Count,
+        "life" => LifecycleRows.Count,
         _ => 0,
     };
 
     private CsvTable TableOf(string? key) => key switch
     {
         "conn" => DnacCatalog.ToCsv([.. ConnectionRows]),
+        "dev" => DnacCatalog.ToCsv([.. DeviceRows]),
+        "life" => DnacCatalog.ToCsv([.. LifecycleRows]),
         _ => DnacCatalog.ToCsv([.. EventRows]),
     };
 
@@ -456,6 +563,10 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
 
         ConnectionRows.Clear();
         EventRows.Clear();
+        DeviceRows.Clear();
+        LifecycleRows.Clear();
+
+        _deviceNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         _lastResponse = "";
         _lastUrl = "";
@@ -482,7 +593,12 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     private bool CanFetch()
         => !IsBusy && Host.Trim().Length > 0 && UserName.Trim().Length > 0 && Password.Length > 0;
 
-    private void RefreshFetchCommands() => FetchClientCommand.RaiseCanExecuteChanged();
+    private void RefreshFetchCommands()
+    {
+        FetchClientCommand.RaiseCanExecuteChanged();
+        FetchDevicesCommand.RaiseCanExecuteChanged();
+        FetchLifecycleCommand.RaiseCanExecuteChanged();
+    }
 
     private void RefreshSaveCommands()
     {

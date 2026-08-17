@@ -146,6 +146,13 @@ public sealed class TableColumns : ObservableObject
 
         // Catalyst Center イベント: 0 時刻 / 1 種別 / 2 結果 / 3 発生元 / 4 詳細(星)
         new("dncev", 4, [(0, 140), (1, 150), (2, 70), (3, 130)]),
+
+        // Catalyst Center 機器: 0 機器(星) / 1 型番 / 2 シリアル / 3 版 / 4 IP / 5 サイト / 6 役割 /
+        //                       7 到達性 / 8 健全度
+        new("dncdev", 0, [(1, 130), (2, 120), (3, 90), (4, 110), (5, 170), (6, 90), (7, 80), (8, 90)]),
+
+        // Catalyst Center 保守と適合: 0 機器 / 1 種別 / 2 状態 / 3 日付 / 4 備考(星)
+        new("dnclc", 4, [(0, 150), (1, 130), (2, 100), (3, 140)]),
     ];
 
     private readonly Dictionary<string, double> _widths = [];
