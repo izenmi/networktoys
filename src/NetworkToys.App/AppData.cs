@@ -12,15 +12,12 @@ namespace NetworkToys.App;
 /// ただし Program Files のような書き込めない場所へ置かれることもあるので、
 /// そのときだけ %APPDATA% へ逃がす。黙って保存に失敗するよりはよい。
 ///
-/// 以前の置き場所（%APPDATA%\NetworkToys\、さらに前は %APPDATA%\PingWatcher\、
-/// %APPDATA%\PastelNet\）に中身があれば、初回に一度だけ引き継ぐ。
+/// 逃がし先（%APPDATA%\NetworkToys\）に中身があれば、初回に一度だけ引き継ぐ。
+/// 旧アプリ名（PingWatcher / PastelNet）のフォルダは見ない（2026-08-17 ユーザー指示）。
 /// </summary>
 internal static class AppData
 {
     private const string FolderName = "NetworkToys";
-
-    /// <summary>旧アプリ名のフォルダ。新しい順に並べる。</summary>
-    private static readonly string[] PreviousFolderNames = ["PingWatcher", "PastelNet"];
 
     private static readonly object Gate = new();
     private static string? _resolved;
@@ -42,19 +39,12 @@ internal static class AppData
         "sessions",
     ];
 
-    /// <summary>
-    /// 引き継ぎ元として順に見る場所。手前から探し、最初に見つかったものを使う。
-    /// </summary>
+    /// <summary>引き継ぎ元として見る場所。</summary>
     private static IEnumerable<string> LegacyDirectories()
     {
         string roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
         yield return Path.Combine(roaming, FolderName);
-
-        foreach (string previous in PreviousFolderNames)
-        {
-            yield return Path.Combine(roaming, previous);
-        }
     }
 
     /// <summary>設定を置くフォルダ。初回の呼び出しで場所を決め、必要なら引き継ぐ。</summary>
