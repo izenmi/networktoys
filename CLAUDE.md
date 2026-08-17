@@ -284,6 +284,8 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **パスワードは保存しない・入れ物も作らない。** `AppSettingsDocument` に持つのは接続先・ユーザー名・**受け入れた指紋**だけ（ACI・WLC と同じ）。
 - **自己診断から実機を叩かない。**`OnActivated` を持たせないこと。検査は偽ハンドラ（`SelfTest.FakeDnac`）との往復で行う。
 - **「応答を表示」を外さない。** 1 行目に**投げた URL** を添えてある。項目名の思い違いは実機でしか分からず、これが無いと「表が空」から先へ進めない。
+- **`/dna/data/api/v1` の一群は 2.3.7.6 以降にしか無い。** 2.3.5 系（実機は 2.3.5.5）では 404 になるので、それぞれ落とし先を持たせてある: 健全度は `intent/device-health`（機器ごとの一覧。`network-health` は拠点の集計なので機器の行が無く、最後の保険）、端末のイベントは `intent/issues?macAddress=…`、端末の一覧は `intent/endpoint-analytics/endpoints`。**逃げ道を使ったことは画面に必ず断る**（Endpoint Analytics は接続先も品質も持たないので、欄が埋まらない理由が分からなくなる）。
+- **応答の入れ物は `response` だけではない。** Endpoint Analytics は `items` で返すので、`DnacJson.Rows` は両方を見る。
 
 ### タブの入れ子（その他）
 
