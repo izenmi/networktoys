@@ -280,8 +280,21 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         IReadOnlyList<AciMo> mos =
             await FetchClassAsync(client, "l1PhysIf", Children, node.Dn, token);
 
-        Replace(PortRows, AciCatalog.ParsePorts(mos));
-        Status = $"{node.Name}: ポート {PortRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
+        // 束(ポートチャネル)。子の pcRsMbrIfs がメンバーの物理インターフェースを指す
+        IReadOnlyList<AciMo> bundles =
+            await FetchClassAsync(client, "pcAggrIf", Children, node.Dn, token);
+
+        // 「どの口にどの EPG と VLAN が載っているか」は EPG 側の静的パスが持っている
+        IReadOnlyList<AciMo> epgs = await FetchClassAsync(client, "fvAEPg", Children, null, token);
+        _allMembers = AciCatalog.ParseEpgMembers(epgs);
+
+        Replace(PortRows, AciCatalog.ParsePorts(mos, _allMembers, bundles));
+
+        int assigned = PortRows.Count(p => p.Epgs.Length > 0);
+
+        Status = $"{node.Name}: ポート {PortRows.Count} 件"
+                 + (assigned > 0 ? $"（EPG の割り当てあり {assigned} 件）" : "")
+                 + $"（{DateTime.Now:HH:mm:ss}）";
     });
 
     private Task FetchEpgsAsync() => RunAsync("EPG", async (client, token) =>

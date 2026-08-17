@@ -356,7 +356,8 @@ public partial class MainWindow : Window
         // スコアは数値のまま並べる（表示文字列で並べると 9 が 80 より後ろへ行く）
         ["acihl"] = ["Kind", "Name", "Score", "State"],
         ["aciflt"] = ["Severity", "Code", "Created", "Target", "Description", "Ack"],
-        ["aciport"] = ["Node", "Interface", "AdminState", "OperState", "Speed", "Usage", "Reason", "LastChange"],
+        ["aciport"] = ["Node", "Interface", "AdminState", "OperState", "Speed", "Usage", "PortChannel",
+                       "Epgs", "Vlans", "Modes", "Reason", "LastChange"],
         ["aciepg"] = ["Tenant", "AppProfile", "Name", "BridgeDomain", "Domains", "PathCount"],
         ["aciepgm"] = ["Node", "Path", "Encap", "Mode"],
         ["aciep"] = ["Mac", "Ip", "Tenant", "Epg", "Encap", "Node", "Path"],

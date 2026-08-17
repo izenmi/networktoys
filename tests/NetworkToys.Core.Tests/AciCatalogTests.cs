@@ -195,6 +195,77 @@ public class AciCatalogTests
     }
 
     [Fact]
+    public void A_port_shows_which_epg_and_vlan_are_bound_to_it()
+    {
+        // 「どの口にどの EPG が載っているか」は EPG 側の静的パスにしかない
+        IReadOnlyList<AciEpgMemberRow> members = AciCatalog.ParseEpgMembers(Mos(EpgsJson));
+        IReadOnlyList<AciPortRow> rows = AciCatalog.ParsePorts(Mos(PortsJson), members);
+
+        Assert.Equal("Web", rows[0].Epgs);
+        Assert.Equal("vlan-100", rows[0].Vlans);
+        Assert.Equal("タグ付き", rows[0].Modes);
+
+        // 何も載っていない口は空。0 や「—」で埋めない
+        Assert.Equal("", rows[1].Epgs);
+    }
+
+    [Fact]
+    public void A_port_in_a_bundle_shows_the_port_channel_and_the_epg_bound_to_the_bundle()
+    {
+        // vPC のバインドは束(VPC-Web)に付く。メンバーの口には直接ぶら下がらないので、
+        // 束の名前を辿らないと「この口に何も載っていない」ように見えてしまう
+        const string bundles = """
+            {"totalCount":"1","imdata":[
+              {"pcAggrIf":{"attributes":{
+                "dn":"topology/pod-1/node-103/sys/aggr-[po1]","id":"po1","name":"VPC-Web",
+                "pcMode":"active","adminSt":"up"},
+               "children":[
+                 {"pcRsMbrIfs":{"attributes":{"tDn":"topology/pod-1/node-103/sys/phys-[eth1/10]"}}},
+                 {"ethpmAggrIf":{"attributes":{"operSt":"up","operSpeed":"20G"}}}]}}
+            ]}
+            """;
+
+        const string ports = """
+            {"totalCount":"1","imdata":[
+              {"l1PhysIf":{"attributes":{
+                "dn":"topology/pod-1/node-103/sys/phys-[eth1/10]","id":"eth1/10","adminSt":"up","usage":"epg"},
+               "children":[{"ethpmPhysIf":{"attributes":{"operSt":"up"}}}]}}
+            ]}
+            """;
+
+        IReadOnlyList<AciEpgMemberRow> members = AciCatalog.ParseEpgMembers(Mos(EpgsJson));
+        IReadOnlyList<AciPortRow> rows = AciCatalog.ParsePorts(Mos(ports), members, Mos(bundles));
+
+        Assert.Equal(2, rows.Count);
+
+        // メンバーの口
+        Assert.Equal("eth1/10", rows[0].Interface);
+        Assert.Equal("po1（active）", rows[0].PortChannel);
+
+        // protpaths-103-104 は 103 と 104 の両方の口の話
+        Assert.Equal("Web", rows[0].Epgs);
+        Assert.Equal("vlan-100", rows[0].Vlans);
+        Assert.Equal("タグなし", rows[0].Modes);
+
+        // 束そのものも 1 行として出す（EPG は束の側に付くので、無いと割り当てが見えない）
+        Assert.Equal("po1", rows[1].Interface);
+        Assert.Equal("メンバー: eth1/10", rows[1].PortChannel);
+        Assert.Equal("Web", rows[1].Epgs);
+        Assert.Equal("● 稼働", rows[1].OperState);
+    }
+
+    [Fact]
+    public void Ports_without_the_epg_list_still_come_out()
+    {
+        // EPG を渡さなくても（先に取っていなくても）ポートの一覧そのものは出る
+        IReadOnlyList<AciPortRow> rows = AciCatalog.ParsePorts(Mos(PortsJson));
+
+        Assert.Equal(3, rows.Count);
+        Assert.Equal("", rows[0].Epgs);
+        Assert.Equal("", rows[0].PortChannel);
+    }
+
+    [Fact]
     public void Ports_prefer_the_actual_speed_over_the_configured_one()
     {
         IReadOnlyList<AciPortRow> rows = AciCatalog.ParsePorts(Mos(PortsJson));

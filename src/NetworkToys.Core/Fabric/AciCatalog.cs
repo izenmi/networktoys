@@ -44,6 +44,10 @@ public sealed record AciPortRow(
     SeverityKind OperStateKind,
     string Speed,
     string Usage,
+    string PortChannel,
+    string Epgs,
+    string Vlans,
+    string Modes,
     string Reason,
     string LastChange);
 
@@ -227,31 +231,159 @@ public static class AciCatalog
     /// 子が無いときは実際の状態を「—」にする。<b>設定の値で埋めない</b> —
     /// 「上げてあるのに上がっていない」を見るための画面なので、そこを混ぜると意味が消える。
     /// </summary>
-    public static IReadOnlyList<AciPortRow> ParsePorts(IEnumerable<AciMo> mos)
+    /// <summary>
+    /// 物理ポートの一覧。<b>ポートチャネル(束)そのものも同じ表に出す</b>。
+    ///
+    /// <paramref name="members"/> は EPG 側の静的パス。「どの口にどの EPG と VLAN が
+    /// 載っているか」は EPG 側にしか無いので、突き合わせて埋める。
+    /// <paramref name="bundles"/> は <c>pcAggrIf</c>。
+    /// </summary>
+    public static IReadOnlyList<AciPortRow> ParsePorts(
+        IEnumerable<AciMo> mos,
+        IEnumerable<AciEpgMemberRow>? members = null,
+        IEnumerable<AciMo>? bundles = null)
     {
+        IReadOnlyList<AciEpgMemberRow> paths = members is null ? [] : [.. members];
+        IReadOnlyList<AciBundle> aggregates = ReadBundles(bundles);
+
+        Dictionary<string, AciBundle> byMemberPort = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (AciBundle bundle in aggregates)
+        {
+            foreach (string port in bundle.Members)
+                byMemberPort[PortKey(bundle.Node, port)] = bundle;
+        }
+
         var rows = new List<AciPortRow>();
 
         foreach (AciMo mo in mos)
         {
-            AciMo? actual = mo.FirstChild("ethpmPhysIf");
-            string operSt = actual?["operSt"] ?? "";
+            string node = AciDn.Node(mo["dn"]);
+            string port = Or(mo["id"], AciDn.Port(mo["dn"]));
 
-            (string operText, SeverityKind operKind) = DescribeOperState(operSt, mo["adminSt"]);
+            byMemberPort.TryGetValue(PortKey(node, port), out AciBundle? bundle);
 
-            rows.Add(new AciPortRow(
-                Node: AciDn.Node(mo["dn"]),
-                Interface: Or(mo["id"], AciDn.Port(mo["dn"])),
-                AdminState: DescribeAdminState(mo["adminSt"]),
-                OperState: operText,
-                OperStateKind: operKind,
-                Speed: Or(actual?["operSpeed"] ?? "", mo["speed"]),
-                Usage: DescribeUsage(mo["usage"]),
-                Reason: actual?["operStQual"] ?? "",
-                LastChange: actual?["lastLinkStChg"] ?? ""));
+            rows.Add(PortRow(mo, "ethpmPhysIf", node, port, bundle?.Label ?? "",
+                             Bound(paths, node, port, bundle)));
+        }
+
+        // 束そのもの。EPG は束の側に付くので、この行が無いと割り当てが見えない
+        foreach (AciBundle bundle in aggregates)
+        {
+            rows.Add(PortRow(bundle.Mo, "ethpmAggrIf", bundle.Node, bundle.Id,
+                             bundle.Members.Count > 0 ? "メンバー: " + string.Join(", ", bundle.Members) : "",
+                             Bound(paths, bundle.Node, bundle.Id, bundle)));
         }
 
         return rows;
     }
+
+    private static AciPortRow PortRow(
+        AciMo mo, string operClass, string node, string port, string portChannel, AciEpgMemberRow[] bound)
+    {
+        AciMo? actual = mo.FirstChild(operClass);
+        string operSt = actual?["operSt"] ?? "";
+
+        (string operText, SeverityKind operKind) = DescribeOperState(operSt, mo["adminSt"]);
+
+        return new AciPortRow(
+            Node: node,
+            Interface: port,
+            AdminState: DescribeAdminState(mo["adminSt"]),
+            OperState: operText,
+            OperStateKind: operKind,
+            Speed: Or(actual?["operSpeed"] ?? "", mo["speed"]),
+            Usage: DescribeUsage(mo["usage"]),
+            PortChannel: portChannel,
+            Epgs: Join(bound.Select(m => m.Epg)),
+            Vlans: Join(bound.Select(m => m.Encap)),
+            Modes: Join(bound.Select(m => m.Mode)),
+            Reason: actual?["operStQual"] ?? "",
+            LastChange: actual?["lastLinkStChg"] ?? "");
+    }
+
+    /// <summary>その口に載っている EPG。束の口は、束の側に付いたものも自分のものとして数える。</summary>
+    private static AciEpgMemberRow[] Bound(
+        IReadOnlyList<AciEpgMemberRow> paths, string node, string port, AciBundle? bundle)
+        => [.. paths.Where(m => Matches(m, node, port, bundle))];
+
+    /// <summary>ポートチャネル。<c>Names</c> は EPG の静的パスが指しうる名前（番号と名前の両方）。</summary>
+    private sealed record AciBundle(
+        AciMo Mo,
+        string Node,
+        string Id,
+        string Label,
+        IReadOnlyList<string> Names,
+        IReadOnlyList<string> Members);
+
+    /// <summary>
+    /// <c>pcAggrIf</c> をほどく。子の <c>pcRsMbrIfs</c> がメンバーの物理インターフェースを指している。
+    /// </summary>
+    private static IReadOnlyList<AciBundle> ReadBundles(IEnumerable<AciMo>? bundles)
+    {
+        if (bundles is null) return [];
+
+        var list = new List<AciBundle>();
+
+        foreach (AciMo aggregate in bundles)
+        {
+            string dn = aggregate["dn"];
+            string node = AciDn.Node(dn);
+            string id = Or(aggregate["id"], AciDn.Value(dn, "aggr"));
+            string name = aggregate["name"];
+
+            // 束ね方(LACP かどうか)は束の側にしか出ない。分かる範囲で添える
+            string label = aggregate["pcMode"] is { Length: > 0 } mode && mode != "off"
+                ? $"{id}（{mode}）"
+                : id;
+
+            string[] memberPorts =
+            [
+                .. aggregate.ChildrenOf("pcRsMbrIfs")
+                    .Select(m => AciDn.Port(m["tDn"]))
+                    .Where(p => p.Length > 0),
+            ];
+
+            list.Add(new AciBundle(
+                Mo: aggregate,
+                Node: node,
+                Id: id,
+                Label: label,
+                Names: [.. (string[])[id, name].Where(n => n.Length > 0)],
+                Members: memberPorts));
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// その静的パスがこの口のものか。素の口は名前で、束の口は束の名前で当てる。
+    /// vPC の DN はノードを 2 つ持つ（<c>protpaths-101-102</c>）ので、どちらかに含まれれば当たり。
+    /// </summary>
+    private static bool Matches(AciEpgMemberRow member, string node, string port, AciBundle? bundle)
+    {
+        if (!NodeMatches(member.Node, node)) return false;
+
+        if (string.Equals(member.Path, port, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return bundle is not null
+               && bundle.Names.Any(n => string.Equals(n, member.Path, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool NodeMatches(string pathNode, string node)
+    {
+        if (pathNode.Length == 0 || node.Length == 0) return false;
+        if (string.Equals(pathNode, node, StringComparison.Ordinal)) return true;
+
+        // vPC は "101-102" の形。どちらかのノードなら、その口の話
+        return pathNode.Split('-').Any(part => string.Equals(part, node, StringComparison.Ordinal));
+    }
+
+    private static string PortKey(string node, string port) => $"{node}|{port}";
+
+    /// <summary>重複を畳んで並べる。空は落とす（「—」を並べても読めない）。</summary>
+    private static string Join(IEnumerable<string> values)
+        => string.Join(", ", values.Where(v => v.Length > 0).Distinct(StringComparer.Ordinal));
 
     public static string DescribeAdminState(string? adminSt) => adminSt switch
     {
@@ -560,8 +692,12 @@ public static class AciCatalog
         [.. rows.Select(r => new[] { r.Time, r.Kind, r.Severity, r.Target, r.Text })]);
 
     public static CsvTable ToCsv(IReadOnlyList<AciPortRow> rows) => new(
-        ["ノード", "インターフェース", "管理", "状態", "速度", "用途", "理由", "最終変化"],
-        [.. rows.Select(r => new[] { r.Node, r.Interface, r.AdminState, r.OperState, r.Speed, r.Usage, r.Reason, r.LastChange })]);
+        ["ノード", "インターフェース", "管理", "状態", "速度", "用途", "ポートチャネル", "EPG", "VLAN", "タグ", "理由", "最終変化"],
+        [.. rows.Select(r => new[]
+        {
+            r.Node, r.Interface, r.AdminState, r.OperState, r.Speed, r.Usage,
+            r.PortChannel, r.Epgs, r.Vlans, r.Modes, r.Reason, r.LastChange,
+        })]);
 
     public static CsvTable ToCsv(IReadOnlyList<AciEpgRow> rows) => new(
         ["テナント", "アプリ", "EPG", "ブリッジドメイン", "ドメイン", "静的パス"],
