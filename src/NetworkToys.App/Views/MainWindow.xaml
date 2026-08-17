@@ -1280,7 +1280,7 @@
                                 <Button x:Name="DiffMaximizeButton" Content="⤢ 最大化"
                                         Click="OnToggleMaximizedView"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
-                                        ToolTip="メニューの帯とタブの見出しを畳んで、この画面を窓いっぱいに出します（F11 で戻せます）。" />
+                                        ToolTip="タブの見出しを畳んで、いま見ているものだけを広く出します（F11 で戻せます）。" />
                                 <Button Content="CSV で保存" Command="{Binding SaveChangesCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                         ToolTip="「何が変わったか」を書き出します。" />
@@ -6767,7 +6767,7 @@
                                         <Button x:Name="AciDiffMaximizeButton" Content="⤢ 最大化"
                                                 Click="OnToggleMaximizedView"
                                                 Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
-                                                ToolTip="メニューの帯とタブの見出しを畳んで、この画面を窓いっぱいに出します（F11 で戻せます）。" />
+                                                ToolTip="タブの見出しを畳んで、いま見ているものだけを広く出します（F11 で戻せます）。" />
 
                                         <Button Content="◀ 前の差分" Command="{Binding PreviousDifferenceCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
