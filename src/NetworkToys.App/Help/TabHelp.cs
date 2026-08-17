@@ -84,6 +84,8 @@ internal static class TabHelp
         できる操作
         ・「前の差分」「次の差分」で、長い設定でもたどれる
         ・欄にファイルを放り込んでも読み込める
+        ・「機器から」で SSH / Telnet で入り、いまの対象の show を直に取ってくる
+        　（パスワードは保存しない。読み込みは置き換え）
         """;
 
     /// <summary>WFP</summary>
