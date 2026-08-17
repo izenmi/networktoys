@@ -1911,7 +1911,7 @@
                         </WrapPanel>
 
                         <!-- プロキシ。定義（左）と、そのうちどれで試すか（右） -->
-                        <Border DockPanel.Dock="Top" MaxHeight="96" Margin="0,0,0,6"
+                        <Border DockPanel.Dock="Top" MaxHeight="78" Margin="0,0,0,6"
                                 Background="{DynamicResource Brush.Surface}"
                                 BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
@@ -1952,13 +1952,14 @@
                         </Border>
 
                         <!--
-                            項目と結果は上下に半々で置く（2026-08-16 ユーザー指示で項目側を詰めた）。
-                            以前は項目に最大 240px を与えていて、結果より背が高くなりがちだった。
-                            窓を広げれば両方が同じだけ伸びる。
+                            項目と結果を上下に置く。
+                            <b>項目の側は結果より小さく取る</b>（2026-08-17 ユーザー指示）。
+                            上にはひな型・プロキシの設定も載っていて、それらを合わせた「設定するところ」が
+                            結果と同じくらいの背丈に見えるようにするため。窓を広げれば両方が伸びる。
                         -->
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="*" MinHeight="80" />
+                                <RowDefinition Height="0.7*" MinHeight="64" />
                                 <RowDefinition Height="*" MinHeight="80" />
                             </Grid.RowDefinitions>
 
