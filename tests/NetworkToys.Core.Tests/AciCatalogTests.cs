@@ -266,11 +266,15 @@ public class AciCatalogTests
     }
 
     [Fact]
-    public void Ports_prefer_the_actual_speed_over_the_configured_one()
+    public void Ports_show_the_speed_they_actually_linked_at()
     {
         IReadOnlyList<AciPortRow> rows = AciCatalog.ParsePorts(Mos(PortsJson));
 
         Assert.Equal("10G", rows[0].Speed);
+
+        // 設定値(speed)は "inherit" のことが多く、見ても分からない。落ちている口は「—」
+        Assert.Equal("unknown", rows[1].Speed);
+        Assert.Equal("—", rows[2].Speed);
     }
 
     [Fact]

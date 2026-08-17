@@ -5860,8 +5860,6 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.8]}" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.9]}" />
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.10]}" />
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.11]}" />
                                             </Grid.ColumnDefinitions>
                                             <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                             <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
@@ -5872,20 +5870,16 @@
                                             <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                             <Border Grid.Column="7" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                             <Border Grid.Column="8" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                            <Border Grid.Column="9" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                            <Border Grid.Column="10" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                             <TextBlock Grid.Column="0" Text="ノード" Style="{StaticResource Caption}" />
                                             <TextBlock Grid.Column="1" Text="IF" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="2" Text="管理" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="3" Text="状態" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="4" Text="速度" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="5" Text="用途" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="2" Text="状態" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="3" Text="速度" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="4" Text="VLAN" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="5" Text="タグ" Style="{StaticResource Caption}" />
                                             <TextBlock Grid.Column="6" Text="PC" Style="{StaticResource Caption}" />
                                             <TextBlock Grid.Column="7" Text="EPG" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="8" Text="VLAN" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="9" Text="タグ" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="10" Text="理由" Style="{StaticResource Caption}" />
-                                            <TextBlock Grid.Column="11" Text="最終変化" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="8" Text="理由" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="9" Text="最終変化" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
                                                    Tag="aciport.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
@@ -5905,10 +5899,6 @@
                                                    Tag="aciport.8" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="9" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
                                                    Tag="aciport.9" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                            <Thumb Grid.Column="10" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciport.10" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                            <Thumb Grid.Column="11" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciport.11" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -5934,8 +5924,6 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.8]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.9]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.10]}" />
-                                                    <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.11]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
@@ -5946,18 +5934,13 @@
                                                 <Border Grid.Column="6" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="7" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="8" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="9" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
-                                                <Border Grid.Column="10" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <TextBlock Grid.Column="0" Text="{Binding Node}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="1" Text="{Binding Interface}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="2" Text="{Binding AdminState}"
-                                                           FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="3" Text="{Binding OperState}"
+                                                <TextBlock Grid.Column="2" Text="{Binding OperState}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center">
                                                     <TextBlock.Style>
@@ -5977,28 +5960,25 @@
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                                <TextBlock Grid.Column="4" Text="{Binding Speed}"
+                                                <TextBlock Grid.Column="3" Text="{Binding Speed}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="5" Text="{Binding Usage}"
+                                                <TextBlock Grid.Column="4" Text="{Binding Vlans}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" />
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Vlans}" />
+                                                <TextBlock Grid.Column="5" Text="{Binding Modes}"
+                                                           FontSize="{DynamicResource Size.Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="6" Text="{Binding PortChannel}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="7" Text="{Binding Epgs}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Epgs}" />
-                                                <TextBlock Grid.Column="8" Text="{Binding Vlans}" Style="{StaticResource Mono}"
-                                                           FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Vlans}" />
-                                                <TextBlock Grid.Column="9" Text="{Binding Modes}"
+                                                <TextBlock Grid.Column="8" Text="{Binding Reason}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="10" Text="{Binding Reason}"
-                                                           FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="11" Text="{Binding LastChange}"
+                                                <TextBlock Grid.Column="9" Text="{Binding LastChange}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                             </Grid>

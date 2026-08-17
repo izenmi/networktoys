@@ -292,7 +292,9 @@ public static class AciCatalog
             AdminState: DescribeAdminState(mo["adminSt"]),
             OperState: operText,
             OperStateKind: operKind,
-            Speed: Or(actual?["operSpeed"] ?? "", mo["speed"]),
+            // 設定値(speed)は "inherit" のことが多く、見ても分からない。
+            // 出すのは<b>いまリンクしている速度</b>だけにする（取れなければ「—」）
+            Speed: actual?["operSpeed"] is { Length: > 0 } speed ? speed : "—",
             Usage: DescribeUsage(mo["usage"]),
             PortChannel: portChannel,
             Epgs: Join(bound.Select(m => m.Epg)),
