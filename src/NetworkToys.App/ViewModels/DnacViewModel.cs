@@ -358,13 +358,19 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
     /// </summary>
     private Task FetchLifecycleAsync() => RunAsync(SelectedLifecycleKind, async (client, token) =>
     {
-        (IReadOnlyList<string> paths, Func<IEnumerable<JsonElement>, IReadOnlyList<DnacLifecycleRow>> parse) =
-            SelectedLifecycleKind switch
-            {
-                "適合性" => (DnacCatalog.CompliancePaths, DnacCatalog.ParseCompliance),
-                "ライセンス" => (DnacCatalog.LicensePaths, DnacCatalog.ParseLicenses),
-                _ => (DnacCatalog.EoxPaths, DnacCatalog.ParseEox),
-            };
+        IReadOnlyList<string> paths = DnacCatalog.EoxPaths;
+        Func<IEnumerable<JsonElement>, IReadOnlyList<DnacLifecycleRow>> parse = DnacCatalog.ParseEox;
+
+        if (SelectedLifecycleKind == "適合性")
+        {
+            paths = DnacCatalog.CompliancePaths;
+            parse = DnacCatalog.ParseCompliance;
+        }
+        else if (SelectedLifecycleKind == "ライセンス")
+        {
+            paths = DnacCatalog.LicensePaths;
+            parse = DnacCatalog.ParseLicenses;
+        }
 
         string json = await client.GetFirstAsync(paths, token).ConfigureAwait(true);
 
