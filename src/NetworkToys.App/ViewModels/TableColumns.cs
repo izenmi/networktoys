@@ -124,6 +124,12 @@ public sealed class TableColumns : ObservableObject
 
         // WLC SSID: 0 SSID(星) / 1 プロファイル / 2 ID / 3 状態 / 4 台数 / 5 2.4G / 6 5G / 7 6G
         new("wlcssid", 0, [(1, 150), (2, 50), (3, 80), (4, 60), (5, 70), (6, 70), (7, 70)]),
+
+        // WLC 電波: 0 AP(星) / 1 無線 / 2 ch / 3 出力 / 4 使用率 / 5 雑音 / 6 台数
+        new("wlcrf", 0, [(1, 90), (2, 50), (3, 60), (4, 70), (5, 60), (6, 50)]),
+
+        // WLC 不正 AP: 0 種別 / 1 SSID(星) / 2 BSSID / 3 メーカー / 4 ch / 5 電波 / 6 検知AP / 7 最終受信 / 8 備考
+        new("wlcrog", 1, [(0, 60), (2, 130), (3, 110), (4, 50), (5, 55), (6, 130), (7, 130), (8, 90)]),
     ];
 
     private readonly Dictionary<string, double> _widths = [];

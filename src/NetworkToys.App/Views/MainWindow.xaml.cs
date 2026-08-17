@@ -353,6 +353,9 @@ public partial class MainWindow : Window
         ["wlcap"] = ["State", "Name", "Ip", "Mac", "Model", "Version", "Radios", "Clients", "Tags"],
         ["wlcjoin"] = ["State", "Name", "Mac", "LastJoin", "LastDisconnect", "Reason", "Joins", "Failures"],
         ["wlcssid"] = ["Ssid", "Profile", "Id", "State", "Clients", "Band24", "Band5", "Band6"],
+        // 使用率と電波強度は数値のまま並べる
+        ["wlcrf"] = ["ApName", "Radio", "Channel", "Power", "Utilization", "Noise", "Clients"],
+        ["wlcrog"] = ["Kind", "Ssid", "Bssid", "Vendor", "Channel", "Rssi", "DetectedBy", "LastHeard", "Note"],
     };
 
     /// <summary>
