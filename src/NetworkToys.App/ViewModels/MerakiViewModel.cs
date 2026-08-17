@@ -6,6 +6,7 @@ using Microsoft.Win32;
 using NetworkToys.App.Mvvm;
 using NetworkToys.App.Services;
 using NetworkToys.Core.Cloud;
+using NetworkToys.Core.Design;
 using NetworkToys.Core.Work;
 
 namespace NetworkToys.App.ViewModels;
