@@ -912,41 +912,6 @@ internal static class SelfTest
             dialog.Close();
         });
 
-        Check("表示領域を最大化して、元に戻せる", () =>
-        {
-            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
-
-            // 畳むのはタブの見出しと 1 行説明だけ。メニューの帯は残す
-            System.Windows.Controls.TabControl aci = window!.AciSubTabs;
-            System.Windows.Style? originalInner = aci.ItemContainerStyle;
-
-            window.SetMaximizedViewForTest(true);
-            window.UpdateLayout();
-
-            Assert(window.MainMenu.Visibility == System.Windows.Visibility.Visible,
-                   "最大化でメニューの帯まで畳んでいる");
-            Assert(window.MainTabs.ItemContainerStyle is not null,
-                   "最大化しても主タブの見出しが畳まれていない");
-            Assert(aci.ItemContainerStyle is not null && aci.ItemContainerStyle != originalInner,
-                   "最大化してもサブタブの見出しが畳まれていない");
-            Assert(window.MainTabs.SelectedItem is not null, "最大化したら中身まで消えた");
-
-            window.SetMaximizedViewForTest(false);
-            window.UpdateLayout();
-
-            Assert(window.MainTabs.ItemContainerStyle is null,
-                   "元に戻しても主タブの見出しが畳まれたまま");
-
-            // 「その他」の中身は素から畳んである。戻すときに null を入れると見出しが生える
-            Assert(ReferenceEquals(aci.ItemContainerStyle, originalInner),
-                   "元に戻したのに、サブタブの見出しの出し方が変わっている");
-
-            // 鍵盤からも戻せること（メニューを畳むので、ここが唯一の逃げ道になる）
-            Assert(window.InputBindings.OfType<System.Windows.Input.KeyBinding>()
-                       .Any(b => b.Key == System.Windows.Input.Key.F11),
-                   "F11 で最大化を切り替えられない");
-        });
-
         Check("差分比較: 結果を出していないときは「貼り付けに戻る」を押せない", () =>
         {
             // 常に押せるままだと、貼り付け欄を出している間に押しても何も起きず、

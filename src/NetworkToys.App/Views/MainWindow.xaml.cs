@@ -23,15 +23,6 @@ public partial class MainWindow : Window
     /// <summary>差分の左右で縦スクロールを写している最中か（写した先の通知で往復しないため）。</summary>
     private bool _syncingDiffPanes;
 
-    /// <summary>表示領域を最大化しているか。</summary>
-    private bool _maximizedView;
-
-    /// <summary>
-    /// 最大化のあいだ畳んだサブタブの、もとの見出しの出し方。
-    /// <b>「その他」は素からずっと畳んである</b>ので、戻すときに null を入れると見出しが生えてしまう。
-    /// </summary>
-    private readonly Dictionary<TabControl, Style?> _innerHeaderStyles = [];
-
     public MainWindow() : this(null)
     {
     }
@@ -72,10 +63,6 @@ public partial class MainWindow : Window
         InputBindings.Add(new KeyBinding(
             new Mvvm.RelayCommand(() => OnScreenshot(this, new RoutedEventArgs())),
             new KeyGesture(Key.F12)));
-
-        // 最大化はメニューごと畳むので、鍵盤からも戻せるようにしておく
-        InputBindings.Add(new KeyBinding(
-            new Mvvm.RelayCommand(() => SetMaximizedView(!_maximizedView)), new KeyGesture(Key.F11)));
 
         _shell.DeviceCompare.RequestScrollIntoView += OnScrollDiffIntoView;
         _shell.Aci.RequestScrollIntoView += (_, index) => ScrollIntoView(AciDiffBefore, index);
@@ -193,80 +180,6 @@ public partial class MainWindow : Window
     {
         if (sender is PasswordBox box)
             _shell.Wlc.Password = box.Password;
-    }
-
-    /// <summary>
-    /// サブタブの見出しも畳む。<b>もとの出し方を覚えてから</b>差し替える —
-    /// 「その他」の中身は素から畳んであるので、戻すときに null を入れると見出しが生えてしまう。
-    /// </summary>
-    private void ApplyInnerTabHeaders(bool maximized)
-    {
-        var hidden = (Style)FindResource("HiddenTabHeader");
-
-        foreach (TabControl inner in InnerTabControls(MainTabs))
-        {
-            if (maximized)
-            {
-                if (!_innerHeaderStyles.ContainsKey(inner))
-                    _innerHeaderStyles[inner] = inner.ItemContainerStyle;
-
-                inner.ItemContainerStyle = hidden;
-            }
-            else if (_innerHeaderStyles.TryGetValue(inner, out Style? original))
-            {
-                inner.ItemContainerStyle = original;
-                _innerHeaderStyles.Remove(inner);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 中に入っている TabControl をすべて。<b>「その他」の中のタブはもう 1 段深い</b>ので、
-    /// 1 段だけ見ると ACI や WLC のサブタブに届かない。
-    /// </summary>
-    private static IEnumerable<TabControl> InnerTabControls(TabControl root)
-    {
-        foreach (object? item in root.Items)
-        {
-            if (item is not TabItem tab || InnerTabsOf(tab) is not { } inner) continue;
-
-            yield return inner;
-
-            foreach (TabControl deeper in InnerTabControls(inner)) yield return deeper;
-        }
-    }
-
-    /// <summary>自己診断が最大化を試すための入口（画面から押すのと同じ道を通す）。</summary>
-    internal void SetMaximizedViewForTest(bool maximized) => SetMaximizedView(maximized);
-
-    /// <summary>「表示領域を最大化」。メニューからも、画面の中のボタンからも来る。</summary>
-    private void OnToggleMaximizedView(object sender, RoutedEventArgs e) => SetMaximizedView(!_maximizedView);
-
-    /// <summary>
-    /// 見ているものを窓いっぱいに出す。
-    ///
-    /// 畳むのは<b>周りの飾りだけ</b>（メニューの帯・主タブの見出し・各タブの 1 行説明）で、
-    /// 中身には触らない。<b>戻す道を必ず残す</b> — メニューごと畳むので、
-    /// F11 と、画面の中の「元に戻す」ボタンで戻れるようにしてある。
-    /// </summary>
-    private void SetMaximizedView(bool maximized)
-    {
-        _maximizedView = maximized;
-
-        // メニューの帯は残す（2026-08-17 ユーザー指示）。畳むのはタブの見出しと 1 行説明
-        MainTabs.ItemContainerStyle = maximized ? (Style)FindResource("HiddenTabHeader") : null;
-
-        ApplyInnerTabHeaders(maximized);
-
-        // 1 行の説明と ⓘ は、スタイルが動的に引いている（全タブぶんまとめて切り替わる）
-        Resources["Visibility.TabIntro"] = maximized ? Visibility.Collapsed : Visibility.Visible;
-
-        MaximizeViewMenuItem.IsChecked = maximized;
-
-        foreach (Button button in (Button[])[DiffMaximizeButton, AciDiffMaximizeButton])
-        {
-            button.Content = maximized ? "⤡ 元に戻す" : "⤢ 最大化";
-        }
     }
 
     /// <summary>差分比較の「作業前」を、機器から直に取ってくる。</summary>
@@ -1628,9 +1541,6 @@ public partial class MainWindow : Window
         if (e.OriginalSource is not TabControl) return;
 
         UpdateOtherHeader();
-
-        // 最大化のまま別のタブへ移ったとき、そちらのサブタブが出てこないようにする
-        if (_maximizedView) ApplyInnerTabHeaders(maximized: true);
 
         if (SuppressWifiActivation) return;
 
