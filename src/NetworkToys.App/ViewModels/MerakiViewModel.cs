@@ -19,7 +19,7 @@ public sealed record MerakiOrganizationItem(string Id, string Name);
 public sealed record MerakiTimespan(string Name, int Seconds);
 
 /// <summary>
-/// 帯域の棒 1 本。<b>幅は星（比率）で持つ</b> — 画面幅を測らずに済み、
+/// 通信量の棒 1 本。<b>幅は星（比率）で持つ</b> — 画面幅を測らずに済み、
 /// 窓を広げてもそのまま伸びる（Wi-Fi のチャンネル棒と同じ手）。
 /// </summary>
 public sealed class MerakiBarViewModel
@@ -71,7 +71,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     private double _usageMaximum = 100;
     private string _usageUnit = "%";
     private string _usageSummary = "—";
-    private IReadOnlyList<MerakiBandwidthRow> _bandwidthRows = [];
+    private IReadOnlyList<MerakiTrafficRow> _trafficRows = [];
     private bool _isBusy;
     private CancellationTokenSource? _cts;
 
@@ -110,15 +110,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
         FetchUsageCommand = new RelayCommand(() => _ = FetchUsageAsync(),
             () => !IsBusy && ApiKey.Length > 0 && SelectedNetwork is not null);
-        FetchUtilizationCommand = new RelayCommand(() => _ = FetchUtilizationAsync(),
-            () => !IsBusy && ApiKey.Length > 0 && DeviceRows.Count > 0);
-        SaveUtilizationCommand = new RelayCommand(
-            () => Save("utilization", MerakiCatalog.ToCsv([.. UtilizationRows])),
-            () => UtilizationRows.Count > 0);
-        FetchBandwidthCommand = new RelayCommand(() => _ = FetchBandwidthAsync(),
+        FetchTrafficCommand = new RelayCommand(() => _ = FetchTrafficAsync(),
             () => !IsBusy && ApiKey.Length > 0 && SelectedOrganization is not null);
-        SaveBandwidthCommand = new RelayCommand(() => Save("bandwidth", MerakiCatalog.ToCsv(_bandwidthRows)),
-            () => _bandwidthRows.Count > 0);
+        SaveTrafficCommand = new RelayCommand(() => Save("traffic", MerakiCatalog.ToCsv(_trafficRows)),
+            () => _trafficRows.Count > 0);
 
         SaveDevicesCommand = new RelayCommand(
             () => Save("devices", MerakiCatalog.ToCsv(DeviceRows)), () => DeviceRows.Count > 0);
@@ -152,10 +147,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     /// <summary>アラート。</summary>
     public ObservableCollection<MerakiAlertRow> AlertRows { get; } = [];
 
-    /// <summary>MX ごとの利用率。</summary>
-    public ObservableCollection<MerakiUtilizationRow> UtilizationRows { get; } = [];
 
-    /// <summary>回線の使用量の推移（折れ線に渡す値。古い順）。</summary>
+    /// <summary>回線の通信量の推移（折れ線に渡す値。古い順）。</summary>
     public IReadOnlyList<double> UsageSeries
     {
         get => _usageSeries;
@@ -182,8 +175,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _usageSummary, value);
     }
 
-    /// <summary>拠点ごとの帯域（棒）。</summary>
-    public ObservableCollection<MerakiBarViewModel> BandwidthBars { get; } = [];
+    /// <summary>拠点ごとの通信量（棒）。</summary>
+    public ObservableCollection<MerakiBarViewModel> TrafficBars { get; } = [];
 
     public IReadOnlyList<MerakiTimespan> Timespans { get; } =
     [
@@ -222,13 +215,11 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     public RelayCommand FetchUsageCommand { get; }
 
     /// <summary>MX ごとの利用率を取る（device utilization）。</summary>
-    public RelayCommand FetchUtilizationCommand { get; }
 
-    public RelayCommand SaveUtilizationCommand { get; }
 
-    public RelayCommand FetchBandwidthCommand { get; }
+    public RelayCommand FetchTrafficCommand { get; }
 
-    public RelayCommand SaveBandwidthCommand { get; }
+    public RelayCommand SaveTrafficCommand { get; }
 
     public RelayCommand SaveSitesCommand { get; }
     public RelayCommand SaveDhcpCommand { get; }
@@ -352,8 +343,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             FetchDhcpCommand.RaiseCanExecuteChanged();
             FetchAlertsCommand.RaiseCanExecuteChanged();
             FetchUsageCommand.RaiseCanExecuteChanged();
-            FetchBandwidthCommand.RaiseCanExecuteChanged();
-            FetchUtilizationCommand.RaiseCanExecuteChanged();
+            FetchTrafficCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
         }
     }
@@ -1179,83 +1169,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// MX ごとの利用率（device utilization）。
-    ///
-    /// <b>答えるのはプライマリの MX だけ</b>で、それ以外は 400、まだデータが無ければ 204 が返る。
-    /// どちらも「取れなかった」で 1 行として出す — <b>一覧から消すと「その機器は無い」と誤読される</b>。
-    /// </summary>
-    private async Task FetchUtilizationAsync()
-    {
-        IsBusy = true;
-        _cts = new CancellationTokenSource();
-
-        try
-        {
-            CancellationToken token = _cts.Token;
-
-            MerakiDeviceRow[] appliances =
-            [
-                .. DeviceRows.Where(d => d.Model.StartsWith("MX", StringComparison.OrdinalIgnoreCase)
-                                         && d.Serial.Length > 0),
-            ];
-
-            if (appliances.Length > 1)
-                Notice = SlowNotice(appliances.Length, "台");
-
-            var rows = new List<MerakiUtilizationRow>();
-
-            for (int i = 0; i < appliances.Length; i++)
-            {
-                MerakiDeviceRow device = appliances[i];
-                string name = device.Name.Length > 0 ? device.Name : device.Serial;
-
-                Status = $"利用率を確認しています… {i + 1}/{appliances.Length}（{name}）";
-
-                try
-                {
-                    rows.Add(MerakiCatalog.ParseAppliancePerformance(
-                        await _dashboard.AppliancePerformanceAsync(ApiKey, device.Serial, token),
-                        device.Network, name, device.Model, device.Serial));
-                }
-                catch (MerakiApiException ex)
-                {
-                    // 1 台で全体を止めない。答えられない理由は行に残す
-                    rows.Add(new MerakiUtilizationRow(
-                        device.Network, name, device.Model, device.Serial,
-                        "—", SeverityKind.Muted, ex.Message));
-                }
-            }
-
-            Replace(UtilizationRows, rows);
-            ClearSlowNotice();
-
-            Status = appliances.Length == 0
-                ? "MX が見つかりませんでした（先に「機器」を取得してください）。"
-                : $"MX {UtilizationRows.Count} 台の利用率（{DateTime.Now:HH:mm:ss} 時点）。";
-        }
-        catch (OperationCanceledException)
-        {
-            Status = "中断しました。";
-        }
-        catch (Exception ex)
-        {
-            Status = $"取得に失敗しました: {ex.Message}";
-            CrashLog.Write(ex, "MerakiViewModel.FetchUtilizationAsync");
-        }
-        finally
-        {
-            IsBusy = false;
-            _cts?.Dispose();
-            _cts = null;
-            RefreshSaveCommands();
-        }
-    }
-
-    /// <summary>
-    /// 拠点ごとの帯域。応答は期間内の合計バイト数なので、Core 側で毎秒に直してもらう。
+    /// 拠点ごとの通信量。応答は期間内の合計なので、そのまま量として出す。
     /// <b>回線ごとに 1 行</b>（まとめるとどちらの回線が使われているか見えなくなる）。
     /// </summary>
-    private async Task FetchBandwidthAsync()
+    private async Task FetchTrafficAsync()
     {
         if (SelectedOrganization is not { } organization) return;
 
@@ -1264,31 +1181,30 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
         try
         {
-            Status = "拠点ごとの帯域を取得しています…";
+            Status = "拠点ごとの通信量を取得しています…";
 
-            _bandwidthRows = MerakiCatalog.ParseBandwidth(
+            _trafficRows = MerakiCatalog.ParseTraffic(
                 await _dashboard.UplinkUsageAsync(
-                    ApiKey, organization.Id, SelectedTimespan.Seconds, _cts.Token),
-                SelectedTimespan.Seconds);
+                    ApiKey, organization.Id, SelectedTimespan.Seconds, _cts.Token));
 
-            double max = _bandwidthRows.Count > 0 ? _bandwidthRows.Max(r => r.BytesPerSecond) : 0;
+            double max = _trafficRows.Count > 0 ? _trafficRows.Max(r => r.Kilobytes) : 0;
 
-            BandwidthBars.Clear();
+            TrafficBars.Clear();
 
-            foreach (MerakiBandwidthRow row in _bandwidthRows.OrderByDescending(r => r.BytesPerSecond))
+            foreach (MerakiTrafficRow row in _trafficRows.OrderByDescending(r => r.Kilobytes))
             {
-                BandwidthBars.Add(new MerakiBarViewModel(
+                TrafficBars.Add(new MerakiBarViewModel(
                     device: row.Network,
                     model: row.Uplink,
-                    network: $"↑ {row.SentRate} ／ ↓ {row.ReceivedRate}",
-                    valueText: row.Rate,
-                    value: row.BytesPerSecond,
+                    network: $"↑ {row.Sent} ／ ↓ {row.Received}",
+                    valueText: row.Total,
+                    value: row.Kilobytes,
                     max: max));
             }
 
-            Status = _bandwidthRows.Count == 0
-                ? "帯域の情報は取れませんでした（MX のある組織でだけ出ます）。"
-                : $"拠点の帯域 {_bandwidthRows.Count} 回線（{SelectedTimespan.Name}の平均・{DateTime.Now:HH:mm:ss} 時点）。";
+            Status = _trafficRows.Count == 0
+                ? "通信量は取れませんでした（MX のある組織でだけ出ます）。"
+                : $"拠点の通信量 {_trafficRows.Count} 回線（{SelectedTimespan.Name}の合計・{DateTime.Now:HH:mm:ss} 時点）。";
         }
         catch (MerakiApiException ex)
         {
@@ -1301,7 +1217,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             Status = $"取得に失敗しました: {ex.Message}";
-            CrashLog.Write(ex, "MerakiViewModel.FetchBandwidthAsync");
+            CrashLog.Write(ex, "MerakiViewModel.FetchTrafficAsync");
         }
         finally
         {
@@ -1332,11 +1248,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SiteRows.Clear();
         DhcpRows.Clear();
         AlertRows.Clear();
-        UtilizationRows.Clear();
-        BandwidthBars.Clear();
+        TrafficBars.Clear();
         UsageSeries = [];
         UsageSummary = "—";
-        _bandwidthRows = [];
+        _trafficRows = [];
 
         SelectedOrganization = null;
         SelectedNetwork = null;
@@ -1361,8 +1276,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SaveSitesCommand.RaiseCanExecuteChanged();
         SaveDhcpCommand.RaiseCanExecuteChanged();
         SaveAlertsCommand.RaiseCanExecuteChanged();
-        SaveBandwidthCommand.RaiseCanExecuteChanged();
-        SaveUtilizationCommand.RaiseCanExecuteChanged();
+        SaveTrafficCommand.RaiseCanExecuteChanged();
     }
 
     public void Dispose()

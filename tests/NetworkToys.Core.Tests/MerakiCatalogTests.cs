@@ -389,7 +389,7 @@ public class MerakiCatalogTests
     {
         MerakiDeviceRow appliance = new(
             "MX-1F", "MX68", "Q2AA-1111-AAAA", "18.1", "本社", "● 稼働",
-            ConnectionStateKind.Ok, "203.0.113.5", "192.168.1.1");
+            ConnectionStateKind.Ok, "192.168.1.1");
 
         MerakiDeviceRow switchRow = appliance with { Name = "SW-1F", Model = "MS120", LanIp = "192.168.1.2" };
 
@@ -472,9 +472,9 @@ public class MerakiCatalogTests
     }
 
     [Fact]
-    public void Uplink_history_is_turned_into_bits_per_second_per_interval()
+    public void Uplink_history_keeps_the_volume_of_each_interval()
     {
-        // 区間ごとの合計バイト。区間の長さで割って毎秒に直す
+        // 区間ごとの合計（キロバイト）。毎秒には直さない
         const string json = """
             [ {"startTime":"2026-08-17T00:00:00Z","endTime":"2026-08-17T00:10:00Z",
                "byInterface":[{"interface":"wan1","sent":300000,"received":300000}]},
@@ -484,45 +484,8 @@ public class MerakiCatalogTests
 
         MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseUplinkHistory([json], "本社");
 
-        // 600000 B / 600 s = 1000 B/s = 8 kbps
-        Assert.Equal([1000, 1000], series.Values);
-        Assert.Contains("8.0 kbps", series.Summary, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void MX_の利用率を読み取る()
-    {
-        // 応答は配列ではなくオブジェクト 1 個
-        MerakiUtilizationRow row = MerakiCatalog.ParseAppliancePerformance(
-            ["""{"perfScore":20}"""], "本社", "MX-honsha", "MX68", "Q2AA-1111-AAAA");
-
-        Assert.Equal("本社", row.Network);
-        Assert.Equal("MX-honsha", row.Device);
-        Assert.Contains("20%", row.Utilization, StringComparison.Ordinal);
-        Assert.Equal(SeverityKind.Ok, row.UtilizationKind);
-    }
-
-    [Theory]
-    [InlineData(0, SeverityKind.Ok)]
-    [InlineData(33, SeverityKind.Ok)]
-    [InlineData(34, SeverityKind.Notice)]
-    [InlineData(66, SeverityKind.Notice)]
-    [InlineData(67, SeverityKind.Alert)]
-    [InlineData(100, SeverityKind.Alert)]
-    public void 利用率は_3_段階で読ませる(double score, SeverityKind expected)
-        => Assert.Equal(expected, MerakiCatalog.DescribeUtilization(score).Kind);
-
-    [Fact]
-    public void データが無い_MX_は_0_パーセントにしない()
-    {
-        // 204 No Content は本文が空で返る。0% と混同させない
-        MerakiUtilizationRow row = MerakiCatalog.ParseAppliancePerformance(
-            [""], "大阪", "MX-osaka", "MX67", "Q2BB-2222-BBBB");
-
-        Assert.Equal("—", row.Utilization);
-        Assert.Equal(SeverityKind.Muted, row.UtilizationKind);
-
-        Assert.Equal("—", MerakiCatalog.DescribeUtilization(null).Text);
+        Assert.Equal([600000, 600000], series.Values);
+        Assert.Contains("585.9 MB", series.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -535,30 +498,30 @@ public class MerakiCatalogTests
     }
 
     [Fact]
-    public void Bandwidth_is_turned_into_bits_per_second_per_uplink()
+    public void Traffic_is_the_volume_that_flowed_in_the_period()
     {
-        // 応答は期間内の合計バイト。1 時間ぶんなら 3600 で割って毎秒に直す
+        // 応答は期間内の合計（キロバイト）。毎秒には直さない
         const string json = """
             [ {"name":"本社","byUplink":[
-                 {"interface":"wan1","sent":3600000,"received":7200000},
+                 {"interface":"wan1","sent":1024,"received":2048},
                  {"interface":"wan2","sent":0,"received":0}]} ]
             """;
 
-        IReadOnlyList<MerakiBandwidthRow> rows = MerakiCatalog.ParseBandwidth([json], 3600);
+        IReadOnlyList<MerakiTrafficRow> rows = MerakiCatalog.ParseTraffic([json]);
 
         Assert.Equal(2, rows.Count);
         Assert.Equal("wan1", rows[0].Uplink);
 
-        // 1000 B/s の送信 = 8 kbps
-        Assert.Equal("8.0 kbps", rows[0].SentRate);
-        Assert.Equal("16.0 kbps", rows[0].ReceivedRate);
-        Assert.Equal("24.0 kbps", rows[0].Rate);
+        Assert.Equal("1.0 MB", rows[0].Sent);
+        Assert.Equal("2.0 MB", rows[0].Received);
+        Assert.Equal("3.0 MB", rows[0].Total);
 
         // 回線ごとに 1 行。まとめると、どちらを使っているか見えなくなる
         Assert.Equal("wan2", rows[1].Uplink);
+        Assert.Equal("0 KB", rows[1].Total);
     }
 
     [Fact]
-    public void Bandwidth_without_uplinks_is_skipped_not_fatal()
-        => Assert.Empty(MerakiCatalog.ParseBandwidth(["""[{"name":"本社"}]"""], 3600));
+    public void Traffic_without_uplinks_is_skipped_not_fatal()
+        => Assert.Empty(MerakiCatalog.ParseTraffic(["""[{"name":"本社"}]"""]));
 }

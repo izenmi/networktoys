@@ -522,7 +522,6 @@ public partial class MainWindow : Window
         ["mrsite"] = ["Network", "Clients", "Segments", "Note"],
         ["mrdhcp"] = ["Network", "Device", "Vlan", "Subnet", "Used", "Free", "UsagePercent"],
         ["mralert"] = ["Severity", "Type", "Network", "Device", "StartedAt", "Detail"],
-        ["mrutil"] = ["Network", "Device", "Model", "Serial", "Utilization", "Note"],
         // 判定は列挙のまま並べる（合格・不合格・注意…の順にまとまる）
         ["mrcheck"] = ["Name", "Target", "Verdict", "Detail"],
         ["acihl"] = ["Kind", "Name", "Score", "State"],

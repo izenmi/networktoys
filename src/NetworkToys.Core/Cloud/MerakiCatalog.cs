@@ -79,26 +79,16 @@ public sealed record MerakiDhcpRow(
     SeverityKind UsageKind);
 
 /// <summary>
-/// 機器の利用率の 1 行（MX 1 台ぶん）。
-/// <b>利用率を答えるのはプライマリの MX だけ</b>なので、答えられない機器は <c>Note</c> に理由を入れる。
+/// 拠点ごとの通信量の 1 行（回線 1 本ぶん）。<b>期間内に流れた量</b>で、毎秒に直したものではない。
 /// </summary>
-public sealed record MerakiUtilizationRow(
-    string Network,
-    string Device,
-    string Model,
-    string Serial,
-    string Utilization,
-    SeverityKind UtilizationKind,
-    string Note);
-
-/// <summary>拠点ごとの帯域利用量の 1 行（回線 1 本ぶん）。</summary>
-public sealed record MerakiBandwidthRow(
+/// <param name="Kilobytes">並べ替えと棒の長さに使う生の値（応答の単位のまま）。</param>
+public sealed record MerakiTrafficRow(
     string Network,
     string Uplink,
-    double BytesPerSecond,
-    string Rate,
-    string SentRate,
-    string ReceivedRate);
+    double Kilobytes,
+    string Total,
+    string Sent,
+    string Received);
 
 /// <summary>アラートの 1 行。</summary>
 public sealed record MerakiAlertRow(
@@ -466,7 +456,15 @@ public static class MerakiCatalog
             || usage.ValueKind != JsonValueKind.Object)
             return "—";
 
-        double kilobytes = Number(usage, "sent") + Number(usage, "recv");
+        return FormatKilobytes(Number(usage, "sent") + Number(usage, "recv"));
+    }
+
+    /// <summary>
+    /// キロバイトを人が読める量にする。<b>クライアントの通信量と回線の通信量で同じ書式</b>を使う
+    /// （画面をまたいで単位が変わると比べられない）。
+    /// </summary>
+    public static string FormatKilobytes(double kilobytes)
+    {
         if (kilobytes <= 0) return "0 KB";
         if (kilobytes < 1024) return kilobytes.ToString("F0", CultureInfo.InvariantCulture) + " KB";
 
@@ -653,21 +651,18 @@ public static class MerakiCatalog
         _ => ($"{percent}%", SeverityKind.Ok),
     };
 
-    // ===== 帯域 =====
+    // ===== 通信量 =====
 
     /// <summary>
-    /// 拠点ごとの WAN の使用量。応答は<b>期間内の合計バイト数</b>なので、
-    /// 期間で割って毎秒に直す（画面に出すのは bps）。
+    /// 拠点ごとの WAN の通信量。<b>応答は期間内の合計（単位はキロバイト）</b>なので、
+    /// そのまま量として出す（毎秒に直さない。2026-08-17 ユーザー指示）。
     ///
     /// 回線（wan1/wan2）ごとに 1 行にする。まとめてしまうと、
     /// 「どちらの回線が使われているか」が見えなくなる。
     /// </summary>
-    public static IReadOnlyList<MerakiBandwidthRow> ParseBandwidth(
-        IEnumerable<string> pages, int timespanSeconds)
+    public static IReadOnlyList<MerakiTrafficRow> ParseTraffic(IEnumerable<string> pages)
     {
-        int seconds = timespanSeconds > 0 ? timespanSeconds : 1;
-
-        var rows = new List<MerakiBandwidthRow>();
+        var rows = new List<MerakiTrafficRow>();
 
         foreach (JsonElement item in Items(pages))
         {
@@ -681,16 +676,16 @@ public static class MerakiCatalog
             {
                 if (uplink.ValueKind != JsonValueKind.Object) continue;
 
-                double sent = Number(uplink, "sent") / seconds;
-                double received = Number(uplink, "received") / seconds;
+                double sent = Number(uplink, "sent");
+                double received = Number(uplink, "received");
 
-                rows.Add(new MerakiBandwidthRow(
+                rows.Add(new MerakiTrafficRow(
                     Network: network,
                     Uplink: Str(uplink, "interface"),
-                    BytesPerSecond: sent + received,
-                    Rate: BitRateFormat.Format(sent + received),
-                    SentRate: BitRateFormat.Format(sent),
-                    ReceivedRate: BitRateFormat.Format(received)));
+                    Kilobytes: sent + received,
+                    Total: FormatKilobytes(sent + received),
+                    Sent: FormatKilobytes(sent),
+                    Received: FormatKilobytes(received)));
             }
         }
 
@@ -711,8 +706,8 @@ public static class MerakiCatalog
         string Summary);
 
     /// <summary>
-    /// 拠点の WAN 使用量の推移。応答は区間ごとの<b>合計バイト</b>なので、
-    /// 区間の長さで割って毎秒に直す（画面に出すのは bps）。
+    /// 拠点の WAN の通信量の推移。応答は<b>区間ごとの合計（キロバイト）</b>で、
+    /// そのまま量として出す（毎秒に直さない。通信量タブと単位を揃える）。
     /// </summary>
     public static MerakiSeries ParseUplinkHistory(IEnumerable<string> pages, string label)
     {
@@ -720,7 +715,6 @@ public static class MerakiCatalog
 
         foreach (JsonElement item in Items(pages))
         {
-            double seconds = IntervalSeconds(item);
             double total = 0;
 
             if (item.TryGetProperty("byInterface", out JsonElement interfaces)
@@ -734,7 +728,7 @@ public static class MerakiCatalog
                 total = Number(item, "sent") + Number(item, "received");
             }
 
-            values.Add(seconds > 0 ? total / seconds : 0);
+            values.Add(total);
         }
 
         double max = values.Count > 0 ? values.Max() : 0;
@@ -746,77 +740,10 @@ public static class MerakiCatalog
             Unit: "",
             Summary: values.Count == 0
                 ? "—"
-                : $"最大 {BitRateFormat.Format(max)} ／ 平均 {BitRateFormat.Format(values.Average())}");
+                : $"区間ごと 最大 {FormatKilobytes(max)} ／ 平均 {FormatKilobytes(values.Average())}");
     }
 
-    /// <summary>
-    /// MX 1 台の利用率（<c>perfScore</c>）。
-    ///
-    /// <b>応答は配列ではなく <c>{"perfScore":20}</c> の 1 個</b>なので、ほかの一覧と同じようには読めない。
-    /// <b>まだデータが無いときは 204</b> が返る（本文が空）ので、そのときは「—」にする
-    /// （0% と混同させない）。
-    /// </summary>
-    public static MerakiUtilizationRow ParseAppliancePerformance(
-        IEnumerable<string> pages, string network, string device, string model, string serial)
-    {
-        double? score = null;
 
-        foreach (string page in pages)
-        {
-            if (string.IsNullOrWhiteSpace(page)) continue;
-
-            JsonDocument document;
-            try
-            {
-                document = JsonDocument.Parse(page);
-            }
-            catch (JsonException)
-            {
-                continue;
-            }
-
-            using (document)
-            {
-                if (document.RootElement.ValueKind == JsonValueKind.Object
-                    && document.RootElement.TryGetProperty("perfScore", out JsonElement value)
-                    && value.ValueKind == JsonValueKind.Number
-                    && value.TryGetDouble(out double number))
-                {
-                    score = number;
-                }
-            }
-        }
-
-        (string text, SeverityKind kind) = DescribeUtilization(score);
-
-        return new MerakiUtilizationRow(network, device, model, serial, text, kind, "");
-    }
-
-    /// <summary>
-    /// 利用率の読み方。ダッシュボードと同じく <b>33 まで低い・66 まで中くらい・それ以上は高い</b>。
-    /// 取れないものは「—」で、<b>0% とは意味が違う</b>。
-    /// </summary>
-    public static (string Text, SeverityKind Kind) DescribeUtilization(double? score) => score switch
-    {
-        null => ("—", SeverityKind.Muted),
-        <= 33 => ($"{score:0}% ● 余裕", SeverityKind.Ok),
-        <= 66 => ($"{score:0}% ⊘ やや高い", SeverityKind.Notice),
-        _ => ($"{score:0}% ✕ 高い", SeverityKind.Alert),
-    };
-
-    /// <summary>区間の長さ（秒）。開始と終了から出す。読めなければ 0。</summary>
-    private static double IntervalSeconds(JsonElement item)
-    {
-        if (!DateTime.TryParse(Str(item, "startTime"), CultureInfo.InvariantCulture,
-                               DateTimeStyles.AdjustToUniversal, out DateTime start))
-            return 0;
-
-        if (!DateTime.TryParse(Str(item, "endTime"), CultureInfo.InvariantCulture,
-                               DateTimeStyles.AdjustToUniversal, out DateTime end))
-            return 0;
-
-        return (end - start).TotalSeconds;
-    }
 
     // ===== アラート =====
 
@@ -881,13 +808,9 @@ public static class MerakiCatalog
         ["拠点", "機器", "VLAN", "サブネット", "払い出し済み", "空き", "使用率"],
         [.. rows.Select(r => new[] { r.Network, r.Device, r.Vlan, r.Subnet, r.UsedText, r.FreeText, r.UsageText })]);
 
-    public static CsvTable ToCsv(IReadOnlyList<MerakiUtilizationRow> rows) => new(
-        ["拠点", "機器", "型番", "シリアル", "利用率", "備考"],
-        [.. rows.Select(r => new[] { r.Network, r.Device, r.Model, r.Serial, r.Utilization, r.Note })]);
-
-    public static CsvTable ToCsv(IReadOnlyList<MerakiBandwidthRow> rows) => new(
+    public static CsvTable ToCsv(IReadOnlyList<MerakiTrafficRow> rows) => new(
         ["拠点", "回線", "合計", "送信", "受信"],
-        [.. rows.Select(r => new[] { r.Network, r.Uplink, r.Rate, r.SentRate, r.ReceivedRate })]);
+        [.. rows.Select(r => new[] { r.Network, r.Uplink, r.Total, r.Sent, r.Received })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiAlertRow> rows) => new(
         ["重大度", "種別", "拠点", "機器", "発生", "内容"],
