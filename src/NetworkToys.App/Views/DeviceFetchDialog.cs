@@ -121,7 +121,8 @@ internal sealed class DeviceFetchDialog : Window
 
         Content = body;
 
-        Loaded += (_, _) => (_host.Text.Length == 0 ? _host : _password).Focus();
+        // 前と同じ相手なら、打つのはパスワードだけで済むようにする
+        Loaded += (_, _) => ((Control)(_host.Text.Length == 0 ? _host : _password)).Focus();
         Closed += (_, _) => _cts?.Cancel();
     }
 
