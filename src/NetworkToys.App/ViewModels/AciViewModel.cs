@@ -671,7 +671,9 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         string json = await client.SubtreeAsync(AciCatalog.TenantExportPath(tenant), token)
             .ConfigureAwait(true);
 
-        _lastResponse = json;
+        // 枝を丸ごと取るので、大きなテナントでは数 MB になる。
+        // 控えは頭だけにする（切り分けに要るのは形であって、全文ではない）
+        _lastResponse = json.Length > 256 * 1024 ? json[..(256 * 1024)] : json;
         OnPropertyChanged(nameof(LastResponse));
 
         IReadOnlyList<AciMo> mos = AciMoReader.Parse(json);

@@ -560,6 +560,8 @@ internal static class SelfTest
             Assert(!shell.Aci.FetchCommand.CanExecute(null), "資格情報が空でも取得できてしまう");
             Assert(!shell.Aci.FetchEndpointsCommand.CanExecute(null),
                    "資格情報が空でもエンドポイントを取得できてしまう");
+            Assert(!shell.Aci.ExportTenantCommand.CanExecute(null),
+                   "資格情報が空でもテナントの設定を書き出せてしまう");
 
             // 窓を開くのは画面の仕事。結線し忘れたら「受け入れない」に倒れること
             Assert(!new ViewModels.AciViewModel().ConfirmFingerprint("test"),
@@ -606,6 +608,35 @@ internal static class SelfTest
             Assert(fake.Paths.All(p => p.StartsWith("/api/aaa", StringComparison.Ordinal)
                                        || p.StartsWith("/api/node/class/", StringComparison.Ordinal)),
                    $"見覚えのない宛先へ要求している: {string.Join(" / ", fake.Paths)}");
+        });
+
+        Check("ACI: テナントの設定を書き出して見比べられる形にできる", () =>
+        {
+            var fake = new FakeApic();
+
+            using var client = new Services.ApicClient("apic.selftest.invalid", null, fake);
+
+            client.LoginAsync("admin", "pw", "", CancellationToken.None).GetAwaiter().GetResult();
+
+            string json = client
+                .SubtreeAsync(Core.Fabric.AciCatalog.TenantExportPath("Prod"), CancellationToken.None)
+                .GetAwaiter().GetResult();
+
+            string text = Core.Fabric.AciConfigExport.Render("", Core.Fabric.AciMoReader.Parse(json));
+
+            Assert(text.Contains("fvTenant uni/tn-Prod", StringComparison.Ordinal),
+                   "テナントの設定を行にできていない");
+            Assert(text.Contains("fvBD uni/tn-Prod/BD-Web", StringComparison.Ordinal),
+                   "子のオブジェクトが出ていない");
+
+            // これが抜けると稼働値まで混ざり、設定を変えていなくても差分になる
+            Assert(fake.Paths.Any(p => p.Contains("rsp-prop-include=config-only", StringComparison.Ordinal)),
+                   $"設定だけを求めていない: {string.Join(" / ", fake.Paths)}");
+
+            // 枝を丸ごと返す問い合わせ。ページを重ねない
+            Assert(!fake.Paths.Any(p => p.Contains("/api/mo/", StringComparison.Ordinal)
+                                        && p.Contains("page=", StringComparison.Ordinal)),
+                   "書き出しにページングを重ねている");
         });
 
         Check("ACI: 証明書を受け入れていない相手には繋がない", () =>
@@ -2691,6 +2722,10 @@ internal static class SelfTest
 
         private const string Empty = """{"totalCount":"0","imdata":[]}""";
 
+        /// <summary>テナントを枝ごと返す（設定の書き出し用）。子の並びは APIC 任せのつもりで逆順にしてある。</summary>
+        private const string Tenant =
+            """{"totalCount":"1","imdata":[{"fvTenant":{"attributes":{"dn":"uni/tn-Prod","name":"Prod"},"children":[{"fvAp":{"attributes":{"dn":"uni/tn-Prod/ap-Shop","name":"Shop"}}},{"fvBD":{"attributes":{"dn":"uni/tn-Prod/BD-Web","name":"BD-Web","modTs":"2026-08-17T09:00:00.000+09:00"}}}]}}]}""";
+
         /// <summary>
         /// 総数が 1 ページ(200 件)に収まらないと言う。＝2 ページ目を取りに行くはず。
         /// 中身の件数は検査に要るぶんだけ（実機は 1 ページ 200 件で返す）。
@@ -2719,6 +2754,7 @@ internal static class SelfTest
             {
                 "/api/aaaLogin.json" => LoginJson,
                 "/api/aaaLogout.json" => Empty,
+                _ when path.StartsWith("/api/mo/", StringComparison.Ordinal) => Tenant,
                 _ when path.Contains("page=0", StringComparison.Ordinal) => Page0,
                 _ when path.Contains("page=1", StringComparison.Ordinal) => Page1,
                 _ => Empty,
