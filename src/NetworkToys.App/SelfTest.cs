@@ -560,8 +560,12 @@ internal static class SelfTest
             Assert(!shell.Aci.FetchCommand.CanExecute(null), "資格情報が空でも取得できてしまう");
             Assert(!shell.Aci.FetchEndpointsCommand.CanExecute(null),
                    "資格情報が空でもエンドポイントを取得できてしまう");
-            Assert(!shell.Aci.ExportTenantCommand.CanExecute(null),
-                   "資格情報が空でもテナントの設定を書き出せてしまう");
+            Assert(!shell.Aci.FetchBeforeCommand.CanExecute(null),
+                   "資格情報が空でも作業前の設定を取れてしまう");
+            Assert(!shell.Aci.FetchAfterCommand.CanExecute(null),
+                   "資格情報が空でも作業後の設定を取れてしまう");
+            Assert(!shell.Aci.CompareCommand.CanExecute(null),
+                   "何も取っていないのに比較できてしまう");
 
             // 窓を開くのは画面の仕事。結線し忘れたら「受け入れない」に倒れること
             Assert(!new ViewModels.AciViewModel().ConfirmFingerprint("test"),

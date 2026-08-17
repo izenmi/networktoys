@@ -181,38 +181,6 @@ public partial class MainWindow : Window
             _shell.Wlc.Password = box.Password;
     }
 
-    /// <summary>書き出した ACI のテナント設定を、差分比較の「作業前」に入れる。</summary>
-    private void OnAciExportToBefore(object sender, RoutedEventArgs e) => SendAciExport(before: true);
-
-    /// <summary>書き出した ACI のテナント設定を、差分比較の「作業後」に入れる。</summary>
-    private void OnAciExportToAfter(object sender, RoutedEventArgs e) => SendAciExport(before: false);
-
-    /// <summary>
-    /// 書き出したテナントの設定を差分比較へ送る。
-    ///
-    /// <b>対象は「そのまま比較」に切り替える</b> — show run でも経路でもないので、
-    /// 行としてそのまま突き合わせるのが正しい。差分比較は対象ごとに貼り付けを分けて
-    /// 持っているので、切り替えても他の対象に貼ったものは消えない。
-    /// </summary>
-    private void SendAciExport(bool before)
-    {
-        if (_shell.Aci.TenantExport is not { Length: > 0 } text)
-        {
-            TextViewDialog.Show(this, "設定の書き出し", "先に「設定を書き出す」を押してください。");
-            return;
-        }
-
-        ViewModels.DeviceCompareViewModel compare = _shell.DeviceCompare;
-
-        compare.SelectedMode = Array.Find(
-            compare.Modes, m => m.Kind == NetworkToys.Core.Work.DeviceOutputKind.PlainText) ?? compare.SelectedMode;
-
-        if (before) compare.BeforeText = text;
-        else compare.AfterText = text;
-
-        Show(CompareTab);
-    }
-
     /// <summary>差分比較の「作業前」を、機器から直に取ってくる。</summary>
     private void OnDiffFetchBefore(object sender, RoutedEventArgs e) => FetchIntoDiff(before: true);
 
@@ -331,8 +299,9 @@ public partial class MainWindow : Window
         // 写した先がまた通知してくる。1 往復で止める
         if (_syncingDiffPanes || e.VerticalChange == 0) return;
 
-        ListBox other = ReferenceEquals(sender, DiffList) ? DiffListAfter : DiffList;
-
+        // 相手は Tag で持たせてある（名前の対応表をここに置かない。
+        // 差分の画面は ACI タブの中にもあるので、増えるたびに直す形にしない）
+        if ((sender as FrameworkElement)?.Tag is not ListBox other) return;
         if (ScrollViewerOf(other) is not { } viewer) return;
 
         _syncingDiffPanes = true;

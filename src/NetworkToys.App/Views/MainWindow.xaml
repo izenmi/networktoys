@@ -220,6 +220,82 @@
         </Style>
 
         <!-- 上の枠付き版。差分比較の一覧が使う（選択を枠で示す） -->
+        <!--
+            差分の 1 行（片側ぶん）。左右で色の語彙が違うだけ（消えた側は Error.Bg）。
+            差分比較タブと ACI の差分比較サブタブで使い回す。
+        -->
+        <DataTemplate x:Key="DiffRow.Left">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="42" />
+                    <ColumnDefinition Width="*" MinWidth="200" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding LeftNumberText}"
+                           Style="{StaticResource Mono}"
+                           FontSize="{DynamicResource Size.Caption}"
+                           Foreground="{DynamicResource Brush.TextMuted}"
+                           HorizontalAlignment="Right" Margin="0,0,6,0" />
+
+                <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け) -->
+                <Border x:Name="Cell" Grid.Column="1" Padding="4,1"
+                        CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
+                    <controls:DiffText Segments="{Binding LeftSegments}"
+                                       ChangedBrush="{DynamicResource Brush.Error.Bg}"
+                                       Style="{StaticResource Mono}"
+                                       FontSize="{DynamicResource Size.Caption}"
+                                       TextWrapping="NoWrap" />
+                </Border>
+            </Grid>
+
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="Changed">
+                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="LeftOnly">
+                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!--
+            差分の 1 行（片側ぶん）。左右で色の語彙が違うだけ（増えた側は Ok.Bg）。
+            差分比較タブと ACI の差分比較サブタブで使い回す。
+        -->
+        <DataTemplate x:Key="DiffRow.Right">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="42" />
+                    <ColumnDefinition Width="*" MinWidth="200" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding RightNumberText}"
+                           Style="{StaticResource Mono}"
+                           FontSize="{DynamicResource Size.Caption}"
+                           Foreground="{DynamicResource Brush.TextMuted}"
+                           HorizontalAlignment="Right" Margin="0,0,6,0" />
+
+                <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け) -->
+                <Border x:Name="Cell" Grid.Column="1" Padding="4,1"
+                        CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
+                    <controls:DiffText Segments="{Binding RightSegments}"
+                                       ChangedBrush="{DynamicResource Brush.Ok.Bg}"
+                                       Style="{StaticResource Mono}"
+                                       FontSize="{DynamicResource Size.Caption}"
+                                       TextWrapping="NoWrap" />
+                </Border>
+            </Grid>
+
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="Changed">
+                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="RightOnly">
+                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
         <Style x:Key="PlainCompactContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
             <Setter Property="Template">
                 <Setter.Value>
@@ -1373,6 +1449,7 @@
 
                                         <ListBox x:Name="DiffList"
                                                  Grid.Column="0"
+                                                 Tag="{Binding ElementName=DiffListAfter}"
                                                  ItemsSource="{Binding Rows}"
                                                  ItemContainerStyle="{StaticResource PlainCompactContainer}"
                                                  SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
@@ -1384,40 +1461,7 @@
                                                  VirtualizingStackPanel.IsVirtualizing="True"
                                                  VirtualizingStackPanel.VirtualizationMode="Recycling">
                                             <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="42" />
-                                                            <ColumnDefinition Width="*" MinWidth="200" />
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <TextBlock Grid.Column="0" Text="{Binding LeftNumberText}"
-                                                                   Style="{StaticResource Mono}"
-                                                                   FontSize="{DynamicResource Size.Caption}"
-                                                                   Foreground="{DynamicResource Brush.TextMuted}"
-                                                                   HorizontalAlignment="Right" Margin="0,0,6,0" />
-
-                                                        <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け)。
-                                                             消えた側は Error.Bg、増えた側は Ok.Bg — 行全体の色と同じ語彙 -->
-                                                        <Border x:Name="Cell" Grid.Column="1" Padding="4,1"
-                                                                CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
-                                                            <controls:DiffText Segments="{Binding LeftSegments}"
-                                                                               ChangedBrush="{DynamicResource Brush.Error.Bg}"
-                                                                               Style="{StaticResource Mono}"
-                                                                               FontSize="{DynamicResource Size.Caption}"
-                                                                               TextWrapping="NoWrap" />
-                                                        </Border>
-                                                    </Grid>
-
-                                                    <DataTemplate.Triggers>
-                                                        <DataTrigger Binding="{Binding Kind}" Value="Changed">
-                                                            <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Kind}" Value="LeftOnly">
-                                                            <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Error.Bg}" />
-                                                        </DataTrigger>
-                                                    </DataTemplate.Triggers>
-                                                </DataTemplate>
+                                                <StaticResource ResourceKey="DiffRow.Left" />
                                             </ListBox.ItemTemplate>
                                         </ListBox>
 
@@ -1427,6 +1471,7 @@
 
                                         <ListBox x:Name="DiffListAfter"
                                                  Grid.Column="2"
+                                                 Tag="{Binding ElementName=DiffList}"
                                                  ItemsSource="{Binding Rows}"
                                                  ItemContainerStyle="{StaticResource PlainCompactContainer}"
                                                  SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
@@ -1438,40 +1483,7 @@
                                                  VirtualizingStackPanel.IsVirtualizing="True"
                                                  VirtualizingStackPanel.VirtualizationMode="Recycling">
                                             <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="42" />
-                                                            <ColumnDefinition Width="*" MinWidth="200" />
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <TextBlock Grid.Column="0" Text="{Binding RightNumberText}"
-                                                                   Style="{StaticResource Mono}"
-                                                                   FontSize="{DynamicResource Size.Caption}"
-                                                                   Foreground="{DynamicResource Brush.TextMuted}"
-                                                                   HorizontalAlignment="Right" Margin="0,0,6,0" />
-
-                                                        <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け)。
-                                                             消えた側は Error.Bg、増えた側は Ok.Bg — 行全体の色と同じ語彙 -->
-                                                        <Border x:Name="Cell" Grid.Column="1" Padding="4,1"
-                                                                CornerRadius="{DynamicResource Radius.Chip}" Margin="0,0,6,0">
-                                                            <controls:DiffText Segments="{Binding RightSegments}"
-                                                                               ChangedBrush="{DynamicResource Brush.Ok.Bg}"
-                                                                               Style="{StaticResource Mono}"
-                                                                               FontSize="{DynamicResource Size.Caption}"
-                                                                               TextWrapping="NoWrap" />
-                                                        </Border>
-                                                    </Grid>
-
-                                                    <DataTemplate.Triggers>
-                                                        <DataTrigger Binding="{Binding Kind}" Value="Changed">
-                                                            <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Warn.Bg}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Kind}" Value="RightOnly">
-                                                            <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Brush.Ok.Bg}" />
-                                                        </DataTrigger>
-                                                    </DataTemplate.Triggers>
-                                                </DataTemplate>
+                                                <StaticResource ResourceKey="DiffRow.Right" />
                                             </ListBox.ItemTemplate>
                                         </ListBox>
                                 </Grid>
@@ -6613,24 +6625,6 @@
                                                 CommandParameter="config" Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
                                     </StackPanel>
 
-                                    <!-- 作業前後の見比べ用。テナント 1 つを枝ごと書き出して差分比較へ送る -->
-                                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                        <TextBlock Text="テナント" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <ComboBox Width="180" Margin="0,0,6,2"
-                                                  ItemsSource="{Binding Tenants}"
-                                                  SelectedItem="{Binding SelectedTenant}"
-                                                  ToolTip="「取得」を押すと、ここにテナントが並びます。" />
-                                        <Button Content="設定を書き出す" Command="{Binding ExportTenantCommand}"
-                                                Margin="0,0,6,2"
-                                                ToolTip="選んだテナントの設定を枝ごと取り、見比べられる形に並べ直します（設定は書きません）。" />
-                                        <Button Content="作業前へ" Click="OnAciExportToBefore"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
-                                                ToolTip="書き出した設定を、差分比較タブの「作業前」に入れます。" />
-                                        <Button Content="作業後へ" Click="OnAciExportToAfter"
-                                                Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
-                                                ToolTip="書き出した設定を、差分比較タブの「作業後」に入れます。" />
-                                    </WrapPanel>
                                 <Border Background="{DynamicResource Brush.Surface}"
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
@@ -6707,6 +6701,104 @@
                                         </ListBox>
                                     </DockPanel>
                                 </Border>
+                                </DockPanel>
+                            </Border>
+                        </TabItem>
+
+                        <!-- 作業前後の設定を、このタブの中で見比べる -->
+                        <TabItem Header="差分比較">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
+                                                   ToolTip="{x:Static help:TabHelp.AciDiff}" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="テナントの設定を作業の前と後で取って、その場で見比べます。" />
+                                    </DockPanel>
+
+                                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock Text="テナント" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <ComboBox Width="180" Margin="0,0,12,2"
+                                                  ItemsSource="{Binding Tenants}"
+                                                  SelectedItem="{Binding SelectedTenant}"
+                                                  ToolTip="上の「取得」を押すと、ここにテナントが並びます。" />
+
+                                        <Button Content="作業前を取得" Command="{Binding FetchBeforeCommand}"
+                                                Margin="0,0,6,2"
+                                                ToolTip="いまの設定を「作業前」として取ります（設定は書きません）。" />
+                                        <Button Content="作業後を取得" Command="{Binding FetchAfterCommand}"
+                                                Margin="0,0,12,2"
+                                                ToolTip="作業を終えてから押します。同じテナントをもう一度取ります。" />
+
+                                        <Button Content="比較" Command="{Binding CompareCommand}" Margin="0,0,12,2" />
+
+                                        <CheckBox Content="異なる行だけ" IsChecked="{Binding OnlyDifferences}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,2" />
+                                        <TextBlock Text="{Binding DiffHeadline}" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" />
+                                    </WrapPanel>
+
+                                    <!--
+                                        左右は別々の一覧にして、それぞれで横スクロールする（長い行のため）。
+                                        縦だけは code-behind で互いに合わせる。相手は Tag で持たせてある
+                                    -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="11" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <DockPanel Grid.Column="0">
+                                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                                       Margin="42,0,0,3" TextTrimming="CharacterEllipsis"
+                                                       Text="{Binding BeforeLabel}" />
+                                            <Border DockPanel.Dock="Top" Height="1" Margin="0,0,0,2"
+                                                    Background="{DynamicResource Brush.Border}" />
+                                            <ListBox x:Name="AciDiffBefore"
+                                                     Tag="{Binding ElementName=AciDiffAfter}"
+                                                     ItemsSource="{Binding DiffRows}"
+                                                     ItemContainerStyle="{StaticResource PlainCompactContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                                     ScrollViewer.ScrollChanged="OnDiffPaneScrolled"
+                                                     VirtualizingStackPanel.IsVirtualizing="True"
+                                                     VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                                <ListBox.ItemTemplate>
+                                                    <StaticResource ResourceKey="DiffRow.Left" />
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+
+                                        <!-- 作業前と作業後の区切り。左右の余白は差分比較タブと同じ 5px -->
+                                        <Border Grid.Column="1" Width="1" Margin="5,0"
+                                                Background="{DynamicResource Brush.Border}" />
+
+                                        <DockPanel Grid.Column="2">
+                                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
+                                                       Margin="42,0,0,3" TextTrimming="CharacterEllipsis"
+                                                       Text="{Binding AfterLabel}" />
+                                            <Border DockPanel.Dock="Top" Height="1" Margin="0,0,0,2"
+                                                    Background="{DynamicResource Brush.Border}" />
+                                            <ListBox x:Name="AciDiffAfter"
+                                                     Tag="{Binding ElementName=AciDiffBefore}"
+                                                     ItemsSource="{Binding DiffRows}"
+                                                     ItemContainerStyle="{StaticResource PlainCompactContainer}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     HorizontalContentAlignment="Stretch"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                                     ScrollViewer.ScrollChanged="OnDiffPaneScrolled"
+                                                     VirtualizingStackPanel.IsVirtualizing="True"
+                                                     VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                                <ListBox.ItemTemplate>
+                                                    <StaticResource ResourceKey="DiffRow.Right" />
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </Grid>
                                 </DockPanel>
                             </Border>
                         </TabItem>

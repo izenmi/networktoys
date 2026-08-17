@@ -56,7 +56,12 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     private AciNodeItem? _selectedNode;
     private AciEpgRow? _selectedEpg;
     private string? _selectedTenant;
-    private string _tenantExport = "";
+    private string _before = "";
+    private string _after = "";
+    private string _beforeLabel = "まだ取っていません";
+    private string _afterLabel = "まだ取っていません";
+    private string _diffHeadline = "";
+    private bool _onlyDifferences;
     private AciLogKind _selectedLogKind;
     private AciConfigKind _selectedConfigKind;
     private string _lastResponse = "";
@@ -90,8 +95,15 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         FetchEndpointsCommand = new RelayCommand(() => _ = FetchEndpointsAsync(), CanFetch);
         FetchLogCommand = new RelayCommand(() => _ = FetchLogAsync(), CanFetch);
         FetchConfigCommand = new RelayCommand(() => _ = FetchConfigAsync(), CanFetch);
-        ExportTenantCommand = new RelayCommand(
-            () => _ = ExportTenantAsync(), () => CanFetch() && SelectedTenant is { Length: > 0 });
+        FetchBeforeCommand = new RelayCommand(
+            () => _ = FetchTenantConfigAsync(before: true),
+            () => CanFetch() && SelectedTenant is { Length: > 0 });
+
+        FetchAfterCommand = new RelayCommand(
+            () => _ = FetchTenantConfigAsync(before: false),
+            () => CanFetch() && SelectedTenant is { Length: > 0 });
+
+        CompareCommand = new RelayCommand(Compare, () => _before.Length > 0 && _after.Length > 0);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
@@ -114,6 +126,9 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public ObservableCollection<AciEndpointRow> EndpointRows { get; } = [];
     public ObservableCollection<AciConfigRow> ConfigRows { get; } = [];
 
+    /// <summary>作業前後の差分（左右に並べた行）。</summary>
+    public ObservableCollection<SideBySideRow> DiffRows { get; } = [];
+
     public ObservableCollection<AciNodeItem> Nodes { get; } = [];
 
     /// <summary>テナントの名前。「取得」を押したときに埋まる（ノードと同じ扱い）。</summary>
@@ -131,8 +146,14 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public RelayCommand FetchLogCommand { get; }
     public RelayCommand FetchConfigCommand { get; }
 
-    /// <summary>選んだテナントの設定を、見比べられる形で書き出す。</summary>
-    public RelayCommand ExportTenantCommand { get; }
+    /// <summary>選んだテナントの設定を「作業前」として取る。</summary>
+    public RelayCommand FetchBeforeCommand { get; }
+
+    /// <summary>選んだテナントの設定を「作業後」として取る。</summary>
+    public RelayCommand FetchAfterCommand { get; }
+
+    /// <summary>取った 2 つを見比べる。</summary>
+    public RelayCommand CompareCommand { get; }
 
     public RelayCommand CancelCommand { get; }
 
@@ -224,13 +245,33 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public string? SelectedTenant
     {
         get => _selectedTenant;
-        set { if (SetProperty(ref _selectedTenant, value)) ExportTenantCommand.RaiseCanExecuteChanged(); }
+        set
+        {
+            if (!SetProperty(ref _selectedTenant, value)) return;
+
+            FetchBeforeCommand.RaiseCanExecuteChanged();
+            FetchAfterCommand.RaiseCanExecuteChanged();
+        }
     }
 
-    /// <summary>
-    /// 書き出したテナントの設定。<b>画面には出さない</b>（差分比較タブへ送るための控え）。
-    /// </summary>
-    public string TenantExport => _tenantExport;
+    /// <summary>見比べる 2 つ。<b>いつ・どのテナントを取ったか</b>を見出しに出す。</summary>
+    public string BeforeLabel => _beforeLabel;
+
+    public string AfterLabel => _afterLabel;
+
+    /// <summary>差分の要約（違いの数）。</summary>
+    public string DiffHeadline
+    {
+        get => _diffHeadline;
+        private set => SetProperty(ref _diffHeadline, value);
+    }
+
+    /// <summary>違う行だけを出すか。切り替えたら、取り直さずに並べ直す。</summary>
+    public bool OnlyDifferences
+    {
+        get => _onlyDifferences;
+        set { if (SetProperty(ref _onlyDifferences, value) && DiffRows.Count > 0) Compare(); }
+    }
 
     /// <summary>選ばれた EPG。メンバー一覧はこれで絞る（取得のたびに引き直さない）。</summary>
     public AciEpgRow? SelectedEpg
@@ -598,14 +639,20 @@ public sealed class AciViewModel : ObservableObject, IDisposable
 
         foreach (var rows in (System.Collections.IList[])
                  [HealthRows, FaultRows, LogRows, PortRows, EpgRows, MemberRows, EndpointRows, ConfigRows,
-                  Nodes, Tenants])
+                  DiffRows, Nodes, Tenants])
         {
             rows.Clear();
         }
 
         _allMembers = [];
         _lastResponse = "";
-        _tenantExport = "";
+        _before = "";
+        _after = "";
+        _beforeLabel = "まだ取っていません";
+        _afterLabel = "まだ取っていません";
+        OnPropertyChanged(nameof(BeforeLabel));
+        OnPropertyChanged(nameof(AfterLabel));
+        DiffHeadline = "";
         SelectedNode = null;
         SelectedTenant = null;
         SelectedEpg = null;
@@ -640,7 +687,8 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         FetchEndpointsCommand.RaiseCanExecuteChanged();
         FetchLogCommand.RaiseCanExecuteChanged();
         FetchConfigCommand.RaiseCanExecuteChanged();
-        ExportTenantCommand.RaiseCanExecuteChanged();
+        FetchBeforeCommand.RaiseCanExecuteChanged();
+        FetchAfterCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshSaveCommands()
@@ -658,45 +706,84 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// テナント 1 つの設定を、枝ごと丸ごと書き出す。
+    /// テナント 1 つの設定を、枝ごと丸ごと取って「作業前」か「作業後」に入れる。
     ///
     /// <b>ページングは重ねない</b>（枝を 1 応答で返す問い合わせ）。並び順は APIC 任せなので、
     /// <see cref="AciConfigExport"/> が並べ替えて字下げした行に直す — そうしないと
     /// <b>同じ設定でも並びが違うだけで差分だらけになる</b>。
     /// </summary>
-    private Task ExportTenantAsync() => RunAsync("テナントの設定", async (client, token) =>
-    {
-        if (SelectedTenant is not { Length: > 0 } tenant) return;
-
-        string json = await client.SubtreeAsync(AciCatalog.TenantExportPath(tenant), token)
-            .ConfigureAwait(true);
-
-        // 枝を丸ごと取るので、大きなテナントでは数 MB になる。
-        // 控えは頭だけにする（切り分けに要るのは形であって、全文ではない）
-        _lastResponse = json.Length > 256 * 1024 ? json[..(256 * 1024)] : json;
-        OnPropertyChanged(nameof(LastResponse));
-
-        IReadOnlyList<AciMo> mos = AciMoReader.Parse(json);
-
-        if (mos.Count == 0)
+    private Task FetchTenantConfigAsync(bool before) => RunAsync(
+        before ? "作業前の設定" : "作業後の設定",
+        async (client, token) =>
         {
-            _tenantExport = "";
-            OnPropertyChanged(nameof(TenantExport));
+            if (SelectedTenant is not { Length: > 0 } tenant) return;
 
-            Status = $"{tenant} の設定を読み取れませんでした。";
-            Notice = "⚠ 「応答を表示」で生の応答を確かめてください（権限が足りないことがあります）。";
+            string json = await client.SubtreeAsync(AciCatalog.TenantExportPath(tenant), token)
+                .ConfigureAwait(true);
+
+            // 枝を丸ごと取るので、大きなテナントでは数 MB になる。
+            // 控えは頭だけにする（切り分けに要るのは形であって、全文ではない）
+            _lastResponse = json.Length > 256 * 1024 ? json[..(256 * 1024)] : json;
+            OnPropertyChanged(nameof(LastResponse));
+
+            IReadOnlyList<AciMo> mos = AciMoReader.Parse(json);
+
+            if (mos.Count == 0)
+            {
+                Status = $"{tenant} の設定を読み取れませんでした。";
+                Notice = "⚠ 「応答を表示」で生の応答を確かめてください（権限が足りないことがあります）。";
+                return;
+            }
+
+            string label = $"{tenant}（{DateTime.Now:MM-dd HH:mm:ss}）";
+            string text = AciConfigExport.Render($"{Host} / テナント {label}", mos);
+
+            if (before)
+            {
+                _before = text;
+                _beforeLabel = label;
+                OnPropertyChanged(nameof(BeforeLabel));
+            }
+            else
+            {
+                _after = text;
+                _afterLabel = label;
+                OnPropertyChanged(nameof(AfterLabel));
+            }
+
+            CompareCommand.RaiseCanExecuteChanged();
+
+            Status = _before.Length > 0 && _after.Length > 0
+                ? $"{(before ? "作業前" : "作業後")}を取りました。「比較」で見比べられます。"
+                : $"{(before ? "作業前" : "作業後")}を取りました。もう片方も取ってください。";
+        });
+
+    /// <summary>
+    /// 取った 2 つを左右に並べる。<b>行として突き合わせる</b> —
+    /// 書き出しの段で並べ替えと字下げを済ませてあるので、ここは素の行差分でよい。
+    /// </summary>
+    private void Compare()
+    {
+        SideBySideResult result = SideBySideDiff.Build(_before, _after);
+
+        DiffRows.Clear();
+
+        if (result.TooLarge)
+        {
+            DiffHeadline = "";
+            Status = "設定が大きすぎるため差分を取れませんでした。";
             return;
         }
 
-        _tenantExport = AciConfigExport.Render(
-            $"{Host} / テナント {tenant} / {DateTime.Now:yyyy-MM-dd HH:mm:ss}", mos);
+        foreach (SideBySideRow row in OnlyDifferences ? SideBySideDiff.OnlyDifferences(result) : result.Rows)
+            DiffRows.Add(row);
 
-        OnPropertyChanged(nameof(TenantExport));
+        DiffHeadline = result.HasChanges
+            ? $"{result.ChangedCount} 行に違いがあります。"
+            : "違いはありません。";
 
-        int lines = _tenantExport.AsSpan().Count('\n');
-
-        Status = $"{tenant} の設定を書き出しました（{lines} 行）。「作業前へ」か「作業後へ」で送れます。";
-    });
+        Status = $"{_beforeLabel} と {_afterLabel} を見比べました。";
+    }
 
     private void SyncTenants(IEnumerable<AciMo> mos)
     {
