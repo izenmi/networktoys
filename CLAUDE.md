@@ -377,6 +377,16 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **既定スタイルを持つコントロールは、色を継承してくれない。** `ListBox` / `ListView` の既定スタイルは `Foreground` にシステム色（＝黒）を入れるため、暗い配色にしても行の中の `TextBlock` だけ黒く残る（`ItemsControl` は既定スタイルを持たないので継承される）。暗黙スタイルで上書きすること。**キー付きスタイルは暗黙スタイルを継承しない**ので、`BasedOn="{StaticResource {x:Type ListBox}}"` を明示する。`ContextMenu` / `MenuItem` / `ToolTip` も同様にシステム色で描かれる。
 - **`TargetListBox` スタイルは Ping 用の `ItemTemplate` を既定で当ててくる。** 型別の暗黙 DataTemplate で出し分ける一覧(接続タブ)にこのスタイルを使うときは、`ItemTemplate="{x:Null}"` で明示的に外すこと。外し忘れるとスタイル側のテンプレートが暗黙テンプレートより優先され、**全行が Ping の「◌ 待機」バッジで描かれる**(バインドは静かに失敗するのでビルドも selftest も通ってしまう。実機で発覚した)。
 - **既定のテンプレートが敷いている装飾は、色を指定しても消えない。** `ContextMenu` は左端にアイコン用の白い帯を持っており、`Background` を変えても残る。項目を自前で描くならテンプレートごと差し替えること。**メニュー内の区切り線は `{x:Static MenuItem.SeparatorStyleKey}` という専用のキーで引かれる**ので、`Separator` の暗黙スタイルは当たらない。
+- **クリックの出どころから上へたどるときに `VisualTreeHelper.GetParent` をそのまま使わない。**
+  `TextBlock` の中を色分けすると（差分の色分けが `Run` を並べる）、マウスの `OriginalSource` が
+  **`Run`＝`ContentElement` で Visual ではない**ため、渡した瞬間に `InvalidOperationException` が飛び、
+  **アプリごと落ちる**（2026-08-17 に「差分の結果を押したら落ちた」として報告された）。
+  たどり方は `MainWindow.ClickedParentOf` 1 か所に閉じてあり、`ContentElement` は
+  論理の親（＝載っている `TextBlock`）へ上げてから続ける。**新しい経路でも必ずこれを通すこと。**
+- **押しても何も起きないボタンを、押せるままにしない。** 「比較を停止」は結果を閉じて
+  貼り付け欄に戻るだけのボタンで、貼り付け欄を出している間も押せたため
+  「押しても効かない」と報告された（2026-08-17）。`CanExecute` で状態を映し、
+  **名前も実際にすることに合わせる**（「貼り付けに戻る」に改めた）。
 - **`ComboBox` に `IsEditable="True"` を使わない。** このアプリは `ComboBox` のテンプレートを置き換えており、**`PART_EditableTextBox` を持っていない**。付けると入力欄が描かれず、**選んでも表示は空のまま**になる（ACI タブの接続先で実際にやった。2026-08-17 にユーザーが実機で発見）。手で打つ欄は素の `TextBox` にする。自己診断が全タブの `ComboBox` を見て捕まえる。
 - **`ComboBox` の閉じているときの表示に `DisplayMemberPath` は効かない。** 選択中の項目は `SelectionBoxItemTemplate` 経由で描かれるため、**型名がそのまま出る**。ドロップダウンを開いたときだけ正しく見えるので気づきにくい。`ItemTemplate` を明示すること。
 - **測定結果ごとに `Dispatcher.Invoke` しない。** 500 宛先 × 1Hz = 500 通知/秒で UI が溶ける。`Channel<T>` に積んで 10Hz の単一ポンプでまとめて適用する。
