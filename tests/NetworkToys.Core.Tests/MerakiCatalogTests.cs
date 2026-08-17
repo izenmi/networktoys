@@ -426,4 +426,32 @@ public class MerakiCatalogTests
     [InlineData(2048, "2.0 MB")]
     public void Kilobytes_are_described_in_readable_units(double kilobytes, string expected)
         => Assert.Equal(expected, MerakiCatalog.DescribeKilobytes(kilobytes));
+
+    [Fact]
+    public void Bandwidth_is_turned_into_bits_per_second_per_uplink()
+    {
+        // 応答は期間内の合計バイト。1 時間ぶんなら 3600 で割って毎秒に直す
+        const string json = """
+            [ {"name":"本社","byUplink":[
+                 {"interface":"wan1","sent":3600000,"received":7200000},
+                 {"interface":"wan2","sent":0,"received":0}]} ]
+            """;
+
+        IReadOnlyList<MerakiBandwidthRow> rows = MerakiCatalog.ParseBandwidth([json], 3600);
+
+        Assert.Equal(2, rows.Count);
+        Assert.Equal("wan1", rows[0].Uplink);
+
+        // 1000 B/s の送信 = 8 kbps
+        Assert.Equal("8.0 kbps", rows[0].SentRate);
+        Assert.Equal("16.0 kbps", rows[0].ReceivedRate);
+        Assert.Equal("24.0 kbps", rows[0].Rate);
+
+        // 回線ごとに 1 行。まとめると、どちらを使っているか見えなくなる
+        Assert.Equal("wan2", rows[1].Uplink);
+    }
+
+    [Fact]
+    public void Bandwidth_without_uplinks_is_skipped_not_fatal()
+        => Assert.Empty(MerakiCatalog.ParseBandwidth(["""[{"name":"本社"}]"""], 3600));
 }

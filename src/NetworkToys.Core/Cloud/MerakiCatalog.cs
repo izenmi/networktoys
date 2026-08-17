@@ -84,6 +84,15 @@ public sealed record MerakiUtilizationRow(
     double Value,
     string ValueText);
 
+/// <summary>拠点ごとの帯域利用量の 1 行（回線 1 本ぶん）。</summary>
+public sealed record MerakiBandwidthRow(
+    string Network,
+    string Uplink,
+    double BytesPerSecond,
+    string Rate,
+    string SentRate,
+    string ReceivedRate);
+
 /// <summary>アラートの 1 行。</summary>
 public sealed record MerakiAlertRow(
     string Severity,
@@ -543,6 +552,50 @@ public static class MerakiCatalog
         return Number(current, path[^1]);
     }
 
+    // ===== 帯域 =====
+
+    /// <summary>
+    /// 拠点ごとの WAN の使用量。応答は<b>期間内の合計バイト数</b>なので、
+    /// 期間で割って毎秒に直す（画面に出すのは bps）。
+    ///
+    /// 回線（wan1/wan2）ごとに 1 行にする。まとめてしまうと、
+    /// 「どちらの回線が使われているか」が見えなくなる。
+    /// </summary>
+    public static IReadOnlyList<MerakiBandwidthRow> ParseBandwidth(
+        IEnumerable<string> pages, int timespanSeconds)
+    {
+        int seconds = timespanSeconds > 0 ? timespanSeconds : 1;
+
+        var rows = new List<MerakiBandwidthRow>();
+
+        foreach (JsonElement item in Items(pages))
+        {
+            string network = Or(Str(item, "name"), Str(item, "networkId"));
+
+            if (!item.TryGetProperty("byUplink", out JsonElement uplinks)
+                || uplinks.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (JsonElement uplink in uplinks.EnumerateArray())
+            {
+                if (uplink.ValueKind != JsonValueKind.Object) continue;
+
+                double sent = Number(uplink, "sent") / seconds;
+                double received = Number(uplink, "received") / seconds;
+
+                rows.Add(new MerakiBandwidthRow(
+                    Network: network,
+                    Uplink: Str(uplink, "interface"),
+                    BytesPerSecond: sent + received,
+                    Rate: BitRateFormat.Format(sent + received),
+                    SentRate: BitRateFormat.Format(sent),
+                    ReceivedRate: BitRateFormat.Format(received)));
+            }
+        }
+
+        return rows;
+    }
+
     // ===== アラート =====
 
     public static IReadOnlyList<MerakiAlertRow> ParseAlerts(IEnumerable<string> pages)
@@ -605,6 +658,10 @@ public static class MerakiCatalog
     public static CsvTable ToCsv(IReadOnlyList<MerakiDhcpRow> rows) => new(
         ["拠点", "機器", "VLAN", "サブネット", "払い出し済み", "空き", "使用率"],
         [.. rows.Select(r => new[] { r.Network, r.Device, r.Vlan, r.Subnet, r.UsedText, r.FreeText, r.UsageText })]);
+
+    public static CsvTable ToCsv(IReadOnlyList<MerakiBandwidthRow> rows) => new(
+        ["拠点", "回線", "合計", "送信", "受信"],
+        [.. rows.Select(r => new[] { r.Network, r.Uplink, r.Rate, r.SentRate, r.ReceivedRate })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiUtilizationRow> rows) => new(
         ["機器", "型番", "拠点", "値"],

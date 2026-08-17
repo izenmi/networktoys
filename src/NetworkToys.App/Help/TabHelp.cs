@@ -317,6 +317,27 @@ internal static class TabHelp
         ・欄にファイルを放り込んでも読み込める
         """;
 
+    /// <summary>Meraki ─ 帯域</summary>
+    public const string MerakiBandwidth =
+        """
+        Meraki ─ 帯域
+
+        この画面ですること
+        ・拠点ごとに、WAN 回線をどれだけ使っているかを bps で並べる
+
+        こんなときに
+        ・どの拠点が回線を食っているかを、まとめて見たいとき
+        ・増速の要否を数字で示したいとき
+
+        知っておくとよいこと
+        ・出るのは期間内の合計を 1 秒あたりに直した平均。瞬間の値ではない
+        ・回線ごとに 1 行にする（wan1 と wan2 をまとめると、どちらを使っているか見えない）
+        ・MX のある組織でだけ出る
+
+        できる操作
+        ・一覧を CSV で保存する
+        """;
+
     /// <summary>Meraki ─ 使われ具合</summary>
     public const string MerakiUsage =
         """

@@ -73,6 +73,13 @@ internal sealed class MerakiDashboard : IDisposable
     public Task<IReadOnlyList<string>> DhcpSubnetsAsync(string apiKey, string serial, CancellationToken token)
         => GetPagesAsync($"/devices/{Escape(serial)}/appliance/dhcp/subnets", apiKey, token);
 
+    /// <summary>拠点ごとの WAN 使用量（期間内の合計バイト）。</summary>
+    public Task<IReadOnlyList<string>> UplinkUsageAsync(
+        string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
+        => GetPagesAsync(
+            $"/organizations/{Escape(organizationId)}/appliance/uplinks/usage/byNetwork?timespan={timespanSeconds}",
+            apiKey, token);
+
     /// <summary>利用率の高い MX（組織の要約）。</summary>
     public Task<IReadOnlyList<string>> TopAppliancesAsync(
         string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
