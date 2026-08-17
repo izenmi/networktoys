@@ -1561,9 +1561,14 @@ internal static class SelfTest
                 }
                 else
                 {
-                    // 逆も守る。中に切り替えを持つのに ▾ が無いと、まとめていることに気づけない
-                    Assert(inner.Length == 0,
-                           $"「{header}」は中に切り替えを持つのに ▾ が付いていない");
+                    // 逆も守る。ただし「サブタブを持つ」と「まとめている」は別物で、
+                    // Meraki のように帯を出したままサブタブを並べる主タブがある。
+                    // 気づけなくなるのは帯を隠したときだけなので、そこだけ ▾ を要る
+                    Assert(inner.All(t => t.ItemContainerStyle is not { } style
+                                          || !style.Setters.OfType<Setter>().Any(x =>
+                                                 x.Property == UIElement.VisibilityProperty
+                                                 && Equals(x.Value, Visibility.Collapsed))),
+                           $"「{header}」は中身の帯を隠しているのに ▾ が付いていない");
                 }
             }
 
