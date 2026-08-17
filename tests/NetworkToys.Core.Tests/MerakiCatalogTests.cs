@@ -1,4 +1,5 @@
 using NetworkToys.Core.Cloud;
+using NetworkToys.Core.Design;
 using NetworkToys.Core.Net;
 using NetworkToys.Core.Work;
 using Xunit;
@@ -277,5 +278,115 @@ public class MerakiCatalogTests
 
         // 既存の CSV 出力と同じ無害化（先頭に ' を足す）を通っていること
         Assert.Contains("'=cmd", csv);
+    }
+
+    // ===== 拠点・DHCP・アラート =====
+
+    [Fact]
+    public void Only_segments_that_actually_have_clients_are_kept()
+    {
+        const string routes = """
+            [ {"subnet":"192.168.10.0/24","name":"1F","enabled":true},
+              {"subnet":"192.168.20.0/24","name":"2F","enabled":true},
+              {"subnet":"10.9.9.0/24","name":"止めた経路","enabled":false} ]
+            """;
+
+        IReadOnlyList<string> subnets = MerakiCatalog.ParseStaticRouteSubnets([routes]);
+
+        // 無効な経路は最初から出さない
+        Assert.Equal(2, subnets.Count);
+
+        IReadOnlyList<string> kept = MerakiCatalog.SegmentsWithClients(
+            subnets, ["192.168.10.55", "203.0.113.9"]);
+
+        // 誰も居ないセグメントは落とす（設定だけ残っている経路を並べても読み違えるだけ）
+        Assert.Equal(["192.168.10.0/24"], kept);
+    }
+
+    [Fact]
+    public void Segments_are_added_to_the_appliance_only()
+    {
+        MerakiDeviceRow appliance = new(
+            "MX-1F", "MX68", "Q2AA-1111-AAAA", "18.1", "本社", "● 稼働",
+            ConnectionStateKind.Ok, "203.0.113.5", "192.168.1.1");
+
+        MerakiDeviceRow switchRow = appliance with { Name = "SW-1F", Model = "MS120", LanIp = "192.168.1.2" };
+
+        IReadOnlyList<MerakiDeviceRow> rows = MerakiCatalog.WithSegments(
+            [appliance, switchRow],
+            new Dictionary<string, string> { ["本社"] = "192.168.10.0/24" });
+
+        Assert.Equal("192.168.1.1 / 192.168.10.0/24", rows[0].LanIp);
+
+        // スイッチや AP に経路の話を混ぜない
+        Assert.Equal("192.168.1.2", rows[1].LanIp);
+    }
+
+    [Fact]
+    public void Dhcp_usage_is_worked_out_from_used_and_free()
+    {
+        const string json = """
+            [ {"vlanId":10,"subnet":"192.168.10.0/24","usedCount":180,"freeCount":20},
+              {"vlanId":20,"subnet":"192.168.20.0/24","usedCount":5,"freeCount":245} ]
+            """;
+
+        IReadOnlyList<MerakiDhcpRow> rows = MerakiCatalog.ParseDhcp([json], "本社", "MX-1F");
+
+        Assert.Equal("10", rows[0].Vlan);
+        Assert.Equal("90%", rows[0].UsageText);
+        Assert.Equal(SeverityKind.Alert, rows[0].UsageKind);
+
+        Assert.Equal("2%", rows[1].UsageText);
+        Assert.Equal(SeverityKind.Ok, rows[1].UsageKind);
+    }
+
+    [Theory]
+    [InlineData(95, SeverityKind.Alert)]
+    [InlineData(75, SeverityKind.Notice)]
+    [InlineData(10, SeverityKind.Ok)]
+    [InlineData(-1, SeverityKind.Muted)]
+    public void Dhcp_usage_changes_colour_before_it_runs_out(int percent, SeverityKind expected)
+        => Assert.Equal(expected, MerakiCatalog.DescribeDhcpUsage(percent).Kind);
+
+    [Fact]
+    public void Alerts_read_the_nested_network_and_device_names()
+    {
+        const string json = """
+            [ {"severity":"critical","categoryType":"connectivity","startedAt":"2026-08-17T01:00:00Z",
+               "title":"Uplink down","network":{"name":"本社"},"device":{"name":"MX-1F"}},
+              {"severity":"brand-new","title":"何か","network":{"name":"支社"}} ]
+            """;
+
+        IReadOnlyList<MerakiAlertRow> rows = MerakiCatalog.ParseAlerts([json]);
+
+        Assert.Equal("✕ 重大", rows[0].Severity);
+        Assert.Equal("本社", rows[0].Network);
+        Assert.Equal("MX-1F", rows[0].Device);
+        Assert.Equal("Uplink down", rows[0].Detail);
+
+        // 知らない重大度はそのまま出す
+        Assert.Equal("brand-new", rows[1].Severity);
+        Assert.Equal("", rows[1].Device);
+    }
+
+    [Fact]
+    public void The_new_tables_keep_one_column_per_header()
+    {
+        CsvTable[] tables =
+        [
+            MerakiCatalog.ToCsv([MerakiCatalog.SiteRow(
+                new MerakiNetworkRow("本社", "N_1", "appliance", "Asia/Tokyo", ""),
+                12, ["192.168.10.0/24"], "")]),
+            MerakiCatalog.ToCsv(MerakiCatalog.ParseDhcp(
+                ["""[{"vlanId":10,"subnet":"192.168.10.0/24","usedCount":1,"freeCount":9}]"""], "本社", "MX-1F")),
+            MerakiCatalog.ToCsv(MerakiCatalog.ParseAlerts(
+                ["""[{"severity":"warning","title":"x"}]"""])),
+        ];
+
+        foreach (CsvTable table in tables)
+        {
+            Assert.NotEmpty(table.Rows);
+            Assert.All(table.Rows, row => Assert.Equal(table.Headers.Count, row.Length));
+        }
     }
 }

@@ -65,6 +65,18 @@ internal sealed class MerakiDashboard : IDisposable
         => GetPagesAsync(
             $"/networks/{Escape(networkId)}/clients?perPage=1000&timespan={timespanSeconds}", apiKey, token);
 
+    /// <summary>拠点のスタティックルート（MX）。</summary>
+    public Task<IReadOnlyList<string>> StaticRoutesAsync(string apiKey, string networkId, CancellationToken token)
+        => GetPagesAsync($"/networks/{Escape(networkId)}/appliance/staticRoutes", apiKey, token);
+
+    /// <summary>MX 1 台の DHCP 払い出し状況。</summary>
+    public Task<IReadOnlyList<string>> DhcpSubnetsAsync(string apiKey, string serial, CancellationToken token)
+        => GetPagesAsync($"/devices/{Escape(serial)}/appliance/dhcp/subnets", apiKey, token);
+
+    /// <summary>組織のアラート。版によっては持っていない（その場合は 404 が返る）。</summary>
+    public Task<IReadOnlyList<string>> AlertsAsync(string apiKey, string organizationId, CancellationToken token)
+        => GetPagesAsync($"/organizations/{Escape(organizationId)}/assurance/alerts?perPage=300", apiKey, token);
+
     /// <summary>ページを最後まで（上限まで）取る。</summary>
     public async Task<IReadOnlyList<string>> GetPagesAsync(string path, string apiKey, CancellationToken token)
     {

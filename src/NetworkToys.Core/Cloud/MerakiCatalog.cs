@@ -1,5 +1,9 @@
 using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
+using NetworkToys.Core.Addressing;
+using NetworkToys.Core.Design;
 using NetworkToys.Core.Net;
 using NetworkToys.Core.Work;
 
@@ -45,6 +49,39 @@ public sealed record MerakiClientRow(
     string Manufacturer,
     string Usage,
     string LastSeen);
+
+/// <summary>拠点ごとの内訳の 1 行。クライアント数は期間つきで数えたもの。</summary>
+public sealed record MerakiSiteRow(
+    string Network,
+    string NetworkId,
+    int Clients,
+    string ClientsText,
+    string Segments,
+    string Note);
+
+/// <summary>DHCP の払い出し状況の 1 行（MX 1 台の 1 サブネット）。</summary>
+public sealed record MerakiDhcpRow(
+    string Network,
+    string Device,
+    string Vlan,
+    string Subnet,
+    int Used,
+    string UsedText,
+    int Free,
+    string FreeText,
+    int UsagePercent,
+    string UsageText,
+    SeverityKind UsageKind);
+
+/// <summary>アラートの 1 行。</summary>
+public sealed record MerakiAlertRow(
+    string Severity,
+    SeverityKind SeverityKind,
+    string Type,
+    string Network,
+    string Device,
+    string StartedAt,
+    string Detail);
 
 /// <summary>
 /// Meraki ダッシュボード API の応答を画面と CSV の行に変換する。
@@ -277,6 +314,192 @@ public static class MerakiCatalog
         _ => (status, ConnectionStateKind.Muted),
     };
 
+    // ===== 拠点（スタティックルート・クライアント数） =====
+
+    /// <summary>スタティックルートの宛先セグメント。無効なものは落とす。</summary>
+    public static IReadOnlyList<string> ParseStaticRouteSubnets(IEnumerable<string> pages)
+    {
+        var subnets = new List<string>();
+
+        foreach (JsonElement item in Items(pages))
+        {
+            // enabled が無い版もある。明示的に false のときだけ落とす
+            if (Scalar(item, "enabled") == "false") continue;
+
+            string subnet = Str(item, "subnet");
+            if (subnet.Length > 0) subnets.Add(subnet);
+        }
+
+        return subnets;
+    }
+
+    /// <summary>
+    /// クライアントが 1 台でも居るセグメントだけを残す。
+    ///
+    /// <b>誰も居ないセグメントは出さない</b>（設定だけ残っている経路を並べても、
+    /// 拠点の実態を読み違えるだけ。2026-08-17 ユーザー指示）。
+    /// </summary>
+    public static IReadOnlyList<string> SegmentsWithClients(
+        IEnumerable<string> subnets, IEnumerable<string> clientIps)
+    {
+        List<IPAddress> addresses =
+        [
+            .. clientIps.Select(ip => IPAddress.TryParse(ip, out IPAddress? parsed) ? parsed : null)
+                .Where(ip => ip is not null && ip.AddressFamily == AddressFamily.InterNetwork)
+                .Select(ip => ip!),
+        ];
+
+        var kept = new List<string>();
+
+        foreach (string subnet in subnets.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!TryParseCidr(subnet, out IPAddress? network, out int prefix)) continue;
+
+            if (addresses.Any(ip => IpMath.IsSameSubnet(ip, network!, prefix)))
+                kept.Add(subnet);
+        }
+
+        return kept;
+    }
+
+    /// <summary>
+    /// 機器一覧の LAN IP に、その拠点のセグメントを足す。
+    /// 足すのは MX（拠点の出入口）だけ — スイッチや AP に経路の話を混ぜると読みにくい。
+    /// </summary>
+    public static IReadOnlyList<MerakiDeviceRow> WithSegments(
+        IEnumerable<MerakiDeviceRow> devices, IReadOnlyDictionary<string, string> segmentsByNetwork)
+    {
+        var rows = new List<MerakiDeviceRow>();
+
+        foreach (MerakiDeviceRow device in devices)
+        {
+            bool isAppliance = device.Model.StartsWith("MX", StringComparison.OrdinalIgnoreCase);
+
+            if (isAppliance
+                && segmentsByNetwork.TryGetValue(device.Network, out string? segments)
+                && segments.Length > 0)
+            {
+                rows.Add(device with { LanIp = Or(device.LanIp, "") + (device.LanIp.Length > 0 ? " / " : "") + segments });
+            }
+            else
+            {
+                rows.Add(device);
+            }
+        }
+
+        return rows;
+    }
+
+    public static MerakiSiteRow SiteRow(
+        MerakiNetworkRow network, int clients, IReadOnlyList<string> segments, string note) => new(
+            Network: network.Name,
+            NetworkId: network.Id,
+            Clients: clients,
+            ClientsText: clients.ToString(CultureInfo.InvariantCulture),
+            Segments: string.Join(" / ", segments),
+            Note: note);
+
+    private static bool TryParseCidr(string cidr, out IPAddress? network, out int prefix)
+    {
+        network = null;
+        prefix = 0;
+
+        string[] parts = cidr.Split('/');
+
+        if (parts.Length != 2) return false;
+        if (!IPAddress.TryParse(parts[0], out network)) return false;
+        if (!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out prefix)) return false;
+
+        return prefix is >= 0 and <= 32 && network.AddressFamily == AddressFamily.InterNetwork;
+    }
+
+    // ===== DHCP =====
+
+    /// <summary>MX 1 台ぶんの DHCP の払い出し状況。</summary>
+    public static IReadOnlyList<MerakiDhcpRow> ParseDhcp(
+        IEnumerable<string> pages, string network, string device)
+    {
+        var rows = new List<MerakiDhcpRow>();
+
+        foreach (JsonElement item in Items(pages))
+        {
+            int used = (int)Number(item, "usedCount");
+            int free = (int)Number(item, "freeCount");
+            int total = used + free;
+            int percent = total > 0 ? (int)Math.Round(used * 100.0 / total) : -1;
+
+            (string usageText, SeverityKind usageKind) = DescribeDhcpUsage(percent);
+
+            rows.Add(new MerakiDhcpRow(
+                Network: network,
+                Device: device,
+                Vlan: Scalar(item, "vlanId"),
+                Subnet: Str(item, "subnet"),
+                Used: used,
+                UsedText: used.ToString(CultureInfo.InvariantCulture),
+                Free: free,
+                FreeText: free.ToString(CultureInfo.InvariantCulture),
+                UsagePercent: percent,
+                UsageText: usageText,
+                UsageKind: usageKind));
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// 払い出しの詰まり具合。<b>枯れる前に気づけるところで色を変える</b>
+    /// （足りなくなってからでは、その拠点は何も繋がらない）。
+    /// </summary>
+    public static (string Text, SeverityKind Kind) DescribeDhcpUsage(int percent) => percent switch
+    {
+        < 0 => ("—", SeverityKind.Muted),
+        >= 90 => ($"{percent}%", SeverityKind.Alert),
+        >= 70 => ($"{percent}%", SeverityKind.Notice),
+        _ => ($"{percent}%", SeverityKind.Ok),
+    };
+
+    // ===== アラート =====
+
+    public static IReadOnlyList<MerakiAlertRow> ParseAlerts(IEnumerable<string> pages)
+    {
+        var rows = new List<MerakiAlertRow>();
+
+        foreach (JsonElement item in Items(pages))
+        {
+            (string severity, SeverityKind kind) = DescribeAlertSeverity(Str(item, "severity"));
+
+            rows.Add(new MerakiAlertRow(
+                Severity: severity,
+                SeverityKind: kind,
+                Type: Or(Str(item, "categoryType"), Or(Str(item, "type"), Str(item, "title"))),
+                Network: Nested(item, "network", "name"),
+                Device: Or(Nested(item, "device", "name"), Nested(item, "scope", "devices")),
+                StartedAt: Or(Str(item, "startedAt"), Str(item, "occurredAt")),
+                Detail: Or(Str(item, "title"), Str(item, "description"))));
+        }
+
+        return rows;
+    }
+
+    /// <summary>アラートの重さ。<b>知らない値はそのまま出す</b>。</summary>
+    public static (string Text, SeverityKind Kind) DescribeAlertSeverity(string? severity) => severity switch
+    {
+        "critical" => ("✕ 重大", SeverityKind.Alert),
+        "warning" => ("⊘ 警告", SeverityKind.Notice),
+        "informational" or "info" => ("● 情報", SeverityKind.Ok),
+        null or "" => ("—", SeverityKind.Muted),
+        _ => (severity, SeverityKind.Muted),
+    };
+
+    /// <summary>入れ子の項目を 1 段だけ辿る。無ければ空文字。</summary>
+    private static string Nested(JsonElement parent, string name, string child)
+        => parent.ValueKind == JsonValueKind.Object
+           && parent.TryGetProperty(name, out JsonElement inner)
+           && inner.ValueKind == JsonValueKind.Object
+            ? Str(inner, child)
+            : "";
+
     // ===== CSV =====
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiNetworkRow> rows) => new(
@@ -290,6 +513,18 @@ public static class MerakiCatalog
     public static CsvTable ToCsv(IReadOnlyList<MerakiUplinkRow> rows) => new(
         ["ネットワーク", "シリアル", "回線", "状態", "IP", "ゲートウェイ", "グローバル IP"],
         [.. rows.Select(r => new[] { r.Network, r.Serial, r.Interface, r.State, r.Ip, r.Gateway, r.PublicIp })]);
+
+    public static CsvTable ToCsv(IReadOnlyList<MerakiSiteRow> rows) => new(
+        ["拠点", "ID", "クライアント数", "セグメント", "備考"],
+        [.. rows.Select(r => new[] { r.Network, r.NetworkId, r.ClientsText, r.Segments, r.Note })]);
+
+    public static CsvTable ToCsv(IReadOnlyList<MerakiDhcpRow> rows) => new(
+        ["拠点", "機器", "VLAN", "サブネット", "払い出し済み", "空き", "使用率"],
+        [.. rows.Select(r => new[] { r.Network, r.Device, r.Vlan, r.Subnet, r.UsedText, r.FreeText, r.UsageText })]);
+
+    public static CsvTable ToCsv(IReadOnlyList<MerakiAlertRow> rows) => new(
+        ["重大度", "種別", "拠点", "機器", "発生", "内容"],
+        [.. rows.Select(r => new[] { r.Severity, r.Type, r.Network, r.Device, r.StartedAt, r.Detail })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiClientRow> rows) => new(
         ["名前", "IP", "MAC", "VLAN", "メーカー", "通信量", "最終確認"],
