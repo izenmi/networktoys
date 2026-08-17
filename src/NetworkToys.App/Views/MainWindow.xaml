@@ -1025,15 +1025,15 @@
                             </Border>
                             <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="wifi.1" DragDelta="OnTableColumnResize" />
+                                   Tag="wifi.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="wifi.2" DragDelta="OnTableColumnResize" />
+                                   Tag="wifi.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="wifi.3" DragDelta="OnTableColumnResize" />
+                                   Tag="wifi.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="wifi.4" DragDelta="OnTableColumnResize" />
+                                   Tag="wifi.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="wifi.5" DragDelta="OnTableColumnResize" />
+                                   Tag="wifi.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -1527,17 +1527,17 @@
 
                                     <!-- 列幅のつまみ。星列(3・4)より左は右端、右は左端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="wfp.0" DragDelta="OnTableColumnResize" />
+                                           Tag="wfp.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="wfp.1" DragDelta="OnTableColumnResize" />
+                                           Tag="wfp.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="wfp.2" DragDelta="OnTableColumnResize" />
+                                           Tag="wfp.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="wfp.3" DragDelta="OnTableColumnResize" />
+                                           Tag="wfp.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                           Tag="wfp.5" DragDelta="OnTableColumnResize" />
+                                           Tag="wfp.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                           Tag="wfp.6" DragDelta="OnTableColumnResize" />
+                                           Tag="wfp.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1"
                                         Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -1994,15 +1994,15 @@
                                         <TextBlock Grid.Column="5" Text="結果" Style="{StaticResource Caption}" />
                                         <!-- 列幅のつまみ。星列(3)より左は右端、右は左端の境界に置く -->
                                         <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="verify.0" DragDelta="OnTableColumnResize" />
+                                               Tag="verify.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="verify.1" DragDelta="OnTableColumnResize" />
+                                               Tag="verify.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="verify.2" DragDelta="OnTableColumnResize" />
+                                               Tag="verify.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="verify.4" DragDelta="OnTableColumnResize" />
+                                               Tag="verify.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="verify.5" DragDelta="OnTableColumnResize" />
+                                               Tag="verify.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1"
                                             Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -2174,13 +2174,13 @@
                                         <TextBlock Grid.Column="4" Text="詳細" Style="{StaticResource Caption}" />
                                         <!-- 列幅のつまみ。星列(4)より左なので右端の境界に置く -->
                                         <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="vres.0" DragDelta="OnTableColumnResize" />
+                                               Tag="vres.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="vres.1" DragDelta="OnTableColumnResize" />
+                                               Tag="vres.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="vres.2" DragDelta="OnTableColumnResize" />
+                                               Tag="vres.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="vres.3" DragDelta="OnTableColumnResize" />
+                                               Tag="vres.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1"
                                             Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -2520,13 +2520,13 @@
                             <TextBlock Grid.Column="4" Text="状態"   Style="{StaticResource Caption}" Margin="10,0,0,0" />
                             <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                   Tag="trace.0" DragDelta="OnTableColumnResize" />
+                                   Tag="trace.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                   Tag="trace.1" DragDelta="OnTableColumnResize" />
+                                   Tag="trace.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="trace.3" DragDelta="OnTableColumnResize" />
+                                   Tag="trace.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="trace.4" DragDelta="OnTableColumnResize" />
+                                   Tag="trace.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -2659,15 +2659,15 @@
                             <TextBlock Grid.Column="5" Text="開放ポート" Style="{StaticResource Caption}" />
                             <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                   Tag="scan.0" DragDelta="OnTableColumnResize" />
+                                   Tag="scan.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                   Tag="scan.1" DragDelta="OnTableColumnResize" />
+                                   Tag="scan.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="scan.3" DragDelta="OnTableColumnResize" />
+                                   Tag="scan.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="scan.4" DragDelta="OnTableColumnResize" />
+                                   Tag="scan.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                   Tag="scan.5" DragDelta="OnTableColumnResize" />
+                                   Tag="scan.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -2946,15 +2946,15 @@
 
                                     <!-- 列幅のつまみ。星列(1・2)より左は右端、右は左端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="conn.0" DragDelta="OnTableColumnResize" />
+                                           Tag="conn.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="conn.1" DragDelta="OnTableColumnResize" />
+                                           Tag="conn.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                           Tag="conn.3" DragDelta="OnTableColumnResize" />
+                                           Tag="conn.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                           Tag="conn.4" DragDelta="OnTableColumnResize" />
+                                           Tag="conn.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                           Tag="conn.5" DragDelta="OnTableColumnResize" />
+                                           Tag="conn.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <!-- TargetListBox スタイルは Ping 用の ItemTemplate を既定で当ててくる。
@@ -3267,9 +3267,9 @@
                                     <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
                                     <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="ftplog.0" DragDelta="OnTableColumnResize" />
+                                           Tag="ftplog.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="ftplog.1" DragDelta="OnTableColumnResize" />
+                                           Tag="ftplog.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
@@ -3371,9 +3371,9 @@
                                     <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
                                     <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="tftplog.0" DragDelta="OnTableColumnResize" />
+                                           Tag="tftplog.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="tftplog.1" DragDelta="OnTableColumnResize" />
+                                           Tag="tftplog.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
@@ -3487,9 +3487,9 @@
                                     <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
                                     <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="sftplog.0" DragDelta="OnTableColumnResize" />
+                                           Tag="sftplog.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="sftplog.1" DragDelta="OnTableColumnResize" />
+                                           Tag="sftplog.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
@@ -3606,11 +3606,11 @@
                                     <TextBlock Grid.Column="3" Text="本文" Style="{StaticResource Caption}" />
                                     <!-- 列幅のつまみ。星列(3)より左なので右端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="syslog.0" DragDelta="OnTableColumnResize" />
+                                           Tag="syslog.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="syslog.1" DragDelta="OnTableColumnResize" />
+                                           Tag="syslog.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="syslog.2" DragDelta="OnTableColumnResize" />
+                                           Tag="syslog.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
@@ -3729,9 +3729,9 @@
                                     <TextBlock Grid.Column="2" Text="内容" Style="{StaticResource Caption}" />
                                     <!-- 列幅のつまみ。星列(2)より左なので右端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="snmptrap.0" DragDelta="OnTableColumnResize" />
+                                           Tag="snmptrap.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="snmptrap.1" DragDelta="OnTableColumnResize" />
+                                           Tag="snmptrap.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Log}"
@@ -3870,19 +3870,19 @@
 
                                         <!-- 列幅のつまみ。星列(1)より左は右端、右は左端の境界に置く -->
                                         <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="collect.0" DragDelta="OnTableColumnResize" />
+                                               Tag="collect.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.2" DragDelta="OnTableColumnResize" />
+                                               Tag="collect.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.3" DragDelta="OnTableColumnResize" />
+                                               Tag="collect.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.4" DragDelta="OnTableColumnResize" />
+                                               Tag="collect.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.5" DragDelta="OnTableColumnResize" />
+                                               Tag="collect.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.6" DragDelta="OnTableColumnResize" />
+                                               Tag="collect.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="collect.7" DragDelta="OnTableColumnResize" />
+                                               Tag="collect.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1"
                                             Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -4203,13 +4203,13 @@
                                                 <TextBlock Grid.Column="4" Text="タグ" Style="{StaticResource Caption}" />
                                                 <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                                 <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.1" DragDelta="OnTableColumnResize" />
+                                                       Tag="mnet.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.2" DragDelta="OnTableColumnResize" />
+                                                       Tag="mnet.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.3" DragDelta="OnTableColumnResize" />
+                                                       Tag="mnet.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mnet.4" DragDelta="OnTableColumnResize" />
+                                                       Tag="mnet.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -4315,19 +4315,19 @@
                                                 <TextBlock Grid.Column="7" Text="LAN IP" Style="{StaticResource Caption}" />
                                                 <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                                 <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.1" DragDelta="OnTableColumnResize" />
+                                                       Tag="mdev.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.2" DragDelta="OnTableColumnResize" />
+                                                       Tag="mdev.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.3" DragDelta="OnTableColumnResize" />
+                                                       Tag="mdev.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.4" DragDelta="OnTableColumnResize" />
+                                                       Tag="mdev.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.5" DragDelta="OnTableColumnResize" />
+                                                       Tag="mdev.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.6" DragDelta="OnTableColumnResize" />
+                                                       Tag="mdev.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mdev.7" DragDelta="OnTableColumnResize" />
+                                                       Tag="mdev.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -4466,17 +4466,17 @@
                                                 <TextBlock Grid.Column="6" Text="グローバル IP" Style="{StaticResource Caption}" />
                                                 <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                                 <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.1" DragDelta="OnTableColumnResize" />
+                                                       Tag="mup.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.2" DragDelta="OnTableColumnResize" />
+                                                       Tag="mup.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.3" DragDelta="OnTableColumnResize" />
+                                                       Tag="mup.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.4" DragDelta="OnTableColumnResize" />
+                                                       Tag="mup.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.5" DragDelta="OnTableColumnResize" />
+                                                       Tag="mup.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mup.6" DragDelta="OnTableColumnResize" />
+                                                       Tag="mup.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -4633,17 +4633,17 @@
                                                 <TextBlock Grid.Column="6" Text="最終確認" Style="{StaticResource Caption}" />
                                                 <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                                 <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.1" DragDelta="OnTableColumnResize" />
+                                                       Tag="mcli.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.2" DragDelta="OnTableColumnResize" />
+                                                       Tag="mcli.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.3" DragDelta="OnTableColumnResize" />
+                                                       Tag="mcli.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.4" DragDelta="OnTableColumnResize" />
+                                                       Tag="mcli.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.5" DragDelta="OnTableColumnResize" />
+                                                       Tag="mcli.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="mcli.6" DragDelta="OnTableColumnResize" />
+                                                       Tag="mcli.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -4861,11 +4861,11 @@
                                         <TextBlock Grid.Column="3" Text="更新日時" Style="{StaticResource Caption}" Margin="6,0,0,0" />
                                         <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                         <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="local.0" DragDelta="OnTableColumnResize" />
+                                               Tag="local.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="local.2" DragDelta="OnTableColumnResize" />
+                                               Tag="local.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="local.3" DragDelta="OnTableColumnResize" />
+                                               Tag="local.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1"
                                             Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -4940,11 +4940,11 @@
                                         <TextBlock Grid.Column="3" Text="更新日時" Style="{StaticResource Caption}" Margin="6,0,0,0" />
                                         <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                         <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="remote.0" DragDelta="OnTableColumnResize" />
+                                               Tag="remote.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="remote.2" DragDelta="OnTableColumnResize" />
+                                               Tag="remote.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                               Tag="remote.3" DragDelta="OnTableColumnResize" />
+                                               Tag="remote.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1"
                                             Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
@@ -5057,11 +5057,11 @@
                                     <TextBlock Grid.Column="3" Text="値" Style="{StaticResource Caption}" />
                                     <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                     <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="snmpget.0" DragDelta="OnTableColumnResize" />
+                                           Tag="snmpget.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="snmpget.1" DragDelta="OnTableColumnResize" />
+                                           Tag="snmpget.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                     <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                           Tag="snmpget.2" DragDelta="OnTableColumnResize" />
+                                           Tag="snmpget.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                 <ListBox ItemsSource="{Binding Rows}"
@@ -5211,11 +5211,11 @@
                                                 <TextBlock Grid.Column="3" Text="状態" Style="{StaticResource Caption}" />
                                                 <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                                 <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="acihl.0" DragDelta="OnTableColumnResize" />
+                                                       Tag="acihl.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="acihl.2" DragDelta="OnTableColumnResize" />
+                                                       Tag="acihl.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="acihl.3" DragDelta="OnTableColumnResize" />
+                                                       Tag="acihl.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -5324,15 +5324,15 @@
                                                 <TextBlock Grid.Column="4" Text="説明" Style="{StaticResource Caption}" />
                                                 <TextBlock Grid.Column="5" Text="確認" Style="{StaticResource Caption}" />
                                                 <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="aciflt.0" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciflt.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="aciflt.1" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciflt.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="aciflt.2" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciflt.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="aciflt.4" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciflt.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="aciflt.5" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciflt.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -5485,27 +5485,27 @@
                                             <TextBlock Grid.Column="11" Text="最終変化" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciport.0" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciport.1" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciport.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciport.3" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciport.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciport.5" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciport.6" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="8" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciport.8" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.8" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="9" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciport.9" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.9" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="10" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciport.10" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.10" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="11" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciport.11" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciport.11" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -5658,15 +5658,15 @@
                                                 <TextBlock Grid.Column="5" Text="静的パス" Style="{StaticResource Caption}" />
                                                 <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                                 <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="aciepg.0" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciepg.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="aciepg.1" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciepg.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="aciepg.3" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciepg.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="aciepg.4" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciepg.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="aciepg.5" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciepg.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -5741,11 +5741,11 @@
                                                 <TextBlock Grid.Column="3" Text="モード" Style="{StaticResource Caption}" />
                                                 <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                                 <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                       Tag="aciepgm.0" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciepgm.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="aciepgm.2" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciepgm.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                                 <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                       Tag="aciepgm.3" DragDelta="OnTableColumnResize" />
+                                                       Tag="aciepgm.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             </Grid>
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -5837,17 +5837,17 @@
                                             <TextBlock Grid.Column="6" Text="パス" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciep.0" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciep.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciep.1" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciep.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="aciep.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciep.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciep.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciep.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciep.5" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciep.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="aciep.6" DragDelta="OnTableColumnResize" />
+                                                   Tag="aciep.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -5961,13 +5961,13 @@
                                             <TextBlock Grid.Column="4" Text="内容" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="acilog.0" DragDelta="OnTableColumnResize" />
+                                                   Tag="acilog.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="acilog.1" DragDelta="OnTableColumnResize" />
+                                                   Tag="acilog.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="acilog.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="acilog.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="acilog.3" DragDelta="OnTableColumnResize" />
+                                                   Tag="acilog.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -6087,13 +6087,13 @@
                                             <TextBlock Grid.Column="4" Text="備考" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="acicfg.0" DragDelta="OnTableColumnResize" />
+                                                   Tag="acicfg.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="acicfg.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="acicfg.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="acicfg.3" DragDelta="OnTableColumnResize" />
+                                                   Tag="acicfg.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="acicfg.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="acicfg.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -6281,23 +6281,23 @@
                                             <TextBlock Grid.Column="9" Text="状態" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="wlccl.0" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="wlccl.1" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="wlccl.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlccl.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlccl.5" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlccl.6" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlccl.7" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="8" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlccl.8" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.8" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="9" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlccl.9" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlccl.9" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -6444,21 +6444,21 @@
                                             <TextBlock Grid.Column="8" Text="タグ" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="wlcap.0" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcap.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcap.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcap.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcap.3" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcap.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcap.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcap.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcap.5" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcap.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcap.6" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcap.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcap.7" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcap.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="8" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcap.8" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcap.8" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -6596,19 +6596,19 @@
                                             <TextBlock Grid.Column="7" Text="失敗" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="wlcjoin.0" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcjoin.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcjoin.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcjoin.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcjoin.3" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcjoin.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcjoin.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcjoin.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcjoin.5" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcjoin.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcjoin.6" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcjoin.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcjoin.7" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcjoin.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -6739,19 +6739,19 @@
                                             <TextBlock Grid.Column="7" Text="6GHz" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcssid.1" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcssid.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcssid.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcssid.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcssid.3" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcssid.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcssid.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcssid.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcssid.5" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcssid.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcssid.6" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcssid.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcssid.7" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcssid.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -6879,17 +6879,17 @@
                                             <TextBlock Grid.Column="6" Text="台数" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrf.1" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrf.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrf.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrf.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrf.3" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrf.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrf.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrf.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrf.5" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrf.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrf.6" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrf.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
@@ -7018,21 +7018,21 @@
                                             <TextBlock Grid.Column="8" Text="備考" Style="{StaticResource Caption}" />
                                             <!-- 星列より左は右端、右は左端の境界につまみを置く -->
                                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                                   Tag="wlcrog.0" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrog.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrog.2" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrog.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrog.3" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrog.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrog.4" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrog.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrog.5" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrog.5" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="6" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrog.6" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrog.6" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="7" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrog.7" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrog.7" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                             <Thumb Grid.Column="8" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
-                                                   Tag="wlcrog.8" DragDelta="OnTableColumnResize" />
+                                                   Tag="wlcrog.8" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />

@@ -300,10 +300,39 @@ public partial class MainWindow : Window
     /// 掴んだ境界がカーソルから離れないための符号の判断は
     /// <see cref="TableColumns"/> の表の宣言 1 か所に閉じてある。
     /// </summary>
+    /// <summary>掴んだときの幅と、掴んだ位置（ウィンドウ座標）。</summary>
+    private string? _gripKey;
+    private double _gripWidth;
+    private double _gripStartX;
+
+    private void OnTableColumnGrab(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string key }) return;
+
+        _gripKey = key;
+        _gripWidth = TableColumns.Instance.WidthOf(key);
+        _gripStartX = Mouse.GetPosition(this).X;
+    }
+
+    /// <summary>
+    /// 列幅のドラッグ。<b>掴んでからの総移動量</b>で決める。
+    ///
+    /// 1 回ぶんの差分を足し込むと、幅を変えたときにつまみ自体が動くぶんを
+    /// <c>Thumb</c> が差し引いてしまい、伸び縮みが鈍る・端で詰まると飛ぶ。
+    /// マウスの位置はウィンドウ基準で見れば、つまみが動いても影響を受けない。
+    /// </summary>
     private void OnTableColumnResize(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: string key })
+        if (sender is not FrameworkElement { Tag: string key }) return;
+
+        // 掴み損ねた（DragStarted が来ていない）ときは、その場の差分で動かす
+        if (_gripKey != key)
+        {
             TableColumns.Instance.Drag(key, e.HorizontalChange);
+            return;
+        }
+
+        TableColumns.Instance.Resize(key, _gripWidth, Mouse.GetPosition(this).X - _gripStartX);
     }
 
     /// <summary>

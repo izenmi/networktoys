@@ -143,10 +143,19 @@ public sealed class TableColumns : ObservableObject
         => _widths.TryGetValue(key, out double width) ? new GridLength(width) : new GridLength(100);
 
     /// <summary>境目を掴んで動かす。表ごとの星列の位置から符号を決める。</summary>
-    public void Drag(string key, double horizontalChange)
-    {
-        if (!_widths.TryGetValue(key, out double current)) return;
+    /// <summary>いまの幅。ドラッグの開始時に控えておくために使う。</summary>
+    public double WidthOf(string key) => _widths.TryGetValue(key, out double width) ? width : 100;
 
+    /// <summary>
+    /// つまみを掴んでからの<b>総移動量</b>で幅を決める。
+    ///
+    /// <b>1 回ぶんの差分（<c>DragDelta.HorizontalChange</c>）を足し込んではいけない。</b>
+    /// 幅を変えるとつまみ自体が動くので、WPF の <c>Thumb</c> は自分の移動ぶんを差し引いた
+    /// 値を返す。差分を足していくと伸び縮みが鈍り、端で詰まると飛ぶ
+    /// （2026-08-17 にユーザーが実機で「変な動き」として報告）。
+    /// </summary>
+    public void Resize(string key, double startWidth, double totalChange)
+    {
         int dot = key.LastIndexOf('.');
         if (dot <= 0 || !int.TryParse(key[(dot + 1)..], CultureInfo.InvariantCulture, out int column))
             return;
@@ -155,12 +164,18 @@ public sealed class TableColumns : ObservableObject
         if (spec is null) return;
 
         // 星列より右の列は左端の境界を掴んでいるので逆向きに動く
-        double delta = column < spec.FirstStar ? horizontalChange : -horizontalChange;
+        double delta = column < spec.FirstStar ? totalChange : -totalChange;
 
-        _widths[key] = Math.Clamp(current + delta, 36, 900);
+        _widths[key] = Math.Clamp(startWidth + delta, 36, 900);
 
         // インデクサ全体の変更を知らせる。どのキーが変わったかは WPF に見分けられない
         OnPropertyChanged("Item[]");
+    }
+
+    /// <summary>いまの幅からの相対で動かす（自己診断など、掴んでいないところから呼ぶ用）。</summary>
+    public void Drag(string key, double horizontalChange)
+    {
+        if (_widths.TryGetValue(key, out double current)) Resize(key, current, horizontalChange);
     }
 
     /// <summary>
