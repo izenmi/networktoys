@@ -1345,11 +1345,12 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- 左右の見出し。区切りの罫線は下の一覧と同じ位置に置く -->
+                                <!-- 左右の見出し。区切りの罫線は下の一覧と同じ位置に置く。
+                                     中の 11 は 貼り付け欄と同じ左右 5px ＋ 罫線 1px -->
                                 <Grid DockPanel.Dock="Top" Margin="0,0,0,3">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="1" />
+                                        <ColumnDefinition Width="11" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="作業前" Style="{StaticResource Caption}" Margin="42,0,0,0" />
@@ -1366,7 +1367,7 @@
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="1" />
+                                        <ColumnDefinition Width="11" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
 
@@ -1420,8 +1421,9 @@
                                             </ListBox.ItemTemplate>
                                         </ListBox>
 
-                                    <!-- 作業前と作業後の区切り -->
-                                    <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" />
+                                    <!-- 作業前と作業後の区切り。左右の余白は貼り付け欄と同じ 5px -->
+                                    <Border Grid.Column="1" Width="1" Margin="5,0"
+                                            Background="{DynamicResource Brush.Border}" />
 
                                         <ListBox x:Name="DiffListAfter"
                                                  Grid.Column="2"
