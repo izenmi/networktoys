@@ -416,8 +416,8 @@ internal static class SelfTest
             window.PingTab.IsSelected = true;
             window.UpdateLayout();
 
-            // Meraki は入れ子の中。親を開いていないのに「見えている」と誤判定すると、
-            // タブを開いただけで本番の API を叩き始める
+            // ACI / WLC は入れ子の中。親を開いていないのに「見えている」と誤判定すると、
+            // タブを開いただけで本番の API を叩き始める（Meraki は主タブだが同じ縛り）
             System.Windows.Controls.TabItem[] mustBeHidden =
                 [window.WifiTab, window.WfpTab, window.ConnectionsTab, window.TraceTab,
                  window.IpConfigTab, window.MerakiTab, window.AciTab, window.WlcTab];
@@ -441,7 +441,7 @@ internal static class SelfTest
             // サブタブの中身も選ばないと実体化しない(親タブを開くだけでは 1 枚目しか作られない)
             object? original = window!.MainTabs.SelectedItem;
 
-            // Meraki は「調べる」の中にある。先祖ごと開かないと中身が作られない
+            // 主タブなのでそのまま開けるが、経路は右クリックからの遷移と同じ Show を通す
             Views.MainWindow.Show(window.MerakiTab);
 
             foreach (object? item in window.MerakiSubTabs.Items)

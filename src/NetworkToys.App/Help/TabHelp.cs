@@ -457,10 +457,10 @@ internal static class TabHelp
         ・一覧を CSV で保存する
         """;
 
-    /// <summary>Cisco ACI</summary>
+    /// <summary>ACI</summary>
     public const string Aci =
         """
-        Cisco ACI
+        ACI
 
         この画面ですること
         ・APIC の REST から、ファブリックの「いまの状態」を読み取る
@@ -479,10 +479,10 @@ internal static class TabHelp
         ・各一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco ACI ─ ヘルス</summary>
+    /// <summary>ACI ─ ヘルス</summary>
     public const string AciHealth =
         """
-        Cisco ACI ─ ヘルス
+        ACI ─ ヘルス
 
         この画面ですること
         ・ファブリック全体・ノード・テナントの健全度を 1 つの表に並べる
@@ -493,10 +493,10 @@ internal static class TabHelp
         ・ここで取れたノードの一覧が、ポート画面の選択肢になる
         """;
 
-    /// <summary>Cisco ACI ─ フォールト</summary>
+    /// <summary>ACI ─ フォールト</summary>
     public const string AciFaults =
         """
-        Cisco ACI ─ フォールト
+        ACI ─ フォールト
 
         この画面ですること
         ・いま出ている障害（faultInst）を、重い順に並べる
@@ -507,10 +507,10 @@ internal static class TabHelp
         ・「確認」は APIC 側で確認応答済みかどうか。ここからは変えられない
         """;
 
-    /// <summary>Cisco ACI ─ ポート</summary>
+    /// <summary>ACI ─ ポート</summary>
     public const string AciPorts =
         """
-        Cisco ACI ─ ポート
+        ACI ─ ポート
 
         この画面ですること
         ・選んだノードの物理ポートについて、設定と実際の状態を突き合わせる
@@ -537,10 +537,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco ACI ─ EPG</summary>
+    /// <summary>ACI ─ EPG</summary>
     public const string AciEpgs =
         """
-        Cisco ACI ─ EPG
+        ACI ─ EPG
 
         この画面ですること
         ・EPG の一覧と、選んだ EPG に結び付いているポート（静的パス）を見る
@@ -554,10 +554,10 @@ internal static class TabHelp
         ・EPG の一覧と、メンバーの一覧をそれぞれ保存する
         """;
 
-    /// <summary>Cisco ACI ─ エンドポイント</summary>
+    /// <summary>ACI ─ エンドポイント</summary>
     public const string AciEndpoints =
         """
-        Cisco ACI ─ エンドポイント
+        ACI ─ エンドポイント
 
         この画面ですること
         ・ファブリックが学習した端末（MAC と IP）を、EPG とポートごとに並べる
@@ -573,10 +573,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco ACI ─ ログ</summary>
+    /// <summary>ACI ─ ログ</summary>
     public const string AciLogs =
         """
-        Cisco ACI ─ ログ
+        ACI ─ ログ
 
         この画面ですること
         ・障害の履歴（faultRecord）と、出来事の記録（eventRecord）を新しい順に並べる
@@ -593,10 +593,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco ACI ─ 構成</summary>
+    /// <summary>ACI ─ 構成</summary>
     public const string AciConfig =
         """
-        Cisco ACI ─ 構成
+        ACI ─ 構成
 
         この画面ですること
         ・テナント構成／ファブリック構成／インターフェース関連ポリシー／
@@ -618,10 +618,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco ACI ─ 差分比較</summary>
+    /// <summary>ACI ─ 差分比較</summary>
     public const string AciDiff =
         """
-        Cisco ACI ─ 差分比較
+        ACI ─ 差分比較
 
         この画面ですること
         ・テナントの設定を作業の前と後で取って、その場で左右に並べて見比べる
@@ -645,10 +645,10 @@ internal static class TabHelp
         ・大きなテナントでは 1 回の取得に少し時間がかかる
         """;
 
-    /// <summary>Cisco WLC</summary>
+    /// <summary>WLC</summary>
     public const string Wlc =
         """
-        Cisco WLC
+        WLC
 
         この画面ですること
         ・Catalyst 9800 から、無線の「いまの状態」を読み取る
@@ -670,10 +670,10 @@ internal static class TabHelp
         ・各一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco WLC ─ 端末</summary>
+    /// <summary>WLC ─ 端末</summary>
     public const string WlcClients =
         """
-        Cisco WLC ─ 端末
+        WLC ─ 端末
 
         この画面ですること
         ・IP か MAC から、その端末がどの AP に繋がっているかを調べる
@@ -693,10 +693,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco WLC ─ AP</summary>
+    /// <summary>WLC ─ AP</summary>
     public const string WlcAps =
         """
-        Cisco WLC ─ AP
+        WLC ─ AP
 
         この画面ですること
         ・AP の一覧を出す。いま繋がっていない AP も同じ表に混ぜる
@@ -712,10 +712,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco WLC ─ 参加・切断</summary>
+    /// <summary>WLC ─ 参加・切断</summary>
     public const string WlcJoins =
         """
-        Cisco WLC ─ 参加・切断
+        WLC ─ 参加・切断
 
         この画面ですること
         ・AP ごとに、最後に参加した時刻・最後に切れた時刻とその理由を並べる
@@ -733,10 +733,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco WLC ─ SSID</summary>
+    /// <summary>WLC ─ SSID</summary>
     public const string WlcSsids =
         """
-        Cisco WLC ─ SSID
+        WLC ─ SSID
 
         この画面ですること
         ・SSID(WLAN) の一覧に、いま繋がっている台数と帯域別の内訳を添える
@@ -753,10 +753,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco WLC ─ 電波</summary>
+    /// <summary>WLC ─ 電波</summary>
     public const string WlcRrm =
         """
-        Cisco WLC ─ 電波
+        WLC ─ 電波
 
         この画面ですること
         ・AP の無線ごとに、チャンネル・送信出力・混み具合・雑音を並べる
@@ -774,10 +774,10 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco WLC ─ 不正 AP</summary>
+    /// <summary>WLC ─ 不正 AP</summary>
     public const string WlcRogues =
         """
-        Cisco WLC ─ 不正 AP
+        WLC ─ 不正 AP
 
         この画面ですること
         ・WLC が見つけた不正 AP と、隣接している AP を 1 つの表に並べる
