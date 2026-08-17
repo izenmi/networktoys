@@ -87,10 +87,20 @@ public static class DnacCatalog
     public static string ClientDetailPath(string mac, long timestampMs)
         => $"{Intent}/client-detail?macAddress={Uri.EscapeDataString(mac)}&timestamp={timestampMs}";
 
-    /// <summary>端末のイベント。2.3.5 より前の版には無い。</summary>
+    /// <summary>
+    /// 端末のイベント。<b><c>/dna/data/api/v1</c> は 2.3.7.6 以降</b>にしか無い。
+    /// </summary>
     public static string EventsPath(string mac, long startMs, long endMs, int limit = 100)
         => $"{Data}/assuranceEvents?clientMac={Uri.EscapeDataString(mac)}"
            + $"&startTime={startMs}&endTime={endMs}&limit={limit}";
+
+    /// <summary>
+    /// 古い版（2.3.5 など）でイベントの代わりに使う「問題」。
+    /// <b>MAC で絞れる</b>ので、端末 1 台ぶんだけが返る。
+    /// </summary>
+    public static string IssuesPath(string mac, long startMs, long endMs)
+        => $"{Intent}/issues?macAddress={Uri.EscapeDataString(mac)}"
+           + $"&startTime={startMs}&endTime={endMs}";
 
     /// <summary>
     /// 機器の在庫。<b><c>offset</c> は 1 始まり</b>（0 を渡すと版によっては何も返らない）。
@@ -99,12 +109,35 @@ public static class DnacCatalog
     public static string DevicePath(int page, int limit)
         => $"{Intent}/network-device?offset={(page * limit) + 1}&limit={limit}";
 
-    public static string[] DeviceHealthPaths => [$"{Data}/networkDevices", $"{Intent}/network-health"];
+    /// <summary>
+    /// 機器の健全度。<b>1 本目は 2.3.7.6 以降にしか無い</b>ので、
+    /// 2.3.5 系では <c>device-health</c>（機器ごとの一覧）へ落ちる。
+    /// <c>network-health</c> は拠点ごとの集計で機器の行を持たないため、最後の保険。
+    /// </summary>
+    public static string[] DeviceHealthPaths =>
+    [
+        $"{Data}/networkDevices",
+        $"{Intent}/device-health?limit=1000&offset=1",
+        $"{Intent}/network-health",
+    ];
 
-    /// <summary>端末の一覧。<b>期間で絞る</b>（いつ見えた端末か）。offset は 1 始まり。</summary>
-    public static string ClientsPath(long startMs, long endMs, int page, int limit)
-        => $"{Data}/clients?startTime={startMs}&endTime={endMs}"
-           + $"&offset={(page * limit) + 1}&limit={limit}";
+    /// <summary>
+    /// 端末の一覧。<b>期間で絞る</b>（いつ見えた端末か）。offset は 1 始まり。
+    ///
+    /// <b><c>/dna/data/api/v1</c> の一群は 2.3.7.6 以降にしか無い。</b>
+    /// それより古い版（2.3.5 など）では 404 になるので、Endpoint Analytics の
+    /// 端末一覧へ落とす（そちらは接続先や品質を持たないぶん、出る項目が少ない）。
+    /// </summary>
+    public static string[] ClientsPaths(long startMs, long endMs, int page, int limit) =>
+    [
+        $"{Data}/clients?startTime={startMs}&endTime={endMs}"
+            + $"&offset={(page * limit) + 1}&limit={limit}",
+        $"{Intent}/endpoint-analytics/endpoints?limit={limit}&offset={(page * limit) + 1}",
+    ];
+
+    /// <summary>その一覧が古い版向けの逃げ道かどうか（画面に断りを出すため）。</summary>
+    public static bool IsFallbackClientPath(string? path)
+        => path is not null && path.Contains("endpoint-analytics", StringComparison.Ordinal);
 
     /// <summary>脆弱性（PSIRT）。手持ちの機器が対象になっている勧告が返る。</summary>
     public static string[] AdvisoryPaths =>
@@ -332,8 +365,8 @@ public static class DnacCatalog
 
             list.Add(new DnacConnectionRow(
                 Mac: DnacJson.First(row, "macAddress", "mac", "id"),
-                Ip: DnacJson.First(row, "ipv4Address", "hostIpV4", "ipAddress"),
-                HostName: DnacJson.First(row, "name", "hostName", "userId"),
+                Ip: DnacJson.First(row, "ipv4Address", "hostIpV4", "ipAddress", "ip"),
+                HostName: DnacJson.First(row, "name", "hostName", "userId", "deviceType"),
                 Kind: DescribeConnection(DnacJson.First(row, "type", "hostType", "connectionType")),
                 Device: DnacJson.First(row, "connectedNetworkDevice/connectedNetworkDeviceName",
                                        "connectedNetworkDeviceName", "clientConnection", "apName"),
@@ -435,15 +468,23 @@ public static class DnacCatalog
 
         foreach (JsonElement row in rows)
         {
-            foreach (JsonElement issue in DnacJson.Children(row, "issueDetails/issue"))
+            IReadOnlyList<JsonElement> issues = DnacJson.Children(row, "issueDetails/issue");
+
+            // enrichment は問題を入れ子で持つが、/issues は 1 行がそのまま 1 件。
+            // 入れ子が無ければ行そのものを問題として読む（どちらの形でも表は同じ）
+            foreach (JsonElement issue in issues.Count > 0 ? issues : [row])
             {
                 list.Add(new DnacEventRow(
-                    Time: DescribeTime(DnacJson.Long(issue, "issueTimestamp", "timestamp")),
-                    Name: DnacJson.First(issue, "issueSummary", "issueCategory", "issueName"),
+                    Time: DescribeTime(DnacJson.Long(
+                        issue, "issueTimestamp", "timestamp", "last_occurence_time", "lastOccurenceTime")),
+                    Name: DnacJson.First(
+                        issue, "issueSummary", "issueCategory", "issueName", "name"),
                     Status: "⊘ 問題",
                     StatusKind: SeverityKind.Notice,
-                    Source: DnacJson.First(issue, "issueSource", "issueCategory"),
-                    Detail: DnacJson.First(issue, "issueDescription", "suggestedActions/message")));
+                    Source: DnacJson.First(
+                        issue, "issueSource", "issueCategory", "deviceRole", "siteId"),
+                    Detail: DnacJson.First(
+                        issue, "issueDescription", "suggestedActions/message", "priority", "status")));
             }
         }
 

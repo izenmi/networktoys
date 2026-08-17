@@ -3047,6 +3047,8 @@ internal static class SelfTest
             {
                 _ when path == Core.Assurance.DnacCatalog.TokenPath => TokenJson,
                 _ when path.Contains("client-enrichment", StringComparison.Ordinal) => EnrichmentJson,
+                // 2.3.5 系はここが健全度の在り処。2 本目へ進めているかを見る
+                _ when path.Contains("device-health", StringComparison.Ordinal) => HealthJson,
                 _ when path.Contains("network-health", StringComparison.Ordinal) => HealthJson,
                 _ when path.Contains("offset=1&", StringComparison.Ordinal) => Inventory(Services.DnacClient.PageSize),
                 _ when path.Contains("network-device", StringComparison.Ordinal) => Inventory(3),

@@ -49,7 +49,15 @@ public sealed record AciPortRow(
     string Vlans,
     string Modes,
     string Reason,
-    string LastChange);
+    string LastChange,
+    string Description = "")
+{
+    /// <summary>
+    /// 並べ替え用の鍵。<b>eth1/2 は eth1/10 より前</b>に来てほしいので、
+    /// 素の文字比較ではなく数字を桁で揃えたものを使う（見出しを押したときもこちらで並ぶ）。
+    /// </summary>
+    public string InterfaceKey => AciCatalog.PortSortKey(Node, Interface);
+}
 
 /// <summary>EPG の 1 行。</summary>
 public sealed record AciEpgRow(
@@ -275,7 +283,41 @@ public static class AciCatalog
                              Bound(paths, bundle.Node, bundle.Id, bundle)));
         }
 
-        return rows;
+        // 応答の順は APIC 任せ（eth1/10 が eth1/2 より前に来る）。口の番号どおりに並べる
+        return [.. rows.OrderBy(r => r.InterfaceKey, StringComparer.Ordinal)];
+    }
+
+    /// <summary>
+    /// ノードと口の名前から並べ替え用の鍵を作る。<b>数字は 6 桁に揃える</b>ので、
+    /// eth1/2 → eth000001/000002 となり、eth1/10 より前に来る。
+    /// ノードも数字なので同じ規則で先頭に置く（101 と 1001 が混ざらない）。
+    /// </summary>
+    public static string PortSortKey(string? node, string? port)
+    {
+        var text = new System.Text.StringBuilder();
+
+        foreach (string part in new[] { node ?? "", port ?? "" })
+        {
+            for (int i = 0; i < part.Length;)
+            {
+                if (char.IsDigit(part[i]))
+                {
+                    int start = i;
+                    while (i < part.Length && char.IsDigit(part[i])) i++;
+
+                    text.Append(part[start..i].PadLeft(6, '0'));
+                }
+                else
+                {
+                    text.Append(char.ToUpperInvariant(part[i]));
+                    i++;
+                }
+            }
+
+            text.Append('\u0000');   // ノードと口の区切り。混ざらないように
+        }
+
+        return text.ToString();
     }
 
     private static AciPortRow PortRow(
@@ -299,7 +341,8 @@ public static class AciCatalog
             Vlans: Join(bound.Select(m => m.Encap)),
             Modes: Join(bound.Select(m => m.Mode)),
             Reason: actual?["operStQual"] ?? "",
-            LastChange: actual?["lastLinkStChg"] ?? "");
+            LastChange: actual?["lastLinkStChg"] ?? "",
+            Description: mo["descr"]);
     }
 
     /// <summary>
@@ -723,10 +766,10 @@ public static class AciCatalog
         [.. rows.Select(r => new[] { r.Time, r.Kind, r.Severity, r.Target, r.Text })]);
 
     public static CsvTable ToCsv(IReadOnlyList<AciPortRow> rows) => new(
-        ["ノード", "インターフェース", "管理", "状態", "速度", "用途", "ポートチャネル", "EPG", "VLAN", "タグ", "理由", "最終変化"],
+        ["ノード", "インターフェース", "説明", "管理", "状態", "速度", "用途", "ポートチャネル", "EPG", "VLAN", "タグ", "理由", "最終変化"],
         [.. rows.Select(r => new[]
         {
-            r.Node, r.Interface, r.AdminState, r.OperState, r.Speed, r.Usage,
+            r.Node, r.Interface, r.Description, r.AdminState, r.OperState, r.Speed, r.Usage,
             r.PortChannel, r.Epgs, r.Vlans, r.Modes, r.Reason, r.LastChange,
         })]);
 

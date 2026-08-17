@@ -195,6 +195,32 @@ public class AciCatalogTests
     }
 
     [Fact]
+    public void Ports_are_ordered_by_number_and_keep_their_description()
+    {
+        // 応答は APIC 任せの順（eth1/10 が先）。説明は l1PhysIf の descr
+        const string json = """
+            {"totalCount":"3","imdata":[
+              {"l1PhysIf":{"attributes":{
+                "dn":"topology/pod-1/node-101/sys/phys-[eth1/10]","id":"eth1/10","adminSt":"up"}}},
+              {"l1PhysIf":{"attributes":{
+                "dn":"topology/pod-1/node-101/sys/phys-[eth1/2]","id":"eth1/2","adminSt":"up",
+                "descr":"AP-1F-01"}}},
+              {"l1PhysIf":{"attributes":{
+                "dn":"topology/pod-1/node-9/sys/phys-[eth1/1]","id":"eth1/1","adminSt":"up"}}}
+            ]}
+            """;
+
+        IReadOnlyList<AciPortRow> rows = AciCatalog.ParsePorts(Mos(json));
+
+        // ノードも口も数字の大小で並ぶ（文字の並びだと 101 が 9 より先に来る）
+        Assert.Equal(new[] { "9", "101", "101" }, rows.Select(r => r.Node).ToArray());
+        Assert.Equal(new[] { "eth1/1", "eth1/2", "eth1/10" }, rows.Select(r => r.Interface).ToArray());
+
+        Assert.Equal("AP-1F-01", rows[1].Description);
+        Assert.Equal("", rows[0].Description);
+    }
+
+    [Fact]
     public void A_port_shows_which_epg_and_vlan_are_bound_to_it()
     {
         // 「どの口にどの EPG が載っているか」は EPG 側の静的パスにしかない

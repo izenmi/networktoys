@@ -526,8 +526,9 @@ public partial class MainWindow : Window
         ["mrcheck"] = ["Name", "Target", "Verdict", "Detail"],
         ["acihl"] = ["Kind", "Name", "Score", "State"],
         ["aciflt"] = ["Severity", "Code", "Created", "Target", "Description", "Ack"],
-        ["aciport"] = ["Node", "Interface", "OperState", "Speed", "Vlans", "Modes", "PortChannel",
-                       "Epgs", "Reason", "LastChange"],
+        // IF の列は InterfaceKey で並べる（eth1/2 が eth1/10 より前に来るように）
+        ["aciport"] = ["InterfaceKey", "InterfaceKey", "OperState", "Speed", "Vlans", "Modes", "PortChannel",
+                       "Epgs", "Reason", "LastChange", "Description"],
         ["aciepg"] = ["Tenant", "AppProfile", "Name", "BridgeDomain", "Domains", "PathCount"],
         ["aciepgm"] = ["Node", "Path", "Encap", "Mode"],
         ["aciep"] = ["Mac", "Ip", "Tenant", "Epg", "Encap", "Node", "Path"],

@@ -303,8 +303,15 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
 
         Status = $"端末 {ClientRows.Count} 台（直近{SelectedTimespan.Name}・{DateTime.Now:HH:mm:ss}）";
 
-        if (ClientRows.Count == 0)
+        if (DnacCatalog.IsFallbackClientPath(client.LastClientPath))
+        {
+            Notice = "⚠ この版には Assurance の端末一覧（2.3.7.6 以降）がありません。"
+                   + "Endpoint Analytics から拾っているので、接続先や品質の欄は埋まりません。";
+        }
+        else if (ClientRows.Count == 0)
+        {
             Notice = "⚠ 1 台も返りませんでした。期間を広げるか、この版に端末の一覧があるかを確かめてください。";
+        }
     });
 
     private Task FetchClientAsync() => RunAsync("端末", async (client, token) =>
@@ -383,9 +390,29 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
 
             return;
         }
-        catch (DnacApiException ex) when (ex.Message.Contains("404", StringComparison.Ordinal))
+        catch (DnacApiException ex) when (ex.Message.Contains("404", StringComparison.Ordinal)
+                                          || ex.Message.Contains("400", StringComparison.Ordinal))
         {
-            // 版が古い。持っているもので代える
+            // 版が古い（2.3.5 など）。この版が持っている「問題」で代える
+        }
+
+        try
+        {
+            string json = await client.GetAsync(DnacCatalog.IssuesPath(mac, start, end), token)
+                .ConfigureAwait(true);
+
+            Record(client, json);
+            Replace(EventRows, DnacCatalog.ParseIssuesAsEvents(DnacJson.Rows(json)));
+
+            Notice = "⚠ この版にはイベントの一覧（2.3.7.6 以降）がありません。"
+                   + "代わりに、この端末について挙がっている問題を出しています。";
+
+            return;
+        }
+        catch (DnacApiException ex) when (ex.Message.Contains("404", StringComparison.Ordinal)
+                                          || ex.Message.Contains("400", StringComparison.Ordinal))
+        {
+            // 問題の一覧も引けない。端末の詳細が持っているぶんで代える
         }
 
         Replace(EventRows, DnacCatalog.ParseIssuesAsEvents(DnacJson.Rows(enrichment)));

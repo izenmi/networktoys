@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using Microsoft.Win32;
@@ -933,17 +934,29 @@ public sealed class AciViewModel : ObservableObject, IDisposable
 
         Nodes.Clear();
 
+        var found = new List<(int Id, AciNodeItem Item)>();
+
         foreach (AciMo mo in mos)
         {
             string dn = mo["dn"];
             if (dn.Length == 0) continue;
 
+            string id = AciDn.Value(dn, "node");
+
             // ポートは必ずノードで絞る。ファブリック全体の l1PhysIf は数万行になる。
             // topSystem の dn は既に …/sys なので、そのまま絞り込みに使える
-            Nodes.Add(new AciNodeItem(
-                Name: $"{AciCatalog.DescribeNodeRole(mo["role"])} {AciDn.Value(dn, "node")} {mo["name"]}".Trim(),
-                Dn: dn.EndsWith("/sys", StringComparison.Ordinal) ? dn : dn + "/sys"));
+            found.Add((
+                int.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out int number)
+                    ? number
+                    : int.MaxValue,
+                new AciNodeItem(
+                    Name: $"{AciCatalog.DescribeNodeRole(mo["role"])} {id} {mo["name"]}".Trim(),
+                    Dn: dn.EndsWith("/sys", StringComparison.Ordinal) ? dn : dn + "/sys")));
         }
+
+        // 応答の順は APIC 任せ。選ぶ欄はノード番号順にする（2026-08-17 ユーザー指示）
+        foreach ((_, AciNodeItem item) in found.OrderBy(f => f.Id).ThenBy(f => f.Item.Name, StringComparer.Ordinal))
+            Nodes.Add(item);
 
         SelectedNode = Nodes.FirstOrDefault(n => n.Dn == keep) ?? Nodes.FirstOrDefault();
     }

@@ -56,9 +56,16 @@ public class DnacClientAdvisoryTests
     [Fact]
     public void 端末の一覧の_offset_も_1_始まり()
     {
-        Assert.Contains("offset=1&", DnacCatalog.ClientsPath(1, 2, 0, 500), StringComparison.Ordinal);
-        Assert.Contains("offset=501&", DnacCatalog.ClientsPath(1, 2, 1, 500), StringComparison.Ordinal);
-        Assert.Contains("startTime=1&endTime=2", DnacCatalog.ClientsPath(1, 2, 0, 500), StringComparison.Ordinal);
+        Assert.Contains("offset=1&", DnacCatalog.ClientsPaths(1, 2, 0, 500)[0], StringComparison.Ordinal);
+        Assert.Contains("offset=501&", DnacCatalog.ClientsPaths(1, 2, 1, 500)[0], StringComparison.Ordinal);
+        Assert.Contains("startTime=1&endTime=2", DnacCatalog.ClientsPaths(1, 2, 0, 500)[0], StringComparison.Ordinal);
+
+        // 古い版向けの逃げ道も 1 始まり。使ったかどうかは画面で断るので見分けが要る
+        string fallback = DnacCatalog.ClientsPaths(1, 2, 1, 500)[1];
+
+        Assert.Contains("offset=501", fallback, StringComparison.Ordinal);
+        Assert.True(DnacCatalog.IsFallbackClientPath(fallback));
+        Assert.False(DnacCatalog.IsFallbackClientPath(DnacCatalog.ClientsPaths(1, 2, 0, 500)[0]));
     }
 
     [Fact]

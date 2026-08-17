@@ -168,16 +168,31 @@ internal sealed class DnacClient : IDisposable
     }
 
     /// <summary>
-    /// 端末の一覧を取り切る。<b>offset は 1 始まり</b>（<see cref="DnacCatalog.ClientsPath"/> が面倒を見る）。
+    /// 端末の一覧を取り切る。<b>offset は 1 始まり</b>（<see cref="DnacCatalog.ClientsPaths"/> が面倒を見る）。
+    ///
+    /// <b>問い合わせ先は版で違う</b>ので、1 ページ目で使えたものを覚えて 2 ページ目以降も同じ形で引く
+    /// （途中で別の API に切り替わると、同じ端末が二度出る）。
+    /// 使った先は <see cref="LastClientPath"/> に残す — 画面で断りを出すため。
     /// </summary>
     public async Task<IReadOnlyList<string>> ClientsAsync(long startMs, long endMs, CancellationToken token)
     {
         var pages = new List<string>();
+        int choice = -1;
 
         for (int page = 0; page < MaxPages; page++)
         {
-            string json = await GetAsync(DnacCatalog.ClientsPath(startMs, endMs, page, PageSize), token)
-                .ConfigureAwait(false);
+            string[] candidates = DnacCatalog.ClientsPaths(startMs, endMs, page, PageSize);
+            string json;
+
+            if (choice >= 0)
+            {
+                json = await GetAsync(candidates[choice], token).ConfigureAwait(false);
+            }
+            else
+            {
+                (json, choice) = await GetFirstWithIndexAsync(candidates, token).ConfigureAwait(false);
+                LastClientPath = candidates[choice];
+            }
 
             pages.Add(json);
 
@@ -187,6 +202,31 @@ internal sealed class DnacClient : IDisposable
         WasTruncated = true;
 
         return pages;
+    }
+
+    /// <summary>直近の端末一覧で実際に使った問い合わせ先。</summary>
+    public string LastClientPath { get; private set; } = "";
+
+    /// <summary>候補を順に試して、<b>どれが答えたか</b>も返す。</summary>
+    private async Task<(string Json, int Index)> GetFirstWithIndexAsync(
+        IReadOnlyList<string> paths, CancellationToken token)
+    {
+        DnacApiException? last = null;
+
+        for (int i = 0; i < paths.Count; i++)
+        {
+            try
+            {
+                return (await GetAsync(paths[i], token).ConfigureAwait(false), i);
+            }
+            catch (DnacApiException ex) when (ex.Message.Contains("404", StringComparison.Ordinal)
+                                              || ex.Message.Contains("400", StringComparison.Ordinal))
+            {
+                last = ex;
+            }
+        }
+
+        throw last ?? new DnacApiException("問い合わせ先が指定されていません。");
     }
 
     /// <summary>

@@ -37,8 +37,11 @@ public static class DnacJson
         {
             JsonElement root = document.RootElement;
 
+            // 入れ物の名前は問い合わせ先で違う（response のほか、
+            // Endpoint Analytics は items で返す）
             if (root.ValueKind == JsonValueKind.Object
-                && root.TryGetProperty("response", out JsonElement response))
+                && (root.TryGetProperty("response", out JsonElement response)
+                    || root.TryGetProperty("items", out response)))
                 root = response;
 
             if (root.ValueKind == JsonValueKind.Array) return Clone(root);
