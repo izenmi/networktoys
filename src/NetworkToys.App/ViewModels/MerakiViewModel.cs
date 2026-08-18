@@ -1282,6 +1282,20 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
                 await _dashboard.UplinkUsageAsync(
                     ApiKey, organization.Id, timespan.Seconds, _cts.Token));
 
+            // 台数はダッシュボードのまとめから添える（版によっては持っていない）
+            try
+            {
+                _trafficRows = MerakiCatalog.WithClientCounts(
+                    _trafficRows,
+                    MerakiCatalog.ClientCountsByNetwork(
+                        await _dashboard.NetworkSummaryAsync(
+                            ApiKey, organization.Id, timespan.Seconds, _cts.Token)));
+            }
+            catch (MerakiApiException)
+            {
+                // 台数が添えられないだけ。通信量は出す
+            }
+
             double max = _trafficRows.Count > 0 ? _trafficRows.Max(r => r.Kilobytes) : 0;
 
             TrafficBars.Clear();
@@ -1290,7 +1304,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             {
                 TrafficBars.Add(new MerakiBarViewModel(
                     device: row.Network,
-                    model: "",
+                    model: row.Clients,
                     network: $"↑ {row.Sent} ／ ↓ {row.Received}",
                     valueText: row.Total,
                     value: row.Kilobytes,

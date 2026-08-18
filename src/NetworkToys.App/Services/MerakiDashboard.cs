@@ -95,7 +95,18 @@ internal sealed class MerakiDashboard : IDisposable
     public Task<IReadOnlyList<string>> DhcpSubnetsAsync(string apiKey, string serial, CancellationToken token)
         => GetPagesAsync($"/devices/{Escape(serial)}/appliance/dhcp/subnets", apiKey, token);
 
-    /// <summary>拠点ごとの WAN 使用量（期間内の合計バイト）。</summary>
+    /// <summary>
+    /// 拠点ごとの<b>まとめ</b>（ダッシュボードの「Networks by status」と同じもの）。
+    /// 台数と通信量が 1 回で取れる。版によっては持っていない（404）。
+    /// </summary>
+    public Task<IReadOnlyList<string>> NetworkSummaryAsync(
+        string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
+        => GetPagesAsync(
+            $"/organizations/{Escape(organizationId)}/summary/top/networks/byStatus"
+            + $"?timespan={timespanSeconds}&perPage=300",
+            apiKey, token);
+
+    /// <summary>拠点ごとの WAN 使用量（期間内の合計。単位はキロバイト）。</summary>
     public Task<IReadOnlyList<string>> UplinkUsageAsync(
         string apiKey, string organizationId, int timespanSeconds, CancellationToken token)
         => GetPagesAsync(

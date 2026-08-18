@@ -3448,9 +3448,11 @@
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid Height="{DynamicResource Size.RowHeight.Wide}">
-                                                        <!-- 拠点ごとに 1 行（回線ごとには割らない。2026-08-18 ユーザー指示） -->
+                                                        <!-- 拠点ごとに 1 行（回線ごとには割らない。2026-08-18 ユーザー指示）。
+                                                             台数は 2 列目（同上） -->
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="230" />
+                                                            <ColumnDefinition Width="70" />
                                                             <ColumnDefinition Width="*" />
                                                             <ColumnDefinition Width="200" />
                                                             <ColumnDefinition Width="100" />
@@ -3461,8 +3463,17 @@
                                                                    VerticalAlignment="Center"
                                                                    TextTrimming="CharacterEllipsis" />
 
+                                                        <!-- クライアント数（Model の欄を使い回している） -->
+                                                        <TextBlock Grid.Column="1" Text="{Binding Model}"
+                                                                   Style="{StaticResource Mono}"
+                                                                   FontSize="{DynamicResource Size.Caption}"
+                                                                   VerticalAlignment="Center"
+                                                                   HorizontalAlignment="Right"
+                                                                   Margin="0,0,10,0"
+                                                                   ToolTip="この期間に見えた端末の数" />
+
                                                         <!-- 棒は星（比率）で伸ばす。画面幅を測らずに済む -->
-                                                        <Grid Grid.Column="1" Margin="0,4,8,4">
+                                                        <Grid Grid.Column="2" Margin="0,4,8,4">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="{Binding Bar}" />
                                                                 <ColumnDefinition Width="{Binding Rest}" />
@@ -3472,12 +3483,12 @@
                                                                     CornerRadius="{DynamicResource Radius.Badge}" />
                                                         </Grid>
 
-                                                        <TextBlock Grid.Column="2" Text="{Binding Network}"
+                                                        <TextBlock Grid.Column="3" Text="{Binding Network}"
                                                                    Style="{StaticResource Mono}"
                                                                    FontSize="{DynamicResource Size.Caption}"
                                                                    VerticalAlignment="Center"
                                                                    TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock Grid.Column="3" Text="{Binding ValueText}"
+                                                        <TextBlock Grid.Column="4" Text="{Binding ValueText}"
                                                                    Style="{StaticResource Mono}"
                                                                    FontSize="{DynamicResource Size.Caption}"
                                                                    VerticalAlignment="Center"

@@ -501,11 +501,12 @@ public class MerakiCatalogTests
     [Fact]
     public void Traffic_is_summed_per_site_not_per_uplink()
     {
-        // 応答は期間内の合計（キロバイト）。毎秒には直さない
+        // 応答は期間内の合計で、単位はバイト（API の説明はキロバイトと読めるが実機はバイト）。
+        // 毎秒には直さない
         const string json = """
             [ {"name":"本社","byUplink":[
-                 {"interface":"wan1","sent":1024,"received":2048},
-                 {"interface":"wan2","sent":1024,"received":0}]},
+                 {"interface":"wan1","sent":1048576,"received":2097152},
+                 {"interface":"wan2","sent":1048576,"received":0}]},
               {"name":"大阪","byUplink":[
                  {"interface":"wan1","sent":0,"received":0}]} ]
             """;
@@ -530,6 +531,40 @@ public class MerakiCatalogTests
     [InlineData(3.5 * 1024 * 1024 * 1024, "3.50 TB")]
     public void Volumes_grow_into_the_next_unit(double kilobytes, string expected)
         => Assert.Equal(expected, MerakiCatalog.FormatKilobytes(kilobytes));
+
+    [Fact]
+    public void Traffic_counts_the_response_as_bytes()
+    {
+        // 2026-08-18 に実測: ダッシュボードの 625.2GB がアプリでは 2625TB に見えていた。
+        // キロバイトとして扱うと 1024 倍になる
+        const string json = """
+            [ {"name":"本社","byUplink":[{"interface":"wan1","sent":1073741824,"received":0}]} ]
+            """;
+
+        Assert.Equal("1.0 GB", MerakiCatalog.ParseTraffic([json])[0].Total);
+    }
+
+    [Fact]
+    public void Client_counts_are_added_to_the_traffic_rows()
+    {
+        const string traffic = """
+            [ {"name":"本社","byUplink":[{"interface":"wan1","sent":1048576,"received":0}]},
+              {"name":"大阪","byUplink":[{"interface":"wan1","sent":1048576,"received":0}]} ]
+            """;
+
+        const string summary = """
+            [ {"networkId":"N_111","name":"本社","clients":{"counts":{"total":42}}} ]
+            """;
+
+        IReadOnlyList<MerakiTrafficRow> rows = MerakiCatalog.WithClientCounts(
+            MerakiCatalog.ParseTraffic([traffic]),
+            MerakiCatalog.ClientCountsByNetwork([summary]));
+
+        Assert.Equal("42", rows[0].Clients);
+
+        // まとめに出てこない拠点は「—」のまま（0 台と混同させない）
+        Assert.Equal("—", rows[1].Clients);
+    }
 
     [Fact]
     public void Traffic_without_uplinks_is_skipped_not_fatal()

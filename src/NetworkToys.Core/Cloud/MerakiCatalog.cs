@@ -87,7 +87,8 @@ public sealed record MerakiTrafficRow(
     double Kilobytes,
     string Total,
     string Sent,
-    string Received);
+    string Received,
+    string Clients = "—");
 
 /// <summary>アラートの 1 行。</summary>
 public sealed record MerakiAlertRow(
@@ -447,6 +448,51 @@ public static class MerakiCatalog
     private static bool IsUplinkUp(string? rawStatus)
         => rawStatus is "active" or "ready" or "connecting";
 
+    /// <summary>
+    /// 拠点ごとの台数（<c>summary/top/networks/byStatus</c>）。
+    /// <b>通信量の表に台数を添えるため</b>だけに使う（2026-08-18 ユーザー指示）。
+    /// 版によっては持っていないので、取れなければ空で返す。
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> ClientCountsByNetwork(IEnumerable<string> pages)
+    {
+        var counts = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (JsonElement item in Items(pages))
+        {
+            string network = Or(Str(item, "name"), Str(item, "networkId"));
+            if (network.Length == 0) continue;
+
+            if (!item.TryGetProperty("clients", out JsonElement clients)
+                || clients.ValueKind != JsonValueKind.Object)
+                continue;
+
+            // {"clients":{"counts":{"total":12}}}
+            string total = clients.TryGetProperty("counts", out JsonElement inner)
+                           && inner.ValueKind == JsonValueKind.Object
+                ? Scalar(inner, "total")
+                : Scalar(clients, "total");
+
+            if (total.Length > 0) counts[network] = total;
+        }
+
+        return counts;
+    }
+
+    /// <summary>台数を通信量の行へ添える。取れなかった拠点は「—」のまま。</summary>
+    public static IReadOnlyList<MerakiTrafficRow> WithClientCounts(
+        IEnumerable<MerakiTrafficRow> rows, IReadOnlyDictionary<string, string> countsByNetwork)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        ArgumentNullException.ThrowIfNull(countsByNetwork);
+
+        return
+        [
+            .. rows.Select(r => countsByNetwork.TryGetValue(r.Network, out string? count) && count.Length > 0
+                ? r with { Clients = count }
+                : r),
+        ];
+    }
+
     /// <summary>アップリンクのグローバル IP を 1 行にまとめる。重複は畳む。</summary>
     public static string GlobalIpSummary(IEnumerable<MerakiUplinkRow> rows)
     {
@@ -693,8 +739,12 @@ public static class MerakiCatalog
     // ===== 通信量 =====
 
     /// <summary>
-    /// 拠点ごとの WAN の通信量。<b>応答は期間内の合計（単位はキロバイト）</b>なので、
+    /// 拠点ごとの WAN の通信量。応答は<b>期間内の合計</b>なので、
     /// そのまま量として出す（毎秒に直さない。2026-08-17 ユーザー指示）。
+    ///
+    /// <b>単位はバイト。</b>API の説明はキロバイトと読めるが、実機の値はバイトだった
+    /// （2026-08-18 に実測。ダッシュボードの 625.2GB がアプリでは 2625TB ＝ 1024 倍と
+    /// 期間差の積になっていた）。<b>キロバイトとして扱わないこと。</b>
     ///
     /// <b>回線ごとには割らず、拠点で 1 行にまとめる</b>（2026-08-18 ユーザー指示）。
     /// 見たいのは「どの拠点がどれだけ使ったか」で、WAN1 と WAN2 の内訳ではない。
@@ -729,7 +779,10 @@ public static class MerakiCatalog
 
         foreach (string network in order)
         {
-            (double sent, double received) = byNetwork[network];
+            (double sentBytes, double receivedBytes) = byNetwork[network];
+
+            double sent = sentBytes / 1024;
+            double received = receivedBytes / 1024;
 
             rows.Add(new MerakiTrafficRow(
                 Network: network,
@@ -808,8 +861,8 @@ public static class MerakiCatalog
         [.. rows.Select(r => new[] { r.Network, r.Device, r.Vlan, r.Subnet, r.UsedText, r.FreeText, r.UsageText })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiTrafficRow> rows) => new(
-        ["拠点", "合計", "送信", "受信"],
-        [.. rows.Select(r => new[] { r.Network, r.Total, r.Sent, r.Received })]);
+        ["拠点", "合計", "送信", "受信", "クライアント数"],
+        [.. rows.Select(r => new[] { r.Network, r.Total, r.Sent, r.Received, r.Clients })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiAlertRow> rows) => new(
         ["重大度", "種別", "拠点", "機器", "発生", "内容"],
