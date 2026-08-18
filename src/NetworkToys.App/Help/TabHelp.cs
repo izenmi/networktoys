@@ -341,30 +341,6 @@ internal static class TabHelp
         ・欄にファイルを放り込んでも読み込める
         """;
 
-    /// <summary>Meraki ─ 通信量</summary>
-    public const string MerakiTraffic =
-        """
-        Meraki ─ 通信量
-
-        この画面ですること
-        ・拠点ごとに、選んだ期間に WAN を流れた通信量を並べる
-
-        こんなときに
-        ・どの拠点が回線を使っているかを、まとめて見たいとき
-        ・増速の要否を数字で示したいとき
-
-        知っておくとよいこと
-        ・出るのは期間内に流れた量。1 秒あたりに直した値ではない
-        ・拠点ごとに 1 行（WAN1 と WAN2 は足す）。台数はダッシュボードのまとめから添える
-        　（版によっては取れない。そのときは「—」）
-        ・数えた期間は日時で出す（「直近 1 日」だけでは、いつからいつまでか分からない）
-        ・単位は KB / MB / GB / TB。1TB を超えたら TB で出る
-        ・MX のある組織でだけ出る
-
-        できる操作
-        ・一覧を Excel（絞り込み付き）か CSV で保存する
-        """;
-
     /// <summary>Meraki ─ 拠点</summary>
     public const string MerakiSites =
         """
