@@ -533,6 +533,22 @@ public class MerakiCatalogTests
         => Assert.Equal(expected, MerakiCatalog.FormatKilobytes(kilobytes));
 
     [Fact]
+    public void The_warm_spare_serial_is_only_returned_when_it_is_enabled()
+    {
+        const string enabled = """
+            {"enabled":true,"primarySerial":"Q2AA-1111-AAAA","spareSerial":"Q2BB-2222-BBBB"}
+            """;
+
+        Assert.Equal("Q2BB-2222-BBBB", MerakiCatalog.SpareSerial([enabled]));
+
+        // 組んでいない拠点。待機側は無い
+        const string disabled = """{"enabled":false,"primarySerial":"Q2AA-1111-AAAA"}""";
+
+        Assert.Equal("", MerakiCatalog.SpareSerial([disabled]));
+        Assert.Equal("", MerakiCatalog.SpareSerial([]));
+    }
+
+    [Fact]
     public void Traffic_counts_the_response_as_bytes()
     {
         // 2026-08-18 に実測: ダッシュボードの 625.2GB がアプリでは 2625TB に見えていた。

@@ -493,6 +493,29 @@ public static class MerakiCatalog
         ];
     }
 
+    /// <summary>
+    /// 冗長構成の<b>待機側（スペア）のシリアル</b>。組んでいない拠点は空。
+    ///
+    /// 導入時確認では<b>待機側を確かめない</b>（2026-08-18 ユーザー指示）—
+    /// 待機側は回線が「待機」で正常なので、そのまま見ると不合格に見える。
+    /// 応答は配列ではなくオブジェクト 1 つ。
+    /// </summary>
+    public static string SpareSerial(IEnumerable<string> pages)
+    {
+        foreach (JsonElement root in RootObjects(pages))
+        {
+            if (root.TryGetProperty("enabled", out JsonElement enabled)
+                && enabled.ValueKind == JsonValueKind.False)
+                continue;
+
+            string spare = Str(root, "spareSerial");
+
+            if (spare.Length > 0) return spare;
+        }
+
+        return "";
+    }
+
     /// <summary>アップリンクのグローバル IP を 1 行にまとめる。重複は畳む。</summary>
     public static string GlobalIpSummary(IEnumerable<MerakiUplinkRow> rows)
     {

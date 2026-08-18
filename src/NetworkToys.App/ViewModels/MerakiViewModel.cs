@@ -861,8 +861,31 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             }
 
             MerakiDeviceRow[] devices = [.. DeviceRows.Where(d => d.Network == network.Name)];
-            MerakiDeviceRow[] appliances = [.. devices.Where(d => IsModel(d, "MX"))];
             MerakiDeviceRow[] switches = [.. devices.Where(d => IsModel(d, "MS"))];
+
+            // 冗長構成の待機側（スペア）は確かめない（2026-08-18 ユーザー指示）。
+            // 待機側は回線が「待機」で正常なので、そのまま見ると不合格に見える
+            string spare = "";
+
+            try
+            {
+                Status = "冗長構成を確認しています…";
+                spare = MerakiCatalog.SpareSerial(
+                    await _dashboard.WarmSpareAsync(ApiKey, network.Id, token));
+            }
+            catch (MerakiApiException)
+            {
+                // 組んでいない拠点や、答えない版。両方見ることになるだけ
+            }
+
+            MerakiDeviceRow[] appliances =
+            [
+                .. devices.Where(d => IsModel(d, "MX")
+                                      && !string.Equals(d.Serial, spare, StringComparison.OrdinalIgnoreCase)),
+            ];
+
+            if (spare.Length > 0)
+                Notice = "⚠ 冗長構成の待機側（スペア）の MX は確かめていません（待機が正常な状態のため）。";
 
             // 1. 機器が正常に稼働しているか（取得済みの一覧だけで判る）
             Step(1, "機器の稼働", network);

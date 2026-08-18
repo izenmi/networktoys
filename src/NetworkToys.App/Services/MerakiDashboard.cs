@@ -120,6 +120,13 @@ internal sealed class MerakiDashboard : IDisposable
     // ===== 導入時確認で使うもの =====
 
     /// <summary>
+    /// 冗長構成（warm spare）の設定。<b>どちらが待機側かはここにしか無い</b>。
+    /// 組んでいない拠点でも <c>enabled: false</c> が返る。
+    /// </summary>
+    public Task<IReadOnlyList<string>> WarmSpareAsync(string apiKey, string networkId, CancellationToken token)
+        => GetPagesAsync($"/networks/{Escape(networkId)}/appliance/warmSpare", apiKey, token);
+
+    /// <summary>
     /// MX 1 台の回線の設定。<b>どの WAN を使う設定にしてあるか</b>はここにしか無い
     /// （状態の方には、使っていない WAN も「未接続」として出てくる）。
     /// </summary>
