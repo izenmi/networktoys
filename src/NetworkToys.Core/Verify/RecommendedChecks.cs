@@ -61,11 +61,13 @@ public static class RecommendedChecks
         Teams のサイトが開く,HTTP,https://teams.microsoft.com/
         Outlook on the web が開く,HTTP,https://outlook.office365.com/
         Exchange Online に繋がる,TCP,outlook.office365.com:443
-        SharePoint が開く,HTTP,https://www.office.com/
         名前が引ける,DNS,teams.microsoft.com
         自分のホスト名が引ける,DNS
 
-        # ブラウザで開いて目視で確認します
+        # ブラウザで開いて目視で確認します。
+        # SharePoint / OneDrive はサインインしていないと 403 になるので、HTTP では判定できません
+        # （経路は通っていても不合格に見えます。2026-08-18）
+        SharePoint が開く,手動,https://www.office.com/,自分のファイルが並ぶこと
         Teams を開いてサインインできる,手動,https://teams.microsoft.com/,自分の名前が出ること
 
         # 帯域。クラウドは速度がそのまま体感になるので一緒に測ります
