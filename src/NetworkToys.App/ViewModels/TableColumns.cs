@@ -76,7 +76,10 @@ public sealed class TableColumns : ObservableObject
         new("collect", 1, [(0, 28), (2, 72), (3, 80), (4, 80), (5, 80), (6, 110), (7, 110)]),
 
         // 確認(試験項目): 0 削除 / 1 項目名 / 2 種類 / 3 宛先(星) / 4 期待 / 5 結果
-        new("verify", 3, [(0, 28), (1, 150), (2, 76), (4, 110), (5, 170)]),
+        // 削除の列には ✕ と ▶ の 2 つが並ぶ(2+16+3+16=37px)。ほかの表の削除列(28px)を
+        // 写すと ▶ が切れる(2026-08-18 報告)。項目名を広く・期待を狭くしたぶんは
+        // 宛先(星)が吸う(2026-08-18 ユーザー指示)
+        new("verify", 3, [(0, 42), (1, 176), (2, 76), (4, 84), (5, 170)]),
 
         // 確認(結果): 0 項目 / 1 プロキシ / 2 合否 / 3 所要 / 4 詳細(星)
         new("vres", 4, [(0, 150), (1, 150), (2, 130), (3, 62)]),
@@ -162,6 +165,13 @@ public sealed class TableColumns : ObservableObject
         // Catalyst Center 保守と適合: 0 機器 / 1 種別 / 2 状態 / 3 日付 / 4 備考(星)
         new("dnclc", 4, [(0, 130), (1, 180), (2, 140), (3, 140)]),
     ];
+
+    /// <summary>
+    /// 既定の列幅の版。<b>宣言の値を作り直したら 1 つ上げる</b> — 上げないと、
+    /// すでに使っている人の <c>settings.json</c> に古い幅が残っていて、
+    /// 直した幅が画面に出ない（そのぶん、手で広げた幅は 1 度だけ既定へ戻る）。
+    /// </summary>
+    private const int LayoutVersion = 2;
 
     private readonly Dictionary<string, double> _widths = [];
 
@@ -299,6 +309,7 @@ public sealed class TableColumns : ObservableObject
         try
         {
             Settings.Current.TableColumns = new Dictionary<string, double>(_widths);
+            Settings.Current.TableColumnsVersion = LayoutVersion;
             Settings.Save();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -311,11 +322,18 @@ public sealed class TableColumns : ObservableObject
     {
         var layout = new TableColumns();
 
+        // 宣言の値は「標準の文字の大きさ」のもの。文字を大きくしている人には
+        // そのままでは狭いので、読んだ倍率を掛けてから置く（Reset と同じ考え）
+        double scale = UiScale.Current;
+
         foreach (TableSpec spec in Tables)
         {
             foreach ((int column, double width) in spec.Columns)
-                layout._widths[$"{spec.Name}.{column}"] = width;
+                layout._widths[$"{spec.Name}.{column}"] = width * scale;
         }
+
+        // 既定を作り直した後は、保存してある幅を 1 度だけ捨てて既定から始める
+        if (Settings.Current.TableColumnsVersion != LayoutVersion) return layout;
 
         foreach ((string key, double width) in Settings.Current.TableColumns)
         {

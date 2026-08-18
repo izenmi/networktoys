@@ -25,6 +25,12 @@ public sealed class AppSettingsDocument
     /// </summary>
     public Dictionary<string, double> TableColumns { get; set; } = [];
 
+    /// <summary>
+    /// 上の列幅を書いたときの版。<b>既定の列幅を作り直したら上げる</b> —
+    /// 上げないと、前に使った人の設定ファイルが古い幅を持ち続け、直したはずの幅が出ない。
+    /// </summary>
+    public int TableColumnsVersion { get; set; }
+
     /// <summary>Ping 画面の宛先リストと測定の既定値。</summary>
     public TargetDocument Ping { get; set; } = new();
 
