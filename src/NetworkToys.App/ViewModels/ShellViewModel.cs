@@ -58,8 +58,6 @@ public sealed class ShellViewModel
         // ACI も同じ。読み取り専用で、押されたときだけ APIC を見に行く
         Aci = new AciViewModel();
 
-        // WLC も同じ。読み取り専用で、押されたときだけ Catalyst 9800 を見に行く
-        Wlc = new WlcViewModel();
 
 
         // 試験タブ。こちらもタブを開いただけでは外へ出ない
@@ -129,9 +127,6 @@ public sealed class ShellViewModel
     /// <summary>Cisco ACI（APIC）からの照会。読み取り専用で、パスワードは保存しない。</summary>
     public AciViewModel Aci { get; }
 
-    /// <summary>Cisco WLC（Catalyst 9800）からの照会。読み取り専用で、パスワードは保存しない。</summary>
-    public WlcViewModel Wlc { get; }
-
     /// <summary>業務確認試験。プロキシを切り替えて同じ試験を回せる。</summary>
     public VerifyViewModel Verify { get; }
 
@@ -174,7 +169,6 @@ public sealed class ShellViewModel
         Collect.Reset();
         Meraki.Reset();
         Aci.Reset();
-        Wlc.Reset();
         Verify.Reset();
         Report.Reset();
     }

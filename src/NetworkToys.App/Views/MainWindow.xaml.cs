@@ -118,7 +118,6 @@ public partial class MainWindow : Window
         // VM から PasswordBox の中身は書けないので、消す合図だけ受け取る
         _shell.Aci.PasswordCleared += (_, _) => AciPasswordBox.Clear();
 
-        _shell.Wlc.PasswordCleared += (_, _) => WlcPasswordBox.Clear();
 
         // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
         _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
@@ -190,13 +189,6 @@ public partial class MainWindow : Window
             _shell.Aci.Password = box.Password;
     }
 
-    /// <summary>APIC のパスワードと同じ扱い。<b>VM の中だけに置く</b>。</summary>
-    private void OnWlcPasswordChanged(object sender, RoutedEventArgs e)
-    {
-        if (sender is PasswordBox box)
-            _shell.Wlc.Password = box.Password;
-    }
-
     /// <summary>差分比較の「作業前」を、機器から直に取ってくる。</summary>
     private void OnDiffFetchBefore(object sender, RoutedEventArgs e) => FetchIntoDiff(before: true);
 
@@ -263,20 +255,6 @@ public partial class MainWindow : Window
         }
 
         menu.IsOpen = menu.Items.Count > 0;
-    }
-
-    /// <summary>
-    /// SSH で取ってきた出力をそのまま出す。<b>表の元になった文字</b>で、
-    /// 見出しの思い違いを実機で切り分けるための逃げ道でもある。
-    /// </summary>
-    private void OnWlcShowSsh(object sender, RoutedEventArgs e)
-    {
-        string output = _shell.Wlc.LastShowOutput;
-
-        TextViewDialog.Show(
-            this,
-            "WLC の show 出力",
-            output.Length > 0 ? output : "まだ SSH で取得していません。");
     }
 
     /// <summary>
@@ -389,39 +367,33 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Ping 一覧の列幅ドラッグ。掴んだ列だけを伸縮させ、余りは可変幅の備考列に
-    /// 吸収させる(GridSplitter の「隣の列も動く」挙動を避けるための自前実装)。
+    /// Ping 一覧の列幅ドラッグ。<b>掴んだ境目の左右の列だけ</b>が伸縮し、
+    /// ほかの列は幅も位置も変わらない（2026-08-18 ユーザー指示）。
     ///
-    /// 備考(星列)より右の列は、幅を変えても<b>右端は動かず左端が動く</b>。
-    /// そのため RTT/ロス/推移のつまみは左端の境界にあり、符号を反転して
-    /// 「境界を右へ動かす=その列が縮む」にしている。こうすると境界が
-    /// カーソルに 1:1 で追従する(右端につまみを置くとカーソルから離れて
-    /// ドラッグ量が暴走する — 実際に起きた)。
+    /// 掴んでからの総移動量で決めるのは表の一覧と同じ理由
+    /// （1 回ぶんの差分を足し込むと、つまみ自身が動くぶんを差し引かれて鈍る）。
     /// </summary>
+    private void OnColumnGrab(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string key }) return;
+
+        _gripKey = key;
+        _gripStartX = Mouse.GetPosition(this).X;
+        ColumnLayout.Instance.BeginResize(key);
+    }
+
     private void OnColumnResize(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
     {
-        if (sender is not FrameworkElement { Tag: string column })
-            return;
+        if (sender is not FrameworkElement { Tag: string key }) return;
 
-        ColumnLayout layout = ColumnLayout.Instance;
-
-        GridLength Grow(GridLength current)
-            => new(Math.Clamp(current.Value + e.HorizontalChange, 36, 600));
-
-        GridLength Shrink(GridLength current)
-            => new(Math.Clamp(current.Value - e.HorizontalChange, 36, 600));
-
-        switch (column)
+        if (_gripKey != key)
         {
-            // 星列より左: 右端の境界が幅と一緒に動くので、そのまま足す
-            case "State": layout.State = Grow(layout.State); break;
-            case "Target": layout.Target = Grow(layout.Target); break;
-
-            // 星列より右: 左端の境界を掴んでいるので逆向き
-            case "Rtt": layout.Rtt = Shrink(layout.Rtt); break;
-            case "Loss": layout.Loss = Shrink(layout.Loss); break;
-            case "Spark": layout.Spark = Shrink(layout.Spark); break;
+            ColumnLayout.Instance.BeginResize(key);
+            ColumnLayout.Instance.Resize(key, e.HorizontalChange);
+            return;
         }
+
+        ColumnLayout.Instance.Resize(key, Mouse.GetPosition(this).X - _gripStartX);
     }
 
     /// <summary>
@@ -429,9 +401,8 @@ public partial class MainWindow : Window
     /// 掴んだ境界がカーソルから離れないための符号の判断は
     /// <see cref="TableColumns"/> の表の宣言 1 か所に閉じてある。
     /// </summary>
-    /// <summary>掴んだときの幅と、掴んだ位置（ウィンドウ座標）。</summary>
+    /// <summary>掴んだつまみと、掴んだ位置（ウィンドウ座標）。</summary>
     private string? _gripKey;
-    private double _gripWidth;
     private double _gripStartX;
 
     private void OnTableColumnGrab(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
@@ -439,8 +410,8 @@ public partial class MainWindow : Window
         if (sender is not FrameworkElement { Tag: string key }) return;
 
         _gripKey = key;
-        _gripWidth = TableColumns.Instance.WidthOf(key);
         _gripStartX = Mouse.GetPosition(this).X;
+        TableColumns.Instance.BeginResize(key);
     }
 
     /// <summary>
@@ -461,7 +432,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        TableColumns.Instance.Resize(key, _gripWidth, Mouse.GetPosition(this).X - _gripStartX);
+        TableColumns.Instance.Resize(key, Mouse.GetPosition(this).X - _gripStartX);
     }
 
     /// <summary>
@@ -733,7 +704,8 @@ public partial class MainWindow : Window
             "いったん終了して、管理者権限で起動し直します。\n" +
             "測定の結果と各画面の入力はそのまま引き継ぎます。\n" +
             caution +
-            "Meraki の API キーだけは保存しない決まりなので、入れ直してください。\n\n" +
+            "パスワードと Meraki の API キーは、保存しない決まりなので引き継ぎません。\n" +
+            "（ログ採取・差分比較・ACI・FTP/SFTP のパスワードは入れ直してください）\n\n" +
             "続けますか？",
             okLabel: "再起動する");
 
@@ -1454,8 +1426,6 @@ public partial class MainWindow : Window
             NetworkToys.Core.Cloud.MerakiDeviceRow device => device.LanIp,
             NetworkToys.Core.Cloud.MerakiClientRow client => client.Ip,
             NetworkToys.Core.Fabric.AciEndpointRow endpoint => endpoint.Ip,
-            NetworkToys.Core.Wireless.WlcClientRow wireless => wireless.Ip,
-            NetworkToys.Core.Wireless.WlcApRow ap => ap.Ip,
             FileServerLogRow log => log.Remote,
             _ => string.Empty,
         };

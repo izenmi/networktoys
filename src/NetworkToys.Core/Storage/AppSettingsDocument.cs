@@ -83,15 +83,6 @@ public sealed class AppSettingsDocument
     /// </summary>
     public Dictionary<string, string> AciFingerprints { get; set; } = [];
 
-    /// <summary>WLC タブの接続先（Catalyst 9800 のホスト名か IP）。1 行 1 件。</summary>
-    public string WlcHosts { get; set; } = "";
-
-    /// <summary>
-    /// WLC タブで前に使ったユーザー名（ホストがキー）。
-    /// <b>パスワードはここに入れない</b>（収集タブ・ACI と同じ決まり）。
-    /// </summary>
-    public Dictionary<string, string> WlcUserNames { get; set; } = [];
-
     /// <summary>
     /// ウィンドウを最前面に固定するか。
     ///
@@ -114,6 +105,14 @@ public sealed class AppSettingsDocument
     /// 統合 Windows 認証で通す前提なので、<b>ここにも認証情報は入れない</b>。
     /// </summary>
     public string VerifyProxies { get; set; } = "";
+
+    /// <summary>
+    /// 試験で選んでいたプロキシの名前（PAC はファイル名だけ）。
+    ///
+    /// 定義だけ覚えてチェックを忘れると、毎回選び直しになる（2026-08-18 ユーザー指示）。
+    /// <b>名前で覚える</b> — 定義を書き換えても、同じ名前が残っていれば選びも残る。
+    /// </summary>
+    public List<string> VerifyProxyPicks { get; set; } = [];
 
     /// <summary>
     /// 自分で作った試験のひな型（名前 → 項目のテキスト）。

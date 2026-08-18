@@ -1326,7 +1326,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Excel ブックで保存する（2026-08-18 ユーザー指示）。
-    /// <b>絞り込みと見出し行の固定つき</b>で、ACI / WLC の保存と同じ形。
+    /// <b>絞り込みと見出し行の固定つき</b>で、ACI の保存と同じ形。
     /// </summary>
     private void SaveXlsx(string? key)
     {

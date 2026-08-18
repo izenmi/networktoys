@@ -106,6 +106,9 @@ public sealed class ProxyChoiceViewModel : ObservableObject
 public sealed class VerifyViewModel : ObservableObject
 {
     private string _proxyText = "";
+
+    /// <summary>前回チェックしていたプロキシの名前。<b>選び直しを毎回させない</b>ため。</summary>
+    private HashSet<string> _picked = [];
     private string _status = "ひな型を入れるか項目を書いて「まとめて実行」を押します。";
     private bool _isBusy;
     private int _done;
@@ -131,6 +134,7 @@ public sealed class VerifyViewModel : ObservableObject
         RebuildTemplates();
 
         _proxyText = Settings.Current.VerifyProxies;
+        _picked = [.. Settings.Current.VerifyProxyPicks];
 
         foreach (CheckItem item in CheckListParser.Parse(Settings.Current.VerifyChecks))
             AddRow(item);
@@ -396,15 +400,33 @@ public sealed class VerifyViewModel : ObservableObject
     /// </summary>
     private void RebuildProxies()
     {
-        HashSet<string> selected = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Name)];
+        // いま画面で選ばれているものを引き継ぐ。定義を書き換えただけで
+        // チェックが外れると使い物にならない。
+        // 起動直後は前回の選び（settings.json）から復元する（2026-08-18 ユーザー指示）
+        if (Proxies.Count > 0)
+            _picked = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Name)];
 
         Proxies.Clear();
 
-        // 初回は 1 つも選ばない（2026-08-16 ユーザー指示）。
+        // 覚えが無ければ 1 つも選ばない（2026-08-16 ユーザー指示）。
         // 選ばれていなければ「直接」だけで 1 周するので、押せば必ず何かは動く
         foreach (ProxyChoice choice in ProxyListParser.Parse(_proxyText))
-            Proxies.Add(new ProxyChoiceViewModel(choice, selected.Contains(choice.Name)));
+        {
+            var row = new ProxyChoiceViewModel(choice, _picked.Contains(choice.Name));
+
+            // チェックを触ったら覚え直す（閉じるときにまとめて書く）
+            row.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(ProxyChoiceViewModel.IsSelected)) RememberPicks();
+            };
+
+            Proxies.Add(row);
+        }
     }
+
+    /// <summary>チェックの状態を控える。書き出すのは閉じるときの <see cref="SaveSettings"/>。</summary>
+    private void RememberPicks()
+        => _picked = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Name)];
 
     private async Task RunAsync()
     {
@@ -871,6 +893,7 @@ public sealed class VerifyViewModel : ObservableObject
         {
             Settings.Current.VerifyChecks = CheckListParser.Format(Rows.Select(r => r.ToItem()));
             Settings.Current.VerifyProxies = _proxyText;
+            Settings.Current.VerifyProxyPicks = [.. _picked];
             Settings.Save();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

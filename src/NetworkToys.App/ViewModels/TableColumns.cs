@@ -133,23 +133,11 @@ public sealed class TableColumns : ObservableObject
         // ACI 機器一覧: 0 ノード / 1 名前(星) / 2 役割 / 3 型番 / 4 シリアル / 5 版 / 6 状態
         new("acidev", 1, [(0, 70), (2, 80), (3, 130), (4, 140), (5, 150), (6, 90)]),
 
-        // WLC 端末: 0 MAC / 1 IP / 2 メーカー / 3 AP(星) / 4 SSID / 5 電波 / 6 RSSI / 7 品質 / 8 速度 / 9 状態
-        new("wlccl", 3, [(0, 130), (1, 120), (2, 110), (4, 110), (5, 110), (6, 55), (7, 70), (8, 60), (9, 80)]),
 
-        // WLC AP: 0 状態 / 1 AP(星) / 2 IP / 3 MAC / 4 型番 / 5 版 / 6 無線 / 7 台数 / 8 タグ
-        new("wlcap", 1, [(0, 80), (2, 110), (3, 130), (4, 120), (5, 80), (6, 160), (7, 50), (8, 130)]),
 
-        // WLC 参加・切断: 0 状態 / 1 AP(星) / 2 MAC / 3 最終参加 / 4 最終切断 / 5 理由 / 6 参加 / 7 失敗
-        new("wlcjoin", 1, [(0, 80), (2, 130), (3, 150), (4, 150), (5, 180), (6, 50), (7, 50)]),
 
-        // WLC SSID: 0 SSID(星) / 1 プロファイル / 2 ID / 3 状態 / 4 台数 / 5 2.4G / 6 5G / 7 6G
-        new("wlcssid", 0, [(1, 150), (2, 50), (3, 80), (4, 60), (5, 70), (6, 70), (7, 70)]),
 
-        // WLC 電波: 0 AP(星) / 1 無線 / 2 ch / 3 出力 / 4 使用率 / 5 雑音 / 6 台数
-        new("wlcrf", 0, [(1, 90), (2, 50), (3, 60), (4, 70), (5, 60), (6, 50)]),
 
-        // WLC 不正 AP: 0 種別 / 1 SSID(星) / 2 BSSID / 3 メーカー / 4 ch / 5 電波 / 6 検知AP / 7 最終受信 / 8 備考
-        new("wlcrog", 1, [(0, 60), (2, 130), (3, 110), (4, 50), (5, 55), (6, 130), (7, 130), (8, 90)]),
 
         // Catalyst Center 端末: 0 MAC / 1 IP / 2 名前 / 3 接続 / 4 機器(星) / 5 ポート・AP /
         //                       6 VLAN / 7 SSID / 8 帯域 / 9 健全度 / 10 サイト / 11 更新
@@ -183,40 +171,87 @@ public sealed class TableColumns : ObservableObject
     public GridLength this[string key]
         => _widths.TryGetValue(key, out double width) ? new GridLength(width) : new GridLength(100);
 
-    /// <summary>境目を掴んで動かす。表ごとの星列の位置から符号を決める。</summary>
-    /// <summary>いまの幅。ドラッグの開始時に控えておくために使う。</summary>
+    /// <summary>いまの幅。</summary>
     public double WidthOf(string key) => _widths.TryGetValue(key, out double width) ? width : 100;
 
+    /// <summary>掴んでいる境目（左右の列と、掴んだ時点の幅）。</summary>
+    private (string Key, string? Left, string? Right, double LeftWidth, double RightWidth) _grip;
+
     /// <summary>
-    /// つまみを掴んでからの<b>総移動量</b>で幅を決める。
+    /// つまみが表しているのは「列」ではなく<b>列と列の境目</b>。
+    ///
+    /// 星列より左の列は右端に、右の列は左端につまみを置いてあるので、
+    /// つまみの列番号から境目の左右が決まる。星列は幅を持たない（null）。
+    /// </summary>
+    private (string? Left, string? Right) BoundaryOf(string key)
+    {
+        int dot = key.LastIndexOf('.');
+
+        if (dot <= 0 || !int.TryParse(key[(dot + 1)..], CultureInfo.InvariantCulture, out int column))
+            return (null, null);
+
+        string table = key[..dot];
+        TableSpec? spec = Array.Find(Tables, t => t.Name == table);
+
+        if (spec is null) return (null, null);
+
+        int left = column < spec.FirstStar ? column : column - 1;
+
+        return (Sized(spec, left), Sized(spec, left + 1));
+    }
+
+    /// <summary>その列が幅を持つなら鍵を返す。星列は持たないので null。</summary>
+    private static string? Sized(TableSpec spec, int column)
+        => Array.Exists(spec.Columns, c => c.Column == column) ? $"{spec.Name}.{column}" : null;
+
+    /// <summary>つまみを掴んだ。境目の左右の幅を控える。</summary>
+    public void BeginResize(string key)
+    {
+        (string? left, string? right) = BoundaryOf(key);
+
+        _grip = (key, left, right, left is null ? 0 : WidthOf(left), right is null ? 0 : WidthOf(right));
+    }
+
+    /// <summary>
+    /// つまみを掴んでからの<b>総移動量</b>で、境目の左右の列だけを伸縮させる。
+    ///
+    /// <b>境目の左右だけが動き、ほかの列は幅も位置も変わらない</b>（2026-08-18 ユーザー指示）。
+    /// 以前は掴んだ列だけを伸縮させ、余りを星列に吸わせていたので、離れた列が
+    /// 勝手に伸び縮みして見えた。片側が星列のときは、もう片側を動かせば
+    /// 星列が同じだけ吸うので結果は同じになる。
     ///
     /// <b>1 回ぶんの差分（<c>DragDelta.HorizontalChange</c>）を足し込んではいけない。</b>
     /// 幅を変えるとつまみ自体が動くので、WPF の <c>Thumb</c> は自分の移動ぶんを差し引いた
     /// 値を返す。差分を足していくと伸び縮みが鈍り、端で詰まると飛ぶ
     /// （2026-08-17 にユーザーが実機で「変な動き」として報告）。
     /// </summary>
-    public void Resize(string key, double startWidth, double totalChange)
+    public void Resize(string key, double totalChange)
     {
-        int dot = key.LastIndexOf('.');
-        if (dot <= 0 || !int.TryParse(key[(dot + 1)..], CultureInfo.InvariantCulture, out int column))
-            return;
+        if (_grip.Key != key) BeginResize(key);
 
-        TableSpec? spec = Array.Find(Tables, t => t.Name == key[..dot]);
-        if (spec is null) return;
+        (_, string? left, string? right, double leftWidth, double rightWidth) = _grip;
 
-        // 星列より右の列は左端の境界を掴んでいるので逆向きに動く
-        double delta = column < spec.FirstStar ? totalChange : -totalChange;
+        if (left is null && right is null) return;
 
-        _widths[key] = Math.Clamp(startWidth + delta, 36, 900);
+        // どちらかが下限・上限で詰まったら、そこで移動量を止める。
+        // 止めないと境目がカーソルから離れて、片側だけが伸び続ける
+        double delta = totalChange;
+
+        if (left is not null) delta = Fit(leftWidth + delta) - leftWidth;
+        if (right is not null) delta = rightWidth - Fit(rightWidth - delta);
+
+        if (left is not null) _widths[left] = Fit(leftWidth + delta);
+        if (right is not null) _widths[right] = Fit(rightWidth - delta);
 
         // インデクサ全体の変更を知らせる。どのキーが変わったかは WPF に見分けられない
         OnPropertyChanged("Item[]");
     }
 
-    /// <summary>いまの幅からの相対で動かす（自己診断など、掴んでいないところから呼ぶ用）。</summary>
+    /// <summary>掴まずに動かす（自己診断など）。</summary>
     public void Drag(string key, double horizontalChange)
     {
-        if (_widths.TryGetValue(key, out double current)) Resize(key, current, horizontalChange);
+        BeginResize(key);
+        Resize(key, horizontalChange);
     }
 
     /// <summary>

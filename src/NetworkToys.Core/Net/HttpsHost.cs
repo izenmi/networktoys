@@ -3,7 +3,7 @@ namespace NetworkToys.Core.Net;
 /// <summary>
 /// HTTPS で機器を叩く画面の共通の小物。
 ///
-/// APIC も WLC も「手で打った接続先」と「証明書の指紋」を同じ形で扱う必要がある。
+/// APIC は「手で打った接続先」と「証明書の指紋」を組で扱う必要がある。
 /// <b>指紋の書き方が画面ごとに違うと、人が見比べられなくなる</b>ので 1 か所に置く。
 /// </summary>
 public static class HttpsHost
