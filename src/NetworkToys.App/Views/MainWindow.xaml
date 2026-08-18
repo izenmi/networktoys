@@ -7008,20 +7008,15 @@
                                          PasswordChanged="OnWlcPasswordChanged"
                                          ToolTip="保存しません。起動するたびに入れ直してください。" />
 
-                            <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2" />
+                            <!-- 入口は 1 つだけ（2026-08-18 ユーザー指示）。SSH で入って全部のタブを埋める -->
+                            <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2"
+                                    ToolTip="SSH で入って show を一通り流し、すべてのタブの表を作ります。" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
-                            <!-- IOS-XE の版でリーフ名が違うことがある。実機で切り分けるための逃げ道 -->
-                            <Button Content="応答を表示" Click="OnWlcShowResponse"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
-                                    ToolTip="直前に取れた生の応答(JSON)と、投げた URL を出します。" />
-
-                            <!-- RESTCONF を有効にできない現場のための道。出力から表も作る -->
-                            <Button Content="SSH で取得" Command="{Binding FetchShowCommand}" Margin="0,0,6,2"
-                                    ToolTip="RESTCONF が使えないときは、こちらで SSH から show を流します。各タブの表もこれで埋まります（IP・電波の強さは show に出ないので「—」）。" />
-                            <Button Content="SSH の出力" Click="OnWlcShowSsh"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,12,2" />
+                            <!-- 見出しの思い違いは実機でしか分からない。元の文字をいつでも読めるようにする -->
+                            <Button Content="取得した出力" Click="OnWlcShowSsh"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
-                                    ToolTip="SSH で取ってきた出力をそのまま開きます。" />
+                                    ToolTip="表の元にした show の出力を、そのまま開きます。" />
                         </WrapPanel>
 
                         <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"
@@ -7030,12 +7025,6 @@
                                    Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                    TextWrapping="Wrap" Margin="0,4,0,0" />
-                        <TextBlock Text="{Binding Fingerprint}" Style="{StaticResource Mono}"
-                                   FontSize="{DynamicResource Size.Caption}"
-                                   Foreground="{DynamicResource Brush.TextMuted}"
-                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0"
-                                   ToolTip="接続した WLC の証明書の指紋。WLC の画面と見比べるためのものです。"
-                                   Visibility="{Binding ShowConnection, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <!-- 中の切り替えも主タブと同じ見た目にする（ACI と同じ扱い） -->
@@ -7378,7 +7367,6 @@
                                         <TextBlock Style="{StaticResource TabIntro}" Text="AP が最後に参加した時刻と、最後に切れた理由を並べます。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="参加・切断を取得" Command="{Binding FetchJoinsCommand}" Margin="0,0,12,0" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
                                                 CommandParameter="join" Margin="0,0,6,0"
                                                 ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
@@ -7521,7 +7509,6 @@
                                         <TextBlock Style="{StaticResource TabIntro}" Text="SSID ごとの接続台数と、帯域別の内訳を出します。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="SSID を取得" Command="{Binding FetchSsidsCommand}" Margin="0,0,12,0" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
                                                 CommandParameter="ssid" Margin="0,0,6,0"
                                                 ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
@@ -7664,7 +7651,6 @@
                                         <TextBlock Style="{StaticResource TabIntro}" Text="AP ごとのチャンネルと混み具合を並べます。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="電波の状態を取得" Command="{Binding FetchRrmCommand}" Margin="0,0,12,0" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
                                                 CommandParameter="rrm" Margin="0,0,6,0"
                                                 ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
@@ -7797,7 +7783,6 @@
                                         <TextBlock Style="{StaticResource TabIntro}" Text="周囲で見えている野良 AP と隣接 AP を並べます。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Content="不正 AP を取得" Command="{Binding FetchRoguesCommand}" Margin="0,0,12,0" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
                                                 CommandParameter="rogue" Margin="0,0,6,0"
                                                 ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />

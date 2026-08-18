@@ -108,9 +108,6 @@ public partial class MainWindow : Window
         // VM から PasswordBox の中身は書けないので、消す合図だけ受け取る
         _shell.Aci.PasswordCleared += (_, _) => AciPasswordBox.Clear();
 
-        _shell.Wlc.ConfirmFingerprint = message => ConfirmDialog.Confirm(
-            this, "WLC の証明書を確認", message, okLabel: "この指紋を受け入れる");
-
         _shell.Wlc.PasswordCleared += (_, _) => WlcPasswordBox.Clear();
 
         _shell.Dnac.ConfirmFingerprint = message => ConfirmDialog.Confirm(
@@ -238,20 +235,9 @@ public partial class MainWindow : Window
             response.Length > 0 ? response : "まだ何も取得していません。");
     }
 
-    /// <summary>直前に取れた WLC の生の応答（と投げた URL）を出す。</summary>
-    private void OnWlcShowResponse(object sender, RoutedEventArgs e)
-    {
-        string response = _shell.Wlc.LastResponse;
-
-        TextViewDialog.Show(
-            this,
-            "WLC の応答",
-            response.Length > 0 ? response : "まだ何も取得していません。");
-    }
-
     /// <summary>
-    /// SSH で取ってきた出力をそのまま出す。<b>表にはしない</b> —
-    /// 17.x の桁揃えは版で列が動き、解釈を書くと「表は出るが中身がずれている」になる。
+    /// SSH で取ってきた出力をそのまま出す。<b>表の元になった文字</b>で、
+    /// 見出しの思い違いを実機で切り分けるための逃げ道でもある。
     /// </summary>
     private void OnWlcShowSsh(object sender, RoutedEventArgs e)
     {

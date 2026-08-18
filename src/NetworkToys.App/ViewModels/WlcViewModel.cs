@@ -16,8 +16,10 @@ namespace NetworkToys.App.ViewModels;
 /// <summary>
 /// Cisco WLC（Catalyst 9800）を見に行くタブ。<b>読み取り専用</b>で、設定を書く口は持たない。
 ///
-/// 通信は <see cref="WlcClient"/>（RESTCONF）、応答の解釈は Core の <see cref="WlcCatalog"/>。
-/// ここは画面の状態と、取得の段取りだけを持つ。
+/// <b>通信は SSH だけ</b>（2026-08-18 ユーザー指示。RESTCONF を有効にできない現場があり、
+/// 入口が 2 つあると「どちらを押せばよいか」で迷うため畳んだ）。
+/// 会話は収集タブと同じ <see cref="DeviceCollector"/>、出力の解釈は Core の
+/// <see cref="WlcShow"/>。ここは画面の状態と段取りだけを持つ。
 ///
 /// <b>タブを選んだだけでは 1 バイトも出さない</b>（<c>OnActivated</c> を持たない）。
 /// CI の Windows ランナーは外に出られるので、選んだだけで通信する作りにすると
@@ -25,17 +27,13 @@ namespace NetworkToys.App.ViewModels;
 /// </summary>
 public sealed class WlcViewModel : ObservableObject, IDisposable
 {
-    private const string Ready = "WLC のアドレスとユーザーを入れて「取得」を押すと、端末と AP を取ってきます。";
+    private const string Ready = "WLC のアドレスとユーザーを入れて「取得」を押すと、SSH で入って一通り取ってきます。";
 
     /// <summary>
-    /// RESTCONF が無効な WLC のための保険。SSH で入って <c>show</c> を流す。
-    ///
-    /// <b>出力は解釈しない（そのまま見せる）。</b>17.x の桁揃えは版で列が動くうえ、
-    /// 実機でも CI でも確かめられないので、解釈を書くと「表は出るが中身がずれている」
-    /// という一番たちの悪い壊れ方をする。桁揃えの出力は人が読めば答えになっている。
+    /// 1 回の「取得」で流す <c>show</c>。<b>この 1 本で全部のタブが埋まる</b>。
     ///
     /// 版で名前が割れるものは両方投げて失敗を無視する（ページャ無効化と同じ
-    /// 「判定の誤りより無害な失敗」）。
+    /// 「判定の誤りより無害な失敗」）。出力の解釈は <see cref="WlcShow"/>。
     /// </summary>
     private static readonly string[] ShowCommands =
     [
@@ -49,8 +47,6 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         "show wireless wps rogue ap summary",
     ];
 
-    private readonly HttpMessageHandler? _handler;
-
     private CancellationTokenSource? _cts;
     private IReadOnlyList<WlcClientRow> _allClients = [];
     private IReadOnlyList<WlcApRow> _allAps = [];
@@ -58,29 +54,18 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     private string _host = "";
     private string _userName = "";
     private string _password = "";
-    private string _fingerprint = "";
     private string _status = Ready;
     private string _notice = "";
     private string _clientQuery = "";
     private bool _onlyDisconnected;
     private bool _isBusy;
-    private string _lastResponse = "";
-    private string _lastUrl = "";
     private string _lastShow = "";
     private bool _showConnection = true;
 
-    /// <param name="handler">自己診断が偽の WLC を挿すための口。既定は本物。</param>
-    public WlcViewModel(HttpMessageHandler? handler = null)
+    public WlcViewModel()
     {
-        _handler = handler;
-
-        FetchCommand = new RelayCommand(() => _ = FetchBasicsAsync(), CanFetch);
-        FetchJoinsCommand = new RelayCommand(() => _ = FetchJoinsAsync(), CanFetch);
-        FetchRrmCommand = new RelayCommand(() => _ = FetchRrmAsync(), CanFetch);
-        FetchRoguesCommand = new RelayCommand(() => _ = FetchRoguesAsync(), CanFetch);
-        FetchSsidsCommand = new RelayCommand(() => _ = FetchSsidsAsync(), CanFetch);
+        FetchCommand = new RelayCommand(() => _ = RunShowAsync(), CanFetch);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
-        FetchShowCommand = new RelayCommand(() => _ = RunShowAsync(), CanFetch);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
         SortWeakestCommand = new RelayCommand(SortWeakest, () => ClientRows.Count > 0);
@@ -104,34 +89,21 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
 
     // ===== コマンド =====
 
+    /// <summary>SSH で入って show を一通り流し、全部のタブを埋める。</summary>
     public RelayCommand FetchCommand { get; }
-    public RelayCommand FetchJoinsCommand { get; }
-    public RelayCommand FetchRrmCommand { get; }
-    public RelayCommand FetchRoguesCommand { get; }
-    public RelayCommand FetchSsidsCommand { get; }
+
     public RelayCommand CancelCommand { get; }
     public RelayCommand SortWeakestCommand { get; }
-
-    /// <summary>RESTCONF が使えないときの保険。SSH で show を流すだけ。</summary>
-    public RelayCommand FetchShowCommand { get; }
 
     public RelayCommand<string> SaveCsvCommand { get; }
     public RelayCommand<string> SaveXlsxCommand { get; }
 
     /// <summary>
-    /// 直前に取れた生の応答。<b>1 行目に投げた URL を添える</b> —
-    /// リーフ名の思い違いは実機でしか分からず、どのパスを叩いたかが要るため。
+    /// SSH で取ってきた生の出力（流したコマンドごと）。
+    /// <b>表の元になった文字をいつでも読めるようにしておく</b> —
+    /// 見出しの思い違いは実機でしか分からず、これが無いと「表が空」から先へ進めない。
     /// </summary>
-    public string LastResponse => _lastUrl.Length > 0 ? $"{_lastUrl}\n\n{_lastResponse}" : _lastResponse;
-
-    /// <summary>SSH で取ってきた生の出力。解釈しないでそのまま見せる。</summary>
     public string LastShowOutput => _lastShow;
-
-    /// <summary>
-    /// 証明書の指紋を見せて受け入れるかを聞く。画面が結線する。
-    /// <b>結線前の既定は「いいえ」</b>。
-    /// </summary>
-    public Func<string, bool> ConfirmFingerprint { get; set; } = _ => false;
 
     /// <summary>画面の <c>PasswordBox</c> を空にしてもらう合図。</summary>
     public event EventHandler? PasswordCleared;
@@ -191,12 +163,6 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         set { if (SetProperty(ref _password, value)) RefreshFetchCommands(); }
     }
 
-    public string Fingerprint
-    {
-        get => _fingerprint;
-        private set => SetProperty(ref _fingerprint, value);
-    }
-
     /// <summary>
     /// 端末の絞り込み。<b>IP でも MAC でも AP 名でも同じ欄に入れてよい</b>
     /// （取ってきた後に絞るので、打つたびに通信はしない）。
@@ -246,173 +212,6 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     }
 
     // ===== 取得 =====
-
-    /// <summary>
-    /// 「取得」。<b>端末と AP を一度に取る</b> — 知りたいことの大半はこの 2 つに入っている。
-    /// AP の台数は端末の側から数えるので、順番にも意味がある。
-    /// </summary>
-    private Task FetchBasicsAsync() => RunAsync("端末と AP", async (client, token) =>
-    {
-        IReadOnlyList<JsonElement> common = await GetAsync(client, WlcCatalog.ClientCommonPaths, token);
-        IReadOnlyList<JsonElement> dot11 = await GetAsync(client, WlcCatalog.ClientDot11Paths, token);
-        IReadOnlyList<JsonElement> traffic = await GetAsync(client, WlcCatalog.ClientTrafficPaths, token);
-        IReadOnlyList<JsonElement> sisf = await GetAsync(client, WlcCatalog.ClientSisfPaths, token);
-
-        _allClients = WlcCatalog.ParseClients(common, dot11, traffic, sisf, OuiCatalog.FindVendor);
-        ShowClients();
-
-        IReadOnlyList<JsonElement> capwap = await GetAsync(client, WlcCatalog.ApCapwapPaths, token);
-        IReadOnlyList<JsonElement> radios = await GetAsync(client, WlcCatalog.ApRadioPaths, token);
-        IReadOnlyList<JsonElement> tags = await GetAsync(client, WlcCatalog.ApTagPaths, token, optional: true);
-        IReadOnlyList<JsonElement> joins = await GetAsync(client, WlcCatalog.ApJoinPaths, token, optional: true);
-
-        _allAps = WlcCatalog.ParseAps(capwap, radios, tags, joins, WlcCatalog.CountClientsByAp(_allClients));
-        ShowAps();
-
-        int missing = _allAps.Count(a => !a.IsJoined);
-
-        Status = $"端末 {_allClients.Count} 台 / AP {_allAps.Count} 台"
-                 + (missing > 0 ? $"（うち未接続 {missing} 台）" : "")
-                 + $"（{DateTime.Now:HH:mm:ss}）";
-
-        if (missing > 0)
-            Notice = $"⚠ 繋がっていない AP が {missing} 台あります。AP の一覧で「未接続だけ」を押すと絞れます。";
-    });
-
-    private Task FetchJoinsAsync() => RunAsync("参加・切断", async (client, token) =>
-    {
-        IReadOnlyList<JsonElement> joins = await GetAsync(client, WlcCatalog.ApJoinPaths, token);
-
-        Replace(JoinRows, WlcCatalog.ParseJoins(joins, _allAps));
-        Status = $"参加・切断 {JoinRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
-    });
-
-    private Task FetchRrmAsync() => RunAsync("電波", async (client, token) =>
-    {
-        IReadOnlyList<JsonElement> measurements = await GetAsync(client, WlcCatalog.RrmPaths, token);
-
-        Replace(RrmRows, WlcCatalog.ParseRrm(measurements, _allAps));
-        Status = $"電波 {RrmRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
-    });
-
-    private Task FetchRoguesAsync() => RunAsync("不正 AP", async (client, token) =>
-    {
-        IReadOnlyList<JsonElement> rogues = await GetAsync(client, WlcCatalog.RoguePaths, token, optional: true);
-        IReadOnlyList<JsonElement> neighbors = await GetAsync(client, WlcCatalog.NeighborPaths, token, optional: true);
-
-        Replace(RogueRows, WlcCatalog.ParseRogues(rogues, neighbors, OuiCatalog.FindVendor));
-        Status = $"不正・隣接 {RogueRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
-    });
-
-    private Task FetchSsidsAsync() => RunAsync("SSID", async (client, token) =>
-    {
-        IReadOnlyList<JsonElement> wlans = await GetAsync(client, WlcCatalog.WlanPaths, token);
-
-        Replace(SsidRows, WlcCatalog.ParseSsids(wlans, _allClients));
-        Status = $"SSID {SsidRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
-    });
-
-    /// <summary>
-    /// 1 本取って行にほどく。<paramref name="optional"/> のものは、
-    /// 無くても取得全体を止めない（版によって持っていないデータがある）。
-    /// </summary>
-    private async Task<IReadOnlyList<JsonElement>> GetAsync(
-        WlcClient client, IReadOnlyList<string> paths, CancellationToken token, bool optional = false)
-    {
-        try
-        {
-            string body = await client.GetFirstAsync(paths, token).ConfigureAwait(true);
-
-            _lastUrl = client.LastUrl;
-            _lastResponse = body.Length > 256 * 1024 ? body[..(256 * 1024)] : body;
-            OnPropertyChanged(nameof(LastResponse));
-
-            return WlcYang.Rows(body);
-        }
-        catch (WlcApiException) when (optional)
-        {
-            // 無いものは無いままにする。ここで止めると、取れるはずの一覧まで道連れになる
-            return [];
-        }
-    }
-
-    /// <summary>
-    /// 取得の 1 まとまり。証明書を受け入れていなければ、指紋を見せて聞き、
-    /// <b>受け入れられたときだけ 1 度だけ</b>やり直す（繰り返さない）。
-    /// </summary>
-    private async Task RunAsync(string what, Func<WlcClient, CancellationToken, Task> work)
-    {
-        if (IsBusy) return;
-
-        IsBusy = true;
-        Notice = "";
-        _cts = new CancellationTokenSource();
-
-        try
-        {
-            string host = HttpsHost.Normalize(Host);
-            bool retried = false;
-
-            while (true)
-            {
-                Settings.Current.WlcFingerprints.TryGetValue(host, out string? accepted);
-
-                try
-                {
-                    Status = $"{what}を取得しています…";
-
-                    using var client = new WlcClient(host, UserName, Password, accepted, _handler);
-
-                    await work(client, _cts.Token).ConfigureAwait(true);
-
-                    Remember(host);
-                    Collapse();
-                    return;
-                }
-                catch (PinnedCertificateException ex)
-                {
-                    Fingerprint = ex.Fingerprint;
-
-                    if (retried)
-                    {
-                        Status = "証明書を受け入れても接続できませんでした。";
-                        return;
-                    }
-
-                    retried = true;
-
-                    if (!ConfirmFingerprint(FingerprintQuestion(host, ex.Fingerprint, accepted)))
-                    {
-                        Status = "証明書を受け入れなかったので接続しませんでした。";
-                        return;
-                    }
-
-                    Settings.Current.WlcFingerprints[host] = ex.Fingerprint;
-                    Settings.Save();
-                }
-            }
-        }
-        catch (WlcApiException ex)
-        {
-            Status = ex.Message;
-        }
-        catch (OperationCanceledException)
-        {
-            Status = "中断しました。";
-        }
-        catch (Exception ex)
-        {
-            Status = "取得できませんでした。";
-            CrashLog.Write(ex, "WlcViewModel.RunAsync");
-        }
-        finally
-        {
-            IsBusy = false;
-            _cts?.Dispose();
-            _cts = null;
-            RefreshSaveCommands();
-        }
-    }
 
     /// <summary>
     /// SSH で show を流す。既存の収集タブの仕組み（<see cref="DeviceCollector"/>）を
@@ -468,15 +267,6 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
             _cts?.Dispose();
             _cts = null;
         }
-    }
-
-    private static string FingerprintQuestion(string host, string fingerprint, string? accepted)
-    {
-        string head = accepted is { Length: > 0 }
-            ? $"{host} の証明書が、前に受け入れたものと変わっています。\n入れ替えた覚えが無ければ、繋がないでください。\n\n前の指紋\n{accepted}\n\n今の指紋\n{fingerprint}"
-            : $"{host} の証明書は、既知の認証局では確認できませんでした。\n\n指紋 (SHA-256)\n{fingerprint}";
-
-        return head + "\n\nWLC の画面に出ている指紋と見比べて、同じであれば受け入れてください。";
     }
 
     // ===== 画面に出す =====
@@ -618,12 +408,9 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
 
         _allClients = [];
         _allAps = [];
-        _lastResponse = "";
-        _lastUrl = "";
         _lastShow = "";
         ClientQuery = "";
         OnlyDisconnected = false;
-        Fingerprint = "";
         Password = "";
         PasswordCleared?.Invoke(this, EventArgs.Empty);
         Notice = "";
@@ -645,15 +432,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     private bool CanFetch()
         => !IsBusy && Host.Trim().Length > 0 && UserName.Trim().Length > 0 && Password.Length > 0;
 
-    private void RefreshFetchCommands()
-    {
-        FetchCommand.RaiseCanExecuteChanged();
-        FetchJoinsCommand.RaiseCanExecuteChanged();
-        FetchRrmCommand.RaiseCanExecuteChanged();
-        FetchRoguesCommand.RaiseCanExecuteChanged();
-        FetchSsidsCommand.RaiseCanExecuteChanged();
-        FetchShowCommand.RaiseCanExecuteChanged();
-    }
+    private void RefreshFetchCommands() => FetchCommand.RaiseCanExecuteChanged();
 
     private void RefreshSaveCommands()
     {
