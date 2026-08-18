@@ -137,11 +137,11 @@
 
                 <TextBlock Grid.Column="3" Text="{Binding LatestRtt}"
                            Style="{StaticResource Mono}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
 
                 <TextBlock Grid.Column="4" Text="{Binding Loss}"
                            Style="{StaticResource Mono}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
 
                 <controls:Sparkline Grid.Column="5" Source="{Binding}" Margin="8,3,8,3"
                                     LineBrush="{DynamicResource Brush.Chart.Line}"
@@ -235,7 +235,7 @@
                            Style="{StaticResource Mono}"
                            FontSize="{DynamicResource Size.Caption}"
                            Foreground="{DynamicResource Brush.TextMuted}"
-                           HorizontalAlignment="Right" Margin="0,0,6,0" />
+                           HorizontalAlignment="Right" Margin="0,0,10,0" />
 
                 <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け) -->
                 <Border x:Name="Cell" Grid.Column="1" Padding="4,0"
@@ -273,7 +273,7 @@
                            Style="{StaticResource Mono}"
                            FontSize="{DynamicResource Size.Caption}"
                            Foreground="{DynamicResource Brush.TextMuted}"
-                           HorizontalAlignment="Right" Margin="0,0,6,0" />
+                           HorizontalAlignment="Right" Margin="0,0,10,0" />
 
                 <!-- 行の中の違う箇所だけ地色を変える(WinMerge の行内色分け) -->
                 <Border x:Name="Cell" Grid.Column="1" Padding="4,0"
@@ -1174,10 +1174,10 @@
                                                    TextTrimming="CharacterEllipsis" />
                                         <TextBlock Grid.Column="3" Text="{Binding Rssi}"
                                                    Style="{StaticResource Mono}" VerticalAlignment="Center"
-                                                   HorizontalAlignment="Right" />
+                                                   HorizontalAlignment="Right" Margin="0,0,10,0" />
                                         <TextBlock Grid.Column="4" Text="{Binding Channel}"
                                                    Style="{StaticResource Mono}" VerticalAlignment="Center"
-                                                   HorizontalAlignment="Right" />
+                                                   HorizontalAlignment="Right" Margin="0,0,10,0" />
                                         <TextBlock Grid.Column="5" Text="{Binding Band}"
                                                    Style="{StaticResource Caption}" VerticalAlignment="Center"
                                                    Margin="8,0,0,0" />
@@ -1683,7 +1683,7 @@
                                                            ToolTip="{Binding ProcessNote}" />
                                                 <TextBlock Grid.Column="6" Text="{Binding CountText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           HorizontalAlignment="Right" />
+                                                           HorizontalAlignment="Right" Margin="0,0,10,0" />
                                             </Grid>
 
                                             <!--
@@ -2370,7 +2370,7 @@
                                                     </StackPanel>
                                                     <TextBlock Grid.Column="3" Text="{Binding ElapsedText}" Style="{StaticResource Mono}"
                                                                FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                               HorizontalAlignment="Right" />
+                                                               HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                     <TextBlock Grid.Column="4" Text="{Binding Detail}"
                                                                FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}" />
@@ -3095,13 +3095,13 @@
                                                            VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="4" Text="{Binding Vlan}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="5" Text="{Binding Manufacturer}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="6" Text="{Binding Usage}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="7" Text="{Binding LastSeen}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
@@ -3198,7 +3198,7 @@
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="1" Text="{Binding ClientsText}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Segments}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Segments}" />
@@ -3327,13 +3327,13 @@
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Vlan}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="3" Text="{Binding Subnet}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="4" Text="{Binding UsedText}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <!-- 右端に寄せた数字と、左端から始まる使用率がくっついて読めなくなる。
                                                      余白は数字の側に持たせる（列を広げると空きが目立ちすぎる） -->
                                                 <TextBlock Grid.Column="5" Text="{Binding FreeText}"
@@ -3775,7 +3775,7 @@
                             <TextBlock Grid.Column="0" Text="#"      Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="1" Text="IP"     Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="2" Text="ホスト名" Style="{StaticResource Caption}" />
-                            <TextBlock Grid.Column="3" Text="RTT"    Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="RTT"    Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,0,10,0" />
                             <TextBlock Grid.Column="4" Text="状態"   Style="{StaticResource Caption}" Margin="10,0,0,0" />
                             <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                             <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
@@ -3820,7 +3820,7 @@
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="3" Text="{Binding Rtt}"
                                                            Style="{StaticResource Mono}" VerticalAlignment="Center"
-                                                           HorizontalAlignment="Right" />
+                                                           HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="4" Text="{Binding Note}"
                                                            Style="{StaticResource Caption}" VerticalAlignment="Center"
                                                            Margin="10,0,0,0" />
@@ -3911,7 +3911,7 @@
                             <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                             <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                             <TextBlock Grid.Column="0" Text="IP"       Style="{StaticResource Caption}" />
-                            <TextBlock Grid.Column="1" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="1" Text="RTT"      Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,0,10,0" />
                             <TextBlock Grid.Column="2" Text="ホスト名" Style="{StaticResource Caption}" Margin="10,0,0,0" />
                             <TextBlock Grid.Column="3" Text="MAC"      Style="{StaticResource Caption}" />
                             <TextBlock Grid.Column="4" Text="ベンダー" Style="{StaticResource Caption}" />
@@ -3962,7 +3962,7 @@
                                                    Style="{StaticResource Mono}" VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="1" Text="{Binding Rtt}"
                                                    Style="{StaticResource Mono}" VerticalAlignment="Center"
-                                                   HorizontalAlignment="Right" />
+                                                   HorizontalAlignment="Right" Margin="0,0,10,0" />
                                         <TextBlock Grid.Column="2" Text="{Binding HostName}"
                                                    VerticalAlignment="Center" Margin="10,0,0,0"
                                                    TextTrimming="CharacterEllipsis" />
@@ -4258,10 +4258,10 @@
                                                     </StackPanel>
                                                     <TextBlock Grid.Column="4" Text="{Binding SentText}" Style="{StaticResource Mono}"
                                                                FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                               HorizontalAlignment="Right" />
+                                                               HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                     <TextBlock Grid.Column="5" Text="{Binding ReceivedText}" Style="{StaticResource Mono}"
                                                                FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                               HorizontalAlignment="Right" />
+                                                               HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -4309,10 +4309,10 @@
                                                 </TextBlock>
                                                 <TextBlock Grid.Column="4" Text="{Binding SentText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           HorizontalAlignment="Right" />
+                                                           HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="5" Text="{Binding ReceivedText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
-                                                           HorizontalAlignment="Right" />
+                                                           HorizontalAlignment="Right" Margin="0,0,10,0" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.Resources>
@@ -4426,7 +4426,7 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="長さ" Style="{StaticResource Caption}" Margin="0,0,10,0" />
                                         <TextBlock Grid.Column="1" Text="マスク" Style="{StaticResource Caption}" Margin="0,0,10,0" />
-                                        <TextBlock Grid.Column="2" Text="ホスト数" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="2" Text="ホスト数" Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                     </Grid>
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{x:Static vm:SubnetViewModel.CheatSheet}">
@@ -4440,7 +4440,7 @@
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Text="{Binding Prefix}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" Margin="0,0,10,0" />
                                                         <TextBlock Grid.Column="1" Text="{Binding Mask}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" Margin="0,0,10,0" />
-                                                        <TextBlock Grid.Column="2" Text="{Binding Hosts}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" HorizontalAlignment="Right" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding Hosts}" Style="{StaticResource Mono}" FontSize="{DynamicResource Size.Caption}" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                     </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -5515,7 +5515,7 @@
                                         <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                         <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                         <TextBlock Grid.Column="1" Text="名前"     Style="{StaticResource Caption}" Margin="6,0,0,0" />
-                                        <TextBlock Grid.Column="2" Text="サイズ"   Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="2" Text="サイズ"   Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                         <TextBlock Grid.Column="3" Text="更新日時" Style="{StaticResource Caption}" Margin="6,0,0,0" />
                                         <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                         <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
@@ -5556,7 +5556,7 @@
                                                     <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
                                                                Margin="6,0,0,0" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Grid.Column="2" Text="{Binding SizeText}" Style="{StaticResource Mono}"
-                                                               VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                               VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                     <TextBlock Grid.Column="3" Text="{Binding ModifiedText}" Style="{StaticResource Mono}"
                                                                VerticalAlignment="Center" Margin="6,0,0,0" />
                                                 </Grid>
@@ -5594,7 +5594,7 @@
                                         <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                         <Border Grid.Column="2" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                         <TextBlock Grid.Column="1" Text="名前"     Style="{StaticResource Caption}" Margin="6,0,0,0" />
-                                        <TextBlock Grid.Column="2" Text="サイズ"   Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="2" Text="サイズ"   Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                         <TextBlock Grid.Column="3" Text="更新日時" Style="{StaticResource Caption}" Margin="6,0,0,0" />
                                         <!-- 列幅のつまみ。星列より左は右端、右は左端の境界に置く -->
                                         <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
@@ -5635,7 +5635,7 @@
                                                     <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
                                                                Margin="6,0,0,0" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Grid.Column="2" Text="{Binding SizeText}" Style="{StaticResource Mono}"
-                                                               VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                               VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                     <TextBlock Grid.Column="3" Text="{Binding ModifiedText}" Style="{StaticResource Mono}"
                                                                VerticalAlignment="Center" Margin="6,0,0,0" />
                                                 </Grid>
@@ -5908,7 +5908,7 @@
                                                             <TextBlock Grid.Column="2" Text="{Binding ScoreText}" Style="{StaticResource Mono}"
                                                                        FontSize="{DynamicResource Size.Caption}"
                                                                        VerticalAlignment="Center"
-                                                                       HorizontalAlignment="Right" />
+                                                                       HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                             <TextBlock Grid.Column="3" Text="{Binding State}"
                                                                        FontSize="{DynamicResource Size.Caption}"
                                                                        VerticalAlignment="Center">
@@ -6362,7 +6362,7 @@
                                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Domains}" />
                                                     <TextBlock Grid.Column="5" Text="{Binding PathCount}"
                                                                FontSize="{DynamicResource Size.Caption}"
-                                                               VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                               VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 </Grid>
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
@@ -7304,13 +7304,13 @@
                                                            VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="6" Text="{Binding RssiText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="7" Text="{Binding Quality}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="8" Text="{Binding Speed}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="9" Text="{Binding State}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center">
@@ -7483,7 +7483,7 @@
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="7" Text="{Binding ClientsText}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="8" Text="{Binding Tags}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Tags}" />
@@ -7626,10 +7626,10 @@
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Reason}" />
                                                 <TextBlock Grid.Column="6" Text="{Binding Joins}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="7" Text="{Binding Failures}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                             </Grid>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
@@ -7739,7 +7739,7 @@
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Id}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="3" Text="{Binding State}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center">
@@ -7762,16 +7762,16 @@
                                                 </TextBlock>
                                                 <TextBlock Grid.Column="4" Text="{Binding Clients}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="5" Text="{Binding Band24}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="6" Text="{Binding Band5}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="7" Text="{Binding Band6}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                             </Grid>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
@@ -7874,10 +7874,10 @@
                                                            VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Channel}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="3" Text="{Binding Power}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="4" Text="{Binding UtilizationText}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center">
@@ -7900,10 +7900,10 @@
                                                 </TextBlock>
                                                 <TextBlock Grid.Column="5" Text="{Binding Noise}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="6" Text="{Binding ClientsText}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                             </Grid>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
@@ -8026,10 +8026,10 @@
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="4" Text="{Binding Channel}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="5" Text="{Binding RssiText}" Style="{StaticResource Mono}"
                                                            FontSize="{DynamicResource Size.Caption}"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                 <TextBlock Grid.Column="6" Text="{Binding DetectedBy}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
