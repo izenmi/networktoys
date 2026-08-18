@@ -1793,9 +1793,9 @@
                                     <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.0]}" />
-                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.1]}" />
+                                            <ColumnDefinition Width="*" MinWidth="120" />
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.2]}" />
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.3]}" />
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.4]}" />
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.5]}" />
                                         </Grid.ColumnDefinitions>
@@ -1812,13 +1812,13 @@
                                         <TextBlock Grid.Column="4" Text="期待" Style="{StaticResource Caption}"
                                                    ToolTip="本文にこの文字列が含まれることまで確かめます（HTTP のみ）。遮断ページを合格と誤読しないための確実な手です。" />
                                         <TextBlock Grid.Column="5" Text="結果" Style="{StaticResource Caption}" />
-                                        <!-- 列幅のつまみ。星列(3)より左は右端、右は左端の境界に置く -->
+                                        <!-- 列幅のつまみ。星列(1)より左は右端、右は左端の境界に置く -->
                                         <Thumb Grid.Column="0" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
                                                Tag="verify.0" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                        <Thumb Grid.Column="1" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
-                                               Tag="verify.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
-                                        <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Right"
+                                        <Thumb Grid.Column="2" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
                                                Tag="verify.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
+                                        <Thumb Grid.Column="3" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
+                                               Tag="verify.3" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="4" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
                                                Tag="verify.4" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                         <Thumb Grid.Column="5" Style="{StaticResource ColumnGrip}" HorizontalAlignment="Left"
@@ -1844,9 +1844,9 @@
                                                 <Grid Height="{DynamicResource Size.RowHeight.Input}">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.0]}" />
-                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.1]}" />
+                                                        <ColumnDefinition Width="*" MinWidth="120" />
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.2]}" />
-                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.3]}" />
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.4]}" />
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[verify.5]}" />
                                                     </Grid.ColumnDefinitions>
