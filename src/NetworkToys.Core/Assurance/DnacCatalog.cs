@@ -685,6 +685,17 @@ public static class DnacCatalog
     }
 
 
+    // ===== 小物 =====
+
+    /// <summary>ミリ秒のエポックを読める形に。0 や取れないものは空文字。</summary>
+    public static string DescribeTime(long? epochMilliseconds)
+    {
+        if (epochMilliseconds is not { } value || value <= 0) return "";
+
+        return DateTimeOffset.FromUnixTimeMilliseconds(value).ToLocalTime()
+            .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+
     private static string FirstDate(JsonElement row, params string[] paths)
     {
         string value = DnacJson.First(row, paths);

@@ -7016,9 +7016,9 @@
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,12,2"
                                     ToolTip="直前に取れた生の応答(JSON)と、投げた URL を出します。" />
 
-                            <!-- RESTCONF が無効な WLC のための保険。表にはしないでそのまま見せる -->
+                            <!-- RESTCONF を有効にできない現場のための道。出力から表も作る -->
                             <Button Content="SSH で取得" Command="{Binding FetchShowCommand}" Margin="0,0,6,2"
-                                    ToolTip="RESTCONF が使えないときに、SSH で show を流します（表にはしません）。" />
+                                    ToolTip="RESTCONF が使えないときは、こちらで SSH から show を流します。各タブの表もこれで埋まります（IP・電波の強さは show に出ないので「—」）。" />
                             <Button Content="SSH の出力" Click="OnWlcShowSsh"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
                                     ToolTip="SSH で取ってきた出力をそのまま開きます。" />

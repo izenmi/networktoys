@@ -445,11 +445,13 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
             _lastShow = DeviceReport.Render(result);
             OnPropertyChanged(nameof(LastShowOutput));
 
+            int filled = FillFromShow(result);
+
             Status = result.FailureMessage is { Length: > 0 } failure
                 ? failure
-                : $"SSH で {result.Commands.Count} 本ぶん取れました。「SSH の出力」で開けます。";
+                : $"SSH で {result.Commands.Count} 本ぶん取れました（表に {filled} 行）。生の出力は「SSH の出力」で開けます。";
 
-            Notice = "⚠ SSH の出力は表にしていません（版によって桁がずれるため）。そのまま読んでください。";
+            Notice = "⚠ SSH から作った表です。IP・電波の強さ・混み具合は show の要約に出ないので「—」になります。";
         }
         catch (OperationCanceledException)
         {
@@ -478,6 +480,50 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
     }
 
     // ===== 画面に出す =====
+
+    /// <summary>
+    /// SSH の出力から表を作る。<b>RESTCONF を有効にできない現場のための本道</b>
+    /// （2026-08-18 ユーザー指示。それまでは生の出力を見せるだけだった）。
+    ///
+    /// 出ない項目は埋めない（IP・電波の強さ・混み具合は show に無い）。
+    /// 読めなかったコマンドがあっても、読めたぶんの表は出す。
+    /// </summary>
+    private int FillFromShow(DeviceCollectionResult result)
+    {
+        string Output(string startsWith) => result.Commands
+            .FirstOrDefault(c => c.Command.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase))?.Output ?? "";
+
+        string aps = Output("show ap summary");
+        string joins = Output("show ap join stats");
+        string clients = Output("show wireless client summary");
+        string wlans = Output("show wireless wlan summary");
+        string radio24 = Output("show ap dot11 24ghz summary");
+        string radio5 = Output("show ap dot11 5ghz summary");
+        string rogues = Or(Output("show wireless wps rogue ap summary"), Output("show rogue ap summary"));
+
+        IReadOnlyList<WlcSsidRow> ssids = WlcShow.ParseWlanSummary(wlans);
+
+        _allAps = WlcShow.ParseApSummary(aps, joins);
+        _allClients = WlcShow.ParseClientSummary(clients, ssids);
+
+        Replace(SsidRows, ssids);
+        Replace(JoinRows, WlcShow.ParseJoinStats(joins));
+        Replace(RogueRows, WlcShow.ParseRogueSummary(rogues));
+
+        Replace(RrmRows,
+        [
+            .. WlcShow.ParseRadioSummary(radio24, "2.4GHz"),
+            .. WlcShow.ParseRadioSummary(radio5, "5GHz"),
+        ]);
+
+        ShowAps();
+        ShowClients();
+
+        return ApRows.Count + ClientRows.Count + SsidRows.Count
+               + JoinRows.Count + RrmRows.Count + RogueRows.Count;
+    }
+
+    private static string Or(string first, string second) => first.Length > 0 ? first : second;
 
     private void ShowClients() => Replace(ClientRows, WlcCatalog.FilterClients(_allClients, ClientQuery));
 
