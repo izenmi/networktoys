@@ -2619,7 +2619,7 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiDevices}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点にある機器を一覧にします。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ組織にある機器を、拠点をまたいで一覧にします。" />
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -2761,7 +2761,7 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiUplinks}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ拠点の WAN 回線の状態を見ます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ組織の MX の WAN 回線の状態を見ます。" />
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
