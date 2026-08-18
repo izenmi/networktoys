@@ -176,6 +176,15 @@ public class SpeedVerdictTests
         Assert.Equal(["https://a.example/x", "https://b.example/y"], FastComPlan.ParseTargets(json));
     }
 
+    [Fact]
+    public void Plain_http_targets_are_upgraded_to_https()
+    {
+        // 平文だと途中のプロキシに中身を見られて止められる（上りが 403 / 503 になった）
+        const string json = """{"targets":[{"url":"http://a.example/speedtest?c=jp"}]}""";
+
+        Assert.Equal(["https://a.example/speedtest?c=jp"], FastComPlan.ParseTargets(json));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("{}")]

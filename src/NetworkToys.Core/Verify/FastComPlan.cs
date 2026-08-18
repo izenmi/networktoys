@@ -78,7 +78,7 @@ public static partial class FastComPlan
                     && url.ValueKind == JsonValueKind.String
                     && url.GetString() is { Length: > 0 } text)
                 {
-                    urls.Add(text);
+                    urls.Add(Secure(text));
                 }
             }
         }
@@ -89,6 +89,18 @@ public static partial class FastComPlan
 
         return urls;
     }
+
+    /// <summary>
+    /// <c>http://</c> で返ってきた測定先を <c>https://</c> に直す。
+    ///
+    /// <b>平文だと、途中のプロキシに中身を見られて止められる</b>（上りの POST が
+    /// 403 / 503 で弾かれた。2026-08-18 実測）。ブラウザは https で張るので
+    /// CONNECT のトンネルになり、プロキシからは中身が見えない。
+    /// </summary>
+    public static string Secure(string url)
+        => url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            ? "https://" + url["http://".Length..]
+            : url;
 
     /// <summary>どこで躓いたかを、次に何を見ればよいか分かる文言にする。</summary>
     public static string DescribeFailure(FastComStep step) => step switch

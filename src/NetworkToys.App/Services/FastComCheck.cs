@@ -143,12 +143,15 @@ internal static class FastComCheck
         // プロキシが弾いたのか先方が断ったのか分からない（2026-08-18 報告）
         string? reason = results.Select(r => r.Reason).FirstOrDefault(r => r is { Length: > 0 });
 
+        // どこへ送って断られたのかが分からないと、プロキシの設定に手が出せない
+        string where = targets.Count > 0 ? $"・宛先 {UploadUrl(targets[0])}" : "";
+
         return new SpeedSample(
             0,
             Elapsed(started),
             reason is { Length: > 0 }
-                ? $"送信を受け付けてもらえませんでした（{reason}）"
-                : "送信を受け付けてもらえませんでした");
+                ? $"送信を受け付けてもらえませんでした（{reason}{where}）"
+                : $"送信を受け付けてもらえませんでした（{where.TrimStart('・')}）");
     }
 
     /// <summary>
