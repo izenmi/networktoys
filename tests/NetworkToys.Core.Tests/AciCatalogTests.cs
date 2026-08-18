@@ -444,6 +444,44 @@ public class AciCatalogTests
     }
 
     [Fact]
+    public void Bridge_domains_show_whether_they_route_and_what_they_serve()
+    {
+        // サブネットも VRF も子にしか無い。子ごと引く前提の形
+        const string json = """
+            {"totalCount":"2","imdata":[
+              {"fvBD":{"attributes":{"dn":"uni/tn-Prod/BD-Web","name":"BD-Web",
+                "unicastRoute":"yes","unkMacUcastAct":"proxy"},
+               "children":[
+                 {"fvRsCtx":{"attributes":{"tnFvCtxName":"Prod-VRF"}}},
+                 {"fvSubnet":{"attributes":{"ip":"10.1.1.1/24"}}},
+                 {"fvSubnet":{"attributes":{"ip":"10.1.2.1/24"}}}]}},
+              {"fvBD":{"attributes":{"dn":"uni/tn-Prod/BD-L2","name":"BD-L2",
+                "unicastRoute":"no","unkMacUcastAct":"flood"}}}
+            ]}
+            """;
+
+        IReadOnlyList<AciBdRow> rows = AciCatalog.ParseBds(Mos(json));
+
+        Assert.Equal(2, rows.Count);
+
+        AciBdRow web = rows.Single(r => r.Name == "BD-Web");
+
+        Assert.Equal("Prod", web.Tenant);
+        Assert.Equal("Prod-VRF", web.Vrf);
+        Assert.Equal("● する", web.Routing);
+        Assert.Equal(SeverityKind.Ok, web.RoutingKind);
+        Assert.Equal("10.1.1.1/24, 10.1.2.1/24", web.Subnets);
+        Assert.Equal("スパインに問い合わせ", web.L2Unknown);
+
+        // L2 だけで使う BD もある。不合格にはしない（色を落とすだけ）
+        AciBdRow l2 = rows.Single(r => r.Name == "BD-L2");
+
+        Assert.Equal("◌ しない", l2.Routing);
+        Assert.Equal(SeverityKind.Muted, l2.RoutingKind);
+        Assert.Equal("", l2.Subnets);
+    }
+
+    [Fact]
     public void Log_rows_take_the_target_from_whichever_field_is_filled()
     {
         const string json = """
@@ -598,6 +636,10 @@ public class AciCatalogTests
             AciCatalog.ToCsv(AciCatalog.ParseEpgMembers(Mos(EpgsJson))),
             AciCatalog.ToCsv(AciCatalog.ParseEndpoints(Mos(EndpointsJson))),
             AciCatalog.ToCsv(AciCatalog.ParseDevices(Mos(NodesJson))),
+            AciCatalog.ToCsv(AciCatalog.ParseBds(Mos("""
+                {"totalCount":"1","imdata":[
+                  {"fvBD":{"attributes":{"dn":"uni/tn-Prod/BD-Web","name":"BD-Web","unicastRoute":"yes"}}}]}
+                """))),
         ];
 
         foreach (CsvTable table in tables)

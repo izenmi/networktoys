@@ -560,6 +560,7 @@ public partial class MainWindow : Window
         // IF の列は InterfaceKey で並べる（eth1/2 が eth1/10 より前に来るように）
         ["aciport"] = ["InterfaceKey", "InterfaceKey", "OperState", "Speed", "Vlans", "Modes", "PortChannel",
                        "Epgs", "Reason", "LastChange", "Description"],
+        ["acibd"] = ["Tenant", "Name", "Vrf", "Routing", "Subnets", "L2Unknown"],
         ["aciepg"] = ["Tenant", "AppProfile", "Name", "BridgeDomain", "Domains", "PathCount"],
         ["aciepgm"] = ["Node", "Path", "Encap", "Mode"],
         ["aciep"] = ["Mac", "Ip", "Tenant", "Epg", "Encap", "Node", "Path"],

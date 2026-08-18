@@ -59,6 +59,21 @@ public sealed record AciPortRow(
     public string InterfaceKey => AciCatalog.PortSortKey(Node, Interface);
 }
 
+/// <summary>
+/// ブリッジドメインの 1 行。
+///
+/// <b>ルーティングするか（<c>unicastRoute</c>）とネットワークアドレス（<c>fvSubnet</c>）</b>は
+/// この画面の主役。<b>両方とも BD の子にしか無い</b>ので、子ごと引く必要がある。
+/// </summary>
+public sealed record AciBdRow(
+    string Tenant,
+    string Name,
+    string Vrf,
+    string Routing,
+    SeverityKind RoutingKind,
+    string Subnets,
+    string L2Unknown);
+
 /// <summary>EPG の 1 行。</summary>
 public sealed record AciEpgRow(
     string Tenant,
@@ -526,6 +541,53 @@ public static class AciCatalog
         return rows;
     }
 
+    // ===== ブリッジドメイン =====
+
+    /// <summary>
+    /// ブリッジドメイン。<b>子ごと引くこと</b>（<c>rsp-subtree=children</c>）—
+    /// サブネットも VRF も子にしか無い。
+    ///
+    /// <c>unicastRoute</c> は「この BD でルーティングするか」。
+    /// <b>「いいえ」は設定漏れとは限らない</b>（L2 だけで使う BD がある）ので、
+    /// 色は付けても不合格にはしない。
+    /// </summary>
+    public static IReadOnlyList<AciBdRow> ParseBds(IEnumerable<AciMo> mos)
+    {
+        var rows = new List<AciBdRow>();
+
+        foreach (AciMo mo in mos)
+        {
+            string dn = mo["dn"];
+
+            string subnets = string.Join(", ", mo.ChildrenOf("fvSubnet")
+                .Select(sub => sub["ip"])
+                .Where(ip => ip.Length > 0));
+
+            bool routes = string.Equals(mo["unicastRoute"], "yes", StringComparison.OrdinalIgnoreCase);
+
+            rows.Add(new AciBdRow(
+                Tenant: AciDn.Value(dn, "tn"),
+                Name: Or(mo["name"], AciDn.Value(dn, "BD")),
+                Vrf: mo.FirstChild("fvRsCtx")?["tnFvCtxName"] ?? "",
+                Routing: routes ? "● する" : "◌ しない",
+                RoutingKind: routes ? SeverityKind.Ok : SeverityKind.Muted,
+                Subnets: subnets,
+                L2Unknown: DescribeL2Unknown(mo["unkMacUcastAct"])));
+        }
+
+        return [.. rows.OrderBy(r => r.Tenant, StringComparer.CurrentCulture)
+                       .ThenBy(r => r.Name, StringComparer.CurrentCulture)];
+    }
+
+    /// <summary>知らない宛先の扱い。<b>知らない値はそのまま出す。</b></summary>
+    public static string DescribeL2Unknown(string? action) => action switch
+    {
+        "flood" => "フラッド",
+        "proxy" => "スパインに問い合わせ",
+        null or "" => "—",
+        _ => action,
+    };
+
     /// <summary>
     /// EPG にぶら下がる静的パスを、EPG をまたいで全部返す。
     /// 画面側で選ばれた EPG の <c>Dn</c> で絞る（取得のたびに引き直さない）。
@@ -692,6 +754,10 @@ public static class AciCatalog
             r.Node, r.Interface, r.Description, r.AdminState, r.OperState, r.Speed, r.Usage,
             r.PortChannel, r.Epgs, r.Vlans, r.Modes, r.Reason, r.LastChange,
         })]);
+
+    public static CsvTable ToCsv(IReadOnlyList<AciBdRow> rows) => new(
+        ["テナント", "ブリッジドメイン", "VRF", "ルーティング", "サブネット", "知らない宛先"],
+        [.. rows.Select(r => new[] { r.Tenant, r.Name, r.Vrf, r.Routing, r.Subnets, r.L2Unknown })]);
 
     public static CsvTable ToCsv(IReadOnlyList<AciEpgRow> rows) => new(
         ["テナント", "アプリ", "EPG", "ブリッジドメイン", "ドメイン", "静的パス"],

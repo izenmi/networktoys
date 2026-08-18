@@ -81,6 +81,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         FetchCommand = new RelayCommand(() => _ = FetchBasicsAsync(), CanFetch);
         FetchPortsCommand = new RelayCommand(() => _ = FetchPortsAsync(), () => CanFetch() && SelectedNode is not null);
         FetchEpgsCommand = new RelayCommand(() => _ = FetchEpgsAsync(), CanFetch);
+        FetchBdsCommand = new RelayCommand(() => _ = FetchBdsAsync(), CanFetch);
         FetchEndpointsCommand = new RelayCommand(() => _ = FetchEndpointsAsync(), CanFetch);
         FetchLogCommand = new RelayCommand(() => _ = FetchLogAsync(), CanFetch);
         FetchDevicesCommand = new RelayCommand(() => _ = FetchDevicesAsync(), CanFetch);
@@ -121,6 +122,9 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public ObservableCollection<AciEndpointRow> EndpointRows { get; } = [];
     public ObservableCollection<AciDeviceRow> DeviceRows { get; } = [];
 
+    /// <summary>ブリッジドメイン。ルーティングの有無とネットワークアドレスを見る。</summary>
+    public ObservableCollection<AciBdRow> BdRows { get; } = [];
+
     /// <summary>作業前後の差分（左右に並べた行）。</summary>
     /// <summary>
     /// 左右に並べた差分。<b>2 万行を 1 行ずつ足すと一覧が測り直され続ける</b>ので、
@@ -139,6 +143,9 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     public RelayCommand FetchCommand { get; }
     public RelayCommand FetchPortsCommand { get; }
     public RelayCommand FetchEpgsCommand { get; }
+
+    /// <summary>ブリッジドメインを取る。</summary>
+    public RelayCommand FetchBdsCommand { get; }
     public RelayCommand FetchEndpointsCommand { get; }
     public RelayCommand FetchLogCommand { get; }
     public RelayCommand FetchDevicesCommand { get; }
@@ -516,6 +523,17 @@ public sealed class AciViewModel : ObservableObject, IDisposable
     });
 
     /// <summary>
+    /// ブリッジドメイン。<b>子ごと引く</b> — サブネットも VRF も子にしか無い。
+    /// </summary>
+    private Task FetchBdsAsync() => RunAsync("ブリッジドメイン", async (client, token) =>
+    {
+        IReadOnlyList<AciMo> mos = await FetchClassAsync(client, "fvBD", Children, null, token);
+
+        Replace(BdRows, AciCatalog.ParseBds(mos));
+        Status = $"ブリッジドメイン {BdRows.Count} 件（{DateTime.Now:HH:mm:ss}）";
+    });
+
+    /// <summary>
     /// ファブリックの機器。<b>型番・シリアル・版は <c>fabricNode</c> にしか無い</b>ので、
     /// ノードの選択欄（<c>topSystem</c> 由来）とは別に引く。
     /// </summary>
@@ -662,6 +680,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         "member" => MemberRows.Count,
         "endpoint" => EndpointRows.Count,
         "device" => DeviceRows.Count,
+        "bd" => BdRows.Count,
         _ => 0,
     };
 
@@ -674,6 +693,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         "epg" => AciCatalog.ToCsv([.. EpgRows]),
         "member" => AciCatalog.ToCsv([.. MemberRows]),
         "endpoint" => AciCatalog.ToCsv([.. EndpointRows]),
+        "bd" => AciCatalog.ToCsv([.. BdRows]),
         _ => AciCatalog.ToCsv([.. DeviceRows]),
     };
 
@@ -721,7 +741,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         _cts?.Cancel();
 
         foreach (var rows in (System.Collections.IList[])
-                 [HealthRows, FaultRows, LogRows, PortRows, EpgRows, MemberRows, EndpointRows, DeviceRows,
+                 [HealthRows, FaultRows, LogRows, PortRows, EpgRows, MemberRows, EndpointRows, DeviceRows, BdRows,
                   DiffRows, Nodes, Tenants])
         {
             rows.Clear();
@@ -775,6 +795,7 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         FetchEndpointsCommand.RaiseCanExecuteChanged();
         FetchLogCommand.RaiseCanExecuteChanged();
         FetchDevicesCommand.RaiseCanExecuteChanged();
+        FetchBdsCommand.RaiseCanExecuteChanged();
         FetchBeforeCommand.RaiseCanExecuteChanged();
         FetchAfterCommand.RaiseCanExecuteChanged();
     }

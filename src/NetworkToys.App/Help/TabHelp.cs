@@ -615,6 +615,29 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
+    /// <summary>ACI ─ BD</summary>
+    public const string AciBds =
+        """
+        ACI ─ BD（ブリッジドメイン）
+
+        この画面ですること
+        ・ブリッジドメインを、ルーティングの有無とネットワークアドレスつきで一覧にする
+
+        こんなときに
+        ・「この BD はルーティングするのか」を、テナントをまたいで確かめたいとき
+        ・使っているネットワークアドレスの棚卸しをするとき
+
+        知っておくとよいこと
+        ・ルーティングは unicastRoute。「しない」は設定漏れとは限らない
+        　（L2 だけで使う BD がある）ので、色は付けても不合格にはしない
+        ・サブネットは BD にぶら下がっているものを全部並べる（複数持てる）
+        ・VRF は BD が紐づけている VRF の名前
+        ・「知らない宛先」は unkMacUcastAct（フラッド／スパインに問い合わせ）
+
+        できる操作
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
+        """;
+
     /// <summary>ACI ─ 差分比較</summary>
     public const string AciDiff =
         """
