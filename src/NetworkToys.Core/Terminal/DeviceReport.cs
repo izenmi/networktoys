@@ -56,7 +56,10 @@ public static class DeviceReport
 
         text.AppendLine($"開始      : {result.StartedAt:yyyy/MM/dd HH:mm:ss}");
         text.AppendLine($"終了      : {result.FinishedAt:yyyy/MM/dd HH:mm:ss}  ({Describe(elapsed)})");
-        text.AppendLine($"特権      : {(result.ReachedEnable ? "● 特権モード(#)" : "◌ ユーザーモード(>)")}");
+        text.AppendLine(result.ReachedEnable
+            ? "特権      : ● 特権モード(#)"
+            : "特権      : ◌ ユーザーモード(>)　※ show running-config などの特権コマンドは断られます"
+              + "（enable のパスワードを確かめてください）");
         text.AppendLine($"ページャ  : {result.PagerNote}");
         text.AppendLine($"結果      : {result.Commands.Count} 本中 {done} 本成功");
 

@@ -390,9 +390,13 @@ public sealed class CollectViewModel : ObservableObject
             {
                 int problems = result.Commands.Count(c => c.Problem is not null);
 
+                // 特権モードに入れていないと show running-config などが軒並み断られる。
+                // 表の上で分かるようにする（原因がコマンド側に見えてしまうため）
+                string mode = result.ReachedEnable ? "" : "（ユーザーモードのまま）";
+
                 row.Status = problems == 0
-                    ? $"✔ 完了 {result.Commands.Count} 本"
-                    : $"▲ 一部失敗 {result.Commands.Count - problems}/{result.Commands.Count} 本";
+                    ? $"✔ 完了 {result.Commands.Count} 本{mode}"
+                    : $"▲ 一部失敗 {result.Commands.Count - problems}/{result.Commands.Count} 本{mode}";
 
                 done++;
             }

@@ -274,13 +274,17 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         await SendAsync("enable", token).ConfigureAwait(false);
 
         var deadline = Stopwatch.StartNew();
+        var silence = Stopwatch.StartNew();
         bool passwordSent = false;
+        bool droppedStale = false;
 
         while (deadline.Elapsed < options.LoginTimeout)
         {
             token.ThrowIfCancellationRequested();
 
-            await PumpAsync(options.SettleTime, token).ConfigureAwait(false);
+            bool got = await PumpAsync(options.SettleTime, token).ConfigureAwait(false);
+            if (got) silence.Restart();
+
             string view = Clean();
 
             if (CiscoPrompt.EndsWithPasswordPrompt(view))
@@ -305,11 +309,26 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
 
             if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out PromptMatch match))
             {
+                // enable と打った直後に、エコーも何も無いプロンプトだけが来ることがある
+                // （前のやり取りの残り）。それを「入れなかった」と読むと、以降ずっと
+                // ユーザーモードのまま走り、show running-config が
+                // 「% Invalid input」で断られる（2026-08-18 に実機で報告された）。
+                // 1 度だけ捨てて、本当の応答を待つ
+                if (!droppedStale && match.Level == PromptLevel.User && CommandCapture.IsBarePrompt(view))
+                {
+                    droppedStale = true;
+                    ClearBuffer();
+                    continue;
+                }
+
                 _level = match.Level;
                 _atPrompt = true;
                 await DrainAsync(token).ConfigureAwait(false);
                 return match.Level != PromptLevel.User;
             }
+
+            // 残りを捨てたあと機器が黙ったままなら、それ以上は待たない
+            if (droppedStale && !got && silence.Elapsed > options.IdleTimeout) return false;
         }
 
         return false;
@@ -464,6 +483,12 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         _echoes |= CommandCapture.HasEcho(chunk, command);
 
         problem ??= CiscoPrompt.DetectCommandProblem(output);
+
+        // 特権モードに入れていないと、show running-config や show logging のような
+        // 特権コマンドは「% Invalid input」で断られる。コマンド自体が使えないように
+        // 読めてしまうので、そうは書かない（2026-08-18 実機報告）
+        if (problem is not null && _level == PromptLevel.User && WasRejected(output))
+            problem = "特権モード(#)に入れていないため使えません。enable のパスワードを確かめてください。";
 
         // 立て直しはここでしない。会話がそろっていなければ _atPrompt が false のままなので、
         // 次のコマンドの入口が面倒を見る（最後のコマンドなら誰も待たされない）。
