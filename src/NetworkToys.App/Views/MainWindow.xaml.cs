@@ -988,14 +988,6 @@ public partial class MainWindow : Window
         UsageDialog.Show(this, "使い方", markdown);
     }
 
-    /// <summary>
-    /// 最新版を確かめる。<b>アプリからは通信しない</b> — 既定のブラウザで
-    /// Releases のページを開くだけ。署名が無くて警告が出る以上、
-    /// 手元の版が古くないかを確かめる導線はあった方がよい。
-    /// </summary>
-    private void OnOpenReleases(object sender, RoutedEventArgs e)
-        => OpenInBrowser("https://github.com/izenmi/networktoys/releases");
-
     private void OnOpenIssues(object sender, RoutedEventArgs e)
         => OpenInBrowser("https://github.com/izenmi/networktoys/issues");
 

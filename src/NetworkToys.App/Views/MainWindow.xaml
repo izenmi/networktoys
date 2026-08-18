@@ -557,7 +557,6 @@
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)" Style="{StaticResource MenuBarItem}">
                 <MenuItem Header="使い方" Click="OnShowUsage" />
-                <MenuItem Header="最新版を確認" Click="OnOpenReleases" />
                 <MenuItem Header="問題を報告" Click="OnOpenIssues" />
                 <Separator />
                 <MenuItem Header="ライセンス情報" Click="OnShowLicenses" />
