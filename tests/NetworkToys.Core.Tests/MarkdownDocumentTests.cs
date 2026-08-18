@@ -116,6 +116,27 @@ public class MarkdownDocumentTests
     }
 
     [Fact]
+    public void A_link_keeps_its_label_and_target()
+    {
+        MarkdownInline[] parts =
+            [.. MarkdownDocument.Parse("目次: [業務確認](#業務確認) を見る").OfType<MarkdownParagraph>().Single().Text];
+
+        MarkdownInline link = Assert.Single(parts, p => p.Link is not null);
+
+        Assert.Equal("業務確認", link.Text);
+        Assert.Equal("#業務確認", link.Link);
+        Assert.Equal("目次: 業務確認 を見る", Text(parts));
+    }
+
+    [Fact]
+    public void A_bracket_that_is_not_a_link_stays_as_it_is()
+    {
+        // 使い方には [confirm] のような角かっこが出てくる。壊さない
+        Assert.Equal("弾く: [confirm] は答えない",
+                     Text(MarkdownDocument.Parse("弾く: [confirm] は答えない").OfType<MarkdownParagraph>().Single().Text));
+    }
+
+    [Fact]
     public void Nothing_readable_is_not_an_error()
     {
         Assert.Empty(MarkdownDocument.Parse(null));

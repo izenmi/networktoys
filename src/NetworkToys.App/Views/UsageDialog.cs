@@ -1,6 +1,8 @@
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using NetworkToys.Core.Work;
@@ -45,6 +47,9 @@ internal sealed class UsageDialog : Window
             Padding = new Thickness(0),
         };
 
+        // ホイールの進みは自分で決める（既定は文字の大きさを見ないので鈍い）
+        viewer.PreviewMouseWheel += OnWheel;
+
         var close = new Button { Content = "閉じる", MinWidth = 96, IsDefault = true, IsCancel = true };
         close.Click += (_, _) => Close();
 
@@ -73,9 +78,25 @@ internal sealed class UsageDialog : Window
     /// </summary>
     internal static int Preview(string markdown) => Build(markdown).Blocks.Count;
 
+    /// <summary>
+    /// 目次のリンクのうち、飛び先の見出しが無いもの。
+    /// <b>見出しを直すと黙って飛べなくなる</b>ので、自己診断が 0 件であることを見る。
+    /// </summary>
+    internal static IReadOnlyList<string> MissingAnchors(string markdown)
+        => MarkdownDocument.MissingAnchors(markdown);
+
+    /// <summary>
+    /// 目次から飛ぶ先。<b>組み立てている間だけの置き場</b>で、見出しを作るたびに足す。
+    /// リンク側は押されたときに引くので、後ろの見出しへも飛べる。
+    /// <see cref="Build"/> は UI スレッドから 1 本ずつしか呼ばれない。
+    /// </summary>
+    private static Dictionary<string, Paragraph> _anchors = new(StringComparer.Ordinal);
+
     /// <summary>読み込んだ Markdown を組む。<b>色と書体は必ず資源から引く</b>（配色の切替に追随する）。</summary>
     private static FlowDocument Build(string markdown)
     {
+        _anchors = new Dictionary<string, Paragraph>(StringComparer.Ordinal);
+
         var document = new FlowDocument
         {
             PagePadding = new Thickness(4, 0, 12, 0),
@@ -138,6 +159,9 @@ internal sealed class UsageDialog : Window
         foreach (Inline inline in Inlines(heading.Text)) paragraph.Inlines.Add(inline);
 
         Scale(paragraph, scale);
+
+        // 目次からの飛び先として控える（同じ見出しが 2 つあれば先に出た方）
+        _anchors.TryAdd(MarkdownDocument.Anchor(string.Concat(heading.Text.Select(t => t.Text))), paragraph);
 
         if (heading.Level <= 2)
         {
@@ -294,6 +318,24 @@ internal sealed class UsageDialog : Window
                 run.SetResourceReference(TextElement.BackgroundProperty, "Brush.SurfaceAlt");
             }
 
+            // 目次のリンク。飛び先はこの文書の中の見出しだけで、外は開かない
+            // （ブラウザを開く口はこのアプリには置かない）
+            if (part.Link is { Length: > 1 } target && target[0] == '#')
+            {
+                Dictionary<string, Paragraph> anchors = _anchors;
+                string key = MarkdownDocument.Anchor(target[1..]);
+
+                var link = new Hyperlink(run);
+                link.SetResourceReference(TextElement.ForegroundProperty, "Brush.Accent.Fg");
+                link.Click += (_, _) =>
+                {
+                    if (anchors.TryGetValue(key, out Paragraph? found)) found.BringIntoView();
+                };
+
+                yield return link;
+                continue;
+            }
+
             yield return run;
         }
     }
@@ -307,6 +349,47 @@ internal sealed class UsageDialog : Window
         double body = Application.Current?.TryFindResource("Size.Body") is double size ? size : 13;
 
         block.FontSize = Math.Round(body * scale);
+    }
+
+    /// <summary>
+    /// ホイール 1 ノッチの進み。
+    ///
+    /// <b>WPF の「1 行」は文字の大きさに関わらず 16px 固定</b>で、OS の
+    /// 「1 ノッチで n 行」に掛けている（既定なら 3 行 = 48px）。本文の行送りは
+    /// 21px 以上あり、文字を大きくすればさらに広がるので、そのままだと
+    /// <b>1 ノッチで 2 行ぶんしか進まない</b>（2026-08-18 報告）。
+    /// ここでは本文の行送りで動かす。<b>OS の設定は引き続き守る</b> —
+    /// 行数はそのまま使い、「1 画面ずつ」(-1) なら 1 画面ぶん動かす。
+    /// </summary>
+    private static void OnWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is not DependencyObject node || ScrollViewerIn(node) is not { } view) return;
+
+        int lines = SystemParameters.WheelScrollLines;
+
+        double body = Application.Current?.TryFindResource("Size.Body") is double size ? size : 13;
+        double step = lines < 0 ? view.ViewportHeight : lines * Math.Round(body * 1.6);
+
+        view.ScrollToVerticalOffset(view.VerticalOffset - (e.Delta / 120.0 * step));
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 中の <see cref="ScrollViewer"/>。<see cref="FlowDocumentScrollViewer"/> は
+    /// テンプレートの中に持っているので、外からは視覚ツリーで探すしかない。
+    /// </summary>
+    private static ScrollViewer? ScrollViewerIn(DependencyObject node)
+    {
+        if (node is ScrollViewer found) return found;
+
+        int count = VisualTreeHelper.GetChildrenCount(node);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (ScrollViewerIn(VisualTreeHelper.GetChild(node, i)) is { } inner) return inner;
+        }
+
+        return null;
     }
 
     protected override void OnSourceInitialized(EventArgs e)

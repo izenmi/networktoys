@@ -1,10 +1,11 @@
 namespace NetworkToys.Core.Work;
 
-/// <summary>文中のひとかたまり。<b>太字と等幅だけ</b>を見分ける。</summary>
+/// <summary>文中のひとかたまり。<b>太字・等幅・リンク</b>だけを見分ける。</summary>
 /// <param name="Text">そのまま出す文字。</param>
 /// <param name="Bold"><c>**…**</c> だったか。</param>
 /// <param name="Code">バッククォートで囲まれていたか。</param>
-public sealed record MarkdownInline(string Text, bool Bold = false, bool Code = false);
+/// <param name="Link"><c>[文字](行き先)</c> の行き先。目次から見出しへ飛ぶのに使う（<c>#見出し</c>）。</param>
+public sealed record MarkdownInline(string Text, bool Bold = false, bool Code = false, string? Link = null);
 
 /// <summary>表の 1 マス。</summary>
 public sealed record MarkdownCell(IReadOnlyList<MarkdownInline> Text);
@@ -229,6 +230,26 @@ public static class MarkdownDocument
                 }
             }
 
+            else if (text[i] == '[')
+            {
+                // [文字](行き先)。入れ子は見ない（使い方に出てくるのは目次の 1 段だけ）
+                int label = text.IndexOf(']', i + 1);
+
+                if (label > i && label + 1 < text.Length && text[label + 1] == '(')
+                {
+                    int end = text.IndexOf(')', label + 2);
+
+                    if (end > label)
+                    {
+                        FlushPlain();
+                        parts.Add(new MarkdownInline(
+                            text[(i + 1)..label], Link: text[(label + 2)..end]));
+                        i = end + 1;
+                        continue;
+                    }
+                }
+            }
+
             plain.Append(text[i]);
             i++;
         }
@@ -236,6 +257,87 @@ public static class MarkdownDocument
         FlushPlain();
 
         return parts;
+    }
+
+    /// <summary>
+    /// 見出しとリンクの飛び先を突き合わせるための形。
+    /// <b>記号と大文字小文字の違いを落とす</b> — GitHub の付け方（小文字にして空白を
+    /// <c>-</c> に、記号は落とす）と、手で書いた <c>#見出し</c> のどちらでも同じ形になる。
+    /// </summary>
+    public static string Anchor(string? text)
+    {
+        var key = new System.Text.StringBuilder();
+
+        foreach (char c in text ?? "")
+        {
+            if (char.IsLetterOrDigit(c)) key.Append(char.ToLowerInvariant(c));
+        }
+
+        return key.ToString();
+    }
+
+    /// <summary>
+    /// 目次のリンクのうち、<b>飛び先の見出しが無いもの</b>（書いたとおりの文字で返す）。
+    /// 見出しを直したときに目次が黙って死ぬのを防ぐための検査口。
+    /// </summary>
+    public static IReadOnlyList<string> MissingAnchors(string? text)
+    {
+        IReadOnlyList<MarkdownBlock> blocks = Parse(text);
+
+        HashSet<string> headings =
+            [.. blocks.OfType<MarkdownHeading>().Select(h => Anchor(string.Concat(h.Text.Select(t => t.Text))))];
+
+        return [.. AllInlines(blocks)
+            .Where(i => i.Link is { Length: > 1 } link && link[0] == '#')
+            .Select(i => i.Link!)
+            .Where(link => !headings.Contains(Anchor(link[1..])))
+            .Distinct(StringComparer.Ordinal)];
+    }
+
+    /// <summary>文書に出てくるひとかたまりを全部並べる（表の中と箇条書きの中も見る）。</summary>
+    private static IEnumerable<MarkdownInline> AllInlines(IEnumerable<MarkdownBlock> blocks)
+    {
+        foreach (MarkdownBlock block in blocks)
+        {
+            switch (block)
+            {
+                case MarkdownHeading heading:
+                    foreach (MarkdownInline part in heading.Text) yield return part;
+                    break;
+
+                case MarkdownParagraph paragraph:
+                    foreach (MarkdownInline part in paragraph.Text) yield return part;
+                    break;
+
+                case MarkdownQuote quote:
+                    foreach (MarkdownInline part in quote.Text) yield return part;
+                    break;
+
+                case MarkdownList list:
+                    foreach (IReadOnlyList<MarkdownInline> item in list.Items)
+                    {
+                        foreach (MarkdownInline part in item) yield return part;
+                    }
+
+                    break;
+
+                case MarkdownTable table:
+                    foreach (MarkdownCell cell in table.Header)
+                    {
+                        foreach (MarkdownInline part in cell.Text) yield return part;
+                    }
+
+                    foreach (IReadOnlyList<MarkdownCell> row in table.Rows)
+                    {
+                        foreach (MarkdownCell cell in row)
+                        {
+                            foreach (MarkdownInline part in cell.Text) yield return part;
+                        }
+                    }
+
+                    break;
+            }
+        }
     }
 
     private static MarkdownTable Table(IReadOnlyList<string> rows)

@@ -1035,6 +1035,19 @@ internal static class SelfTest
 
             // 実際に窓の中身まで組めること（FlowDocument の組み立てで落ちないこと）
             Views.UsageDialog.Preview(markdown!);
+
+            // 目次から見出しへ飛べること。見出しを直すと黙って飛べなくなるので、
+            // 飛び先の無いリンクを名指しで捕まえる（2026-08-18 ユーザー指示で目次を付けた）
+            IReadOnlyList<string> missing = Views.UsageDialog.MissingAnchors(markdown!);
+
+            Assert(missing.Count == 0, $"目次の飛び先が無い: {string.Join(" / ", missing)}");
+
+            Assert(Core.Work.MarkdownDocument.Parse(markdown)
+                       .OfType<Core.Work.MarkdownList>()
+                       .SelectMany(l => l.Items)
+                       .SelectMany(i => i)
+                       .Any(part => part.Link is { Length: > 0 }),
+                   "使い方に目次（見出しへのリンク）が無い");
         });
 
         Check("文字サイズを変えられる", () =>
