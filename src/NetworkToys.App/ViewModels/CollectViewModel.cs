@@ -233,6 +233,15 @@ public sealed class CollectViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 同時に会話する機器の数。
+    ///
+    /// <b>順番に取る理由は無い</b>（機器ごとに独立した会話）が、
+    /// 無制限に開くと踏み台や認証サーバ（TACACS+/AD）へ一度に殺到する。
+    /// 数十台の現場で「速いが迷惑をかけない」あたりに置いてある。
+    /// </summary>
+    private const int MaxConcurrentDevices = 8;
+
     /// <summary>接続の待ち（秒）。</summary>
     public int ConnectSeconds
     {
@@ -325,55 +334,77 @@ public sealed class CollectViewModel : ObservableObject
         int done = 0;
         int failed = 0;
 
+        // 機器ごとの会話は独立しているので、順番に待つ理由がない（2026-08-18 ユーザー指示）。
+        // ただし無制限に開くと、踏み台や認証サーバに一度に殺到する。少しずつ開ける
+        using var gate = new SemaphoreSlim(MaxConcurrentDevices);
+
+        // 合図は先に控える（終わったあとに _cts を捨てるので、中で持ち回らない）
+        CancellationToken token = _cts.Token;
+
+        // 待ちの間は UI スレッドへ戻る（ConfigureAwait(false) を付けない）。
+        // 行の状態も件数もここでしか触らないので、鍵を持ち回らずに済む
+        async Task CollectOneAsync(CollectRowViewModel row)
+        {
+            if (row.Password.Length == 0)
+            {
+                row.Status = "⛔ パスワード未入力";
+                failed++;
+                return;
+            }
+
+            RememberUserName(row);
+
+            var request = new CollectRequest(
+                row.Host, row.Port, row.UseSsh,
+                new DeviceCredentials(row.UserName, row.Password, row.EnablePassword),
+                row.Memo);
+
+            await gate.WaitAsync(token);
+
+            DeviceCollectionResult result;
+
+            try
+            {
+                result = await DeviceCollector.CollectAsync(
+                    request, commands, options, TimeSpan.FromSeconds(ConnectSeconds),
+                    progress, token);
+            }
+            finally
+            {
+                gate.Release();
+            }
+
+            string? saveError = DeviceCollector.Save(folder, result);
+
+            if (result.FailureMessage is { } failure)
+            {
+                row.Status = $"✕ 失敗: {failure}";
+                failed++;
+            }
+            else if (saveError is not null)
+            {
+                row.Status = $"✕ {saveError}";
+                failed++;
+            }
+            else
+            {
+                int problems = result.Commands.Count(c => c.Problem is not null);
+
+                row.Status = problems == 0
+                    ? $"✔ 完了 {result.Commands.Count} 本"
+                    : $"▲ 一部失敗 {result.Commands.Count - problems}/{result.Commands.Count} 本";
+
+                done++;
+            }
+
+            Status = $"{done + failed}/{targets.Length} 台（成功 {done} / 失敗 {failed}）";
+        }
+
         try
         {
-            foreach (CollectRowViewModel row in targets)
-            {
-                _cts.Token.ThrowIfCancellationRequested();
+            Status = $"0/{targets.Length} 台（同時に {Math.Min(MaxConcurrentDevices, targets.Length)} 台まで）";
 
-                if (row.Password.Length == 0)
-                {
-                    row.Status = "⛔ パスワード未入力";
-                    failed++;
-                    continue;
-                }
-
-                RememberUserName(row);
-
-                var request = new CollectRequest(
-                    row.Host, row.Port, row.UseSsh,
-                    new DeviceCredentials(row.UserName, row.Password, row.EnablePassword),
-                    row.Memo);
-
-                DeviceCollectionResult result = await DeviceCollector.CollectAsync(
-                    request, commands, options, TimeSpan.FromSeconds(ConnectSeconds),
-                    progress, _cts.Token);
-
-                string? saveError = DeviceCollector.Save(folder, result);
-
-                if (result.FailureMessage is { } failure)
-                {
-                    row.Status = $"✕ 失敗: {failure}";
-                    failed++;
-                }
-                else if (saveError is not null)
-                {
-                    row.Status = $"✕ {saveError}";
-                    failed++;
-                }
-                else
-                {
-                    int problems = result.Commands.Count(c => c.Problem is not null);
-
-                    row.Status = problems == 0
-                        ? $"✔ 完了 {result.Commands.Count} 本"
-                        : $"▲ 一部失敗 {result.Commands.Count - problems}/{result.Commands.Count} 本";
-
-                    done++;
-                }
-
-                Status = $"{done + failed}/{targets.Length} 台（成功 {done} / 失敗 {failed}）";
-            }
+            await Task.WhenAll([.. targets.Select(CollectOneAsync)]);
 
             _lastFolder = folder;
             OpenFolderCommand.RaiseCanExecuteChanged();

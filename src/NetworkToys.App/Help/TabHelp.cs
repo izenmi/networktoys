@@ -290,7 +290,8 @@ internal static class TabHelp
         ログ採取
 
         この画面ですること
-        ・Cisco 機器へ SSH / Telnet で順に入り、決めておいた show の出力を集める
+        ・Cisco 機器へ SSH / Telnet で入り、決めておいた show の出力を集める
+        ・機器は同時に 8 台まで並行して取りに行く（順番待ちにしない）
         ・1 台 1 ファイルに保存する
 
         こんなときに

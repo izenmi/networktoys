@@ -290,6 +290,9 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         string? problem = null;
         int moreCount = 0;
 
+        // プロンプトが返ったか。返っていれば会話はそろっているので立て直す必要がない
+        bool inSync = false;
+
         // 「最後に何か届いてから」の無音を測る。1 回黙っただけで諦めると、
         // 考えている最中のコマンド(show run の頭など)を切ってしまう
         var silence = Stopwatch.StartNew();
@@ -316,7 +319,10 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             string view = Clean();
 
             if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out _))
+            {
+                inSync = true;
                 break;
+            }
 
             if (CiscoPrompt.EndsWithConfirmPrompt(view))
             {
@@ -351,7 +357,10 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         string output = CommandCapture.ExtractOutput(Clean(), command, _hostname);
         problem ??= CiscoPrompt.DetectCommandProblem(output);
 
-        if (problem is not null)
+        // 立て直すのは<b>会話がそろっていないときだけ</b>。機器が「そんなコマンドは無い」と
+        // 言ってプロンプトを返したのなら、すでにそろっている。ここで毎回 3 秒待っていたので、
+        // 機種違いの一覧を流すと待ち時間が積み上がっていた（2026-08-18 報告）
+        if (problem is not null && !inSync)
             await ResyncAsync(token).ConfigureAwait(false);
 
         return new CommandResult(index, command, output, watch.Elapsed, problem);
