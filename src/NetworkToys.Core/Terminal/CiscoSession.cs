@@ -57,6 +57,16 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     /// <summary>最後に確かめたプロンプトの段階。バッファを消しても失われないよう持つ。</summary>
     private PromptLevel _level = PromptLevel.User;
 
+    /// <summary>
+    /// いま機器がプロンプトで待っていると分かっているか。
+    ///
+    /// <b>ここが false のまま次のコマンドを送ると、前の出力の途中へ打ち込むことになる。</b>
+    /// 打ち込んだ文字は前のコマンドの出力に紛れ、以降のコマンドと出力の対応が
+    /// 丸ごとずれる（2026-08-18 に「コマンドがズレまくる」として報告された）。
+    /// プロンプトを見たときだけ true にし、何か送ったら false に戻す。
+    /// </summary>
+    private bool _atPrompt;
+
     /// <summary>進捗の知らせ（画面のステータス用）。</summary>
     public IProgress<string>? Progress { get; init; }
 
@@ -154,6 +164,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             {
                 _hostname = match.Hostname;
                 _level = match.Level;
+                _atPrompt = true;
                 ClearBuffer();
                 return null;
             }
@@ -214,9 +225,12 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             {
                 if (passwordSent || credentials.EnablePassword.Length == 0)
                 {
-                    // 抜けられないので改行だけ入れてユーザーモードへ戻す
+                    // 抜けられないので改行だけ入れてユーザーモードへ戻す。
+                    // 戻ったこと(＝プロンプトが返ったこと)まで見届けてから諦める —
+                    // ここを見ずに戻ると、次のコマンドを送る前に立て直しが挟まる
                     ClearBuffer();
                     await SendAsync("", token).ConfigureAwait(false);
+                    await WaitForPromptAsync(options.LoginTimeout, token).ConfigureAwait(false);
                     return false;
                 }
 
@@ -229,6 +243,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out PromptMatch match))
             {
                 _level = match.Level;
+                _atPrompt = true;
                 ClearBuffer();
                 return match.Level != PromptLevel.User;
             }
@@ -279,11 +294,28 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         return false;
     }
 
-    /// <summary>コマンドを 1 本投げて、プロンプトが返るまで読む。</summary>
+    /// <summary>
+    /// コマンドを 1 本投げて、プロンプトが返るまで読む。
+    ///
+    /// <b>送る前に、機器がプロンプトで待っていることを必ず確かめる</b>
+    /// （2026-08-18 ユーザー指示）。前のコマンドが打ち切りや確認待ちで終わっていると
+    /// 機器はまだ何か出している最中で、そこへ打ち込むと文字が出力に紛れ、
+    /// <b>以降のコマンドと出力の対応が全部ずれる</b>。
+    /// 直前のコマンドが正常に終わっていれば、そのときプロンプトを見ているので待ち時間は 0。
+    /// </summary>
     private async Task<CommandResult> RunOneAsync(int index, string command, CancellationToken token)
     {
-        ClearBuffer();
         var watch = Stopwatch.StartNew();
+
+        if (!_atPrompt && !await ResyncAsync(token).ConfigureAwait(false))
+        {
+            // 立て直せなかった。ここで送ると、ずれたまま最後まで走ってしまう
+            return new CommandResult(
+                index, command, "", watch.Elapsed,
+                "前のコマンドの応答が終わっていないため実行しませんでした。");
+        }
+
+        ClearBuffer();
 
         await SendAsync(command, token).ConfigureAwait(false);
 
@@ -321,6 +353,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out _))
             {
                 inSync = true;
+                _atPrompt = true;
                 break;
             }
 
@@ -357,38 +390,89 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         string output = CommandCapture.ExtractOutput(Clean(), command, _hostname);
         problem ??= CiscoPrompt.DetectCommandProblem(output);
 
-        // 立て直すのは<b>会話がそろっていないときだけ</b>。機器が「そんなコマンドは無い」と
-        // 言ってプロンプトを返したのなら、すでにそろっている。ここで毎回 3 秒待っていたので、
-        // 機種違いの一覧を流すと待ち時間が積み上がっていた（2026-08-18 報告）
-        if (problem is not null && !inSync)
-            await ResyncAsync(token).ConfigureAwait(false);
+        // 立て直しはここでしない。会話がそろっていなければ _atPrompt が false のままなので、
+        // 次のコマンドの入口が面倒を見る（最後のコマンドなら誰も待たされない）。
+        // プロンプトが返っているなら立て直す必要はない — 機器が「そんなコマンドは無い」と
+        // 言って戻ってきた場合も会話はそろっている（2026-08-18 報告）
+        _ = inSync;
 
         return new CommandResult(index, command, output, watch.Elapsed, problem);
     }
 
     /// <summary>
-    /// 打ち切ったあとの立て直し。<b>一度だけ試す。</b>
-    /// 繰り返し粘るのがハングの正体なので、駄目ならそのまま次へ進む。
+    /// 打ち切ったあとの立て直し。<b>プロンプトが返ってきたら true。</b>
+    ///
+    /// <c>q</c> を送るのはページャで止まっている場合に抜けるため。あとは
+    /// <see cref="WaitForPromptAsync"/> に任せる — <b>時間ではなくプロンプトを待つ</b>。
+    /// 決められた時間で返らなければ諦めて false（繰り返し粘るのがハングの正体）。
     /// </summary>
-    private async Task ResyncAsync(CancellationToken token)
+    private async Task<bool> ResyncAsync(CancellationToken token)
     {
         try
         {
             await WriteRawAsync("q\r\n", token).ConfigureAwait(false);
-            await PumpAsync(TimeSpan.FromSeconds(3), token).ConfigureAwait(false);
+
+            return await WaitForPromptAsync(options.IdleTimeout, token).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
             // 立て直せなければ諦める。呼び出し側が次のコマンドで気づく
+            ClearBuffer();
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// プロンプトが返るまで読む。返ったらバッファを空にして true。
+    ///
+    /// 黙り込んだら改行を入れて様子を見る（ログインと同じ手）。ページャで
+    /// 止まっているときはスペースを送って先へ進める — <b>そこを抜けないと
+    /// プロンプトは永久に返らない</b>。
+    /// </summary>
+    private async Task<bool> WaitForPromptAsync(TimeSpan limit, CancellationToken token)
+    {
+        var deadline = Stopwatch.StartNew();
+        var probe = Stopwatch.StartNew();
+
+        while (deadline.Elapsed < limit)
+        {
+            token.ThrowIfCancellationRequested();
+
+            bool got = await PumpAsync(options.SettleTime, token).ConfigureAwait(false);
+            string view = Clean();
+
+            if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out PromptMatch match))
+            {
+                _level = match.Level;
+                _atPrompt = true;
+                ClearBuffer();
+                return true;
+            }
+
+            if (CiscoPrompt.EndsWithMore(view))
+            {
+                await WriteRawAsync(" ", token).ConfigureAwait(false);
+                continue;
+            }
+
+            if (!got && probe.Elapsed > ProbeInterval)
+            {
+                probe.Restart();
+                await SendAsync("", token).ConfigureAwait(false);
+            }
         }
 
         ClearBuffer();
+        return false;
     }
 
     private Task SendAsync(string line, CancellationToken token) => WriteRawAsync(line + "\r\n", token);
 
     private async Task WriteRawAsync(string text, CancellationToken token)
     {
+        // 送った時点で、機器はプロンプトで待っている状態ではなくなる
+        _atPrompt = false;
+
         byte[] bytes = Encoding.UTF8.GetBytes(text);
 
         await io.WriteAsync(bytes, token).ConfigureAwait(false);

@@ -1417,33 +1417,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// その宛先の <b>IP アドレス</b>を写す（2026-08-18 ユーザー指示。宛先名は写さない）。
+    /// その行の<b>宛先の列</b>をそのまま写す（2026-08-18 ユーザー指示）。
     ///
-    /// 名前で登録した宛先は、引けるまでアドレスが空になる。<b>そのときに名前を写さない</b> —
-    /// 「アドレスをコピー」と書いてあるのに名前が入っていると、貼り付けた先で気づけない。
-    /// IP で登録してあれば、書いてある文字列がそのまま答えになる。
+    /// 以前は引けた IP だけを写し、名前で登録した宛先は「まだ引けていません」と断っていた。
+    /// <b>断られる方が困る</b> — 押した人は見えている文字が写ると思っている。
+    /// 名前を引いたアドレスは応答の列に出ているので、写したい人はそちらを見る。
     /// </summary>
     private void OnCopyAddressFromRow(object sender, RoutedEventArgs e)
     {
         if (RowOf(sender) is not { } row) return;
 
-        string address = row.Address.Length > 0
-            ? row.Address
-            : System.Net.IPAddress.TryParse(row.Host, out _) ? row.Host : "";
-
-        if (address.Length == 0)
-        {
-            ScreenOf(row).StatusMessage =
-                $"「{row.Host}」はまだ名前を引けていないので、IP アドレスを写せません。";
-            return;
-        }
-
-        CopyText(address);
+        CopyText(row.Host);
     }
-
-    /// <summary>その行がどちらの画面のものか（Ping と TCP で宛先リストが分かれている）。</summary>
-    private ViewModels.MonitorViewModel ScreenOf(ViewModels.TargetRowViewModel row)
-        => _shell.Tcp.Rows.Contains(row) ? _shell.Tcp : _shell.Monitor;
 
     // ===== 一覧から次の道具へ送る（スキャン・接続・遮断・Meraki・syslog・Trap） =====
     //

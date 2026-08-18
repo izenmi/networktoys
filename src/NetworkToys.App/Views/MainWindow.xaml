@@ -5111,7 +5111,7 @@
                                     <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" MinWidth="150" />
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.2]}" />
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.3]}" />
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.4]}" />
@@ -5189,7 +5189,7 @@
                                                 <Grid Height="{DynamicResource Size.RowHeight.Input}">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.0]}" />
-                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" MinWidth="150" />
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.2]}" />
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.3]}" />
                                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[collect.4]}" />

@@ -357,6 +357,30 @@ public class CiscoSessionTests
     }
 
     [Fact]
+    public async Task The_next_command_is_not_typed_into_a_device_that_has_not_come_back()
+    {
+        // プロンプトを待たずに送ると、打った文字が前のコマンドの出力に紛れ、
+        // 以降のコマンドと出力の対応が丸ごとずれる（2026-08-18 報告）
+        var sent = new List<string>();
+
+        var device = new FakeCiscoDevice("\r\nR1#", line =>
+        {
+            string text = line.Trim();
+
+            if (text.StartsWith("terminal ", StringComparison.Ordinal)) return "\r\nR1#";
+
+            sent.Add(text);
+            return null;   // 何を送っても黙ったまま。プロンプトは返らない
+        });
+
+        DeviceCollectionResult result = await RunAsync(device, ["show hang", "show clock"]);
+
+        Assert.Equal(2, result.Commands.Count);
+        Assert.Contains("実行しませんでした", result.Commands[1].Problem);
+        Assert.DoesNotContain("show clock", sent);
+    }
+
+    [Fact]
     public async Task A_confirmation_prompt_is_left_unanswered()
     {
         // 実機は確認を出したところで止まる(プロンプトは返さない)
