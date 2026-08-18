@@ -56,13 +56,15 @@ internal static class HttpCheck
         {
             handler = CreateHandler(proxy, resolved);
         }
-        catch (UriFormatException ex)
+        catch (Exception ex) when (ex is UriFormatException or ArgumentException or NotSupportedException)
         {
             // プロキシのアドレスとして読めない（PAC が SOCKS を返した、書き方が違う…）。
             // ここで落とすと試験全体が「失敗」になるので、その 1 件の不合格にとどめる
             // （2026-08-18 に「Invalid URI」で試験ごと止まると報告された）
+            string address = proxy.Mode == ProxyMode.Pac ? resolved : proxy.Address;
+
             return (
-                new HttpOutcome(0, "", "", "", $"プロキシのアドレスとして読めません（{resolved}）: {ex.Message}"),
+                new HttpOutcome(0, "", "", "", $"プロキシのアドレスとして読めません: 「{address}」（{ex.Message}）"),
                 Elapsed(started),
                 DescribeProxy(proxy, resolved));
         }
