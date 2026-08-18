@@ -18,6 +18,14 @@ public sealed record CiscoSessionOptions
     /// <summary>プロンプトを学習するときの静穏時間。長いバナーを吸収する。</summary>
     public TimeSpan SettleTime { get; init; } = TimeSpan.FromMilliseconds(300);
 
+    /// <summary>
+    /// 言い終わったとみなすまでの静穏時間（<c>DrainAsync</c> 用）。
+    ///
+    /// 呼び水への応答は、本来の応答から<b>おおむね 1 往復ぶん遅れて</b>届く。
+    /// 静穏時間を <see cref="SettleTime"/> と同じにすると、遅い回線でこれを取りこぼす。
+    /// </summary>
+    public TimeSpan DrainQuiet { get; init; } = TimeSpan.FromSeconds(1);
+
     /// <summary>ログインの待ち。</summary>
     public TimeSpan LoginTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
@@ -52,6 +60,9 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     /// <summary>無言の機器へ改行を入れて様子を見る間隔。</summary>
     private static readonly TimeSpan ProbeInterval = TimeSpan.FromSeconds(1);
 
+    /// <summary>言い終わるのを待つ上限。<see cref="DrainAsync"/> で粘りすぎないため。</summary>
+    private static readonly TimeSpan DrainLimit = TimeSpan.FromSeconds(3);
+
     private string? _hostname;
 
     /// <summary>最後に確かめたプロンプトの段階。バッファを消しても失われないよう持つ。</summary>
@@ -66,6 +77,14 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     /// プロンプトを見たときだけ true にし、何か送ったら false に戻す。
     /// </summary>
     private bool _atPrompt;
+
+    /// <summary>
+    /// こちらから入れた呼び水（改行）の回数。
+    ///
+    /// <b>余分なプロンプトが後から返ってくる原因はこれだけ</b>なので、
+    /// 1 度も入れていなければ読み捨て（<see cref="DrainAsync"/>）も要らない。
+    /// </summary>
+    private int _probes;
 
     /// <summary>進捗の知らせ（画面のステータス用）。</summary>
     public IProgress<string>? Progress { get; init; }
@@ -147,8 +166,9 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         var deadline = Stopwatch.StartNew();
         var probe = Stopwatch.StartNew();
 
-        // 何も言ってこない機器のために、こちらから改行を 1 つ入れて呼び水にする
-        await SendAsync("", token).ConfigureAwait(false);
+        // 呼び水（改行）は、機器が黙り込んでいるときだけ下の輪の中で入れる。
+        // すでに何か言っている機器へ入れると、余分なプロンプトが返ってきて、
+        // それを後のコマンドの完了と読み違える（ズレの原因になる）
 
         while (deadline.Elapsed < options.LoginTimeout)
         {
@@ -165,7 +185,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                 _hostname = match.Hostname;
                 _level = match.Level;
                 _atPrompt = true;
-                ClearBuffer();
+                await DrainAsync(token).ConfigureAwait(false);
                 return null;
             }
 
@@ -193,6 +213,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             if (!got && probe.Elapsed > ProbeInterval)
             {
                 probe.Restart();
+                _probes++;
                 await SendAsync("", token).ConfigureAwait(false);
             }
         }
@@ -229,6 +250,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                     // 戻ったこと(＝プロンプトが返ったこと)まで見届けてから諦める —
                     // ここを見ずに戻ると、次のコマンドを送る前に立て直しが挟まる
                     ClearBuffer();
+                    _probes++;
                     await SendAsync("", token).ConfigureAwait(false);
                     await WaitForPromptAsync(options.LoginTimeout, token).ConfigureAwait(false);
                     return false;
@@ -244,7 +266,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             {
                 _level = match.Level;
                 _atPrompt = true;
-                ClearBuffer();
+                await DrainAsync(token).ConfigureAwait(false);
                 return match.Level != PromptLevel.User;
             }
         }
@@ -445,7 +467,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             {
                 _level = match.Level;
                 _atPrompt = true;
-                ClearBuffer();
+                await DrainAsync(token).ConfigureAwait(false);
                 return true;
             }
 
@@ -458,12 +480,51 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             if (!got && probe.Elapsed > ProbeInterval)
             {
                 probe.Restart();
+                _probes++;
                 await SendAsync("", token).ConfigureAwait(false);
             }
         }
 
         ClearBuffer();
         return false;
+    }
+
+    /// <summary>
+    /// 機器が黙るまで読み捨ててから、バッファを空にする。
+    ///
+    /// <b>これが無いと、以降のコマンドと出力が丸ごと 1 本ずれる。</b>
+    /// ログインや立て直しでは、黙り込んだ機器へこちらから改行（呼び水）を入れる。
+    /// 機器はあとで我に返ったときに、<b>本来の応答と呼び水への応答の 2 つ</b>を返す。
+    /// こちらは 1 つ目のプロンプトで「そろった」と見て次のコマンドを送るので、
+    /// 遅れて届いた 2 つ目のプロンプトが<b>そのコマンドの完了と読み違えられる</b> —
+    /// そのコマンドは中身が空で終わり、本当の出力は次のコマンドの区画に入る。
+    /// これが最後まで連鎖する（2026-08-18 に「コマンドがズレまくる」として報告された）。
+    ///
+    /// 呼び水を入れるのはログイン・enable・立て直しの 3 か所だけなので、
+    /// 読み捨てるのも 1 セッションにつき数回で済む。
+    /// <b>黙らない機器で粘らない</b>（上限を切ってバッファを空にして戻る）。
+    /// </summary>
+    private async Task DrainAsync(CancellationToken token)
+    {
+        // 呼び水を 1 度も入れていなければ、遅れて届くものは無い
+        if (_probes == 0)
+        {
+            ClearBuffer();
+            return;
+        }
+
+        _probes = 0;
+        var deadline = Stopwatch.StartNew();
+
+        while (deadline.Elapsed < DrainLimit)
+        {
+            token.ThrowIfCancellationRequested();
+
+            // 静穏時間ぶん待って何も来なければ、機器は言い終わっている
+            if (!await PumpAsync(options.DrainQuiet, token).ConfigureAwait(false)) break;
+        }
+
+        ClearBuffer();
     }
 
     private Task SendAsync(string line, CancellationToken token) => WriteRawAsync(line + "\r\n", token);
@@ -572,6 +633,9 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
 /// <summary>1 コマンド分の塊から、エコー行と末尾のプロンプトを剥がす。</summary>
 public static class CommandCapture
 {
+    /// <summary>エコー行を探す範囲（頭から数えた行数）。</summary>
+    private const int EchoSearchLines = 5;
+
     public static string ExtractOutput(string chunk, string command, string? hostname)
     {
         if (chunk.Length == 0) return "";
@@ -581,12 +645,23 @@ public static class CommandCapture
         int start = 0;
         int end = lines.Length;
 
-        // 先頭のエコー行(打ったコマンドがそのまま返ってくる)を落とす。
+        // 先頭のエコー行(打ったコマンドがそのまま返ってくる)までを落とす。
+        // エコーの前に前の応答の残り(遅れて届いたプロンプトなど)が挟まることがあるので、
+        // 見つけたエコーより前は<b>まとめて</b>捨てる。ただし探すのは頭の数行だけ —
+        // 出力の奥に同じ文字で終わる行(alias の定義など)があっても掴まないため。
         // エコーを返さない機器もあるので「あれば落とす」に留める
-        while (start < end && lines[start].Trim().Length == 0) start++;
+        for (int i = start; i < end && i < start + EchoSearchLines; i++)
+        {
+            if (lines[i].Trim().Length == 0) continue;
 
-        if (start < end && lines[start].Trim().EndsWith(command.Trim(), StringComparison.Ordinal))
-            start++;
+            if (lines[i].Trim().EndsWith(command.Trim(), StringComparison.Ordinal))
+            {
+                start = i + 1;
+                break;
+            }
+        }
+
+        while (start < end && lines[start].Trim().Length == 0) start++;
 
         // 末尾のプロンプト行を落とす
         while (end > start && lines[end - 1].Trim().Length == 0) end--;

@@ -1628,6 +1628,7 @@ internal static class SelfTest
             var options = new Core.Terminal.CiscoSessionOptions
             {
                 SettleTime = TimeSpan.FromMilliseconds(80),
+                DrainQuiet = TimeSpan.FromMilliseconds(200),
                 IdleTimeout = TimeSpan.FromSeconds(2),
                 LoginTimeout = TimeSpan.FromSeconds(5),
                 CommandTimeout = TimeSpan.FromSeconds(5),

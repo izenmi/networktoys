@@ -32,7 +32,8 @@ internal sealed class FakeCiscoDevice(string banner, Func<string, string?> respo
     public override long Length => throw new NotSupportedException();
     public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
-    private void Push(string text)
+    /// <summary>台本の外から押し込む（遅れて届く応答を作るため）。</summary>
+    public void Push(string text)
     {
         lock (_gate)
         {
@@ -105,6 +106,7 @@ public class CiscoSessionTests
         IdleTimeout = TimeSpan.FromMilliseconds(300),
         CommandTimeout = TimeSpan.FromSeconds(3),
         LoginTimeout = TimeSpan.FromSeconds(3),
+        DrainQuiet = TimeSpan.FromMilliseconds(150),
     };
 
     private static readonly DeviceCredentials Login = new("admin", "pass1", "enable1");
@@ -354,6 +356,48 @@ public class CiscoSessionTests
         Assert.Equal(2, result.Commands.Count);
         Assert.NotNull(result.Commands[0].Problem);
         Assert.Null(result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task A_late_answer_to_the_wake_up_newline_does_not_shift_every_command()
+    {
+        // 黙っている機器には、こちらから改行(呼び水)を入れて様子を見る。
+        // 機器は我に返ると、本来のプロンプトと呼び水への応答の 2 つを返す。
+        // 遅れて届く 2 つ目を次のコマンドの完了と読み違えると、
+        // 以降のコマンドと出力が丸ごと 1 本ずれる(2026-08-18 報告)
+        FakeCiscoDevice? device = null;
+
+        device = new FakeCiscoDevice("", line =>
+        {
+            string text = line.Trim();
+
+            if (text.Length == 0)
+            {
+                // 呼び水への応答が、本来のプロンプトから 1 往復ぶん遅れて届く
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(80, CancellationToken.None).ConfigureAwait(false);
+                    device!.Push("\r\nR1#");
+                });
+
+                return "\r\nR1#";
+            }
+
+            if (text.StartsWith("terminal ", StringComparison.Ordinal)) return "\r\nR1#";
+
+            return text switch
+            {
+                "show clock" => "\r\n15:30:13 JST\r\nR1#",
+                "show version" => "\r\nCisco IOS Software, Version 15.2\r\nR1#",
+                _ => "\r\nR1#",
+            };
+        });
+
+        DeviceCollectionResult result = await RunAsync(device, ["show clock", "show version"]);
+
+        Assert.Equal(2, result.Commands.Count);
+        Assert.Contains("15:30:13", result.Commands[0].Output);
+        Assert.Contains("Version 15.2", result.Commands[1].Output);
     }
 
     [Fact]
