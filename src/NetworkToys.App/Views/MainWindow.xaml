@@ -2515,7 +2515,7 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                         <Button Content="確認する" Command="{Binding FetchInstallCheckCommand}" Margin="0,0,6,0"
-                                                ToolTip="7 項目を順に確かめます。先に「機器」タブの「取得」を押しておいてください。" />
+                                                ToolTip="7 項目を順に確かめます。機器や回線をまだ取っていなければ、この中で取りに行きます。" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
                                                 CommandParameter="check" Margin="0,0,6,0"
                                                 ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />

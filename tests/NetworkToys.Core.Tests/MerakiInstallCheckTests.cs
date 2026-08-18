@@ -25,14 +25,27 @@ public class MerakiInstallCheckTests
     }
 
     [Fact]
-    public void Devices_fail_and_name_the_ones_that_are_not_online()
+    public void One_device_running_is_enough_to_pass_but_the_others_are_named()
     {
+        // 予備機や撤去待ちが停止のまま残る拠点がある（2026-08-18 ユーザー指示）
         MerakiCheckRow row = MerakiInstallCheck.Devices(
             [Device("MX-1F", "online"), Device("MS-2F", "offline"), Device("MR-3F", "alerting")]);
 
-        Assert.Equal(CheckVerdict.Fail, row.Verdict);
+        Assert.Equal(CheckVerdict.Pass, row.Verdict);
+
+        // 合格でも、止まっている機器は黙って消さない
         Assert.Contains("MS-2F", row.Detail, StringComparison.Ordinal);
         Assert.Contains("MR-3F", row.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Devices_fail_when_nothing_is_running()
+    {
+        MerakiCheckRow row = MerakiInstallCheck.Devices(
+            [Device("MX-1F", "offline"), Device("MS-2F", "offline")]);
+
+        Assert.Equal(CheckVerdict.Fail, row.Verdict);
+        Assert.Contains("MX-1F", row.Detail, StringComparison.Ordinal);
     }
 
     [Fact]

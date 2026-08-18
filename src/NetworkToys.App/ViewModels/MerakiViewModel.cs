@@ -63,9 +63,11 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         ToggleConnectionCommand = new RelayCommand(() => ShowConnection = !ShowConnection);
 
+        // 機器や回線をまだ取っていなくても押せる（要るものはこの中で取りに行く）。
+        // 「拠点は選んだのに押せない」と分からないので（2026-08-18 報告）
         FetchInstallCheckCommand = new RelayCommand(
             () => _ = FetchInstallCheckAsync(),
-            () => !IsBusy && ApiKey.Length > 0 && SelectedNetwork is not null && DeviceRows.Count > 0);
+            () => !IsBusy && ApiKey.Length > 0 && SelectedNetwork is not null);
         SaveInstallCheckCommand = new RelayCommand(
             () => Save("check", MerakiInstallCheck.ToCsv([.. CheckRows])), () => CheckRows.Count > 0);
         MarkCheckPassCommand = new RelayCommand<MerakiCheckRow>(row => MarkCheck(row, CheckVerdict.Pass));
@@ -852,17 +854,31 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             MerakiTimespan timespan = SelectedTimespan;
             string organizationId = SelectedOrganization?.Id ?? "";
 
-            // 回線はまだ取っていないことがある（最初の「取得」では取らなくなった）。
-            // org 単位で 1 回引くだけなので、ここで取りに行く
+            // 機器も回線も、まだ取っていないことがある（最初の「取得」では取らなくなった）。
+            // どちらも組織まとめで 1 回引くだけなので、ここで取りに行く
+            if (_allDevices.Count == 0 && organizationId.Length > 0)
+            {
+                Status = "機器一覧を取得しています…";
+
+                _allDevices = MerakiCatalog.JoinDevices(
+                    await _dashboard.DevicesAsync(ApiKey, organizationId, token),
+                    await _dashboard.DeviceStatusesAsync(ApiKey, organizationId, token),
+                    [.. NetworkRows]);
+
+                ShowByNetwork();
+            }
+
             if (_allUplinks.Count == 0 && organizationId.Length > 0)
             {
                 Status = "アップリンクの状態を取得しています…";
 
                 _allUplinks = MerakiCatalog.ParseUplinks(
                     await _dashboard.UplinksAsync(ApiKey, organizationId, token), [.. NetworkRows]);
+
+                ShowByNetwork();
             }
 
-            MerakiDeviceRow[] devices = [.. DeviceRows.Where(d => d.Network == network.Name)];
+            MerakiDeviceRow[] devices = [.. _allDevices.Where(d => d.Network == network.Name)];
             MerakiDeviceRow[] switches = [.. devices.Where(d => IsModel(d, "MS"))];
 
             // 冗長構成の待機側（スペア）は確かめない（2026-08-18 ユーザー指示）。

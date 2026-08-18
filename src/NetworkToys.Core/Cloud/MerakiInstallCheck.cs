@@ -91,10 +91,22 @@ public static class MerakiInstallCheck
                 .Select(d => $"{NameOf(d)}（{d.State}）"),
         ];
 
+        int alive = devices.Count - bad.Length;
+
+        // <b>1 台でも動いていれば合格</b>（2026-08-18 ユーザー指示）。
+        // 予備機や撤去待ちが停止のまま残る拠点があり、全台稼働を求めると必ず落ちる。
+        // 止まっている機器は<b>合格のまま詳細に並べる</b> — 黙って消さない
+        if (alive == 0)
+        {
+            return new(DevicesName, $"{devices.Count} 台", CheckVerdict.Fail,
+                       $"稼働している機器がありません: {Listed(bad)}");
+        }
+
         return bad.Length == 0
             ? new(DevicesName, $"{devices.Count} 台", CheckVerdict.Pass, $"{devices.Count} 台すべて稼働しています。")
-            : new(DevicesName, $"{devices.Count} 台", CheckVerdict.Fail,
-                  $"稼働していない機器が {bad.Length} 台あります: {Listed(bad)}");
+            : new(DevicesName, $"{devices.Count} 台", CheckVerdict.Pass,
+                  $"{alive} 台が稼働しています。"
+                  + $"止まっている機器が {bad.Length} 台あります: {Listed(bad)}");
     }
 
     // ===== 2. インターネット回線（WAN） =====
