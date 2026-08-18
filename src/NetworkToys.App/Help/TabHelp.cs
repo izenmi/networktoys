@@ -362,7 +362,7 @@ internal static class TabHelp
         ・MX のある組織でだけ出る
 
         できる操作
-        ・一覧を CSV で保存する
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
     /// <summary>Meraki ─ 拠点</summary>
@@ -385,7 +385,7 @@ internal static class TabHelp
         　数十拠点あると数分かかる（待てないときは「中断」で止める）
 
         できる操作
-        ・一覧を CSV で保存する
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
     /// <summary>Meraki ─ DHCP</summary>
@@ -406,7 +406,7 @@ internal static class TabHelp
         ・MX の台数だけ問い合わせるので、台数が多いと数分かかる（「中断」で止められる）
 
         できる操作
-        ・一覧を CSV で保存する
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
     /// <summary>Meraki ─ アラート</summary>
@@ -422,7 +422,7 @@ internal static class TabHelp
         ・重大度は ダッシュボードが付けたものをそのまま出す
 
         できる操作
-        ・一覧を CSV で保存する
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
     /// <summary>Meraki ─ 導入時確認</summary>
@@ -453,7 +453,7 @@ internal static class TabHelp
 
         できる操作
         ・目視の項目に ○ か ✕ を付ける
-        ・一覧を CSV で保存する
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
     /// <summary>ACI</summary>
@@ -837,7 +837,7 @@ internal static class TabHelp
         　（拠点の多い組織で、最初の待ちが長すぎたため。2026-08-18 ユーザー指示）
 
         できる操作
-        ・各一覧を CSV で保存する
+        ・各一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
     /// <summary>機器</summary>
@@ -864,6 +864,7 @@ internal static class TabHelp
 
         できる操作
         ・行を右クリック → Ping やログ採取へ渡す
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
     /// <summary>アップリンク</summary>
@@ -882,6 +883,9 @@ internal static class TabHelp
         こんなときに
         ・回線が生きているか、いま何本目の回線に切り替わっているかを見る
         ・拠点から外へ出られない、という申告の切り分けは、まずここから
+
+        できる操作
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
     /// <summary>クライアント</summary>
@@ -903,6 +907,7 @@ internal static class TabHelp
 
         できる操作
         ・行を右クリック → Ping や経路調査へ渡す
+        ・一覧を Excel（絞り込み付き）か CSV で保存する
 
         知っておくとよいこと
         ・「全拠点」を入れると、拠点をまたいで数える。途中で打ち切らないので、

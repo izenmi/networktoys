@@ -2497,6 +2497,9 @@
                                         </ComboBox>
                                         <Button Content="確認する" Command="{Binding FetchInstallCheckCommand}" Margin="0,0,6,0"
                                                 ToolTip="7 項目を順に確かめます。先に「機器」タブの「取得」を押しておいてください。" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="check" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveInstallCheckCommand}"
                                                 Style="{StaticResource Button.Subtle}"
                                                 ToolTip="判定をそのまま証跡として残せます。" />
@@ -2626,6 +2629,9 @@
                                         <!-- 重い取得はこのタブに閉じる（2026-08-18 ユーザー指示） -->
                                         <Button Content="取得" Command="{Binding FetchDevicesCommand}" Margin="0,0,6,0"
                                                 ToolTip="機器の一覧・稼働状況・ファームの版と、MX の LAN アドレスを取ります。MX のある拠点の数だけ問い合わせるので、少し時間がかかります。" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="devices" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveDevicesCommand}" />
                                     </StackPanel>
 
@@ -2767,6 +2773,9 @@
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                                         <Button Content="取得" Command="{Binding FetchUplinksCommand}" Margin="0,0,6,0"
                                                 ToolTip="MX の WAN の状態を取ります。つながっていない回線と、止まっている機器の回線は出しません。" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="uplinks" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveUplinksCommand}" Margin="0,0,12,0" />
                                         <TextBlock Text="グローバル IP" Style="{StaticResource Caption}"
                                                    VerticalAlignment="Center" Margin="0,0,5,0" />
@@ -2936,6 +2945,9 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                         <Button Content="クライアントを取得" Command="{Binding FetchClientsCommand}" Margin="0,0,6,0" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="clients" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveClientsCommand}"
                                                 Style="{StaticResource Button.Subtle}" />
                                     </StackPanel>
@@ -3074,6 +3086,9 @@
                                         </ComboBox>
                                         <Button Content="拠点ごとに数える" Command="{Binding FetchSitesCommand}" Margin="0,0,12,0"
                                                 ToolTip="拠点の数だけ問い合わせるので、少し時間がかかります。" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="sites" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveSitesCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
                                     </StackPanel>
@@ -3158,6 +3173,9 @@
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                                         <Button Content="DHCP を確認" Command="{Binding FetchDhcpCommand}" Margin="0,0,12,0"
                                                 ToolTip="機器一覧にある MX を順に見ます。先に「機器」タブの「取得」を押してください。" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="dhcp" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveDhcpCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
                                     </StackPanel>
@@ -3292,6 +3310,9 @@
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                                         <Button Content="アラートを取得" Command="{Binding FetchAlertsCommand}" Margin="0,0,12,0" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="alerts" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveAlertsCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
                                     </StackPanel>
@@ -3427,6 +3448,9 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                         <Button Content="取得" Command="{Binding FetchTrafficCommand}" Margin="0,0,6,0" />
+                                        <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
+                                                CommandParameter="traffic" Margin="0,0,6,0"
+                                                ToolTip="絞り込みと見出し行の固定を付けた .xlsx で保存します。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveTrafficCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
                                         <!-- 「直近 1 日」だけでは、いつからいつまでかが分からない -->

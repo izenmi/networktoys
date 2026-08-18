@@ -7,6 +7,8 @@ using NetworkToys.App.Mvvm;
 using NetworkToys.App.Services;
 using NetworkToys.Core.Cloud;
 using NetworkToys.Core.Design;
+using NetworkToys.Core.Reporting;
+using NetworkToys.Core.Terminal;
 using NetworkToys.Core.Verify;
 using NetworkToys.Core.Work;
 
@@ -118,6 +120,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SaveTrafficCommand = new RelayCommand(() => Save("traffic", MerakiCatalog.ToCsv(_trafficRows)),
             () => _trafficRows.Count > 0);
 
+        SaveXlsxCommand = new RelayCommand<string>(SaveXlsx, key => TableOf(key) is not null);
+
         SaveDevicesCommand = new RelayCommand(
             () => Save("devices", MerakiCatalog.ToCsv(DeviceRows)), () => DeviceRows.Count > 0);
         SaveUplinksCommand = new RelayCommand(
@@ -188,6 +192,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     /// <summary>選んだ拠点の導入時確認を一通り走らせる。</summary>
     public RelayCommand FetchInstallCheckCommand { get; }
+
+    /// <summary>Excel ブックで保存する（どの一覧かは CommandParameter で渡す）。</summary>
+    public RelayCommand<string> SaveXlsxCommand { get; }
 
     public RelayCommand SaveInstallCheckCommand { get; }
 
@@ -1368,6 +1375,56 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             Status = message;
     }
 
+    /// <summary>
+    /// 種類ごとの表。<b>Excel 保存はここ 1 か所から引く</b>
+    /// （CSV は種類ごとのコマンドが持っているが、増やすたびに 2 か所直すのは避ける）。
+    /// </summary>
+    private CsvTable? TableOf(string? key) => key switch
+    {
+        "check" => CheckRows.Count > 0 ? MerakiInstallCheck.ToCsv([.. CheckRows]) : null,
+        "devices" => DeviceRows.Count > 0 ? MerakiCatalog.ToCsv(DeviceRows) : null,
+        "uplinks" => UplinkRows.Count > 0 ? MerakiCatalog.ToCsv(UplinkRows) : null,
+        "clients" => ClientRows.Count > 0 ? MerakiCatalog.ToCsv(ClientRows) : null,
+        "sites" => SiteRows.Count > 0 ? MerakiCatalog.ToCsv([.. SiteRows]) : null,
+        "dhcp" => DhcpRows.Count > 0 ? MerakiCatalog.ToCsv([.. DhcpRows]) : null,
+        "alerts" => AlertRows.Count > 0 ? MerakiCatalog.ToCsv([.. AlertRows]) : null,
+        "traffic" => _trafficRows.Count > 0 ? MerakiCatalog.ToCsv(_trafficRows) : null,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Excel ブックで保存する（2026-08-18 ユーザー指示）。
+    /// <b>絞り込みと見出し行の固定つき</b>で、ACI / WLC の保存と同じ形。
+    /// </summary>
+    private void SaveXlsx(string? key)
+    {
+        if (TableOf(key) is not { } table) return;
+
+        var dialog = new SaveFileDialog
+        {
+            FileName = $"{DeviceReport.Sanitize($"meraki-{key}")}-{DateTime.Now:yyyyMMdd-HHmm}.xlsx",
+            DefaultExt = "xlsx",
+            Filter = "Excel ブック (*.xlsx)|*.xlsx|すべてのファイル (*.*)|*.*",
+            AddExtension = true,
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            using (FileStream file = File.Create(dialog.FileName))
+            {
+                XlsxWriter.Write(file, table);
+            }
+
+            Status = $"{Path.GetFileName(dialog.FileName)} に保存しました（フィルタ設定済み）。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"保存できませんでした: {ex.Message}";
+        }
+    }
+
     /// <summary>すべて消す。キーも画面の伏せ字欄も残さない。</summary>
     public void Reset()
     {
@@ -1410,6 +1467,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SaveDhcpCommand.RaiseCanExecuteChanged();
         SaveAlertsCommand.RaiseCanExecuteChanged();
         SaveTrafficCommand.RaiseCanExecuteChanged();
+        SaveXlsxCommand.RaiseCanExecuteChanged();
     }
 
     public void Dispose()
