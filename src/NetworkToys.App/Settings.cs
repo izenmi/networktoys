@@ -86,32 +86,11 @@ internal static class Settings
             }
         }
 
+        // 旧 columns.txt は列幅だけのファイル。列幅は保存しなくなったので、
+        // 読まずに片付ける（2026-08-18 ユーザー指示）
         string columnsPath = AppData.PathOf("columns.txt");
         if (File.Exists(columnsPath))
-        {
-            try
-            {
-                // 旧形式: "v3\t状態\t宛先\tRTT\tロス\t推移"
-                string[] parts = File.ReadAllText(columnsPath).Trim().Split('\t');
-                if (parts.Length == 6 && parts[0] == "v3")
-                {
-                    var widths = new List<double>();
-                    foreach (string part in parts.Skip(1))
-                    {
-                        if (double.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out double width))
-                            widths.Add(width);
-                    }
-
-                    if (widths.Count == 5)
-                        document.Columns = widths;
-                }
-
-                migrated.Add(columnsPath);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
-        }
+            migrated.Add(columnsPath);
 
         Current = document;
 

@@ -13,23 +13,8 @@ public sealed class AppSettingsDocument
     /// <summary>配色。"dark" / "light"。</summary>
     public string Theme { get; set; } = "light";
 
-    /// <summary>
-    /// Ping/TCP 一覧の列幅（状態・宛先・RTT・ロス・推移の順）。
-    /// 空なら既定幅。並びが変わったら Version を上げて捨てる。
-    /// </summary>
-    public List<double> Columns { get; set; } = [];
-
-    /// <summary>
-    /// Ping/TCP 以外の一覧の列幅。キーは「テーブル名.列番号」。
-    /// 知らないキーは読み飛ばすので、列を足し引きしても壊れない。
-    /// </summary>
-    public Dictionary<string, double> TableColumns { get; set; } = [];
-
-    /// <summary>
-    /// 上の列幅を書いたときの版。<b>既定の列幅を作り直したら上げる</b> —
-    /// 上げないと、前に使った人の設定ファイルが古い幅を持ち続け、直したはずの幅が出ない。
-    /// </summary>
-    public int TableColumnsVersion { get; set; }
+    // 列幅は保存しない（2026-08-18 ユーザー指示。毎回そろった幅で始める）。
+    // 入れ物ごと持たないので、古い settings.json に残っている値は読み飛ばされる。
 
     /// <summary>Ping 画面の宛先リストと測定の既定値。</summary>
     public TargetDocument Ping { get; set; } = new();

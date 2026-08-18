@@ -166,13 +166,6 @@ public sealed class TableColumns : ObservableObject
         new("dnclc", 4, [(0, 130), (1, 180), (2, 140), (3, 140)]),
     ];
 
-    /// <summary>
-    /// 既定の列幅の版。<b>宣言の値を作り直したら 1 つ上げる</b> — 上げないと、
-    /// すでに使っている人の <c>settings.json</c> に古い幅が残っていて、
-    /// 直した幅が画面に出ない（そのぶん、手で広げた幅は 1 度だけ既定へ戻る）。
-    /// </summary>
-    private const int LayoutVersion = 2;
-
     private readonly Dictionary<string, double> _widths = [];
 
     public static TableColumns Instance { get; } = Load();
@@ -266,7 +259,7 @@ public sealed class TableColumns : ObservableObject
 
     /// <summary>
     /// 既定に戻す。ドラッグで崩したときの逃げ道
-    /// （これが無いと settings.json を直接編集するしかない）。
+    /// （幅は保存していないので、開き直しても戻せる。押せばその場で戻る）。
     /// 既定値は <see cref="Tables"/> の宣言が持っているので、そこから引き直す。
     /// <b>いまの文字の大きさに合わせた幅</b>に戻す — 素の値のままだと、
     /// 文字を大きくしている人にとっては狭すぎる。
@@ -282,7 +275,6 @@ public sealed class TableColumns : ObservableObject
         }
 
         OnPropertyChanged("Item[]");
-        Save();
     }
 
     /// <summary>
@@ -297,27 +289,15 @@ public sealed class TableColumns : ObservableObject
             _widths[key] = Fit(_widths[key] * ratio);
 
         OnPropertyChanged("Item[]");
-        Save();
     }
 
     /// <summary>ドラッグと同じ範囲に収める。</summary>
     private static double Fit(double width) => Math.Clamp(Math.Round(width), 36, 900);
 
-    /// <summary>アプリを閉じるときに呼ぶ。書けなくても落とさない。</summary>
-    public void Save()
-    {
-        try
-        {
-            Settings.Current.TableColumns = new Dictionary<string, double>(_widths);
-            Settings.Current.TableColumnsVersion = LayoutVersion;
-            Settings.Save();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // 列幅は失っても困らない
-        }
-    }
-
+    /// <summary>
+    /// 起動のたびに宣言の値から組み直す。<b>列幅は保存しない</b>
+    /// （2026-08-18 ユーザー指示。毎回そろった幅で始める）。
+    /// </summary>
     private static TableColumns Load()
     {
         var layout = new TableColumns();
@@ -330,17 +310,6 @@ public sealed class TableColumns : ObservableObject
         {
             foreach ((int column, double width) in spec.Columns)
                 layout._widths[$"{spec.Name}.{column}"] = width * scale;
-        }
-
-        // 既定を作り直した後は、保存してある幅を 1 度だけ捨てて既定から始める
-        if (Settings.Current.TableColumnsVersion != LayoutVersion) return layout;
-
-        foreach ((string key, double width) in Settings.Current.TableColumns)
-        {
-            // 桁が壊れた設定で一覧が潰れないよう、読める範囲だけ受け入れる。
-            // 知らないキー(列を減らした後の残骸)は捨てる
-            if (layout._widths.ContainsKey(key) && width is >= 36 and <= 900)
-                layout._widths[key] = width;
         }
 
         return layout;

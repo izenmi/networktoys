@@ -1877,8 +1877,6 @@ public partial class MainWindow : Window
             _shell.Sftp.Reset();
             _shell.Syslog.Reset();
             _shell.SnmpTrap.Reset();
-            ColumnLayout.Instance.Save();
-            TableColumns.Instance.Save();
 
             // 収集タブは機器の一覧とコマンドだけ覚える(パスワードは覚えない)
             _shell.Collect.Save();

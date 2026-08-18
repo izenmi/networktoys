@@ -18,7 +18,6 @@ public class AppSettingsStoreTests
             var document = new AppSettingsDocument
             {
                 Theme = "light",
-                Columns = [84, 156, 76, 66, 110],
             };
             document.Ping.Targets.Add(new Target { Host = "192.168.1.1", Comment = "GW" });
             document.Tcp.Targets.Add(new Target { Host = "srv-01", Port = 445 });
@@ -28,7 +27,6 @@ public class AppSettingsStoreTests
 
             Assert.Null(error);
             Assert.Equal("light", loaded.Theme);
-            Assert.Equal(new double[] { 84, 156, 76, 66, 110 }, loaded.Columns);
             Assert.Equal("192.168.1.1", Assert.Single(loaded.Ping.Targets).Host);
             Assert.Equal(445, Assert.Single(loaded.Tcp.Targets).Port);
         }
@@ -45,7 +43,6 @@ public class AppSettingsStoreTests
 
         Assert.Null(error);
         Assert.Equal("light", loaded.Theme);
-        Assert.Empty(loaded.Columns);
         Assert.Empty(loaded.Ping.Targets);
     }
 

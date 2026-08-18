@@ -104,7 +104,7 @@ public sealed class ColumnLayout : ObservableObject
 
     /// <summary>
     /// 既定に戻す。ドラッグで崩したときの逃げ道
-    /// （これが無いと settings.json を直接編集するしかない）。
+    /// （幅は保存していないので、開き直しても戻せる。押せばその場で戻る）。
     /// <b>いまの文字の大きさに合わせた幅</b>に戻す — 素の値のままだと、
     /// 文字を大きくしている人にとっては狭すぎる。
     /// </summary>
@@ -117,8 +117,6 @@ public sealed class ColumnLayout : ObservableObject
         Rtt = Fit(Defaults.Rtt * scale);
         Loss = Fit(Defaults.Loss * scale);
         Spark = Fit(Defaults.Spark * scale);
-
-        Save();
     }
 
     /// <summary>
@@ -134,45 +132,14 @@ public sealed class ColumnLayout : ObservableObject
         Rtt = Fit(Rtt.Value * ratio);
         Loss = Fit(Loss.Value * ratio);
         Spark = Fit(Spark.Value * ratio);
-
-        Save();
     }
 
     /// <summary>ドラッグと同じ範囲に収める。</summary>
     private static GridLength Fit(double width) => new(Math.Clamp(Math.Round(width), 36, 600));
 
-    /// <summary>アプリを閉じるときに呼ぶ。書けなくても落とさない。</summary>
-    public void Save()
-    {
-        try
-        {
-            Settings.Current.Columns =
-                [State.Value, Target.Value, Rtt.Value, Loss.Value, Spark.Value];
-            Settings.Save();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // 列幅は失っても困らない
-        }
-    }
-
-    private static ColumnLayout Load()
-    {
-        var layout = new ColumnLayout();
-
-        List<double> widths = Settings.Current.Columns;
-        if (widths.Count != 5)
-            return layout;
-
-        GridLength Read(double value, GridLength fallback)
-            => value is >= 36 and <= 600 ? new GridLength(value) : fallback;
-
-        layout._state = Read(widths[0], layout._state);
-        layout._target = Read(widths[1], layout._target);
-        layout._rtt = Read(widths[2], layout._rtt);
-        layout._loss = Read(widths[3], layout._loss);
-        layout._spark = Read(widths[4], layout._spark);
-
-        return layout;
-    }
+    /// <summary>
+    /// 起動のたびに既定から組み直す。<b>列幅は保存しない</b>
+    /// （2026-08-18 ユーザー指示。毎回そろった幅で始める）。
+    /// </summary>
+    private static ColumnLayout Load() => new();
 }
