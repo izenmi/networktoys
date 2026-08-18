@@ -2386,8 +2386,21 @@ internal static class SelfTest
                 Assert(monitor.TargetListText.Contains("書き換えた", StringComparison.Ordinal),
                        "切り替える前の編集が残っていない");
 
-                // 消えるのは名前だけ。いま出ている宛先は残す
+                // 消すのは取り消せない。聞かずに消えないこと（結線前の既定は「いいえ」）
                 string kept = monitor.TargetListText;
+                monitor.DeleteListCommand.Execute(null);
+
+                Assert(monitor.SavedLists.Contains(first), "確認せずにリストを消している");
+
+                bool asked = false;
+                monitor.ConfirmDelete = _ => { asked = true; return false; };
+                monitor.DeleteListCommand.Execute(null);
+
+                Assert(asked, "消すときに確認していない");
+                Assert(monitor.SavedLists.Contains(first), "「いいえ」と答えたのに消えている");
+
+                // 消えるのは名前だけ。いま出ている宛先は残す
+                monitor.ConfirmDelete = _ => true;
                 monitor.DeleteListCommand.Execute(null);
 
                 Assert(!monitor.SavedLists.Contains(first), "消したリストが一覧に残っている");

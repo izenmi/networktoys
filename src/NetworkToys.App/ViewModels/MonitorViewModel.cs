@@ -363,6 +363,12 @@ public sealed class MonitorViewModel : ObservableObject
     /// </summary>
     public Func<string, string?>? AskListName { get; set; }
 
+    /// <summary>
+    /// リストを消してよいかを聞く。画面が結線する。
+    /// <b>結線前の既定は「いいえ」</b>（ファイル転送と同じ決まり）。
+    /// </summary>
+    public Func<string, bool>? ConfirmDelete { get; set; }
+
     /// <summary>宛先タブで編集するテキスト。書式は EXPing に合わせている。</summary>
     public string TargetListText
     {
@@ -1007,6 +1013,14 @@ public sealed class MonitorViewModel : ObservableObject
     private void DeleteList()
     {
         if (SelectedListName is not { Length: > 0 } name) return;
+
+        // 消すのは取り消せない。必ず聞く（2026-08-18 ユーザー指示）。
+        // 結線前の既定は「いいえ」— 聞けないなら消さない方が安全
+        if (ConfirmDelete?.Invoke(
+                $"宛先リスト「{name}」を消します。\n\nいま画面に出ている宛先は残ります。") != true)
+        {
+            return;
+        }
 
         SavedListStore.Remove(name);
         SavedLists.Remove(name);

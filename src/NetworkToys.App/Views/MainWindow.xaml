@@ -678,7 +678,7 @@
                                             ToolTip="いまの宛先に名前を付けて残します。同じ名前なら上書きします。" />
                                     <Button Content="消す" Command="{Binding DeleteListCommand}"
                                             Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
-                                            ToolTip="選んでいるリストを消します。いま出ている宛先はそのまま残ります。" />
+                                            ToolTip="選んでいるリストを消します（確認が出ます）。いま出ている宛先はそのまま残ります。" />
                                 </WrapPanel>
 
                                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding ListSummary}"
@@ -3532,7 +3532,7 @@
                                             ToolTip="いまの宛先に名前を付けて残します。同じ名前なら上書きします。" />
                                     <Button Content="消す" Command="{Binding DeleteListCommand}"
                                             Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
-                                            ToolTip="選んでいるリストを消します。いま出ている宛先はそのまま残ります。" />
+                                            ToolTip="選んでいるリストを消します（確認が出ます）。いま出ている宛先はそのまま残ります。" />
                                 </WrapPanel>
 
                                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding ListSummary}"

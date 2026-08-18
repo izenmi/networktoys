@@ -88,6 +88,13 @@ public partial class MainWindow : Window
             "いまの宛先リストに名前を付けて残します。同じ名前があれば上書きします。",
             initial);
 
+        // 消すのは取り消せないので必ず聞く
+        _shell.Monitor.ConfirmDelete = message => ConfirmDialog.Confirm(
+            this, "宛先リストを消す", message, okLabel: "消す");
+
+        _shell.Tcp.ConfirmDelete = message => ConfirmDialog.Confirm(
+            this, "宛先リストを消す", message, okLabel: "消す");
+
         // ひな型の名前を聞くのは画面の仕事（VM から窓を開かない）
         _shell.Verify.AskTemplateName = initial => TextPromptDialog.Ask(
             this,
