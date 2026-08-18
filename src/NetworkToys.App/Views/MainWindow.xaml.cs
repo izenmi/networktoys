@@ -120,11 +120,6 @@ public partial class MainWindow : Window
 
         _shell.Wlc.PasswordCleared += (_, _) => WlcPasswordBox.Clear();
 
-        _shell.Dnac.ConfirmFingerprint = message => ConfirmDialog.Confirm(
-            this, "Catalyst Center の証明書を確認", message, okLabel: "この指紋を受け入れる");
-
-        _shell.Dnac.PasswordCleared += (_, _) => DnacPasswordBox.Clear();
-
         // WFP の記録はシステム全体に効く設定なので、立てる前に内容を確認してもらう
         _shell.Wfp.ConfirmEnableCollection += () => ConfirmDialog.Confirm(
             this,
@@ -262,23 +257,6 @@ public partial class MainWindow : Window
         }
 
         menu.IsOpen = menu.Items.Count > 0;
-    }
-
-    private void OnDnacPasswordChanged(object sender, RoutedEventArgs e)
-    {
-        if (sender is PasswordBox box)
-            _shell.Dnac.Password = box.Password;
-    }
-
-    /// <summary>直前に取れた Catalyst Center の生の応答（と投げた URL）を出す。</summary>
-    private void OnDnacShowResponse(object sender, RoutedEventArgs e)
-    {
-        string response = _shell.Dnac.LastResponse;
-
-        TextViewDialog.Show(
-            this,
-            "Catalyst Center の応答",
-            response.Length > 0 ? response : "まだ何も取得していません。");
     }
 
     /// <summary>
@@ -1471,8 +1449,6 @@ public partial class MainWindow : Window
             NetworkToys.Core.Cloud.MerakiClientRow client => client.Ip,
             NetworkToys.Core.Fabric.AciEndpointRow endpoint => endpoint.Ip,
             NetworkToys.Core.Wireless.WlcClientRow wireless => wireless.Ip,
-            NetworkToys.Core.Assurance.DnacConnectionRow client => client.Ip,
-            NetworkToys.Core.Assurance.DnacDeviceRow device => device.Ip,
             NetworkToys.Core.Wireless.WlcApRow ap => ap.Ip,
             FileServerLogRow log => log.Remote,
             _ => string.Empty,

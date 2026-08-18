@@ -500,37 +500,6 @@ internal static class SelfTest
             Assert(!shell.Wlc.FetchCommand.CanExecute(null), "資格情報が空でも取得できてしまう");
         });
 
-        Check("Catalyst Center タブのサブタブをすべて表示できる", () =>
-        {
-            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
-
-            object? original = window!.MainTabs.SelectedItem;
-
-            Views.MainWindow.Show(window.DnacTab);
-
-            foreach (object? item in window.DnacSubTabs.Items)
-            {
-                ((System.Windows.Controls.TabItem)item).IsSelected = true;
-                window.UpdateLayout();
-            }
-
-            window.MainTabs.SelectedItem = original;
-            window.UpdateLayout();
-        });
-
-        Check("Catalyst Center: 資格情報が空では取得できない(CI から実機を叩かない)", () =>
-        {
-            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
-
-            var shell = (ViewModels.ShellViewModel)window!.DataContext;
-
-            Assert(shell.Dnac.Password.Length == 0, "起動直後にパスワードが入っている");
-            Assert(!shell.Dnac.FetchClientCommand.CanExecute(null), "資格情報が空でも取得できてしまう");
-
-            Assert(!new ViewModels.DnacViewModel().ConfirmFingerprint("test"),
-                   "証明書の確認が、結線前から「はい」に倒れている");
-        });
-
         Check("Meraki: キー未入力では取得できない(CI から API を叩かない)", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -655,91 +624,6 @@ internal static class SelfTest
                 refused = true;
             }
             catch (Services.ApicApiException)
-            {
-                // 証明書の失敗として扱えていない
-            }
-
-            Assert(refused, "TLS で断られたのに、証明書の失敗として扱っていない");
-        });
-
-        Check("Catalyst Center: 偽の Catalyst Center と token→取得→ページングを往復できる", () =>
-        {
-            var fake = new FakeDnac();
-
-            using (var client = new Services.DnacClient("dnac.selftest.invalid", null, fake))
-            {
-                client.LoginAsync("admin", "pw", CancellationToken.None).GetAwaiter().GetResult();
-
-                string enrichment = client
-                    .ClientAsync("ip_address", "10.10.22.98", CancellationToken.None)
-                    .GetAwaiter().GetResult();
-
-                Assert(Core.Assurance.DnacCatalog.ParseConnections(
-                           Core.Assurance.DnacJson.Rows(enrichment)).Count == 1,
-                       "端末の応答を行にできていない");
-
-                IReadOnlyList<string> pages = client.DevicesAsync(CancellationToken.None)
-                    .GetAwaiter().GetResult();
-
-                Assert(pages.Count == 2, $"ページを取り切れていない: {pages.Count} ページ");
-
-                // 版が無い機能は 404。次の候補へ進めること
-                string health = client
-                    .GetFirstAsync(Core.Assurance.DnacCatalog.DeviceHealthPaths, CancellationToken.None)
-                    .GetAwaiter().GetResult();
-
-                Assert(Core.Assurance.DnacJson.Rows(health).Count == 1, "候補の 2 本目へ進んでいない");
-            }
-
-            Assert(fake.Paths[0] == Core.Assurance.DnacCatalog.TokenPath, "先にログインしていない");
-
-            // ログインだけが Basic。以後は毎回 X-Auth-Token を自分で付ける
-            for (int i = 1; i < fake.Paths.Count; i++)
-            {
-                Assert(fake.Tokens[i] == "T1", $"{fake.Paths[i]} にトークンが付いていない");
-                Assert(fake.Authorizations[i].Length == 0,
-                       $"{fake.Paths[i]} に Basic 認証が残っている");
-            }
-
-            Assert(fake.Authorizations[0].StartsWith("Basic ", StringComparison.Ordinal),
-                   "ログインが Basic 認証になっていない");
-
-            // 端末の絞り込みはクエリではなくヘッダで渡す
-            Assert(fake.EntityTypes.Contains("ip_address"), "entity_type をヘッダで渡していない");
-            Assert(fake.EntityValues.Contains("10.10.22.98"), "entity_value をヘッダで渡していない");
-
-            // offset は 1 始まり。0 を渡すと版によっては何も返らない
-            Assert(fake.Paths.Any(p => p.Contains("offset=1&", StringComparison.Ordinal)),
-                   $"機器一覧の offset が 1 始まりになっていない: {string.Join(" / ", fake.Paths)}");
-            Assert(fake.Paths.Any(p => p.Contains("offset=501&", StringComparison.Ordinal)),
-                   "2 ページ目を取りに行っていない");
-
-            // 読み取り専用。POST はトークンの取得だけで、宛先は /dna/ の下だけ
-            for (int i = 0; i < fake.Paths.Count; i++)
-            {
-                Assert(fake.Methods[i] == "GET" || fake.Paths[i] == Core.Assurance.DnacCatalog.TokenPath,
-                       $"想定していない書き込みをしている: {fake.Methods[i]} {fake.Paths[i]}");
-
-                Assert(fake.Paths[i].StartsWith("/dna/", StringComparison.Ordinal),
-                       $"見覚えのない宛先へ要求している: {fake.Paths[i]}");
-            }
-        });
-
-        Check("Catalyst Center: 証明書を受け入れていない相手には繋がない", () =>
-        {
-            using var client = new Services.DnacClient("dnac.selftest.invalid", null, new RefusingHost());
-
-            bool refused = false;
-
-            try
-            {
-                client.LoginAsync("admin", "pw", CancellationToken.None).GetAwaiter().GetResult();
-            }
-            catch (Services.PinnedCertificateException)
-            {
-                refused = true;
-            }
-            catch (Services.DnacApiException)
             {
                 // 証明書の失敗として扱えていない
             }
@@ -1105,11 +989,6 @@ internal static class SelfTest
                 (new Core.Wireless.WlcClientRow(
                     "aabb.ccdd.eeff", "192.168.20.31", "Apple", "AP-1F-01", "Corp", "5GHz ch36",
                     -58, "-58", "良い", "34", "866", "● 通信中", Core.Design.SeverityKind.Ok, ""), "192.168.20.31"),
-
-                (new Core.Assurance.DnacConnectionRow(
-                    "AA:BB:CC:DD:EE:01", "10.10.22.98", "pc-1234", "有線", "sw-3f-01", "Gi1/0/13",
-                    "550", "", "", "10 ● 良好", Core.Design.SeverityKind.Ok, "Global/Tokyo/3F",
-                    "2026-08-17 10:00:00"), "10.10.22.98"),
 
                 (new ViewModels.FileServerLogRow("10:00:00", "10.1.1.1", "%LINK-3-UPDOWN", 3), "10.1.1.1"),
 
@@ -2958,78 +2837,6 @@ internal static class SelfTest
     /// 見るのは「GET だけか」「Basic 認証と Accept が毎回付くか」「候補の 2 本目へ進むか」
     /// 「204 を 0 件として扱うか」の 4 つ。
     /// </summary>
-    private sealed class FakeDnac : System.Net.Http.HttpMessageHandler
-    {
-        private const string TokenJson = """{"Token":"T1"}""";
-
-        private const string EnrichmentJson =
-            """{"response":[{"userDetails":{"hostMac":"AA:BB:CC:DD:EE:01","hostIpV4":"10.10.22.98","hostType":"WIRED","port":"Gi1/0/13","healthScore":[{"score":10}]},"connectedDevice":[{"deviceDetails":{"hostname":"sw-1"}}]}]}""";
-
-        private const string HealthJson = """{"response":[{"id":"uuid-1","overallHealth":9}]}""";
-
-        public List<string> Paths { get; } = [];
-
-        public List<string> Methods { get; } = [];
-
-        public List<string> Authorizations { get; } = [];
-
-        public List<string> Tokens { get; } = [];
-
-        public List<string> EntityTypes { get; } = [];
-
-        public List<string> EntityValues { get; } = [];
-
-        protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(
-            System.Net.Http.HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            string path = request.RequestUri?.PathAndQuery ?? "";
-
-            Paths.Add(path);
-            Methods.Add(request.Method.Method);
-            Authorizations.Add(request.Headers.Authorization?.ToString() ?? "");
-            Tokens.Add(Header(request, "X-Auth-Token"));
-
-            if (Header(request, "entity_type") is { Length: > 0 } type) EntityTypes.Add(type);
-            if (Header(request, "entity_value") is { Length: > 0 } value) EntityValues.Add(value);
-
-            // 1 本目の健全度は「この版には無い」。2 本目へ進めるかを見る
-            if (path.StartsWith("/dna/data/api/v1/networkDevices", StringComparison.Ordinal))
-                return Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
-
-            string body = path switch
-            {
-                _ when path == Core.Assurance.DnacCatalog.TokenPath => TokenJson,
-                _ when path.Contains("client-enrichment", StringComparison.Ordinal) => EnrichmentJson,
-                // 2.3.5 系はここが健全度の在り処。2 本目へ進めているかを見る
-                _ when path.Contains("device-health", StringComparison.Ordinal) => HealthJson,
-                _ when path.Contains("network-health", StringComparison.Ordinal) => HealthJson,
-                _ when path.Contains("offset=1&", StringComparison.Ordinal) => Inventory(Services.DnacClient.PageSize),
-                _ when path.Contains("network-device", StringComparison.Ordinal) => Inventory(3),
-                _ => """{"response":[]}""",
-            };
-
-            return Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
-            {
-                Content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json"),
-            });
-        }
-
-        /// <summary>1 ページぶんの在庫。件数が 1 ページに満たなくなるまで取りに行くのを見る。</summary>
-        private static string Inventory(int count)
-        {
-            string rows = string.Join(",", Enumerable.Range(0, count)
-                .Select(i => "{\"id\":\"uuid-" + i + "\",\"hostname\":\"sw-" + i + "\"}"));
-
-            return "{\"response\":[" + rows + "]}";
-        }
-
-        private static string Header(System.Net.Http.HttpRequestMessage request, string name)
-            => request.Headers.TryGetValues(name, out IEnumerable<string>? values)
-                ? string.Join(",", values)
-                : "";
-    }
-
-    /// <summary>証明書で断られる相手（APIC でも WLC でも使う）。指紋が未受け入れの経路を踏む。</summary>
     private sealed class RefusingHost : System.Net.Http.HttpMessageHandler
     {
         protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(

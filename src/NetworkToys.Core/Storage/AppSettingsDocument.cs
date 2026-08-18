@@ -92,18 +92,6 @@ public sealed class AppSettingsDocument
     /// </summary>
     public Dictionary<string, string> WlcUserNames { get; set; } = [];
 
-    /// <summary>Catalyst Center タブの接続先（ホスト名か IP）。1 行 1 件。</summary>
-    public string DnacHosts { get; set; } = "";
-
-    /// <summary>
-    /// Catalyst Center タブで前に使ったユーザー名（ホストがキー）。
-    /// <b>パスワードはここに入れない</b>（収集タブ・ACI・WLC と同じ決まり）。
-    /// </summary>
-    public Dictionary<string, string> DnacUserNames { get; set; } = [];
-
-    /// <summary>受け入れた Catalyst Center の証明書の指紋（ホストがキー）。ACI と同じ扱い。</summary>
-    public Dictionary<string, string> DnacFingerprints { get; set; } = [];
-
     /// <summary>
     /// ウィンドウを最前面に固定するか。
     ///
