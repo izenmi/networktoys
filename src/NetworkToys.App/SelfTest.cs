@@ -1604,7 +1604,7 @@ internal static class SelfTest
 
             var request = new Services.CollectRequest(
                 "127.0.0.1", port, UseSsh: false,
-                new Core.Terminal.DeviceCredentials("admin", "pass", "enable"), "");
+                new Core.Terminal.DeviceCredentials("admin", "zq7-login-secret", "zq7-enable-secret"), "");
 
             Core.Terminal.DeviceCollectionResult result = Services.DeviceCollector.CollectAsync(
                 request, ["show version"], options, TimeSpan.FromSeconds(5), null, CancellationToken.None)
@@ -1617,9 +1617,17 @@ internal static class SelfTest
             Assert(command.Output.Contains("Cisco IOS Software", StringComparison.Ordinal),
                    $"出力が取れていない: {command.Output}");
 
-            // 保存テキストに認証情報が混ざらないこと
+            // 保存テキストに認証情報が混ざらないこと。
+            // 生ログ（届いた文字そのもの）を末尾に付けるようにしたので、
+            // 「Password:」のような機器側の文言は当然出る。<b>秘密そのもの</b>を名指しで見る
             string report = Core.Terminal.DeviceReport.Render(result);
-            Assert(!report.Contains("pass", StringComparison.OrdinalIgnoreCase), "保存テキストにパスワードが混ざっている");
+            Assert(!report.Contains("zq7-login-secret", StringComparison.Ordinal),
+                   "保存テキストにログインのパスワードが混ざっている");
+            Assert(!report.Contains("zq7-enable-secret", StringComparison.Ordinal),
+                   "保存テキストに enable のパスワードが混ざっている");
+
+            // 生ログが付いていること（ずれの切り分けはこれが無いとできない）
+            Assert(report.Contains("生ログ", StringComparison.Ordinal), "生ログが付いていない");
 
             log.AppendLine($"        {command.Output.Split('\n').Length} 行を取得");
         });
@@ -2469,7 +2477,7 @@ internal static class SelfTest
                     if (!loggedIn)
                     {
                         if (text == "admin") Send("\r\nPassword: ");
-                        else if (text == "pass") { loggedIn = true; Send("\r\nR1>"); }
+                        else if (text == "zq7-login-secret") { loggedIn = true; Send("\r\nR1>"); }
                         else Send("\r\nUsername: ");
                         continue;
                     }

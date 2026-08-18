@@ -112,9 +112,9 @@ public class CiscoSessionTests
     private static readonly DeviceCredentials Login = new("admin", "pass1", "enable1");
 
     private static Task<DeviceCollectionResult> RunAsync(
-        FakeCiscoDevice device, string[] commands, CancellationToken token = default)
+        FakeCiscoDevice device, string[] commands, CancellationToken token = default, bool ssh = false)
         => new CiscoSession(device, Fast).RunAsync(
-            "10.0.0.1", 23, usedSsh: false, hostKeyFingerprint: null, Login, commands, token);
+            "10.0.0.1", ssh ? 22 : 23, ssh, hostKeyFingerprint: null, Login, commands, token);
 
     /// <summary>ログインから始まり、enable まで素直に応じる機器の台本。</summary>
     private static Func<string, string?> FromLogin(Func<string, string?> commands)
@@ -356,6 +356,77 @@ public class CiscoSessionTests
         Assert.Equal(2, result.Commands.Count);
         Assert.NotNull(result.Commands[0].Problem);
         Assert.Null(result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task Ssh_presses_enter_once_per_command()
+    {
+        // SSH には Telnet のような改行の取り決めが無く、CR LF を送ると
+        // Enter を 2 回押したことになる機器がある。プロンプトが 2 つ返り、
+        // 遅れて届く 2 つ目が次のコマンドの完了と読み違えられて全部ずれる
+        // (2026-08-18 実機報告)
+        var device = new FakeCiscoDevice("\r\nR1#", AlreadyEnabled(_ => "ok"));
+
+        await RunAsync(device, ["show clock"], ssh: true);
+
+        Assert.Contains("show clock\n", device.Sent, StringComparison.Ordinal);
+        Assert.DoesNotContain("\r", device.Sent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Telnet_keeps_the_protocol_line_ending()
+    {
+        // Telnet は CR LF が Enter そのもの。こちらは変えない
+        var device = new FakeCiscoDevice("\r\nR1#", AlreadyEnabled(_ => "ok"));
+
+        await RunAsync(device, ["show clock"]);
+
+        Assert.Contains("show clock\r\n", device.Sent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task An_extra_prompt_between_commands_does_not_shift_the_rest()
+    {
+        // Enter を 2 回受け取った機器は、1 本のコマンドにプロンプトを 2 つ返す。
+        // 2 つ目は「エコーも出力も無いプロンプト」として捨てる
+        FakeCiscoDevice? device = null;
+
+        device = new FakeCiscoDevice("\r\nR1#", line =>
+        {
+            string text = line.Trim();
+
+            if (text.StartsWith("terminal ", StringComparison.Ordinal)) return "\r\nR1#";
+
+            string? answer = text switch
+            {
+                "show clock" => "\r\nshow clock\r\n15:30:13 JST\r\nR1#",
+                "show version" => "\r\nshow version\r\nCisco IOS Software, Version 15.2\r\nR1#",
+                "show inventory" => "\r\nshow inventory\r\nNAME: \"Chassis\"\r\nR1#",
+                _ => null,
+            };
+
+            if (answer is null) return "\r\nR1#";
+
+            // 応答のすぐ後に、余分なプロンプトが別便で届く
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(40, CancellationToken.None).ConfigureAwait(false);
+                device!.Push("\r\nR1#");
+            });
+
+            return answer;
+        });
+
+        DeviceCollectionResult result = await RunAsync(
+            device, ["show clock", "show version", "show inventory"]);
+
+        Assert.Equal(3, result.Commands.Count);
+        Assert.Contains("15:30:13", result.Commands[0].Output);
+        Assert.Contains("Version 15.2", result.Commands[1].Output);
+        Assert.Contains("Chassis", result.Commands[2].Output);
+
+        // 打ったコマンドが出力に残らないこと(残る＝1 本前の区画を見ている印)
+        Assert.DoesNotContain("show version", result.Commands[2].Output, StringComparison.Ordinal);
     }
 
     [Fact]

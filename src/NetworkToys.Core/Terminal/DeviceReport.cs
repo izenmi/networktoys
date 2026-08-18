@@ -24,7 +24,8 @@ public sealed record DeviceCollectionResult(
     bool ReachedEnable,
     string PagerNote,
     IReadOnlyList<CommandResult> Commands,
-    string? FailureMessage);
+    string? FailureMessage,
+    string Transcript = "");
 
 /// <summary>
 /// 収集結果を 1 台 1 ファイルのテキストにする。
@@ -84,6 +85,17 @@ public static class DeviceReport
                 : command.Output.TrimEnd('\n').Split('\n').Length;
 
             text.AppendLine($"（{command.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)} 秒 / {lines} 行）");
+            text.AppendLine();
+        }
+
+        // 生の会話を最後に付ける。区画のずれや取りこぼしは、これが無いと切り分けられない
+        // （表の元になった文字を残す。WLC の「取得した出力」と同じ考え方）
+        if (result.Transcript is { Length: > 0 })
+        {
+            text.AppendLine(Rule);
+            text.AppendLine("生ログ（機器から届いた文字そのもの。ずれの切り分け用）");
+            text.AppendLine(Rule);
+            text.AppendLine(result.Transcript.TrimEnd('\n'));
             text.AppendLine();
         }
 

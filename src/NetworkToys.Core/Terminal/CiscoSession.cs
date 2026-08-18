@@ -49,6 +49,19 @@ public sealed record CiscoSessionOptions
 public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
 {
     private readonly StringBuilder _buffer = new();
+
+    /// <summary>
+    /// 機器から届いた文字を丸ごと残したもの。
+    ///
+    /// <b>表（区画）の元になった生の会話</b>で、ずれや取りこぼしを実機で切り分ける唯一の手掛かり
+    /// （WLC の「取得した出力」と同じ考え方。2026-08-18 に 3 度めのずれの報告を受けて足した）。
+    /// <b>こちらが送った文字は入れない</b> — パスワードを書き残さないため
+    /// （機器はパスワードをエコーしないので、届いた文字だけなら安全）。
+    /// </summary>
+    private readonly StringBuilder _transcript = new();
+
+    /// <summary>生ログの上限。これを超えたら以降は捨てる（1 台で数百 MB にしない）。</summary>
+    private const int MaxTranscript = 1024 * 1024;
     private readonly Lock _gate = new();
 
     /// <summary>読めたことの合図。読み取りは専用タスクが回し、本体はここで待つ。</summary>
@@ -64,6 +77,21 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     private static readonly TimeSpan DrainLimit = TimeSpan.FromSeconds(3);
 
     private string? _hostname;
+
+    /// <summary>
+    /// 行末に送る文字。<b>SSH では改行 1 文字だけ</b>にする。
+    ///
+    /// SSH には Telnet のような改行の取り決めが無く、機器側の端末制御がそのまま働く。
+    /// <c>CR LF</c> を送ると<b>Enter を 2 回</b>押したことになる機器があり、
+    /// 1 本のコマンドに対してプロンプトが 2 つ返る。1 つ目で「そろった」と見て
+    /// 次を送るので、遅れて届く 2 つ目が<b>そのコマンドの完了</b>と読み違えられ、
+    /// 以降のコマンドと出力が丸ごと 1 本ずれる
+    /// （2026-08-18 実機報告: show clock は正しく、show version が 0 行、
+    /// show inventory の区画に show version が載る）。
+    ///
+    /// Telnet は <c>CR LF</c> が Enter そのものなので、あちらは変えない。
+    /// </summary>
+    private string _newline = "\r\n";
 
     /// <summary>最後に確かめたプロンプトの段階。バッファを消しても失われないよう持つ。</summary>
     private PromptLevel _level = PromptLevel.User;
@@ -86,6 +114,15 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     /// </summary>
     private int _probes;
 
+    /// <summary>
+    /// この機器は打ったコマンドをそのまま返す（エコーする）か。
+    ///
+    /// 対話で入る機器はまず必ずエコーする。<b>エコーも出力も無くプロンプトだけが来たら、
+    /// それは前のやり取りの残り</b>で、いま送ったコマンドの完了ではない。
+    /// エコーを返さない機器も無くはないので、<b>一度エコーを見てから</b>この判断を始める。
+    /// </summary>
+    private bool _echoes;
+
     /// <summary>進捗の知らせ（画面のステータス用）。</summary>
     public IProgress<string>? Progress { get; init; }
 
@@ -100,6 +137,9 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     {
         ArgumentNullException.ThrowIfNull(credentials);
         ArgumentNullException.ThrowIfNull(commands);
+
+        // SSH と Telnet で行末が違う（上の _newline の説明のとおり）
+        _newline = usedSsh ? "\n" : "\r\n";
 
         DateTime started = DateTime.Now;
         List<CommandResult> results = [];
@@ -148,7 +188,8 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
             ReachedEnable: reachedEnable,
             PagerNote: pagerNote,
             Commands: results,
-            FailureMessage: failure);
+            FailureMessage: failure,
+            Transcript: Transcript());
     }
 
     /// <summary>
@@ -374,6 +415,13 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
 
             if (CiscoPrompt.TryMatchAtEnd(view, _hostname, out _))
             {
+                // エコーを返す機器なのに、エコーも出力も無い。前のやり取りの残りなので捨てる
+                if (_echoes && CommandCapture.IsBarePrompt(view))
+                {
+                    ClearBuffer();
+                    continue;
+                }
+
                 inSync = true;
                 _atPrompt = true;
                 break;
@@ -409,7 +457,12 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
 
         watch.Stop();
 
-        string output = CommandCapture.ExtractOutput(Clean(), command, _hostname);
+        string chunk = Clean();
+        string output = CommandCapture.ExtractOutput(chunk, command, _hostname);
+
+        // 1 度でもエコーを見たら、以降は「プロンプトだけ」を残りとして捨てられる
+        _echoes |= CommandCapture.HasEcho(chunk, command);
+
         problem ??= CiscoPrompt.DetectCommandProblem(output);
 
         // 立て直しはここでしない。会話がそろっていなければ _atPrompt が false のままなので、
@@ -432,7 +485,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     {
         try
         {
-            await WriteRawAsync("q\r\n", token).ConfigureAwait(false);
+            await SendAsync("q", token).ConfigureAwait(false);
 
             return await WaitForPromptAsync(options.IdleTimeout, token).ConfigureAwait(false);
         }
@@ -527,7 +580,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
         ClearBuffer();
     }
 
-    private Task SendAsync(string line, CancellationToken token) => WriteRawAsync(line + "\r\n", token);
+    private Task SendAsync(string line, CancellationToken token) => WriteRawAsync(line + _newline, token);
 
     private async Task WriteRawAsync(string text, CancellationToken token)
     {
@@ -588,7 +641,11 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                     if (count == 0) continue;
 
                     lock (_gate)
+                    {
                         _buffer.Append(chars, 0, count);
+
+                        if (_transcript.Length < MaxTranscript) _transcript.Append(chars, 0, count);
+                    }
 
                     _arrived.Release();
                 }
@@ -611,6 +668,19 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     private int BufferLength
     {
         get { lock (_gate) return _buffer.Length; }
+    }
+
+    /// <summary>届いた文字そのもの（端末の制御文字だけ均す）。</summary>
+    private string Transcript()
+    {
+        lock (_gate)
+        {
+            string text = TerminalText.Clean(_transcript.ToString());
+
+            return _transcript.Length >= MaxTranscript
+                ? text + "\n（ここまで。これ以上は記録していません）\n"
+                : text;
+        }
     }
 
     private string Clean()
@@ -636,6 +706,36 @@ public static class CommandCapture
     /// <summary>エコー行を探す範囲（頭から数えた行数）。</summary>
     private const int EchoSearchLines = 5;
 
+    /// <summary>打ったコマンドがそのまま返ってきているか（頭の数行だけ見る）。</summary>
+    public static bool HasEcho(string chunk, string command)
+        => EchoLine(TerminalText.StripMorePrompts(chunk).Split('\n'), command) >= 0;
+
+    /// <summary>プロンプトだけで、ほかに何も無いか。</summary>
+    public static bool IsBarePrompt(string view)
+    {
+        string[] lines = view.Split('\n');
+
+        for (int i = 0; i < lines.Length - 1; i++)
+        {
+            if (lines[i].Trim().Length > 0) return false;
+        }
+
+        return lines.Length > 0 && lines[^1].Trim().Length > 0;
+    }
+
+    /// <summary>エコー行の位置。無ければ -1。</summary>
+    private static int EchoLine(string[] lines, string command)
+    {
+        for (int i = 0; i < lines.Length && i < EchoSearchLines; i++)
+        {
+            if (lines[i].Trim().Length == 0) continue;
+
+            if (lines[i].Trim().EndsWith(command.Trim(), StringComparison.Ordinal)) return i;
+        }
+
+        return -1;
+    }
+
     public static string ExtractOutput(string chunk, string command, string? hostname)
     {
         if (chunk.Length == 0) return "";
@@ -650,16 +750,7 @@ public static class CommandCapture
         // 見つけたエコーより前は<b>まとめて</b>捨てる。ただし探すのは頭の数行だけ —
         // 出力の奥に同じ文字で終わる行(alias の定義など)があっても掴まないため。
         // エコーを返さない機器もあるので「あれば落とす」に留める
-        for (int i = start; i < end && i < start + EchoSearchLines; i++)
-        {
-            if (lines[i].Trim().Length == 0) continue;
-
-            if (lines[i].Trim().EndsWith(command.Trim(), StringComparison.Ordinal))
-            {
-                start = i + 1;
-                break;
-            }
-        }
+        if (EchoLine(lines, command) is int echo && echo >= 0) start = echo + 1;
 
         while (start < end && lines[start].Trim().Length == 0) start++;
 
