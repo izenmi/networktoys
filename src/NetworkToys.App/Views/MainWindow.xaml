@@ -2413,19 +2413,48 @@
                                          PasswordChanged="OnMerakiKeyChanged"
                                          ToolTip="ダッシュボードの [My profile] で発行したキー。保存しません。" />
 
-                            <TextBlock Text="組織" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="180" Margin="0,0,12,2"
-                                      ItemsSource="{Binding Organizations}"
-                                      SelectedItem="{Binding SelectedOrganization}"
-                                      ToolTip="組織が複数あるときに選びます。">
-                                <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <!-- 組織を選ぶ必要があることは見落とされやすい。
+                                 選ぶまでは見出しごと警告色にする（2026-08-18 ユーザー指示） -->
+                            <TextBlock VerticalAlignment="Center" Margin="0,0,5,2">
+                                <!-- 文字も色も Style で決める。属性で書くとトリガーが負ける -->
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                        <Setter Property="Text" Value="組織" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding NeedsOrganization}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Warn.Fg}" />
+                                                <Setter Property="FontWeight" Value="Bold" />
+                                                <Setter Property="Text" Value="⚠ 組織を選ぶ" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <!-- ComboBox のテンプレートは自前なので、枠は外側の Border で描く -->
+                            <Border Margin="0,0,12,2" Padding="2" CornerRadius="{DynamicResource Radius.Control}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderThickness" Value="2" />
+                                        <Setter Property="BorderBrush" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding NeedsOrganization}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource Brush.Warn.Fg}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <ComboBox Width="180"
+                                          ItemsSource="{Binding Organizations}"
+                                          SelectedItem="{Binding SelectedOrganization}"
+                                          ToolTip="組織が複数あるときに選びます。選ぶとそのまま取りに行きます。">
+                                    <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Border>
 
                             <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2" />
                             <Button Content="中断" Command="{Binding CancelCommand}"

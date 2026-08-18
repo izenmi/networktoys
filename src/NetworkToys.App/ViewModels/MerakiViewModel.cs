@@ -70,6 +70,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     private IReadOnlyList<MerakiTrafficRow> _trafficRows = [];
 
     private string _trafficPeriod = "";
+
+    /// <summary>組織の一覧を作り直している最中か。選び直しの合図と区別する。</summary>
+    private bool _syncingOrganizations;
     private bool _isBusy;
     private CancellationTokenSource? _cts;
 
@@ -256,11 +259,39 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ConnectionSummary));
     }
 
+    /// <summary>
+    /// 見に行く組織。
+    ///
+    /// <b>選び直したら、そのまま取りに行く</b>（2026-08-18 ユーザー指示）。
+    /// 「選んでからもう一度取得を押す」は見落とされる — 選んだ時点で用は決まっている。
+    /// 一覧を作っている最中（<see cref="SyncOrganizations"/>）は動かさない。
+    /// </summary>
     public MerakiOrganizationItem? SelectedOrganization
     {
         get => _selectedOrganization;
-        set => SetProperty(ref _selectedOrganization, value);
+        set
+        {
+            if (!SetProperty(ref _selectedOrganization, value)) return;
+
+            OnPropertyChanged(nameof(ConnectionSummary));
+            OnPropertyChanged(nameof(NeedsOrganization));
+
+            FetchDevicesCommand.RaiseCanExecuteChanged();
+            FetchUplinksCommand.RaiseCanExecuteChanged();
+            FetchAlertsCommand.RaiseCanExecuteChanged();
+            FetchTrafficCommand.RaiseCanExecuteChanged();
+
+            if (_syncingOrganizations || value is null || IsBusy || ApiKey.Length == 0) return;
+
+            _ = FetchAsync();
+        }
     }
+
+    /// <summary>
+    /// 組織を選ぶのを待っているか。<b>案内は目立つ場所（⚠ の行）に出す</b> —
+    /// 状態の行に書いていたので見落とされた（2026-08-18 報告）。
+    /// </summary>
+    public bool NeedsOrganization => Organizations.Count > 1 && SelectedOrganization is null;
 
     public MerakiNetworkRow? SelectedNetwork
     {
@@ -371,7 +402,14 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
             if (SelectedOrganization is null)
             {
-                Status = $"組織が {Organizations.Count} 件あります。組織を選んでから、もう一度「取得」を押してください。";
+                Status = "";
+                Notice = $"⚠ この API キーでは組織が {Organizations.Count} 件見えます。"
+                       + "上の「組織」から 1 つ選んでください（選べばそのまま取りに行きます）。";
+
+                OnPropertyChanged(nameof(NeedsOrganization));
+
+                // 選ぶまで待つ。畳んでいると選べないので、必ず開けておく
+                ShowConnection = true;
                 return;
             }
 
@@ -736,11 +774,23 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     {
         string? keep = SelectedOrganization?.Id;
 
-        Organizations.Clear();
-        foreach ((string id, string name) in organizations)
-            Organizations.Add(new MerakiOrganizationItem(id, name));
+        // 一覧を作り直している間は「選び直した」ことにしない（取得が二重に走る）
+        _syncingOrganizations = true;
 
-        SelectedOrganization = Organizations.FirstOrDefault(o => o.Id == keep);
+        try
+        {
+            Organizations.Clear();
+            foreach ((string id, string name) in organizations)
+                Organizations.Add(new MerakiOrganizationItem(id, name));
+
+            SelectedOrganization = Organizations.FirstOrDefault(o => o.Id == keep);
+        }
+        finally
+        {
+            _syncingOrganizations = false;
+        }
+
+        OnPropertyChanged(nameof(NeedsOrganization));
     }
 
     /// <summary>
