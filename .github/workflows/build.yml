@@ -84,7 +84,7 @@ jobs:
       - name: 使い方が同梱されていることを確認
         shell: pwsh
         run: |
-          if (-not (Test-Path "publish/${{ matrix.name }}/使い方.txt")) { throw "使い方.txt が同梱されていません" }
+          if (-not (Test-Path "publish/${{ matrix.name }}/使い方.md")) { throw "使い方.md が同梱されていません" }
 
       # Windows 側の起動処理で止まり、アプリのコードは 1 行も動かないので、
       # 「入っていないときの案内」はアプリの中には書けない。exe の隣に置く

@@ -1050,13 +1050,13 @@ internal static class SelfTest
         {
             // 持ち出して使う道具なので、ネットワークの無い現場でも読めるようにする
             // （2026-08-18 ユーザー指示）
-            string? usage = Views.MainWindow.ReadEmbedded("使い方.txt");
+            string? usage = Views.MainWindow.ReadEmbedded("使い方.md");
 
             Assert(usage is { Length: > 2000 }, $"使い方を読めない（{usage?.Length ?? -1} 文字）");
             Assert(usage!.Contains("NetworkToys", StringComparison.Ordinal), "中身が使い方ではない");
 
             // exe の隣にも置いてある（zip をそのまま渡す相手はこちらを読む）
-            string beside = Path.Combine(AppContext.BaseDirectory, "使い方.txt");
+            string beside = Path.Combine(AppContext.BaseDirectory, "使い方.md");
 
             Assert(File.Exists(beside), $"配布物に使い方が入っていない: {beside}");
         });
