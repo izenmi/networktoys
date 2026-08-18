@@ -452,6 +452,16 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
   自己診断が `shell32` の `ExtractIconEx` で exe から数えて確かめている
   （`System.Drawing` は `UseWPF` だけでは参照されないため使えない）。
 
+## 使い方の同梱
+
+`docs/USAGE.md` を**配布物に「使い方.txt」として置き、exe にも埋め込む**（2026-08-18 ユーザー指示）。
+どちらも csproj の 1 か所（`Content` と `EmbeddedResource`）で、**CI は入っていることを確かめるだけ**。
+
+- **持ち出して使う道具**なので、ネットワークの無い現場でも読める形にしておく。
+  zip から exe だけ取り出されることもあるため、埋め込みも併せて持つ（ライセンス表示と同じ考え）。
+- 画面からは **ヘルプ → 使い方**（`MainWindow.ReadEmbedded`）。
+- 自己診断が「埋め込みが読めること」と「exe の隣にファイルがあること」の両方を見ている。
+
 ## 配る資料（docx）
 
 `docs/紹介資料.md` / `docs/設計資料.md` を `tools/docs/build_docx.py` で `.docx` に焼く（**手で実行**）。

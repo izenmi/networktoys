@@ -58,6 +58,13 @@
          更新は tools/oui/build_oui.py を手で実行する。 -->
     <EmbeddedResource Include="Resources/oui.tsv.gz" />
 
+    <!-- 使い方（docs/USAGE.md）。exe の隣に「使い方.txt」として置き、exe にも埋め込む
+         （2026-08-18 ユーザー指示）。持ち出して使う道具なので、zip から exe だけ
+         取り出されても「ヘルプ → 使い方」で読めるようにする。 -->
+    <Content Include="../../docs/USAGE.md" Link="使い方.txt"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="../../docs/USAGE.md" LogicalName="使い方.txt" />
+
     <!-- 同梱物の著作権表示とライセンス本文。exe に埋め込む。
          zip から exe だけ取り出されても「ヘルプ → ライセンス情報」で読めるように。
          MIT / Apache-2.0 / OFL 1.1 はいずれも再配布時の添付を求めている。 -->

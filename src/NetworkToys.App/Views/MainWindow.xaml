@@ -560,6 +560,7 @@
                 <MenuItem Header="最新版を確認" Click="OnOpenReleases" />
                 <MenuItem Header="問題を報告" Click="OnOpenIssues" />
                 <Separator />
+                <MenuItem Header="使い方" Click="OnShowUsage" />
                 <MenuItem Header="ライセンス情報" Click="OnShowLicenses" />
                 <MenuItem Header="バージョン情報" Click="OnAbout" />
             </MenuItem>

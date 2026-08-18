@@ -995,6 +995,22 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 使い方を出す。
+    ///
+    /// <b>exe に埋め込んである</b>ので、zip から exe だけ取り出されていても読める
+    /// （配布物では exe の隣にも「使い方.txt」として置いてある）。
+    /// </summary>
+    private void OnShowUsage(object sender, RoutedEventArgs e)
+    {
+        string text = ReadEmbedded("使い方.txt")
+            ?? "使い方を読み込めませんでした。\n"
+             + "配布物の「使い方.txt」か、リポジトリの docs/USAGE.md をご覧ください。\n"
+             + "https://github.com/izenmi/networktoys/blob/main/docs/USAGE.md";
+
+        TextViewDialog.Show(this, "使い方", text);
+    }
+
+    /// <summary>
     /// 同梱物の著作権表示とライセンス本文を出す。
     ///
     /// <b>exe に埋め込んである</b>ので、zip から exe だけ取り出されていても読める
@@ -1011,12 +1027,14 @@ public partial class MainWindow : Window
     }
 
     /// <summary>埋め込んだライセンス本文。読めなければ null。</summary>
-    internal static string? ReadNotices()
+    internal static string? ReadNotices() => ReadEmbedded("THIRD-PARTY-NOTICES.txt");
+
+    /// <summary>exe に埋め込んだテキスト。読めなければ null。</summary>
+    internal static string? ReadEmbedded(string name)
     {
         try
         {
-            using System.IO.Stream? stream = typeof(MainWindow).Assembly
-                .GetManifestResourceStream("THIRD-PARTY-NOTICES.txt");
+            using System.IO.Stream? stream = typeof(MainWindow).Assembly.GetManifestResourceStream(name);
 
             if (stream is null) return null;
 
@@ -1026,7 +1044,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is System.IO.IOException or NotSupportedException)
         {
-            CrashLog.Write(ex, "MainWindow.ReadNotices");
+            CrashLog.Write(ex, "MainWindow.ReadEmbedded");
             return null;
         }
     }

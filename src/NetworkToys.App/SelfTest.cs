@@ -1046,6 +1046,21 @@ internal static class SelfTest
                    "MIT の本文が入っていない");
         });
 
+        Check("使い方が exe に埋め込まれ、配布物にも置かれている", () =>
+        {
+            // 持ち出して使う道具なので、ネットワークの無い現場でも読めるようにする
+            // （2026-08-18 ユーザー指示）
+            string? usage = Views.MainWindow.ReadEmbedded("使い方.txt");
+
+            Assert(usage is { Length: > 2000 }, $"使い方を読めない（{usage?.Length ?? -1} 文字）");
+            Assert(usage!.Contains("NetworkToys", StringComparison.Ordinal), "中身が使い方ではない");
+
+            // exe の隣にも置いてある（zip をそのまま渡す相手はこちらを読む）
+            string beside = Path.Combine(AppContext.BaseDirectory, "使い方.txt");
+
+            Assert(File.Exists(beside), $"配布物に使い方が入っていない: {beside}");
+        });
+
         Check("文字サイズを変えられる", () =>
         {
             // 画面側は寸法をすべて DynamicResource で引いているので、

@@ -80,6 +80,12 @@ jobs:
           Copy-Item THIRD-PARTY-NOTICES.txt publish/${{ matrix.name }}/THIRD-PARTY-NOTICES.txt
           Copy-Item LICENSE publish/${{ matrix.name }}/LICENSE.txt
 
+      # 同梱は csproj（Content）で行う。ここは入っていることの確認だけ
+      - name: 使い方が同梱されていることを確認
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "publish/${{ matrix.name }}/使い方.txt")) { throw "使い方.txt が同梱されていません" }
+
       # Windows 側の起動処理で止まり、アプリのコードは 1 行も動かないので、
       # 「入っていないときの案内」はアプリの中には書けない。exe の隣に置く
       # このスクリプトが、起動前に確かめて日本語で案内する。
