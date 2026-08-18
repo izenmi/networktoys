@@ -289,7 +289,8 @@ public class CheckPlanTests
         // アドレスだけ書くと名前は URL そのもの。証跡では長すぎる（2026-08-18 ユーザー指示）
         ProxyChoice pac = ProxyListParser.Parse("http://pac.example.jp/scripts/proxy.pac")[2];
 
-        Assert.Equal("proxy.pac（pac.example.jp）", pac.ShortName);
+        // ホスト名は添えない（長くなるだけ）
+        Assert.Equal("proxy.pac", pac.ShortName);
 
         // 名前を付けてあるものは、そのまま
         Assert.Equal("Zscaler", ProxyListParser.Parse("Zscaler,pac,http://a.example.jp/x.pac")[2].ShortName);
