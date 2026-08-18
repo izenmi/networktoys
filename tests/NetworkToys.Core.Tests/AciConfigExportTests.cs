@@ -110,14 +110,4 @@ public class AciConfigExportTests
         // 名前に記号が入っても壊さない
         Assert.Contains("tn-A%2FB", AciCatalog.TenantExportPath("A/B"), StringComparison.Ordinal);
     }
-
-    [Fact]
-    public void バックアップもファブリック全体を設定だけで求める()
-    {
-        string path = AciCatalog.FabricExportPath();
-
-        Assert.StartsWith("/api/mo/uni.json", path, StringComparison.Ordinal);
-        Assert.Contains("rsp-prop-include=config-only", path, StringComparison.Ordinal);
-        Assert.Contains("rsp-subtree=full", path, StringComparison.Ordinal);
-    }
 }

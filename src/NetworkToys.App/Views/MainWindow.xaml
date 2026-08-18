@@ -5831,12 +5831,8 @@
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
                             <!-- APIC の版によって属性名が違うことがある。実機で切り分けるための逃げ道 -->
                             <Button Content="応答を表示" Click="OnAciShowResponse"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
-                                    ToolTip="直前に取れた生の応答(JSON)を出します。表が空のときの切り分け用です。" />
-                            <!-- 読むだけのバックアップ。APIC には何も書き込まない -->
-                            <Button Content="設定をバックアップ" Command="{Binding BackupCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
-                                    ToolTip="ファブリックの設定（稼働値を除いたもの）を丸ごと取ってファイルに残します。&#10;APIC には何も書き込みません。拡張子を .json にすると生のまま、.txt にすると読みやすく整えて保存します。" />
+                                    ToolTip="直前に取れた生の応答(JSON)を出します。表が空のときの切り分け用です。" />
                         </WrapPanel>
 
                         <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"

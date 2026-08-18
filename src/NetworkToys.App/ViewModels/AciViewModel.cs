@@ -100,7 +100,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
             key => SaveSide(key == "before"),
             key => (key == "before" ? _before : _after).Length > 0);
 
-        BackupCommand = new RelayCommand(() => _ = BackupConfigAsync(), CanFetch);
 
         // 結果を出していない間は押しても何も起きない。押せるままにしない
         ShowFetchedCommand = new RelayCommand(() => ShowFetchedText = true, () => !ShowFetchedText);
@@ -181,9 +180,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
 
     /// <summary>作業前・作業後に取った設定をファイルへ残す（"before" / "after"）。</summary>
     public RelayCommand<string> SaveSideCommand { get; }
-
-    /// <summary>ファブリックの設定を丸ごと取ってファイルへ残す。</summary>
-    public RelayCommand BackupCommand { get; }
 
     public RelayCommand<string> SaveCsvCommand { get; }
     public RelayCommand<string> SaveXlsxCommand { get; }
@@ -811,7 +807,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         FetchBdsCommand.RaiseCanExecuteChanged();
         FetchBeforeCommand.RaiseCanExecuteChanged();
         FetchAfterCommand.RaiseCanExecuteChanged();
-        BackupCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshSaveCommands()
@@ -828,65 +823,6 @@ public sealed class AciViewModel : ObservableObject, IDisposable
         Replace(MemberRows, [.. _allMembers.Where(m => m.EpgDn == dn)]);
         RefreshSaveCommands();
     }
-
-    /// <summary>
-    /// ファブリックの設定を丸ごと取ってファイルへ残す（バックアップ）。
-    ///
-    /// <b>読むだけ</b> — APIC には何も書き込まない（スナップショットは POST なので作らない）。
-    /// 拡張子で中身を選ぶ: <c>.json</c> は APIC が返したそのまま（戻すときに使える形）、
-    /// <c>.txt</c> は差分比較と同じ整形済みの行（別の日に取ったものと見比べる用）。
-    /// </summary>
-    private Task BackupConfigAsync() => RunAsync(
-        "設定のバックアップ",
-        async (client, token) =>
-        {
-            string json = await client.SubtreeAsync(AciCatalog.FabricExportPath(), token)
-                .ConfigureAwait(true);
-
-            // 控えは頭だけ（テナントの書き出しと同じ理由。全文は数 MB になる）
-            _lastResponse = json.Length > 256 * 1024 ? json[..(256 * 1024)] : json;
-            OnPropertyChanged(nameof(LastResponse));
-
-            IReadOnlyList<AciMo> mos = AciMoReader.Parse(json);
-
-            if (mos.Count == 0)
-            {
-                Status = "設定を読み取れませんでした。";
-                Notice = "⚠ 「応答を表示」で生の応答を確かめてください（権限が足りないことがあります）。";
-                return;
-            }
-
-            var dialog = new SaveFileDialog
-            {
-                FileName = $"{DeviceReport.Sanitize($"aci-{AciCatalog.NormalizeHost(Host)}")}-{DateTime.Now:yyyyMMdd-HHmm}.json",
-                DefaultExt = "json",
-                Filter = "JSON (*.json)|*.json|テキスト (*.txt)|*.txt|すべてのファイル (*.*)|*.*",
-                AddExtension = true,
-            };
-
-            if (dialog.ShowDialog() != true)
-            {
-                Status = "保存しませんでした。";
-                return;
-            }
-
-            bool asText = dialog.FileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
-
-            string text = asText
-                ? AciConfigExport.Render($"{Host}（{DateTime.Now:yyyy-MM-dd HH:mm}）", mos)
-                : json;
-
-            try
-            {
-                // JSON に BOM を付けない（読み込む側が壊れる）。テキストは付ける（メモ帳で化けない）
-                File.WriteAllText(dialog.FileName, text, new System.Text.UTF8Encoding(asText));
-                Status = $"{Path.GetFileName(dialog.FileName)} に保存しました（{mos.Count:N0} 個の設定）。";
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                Status = $"保存できませんでした: {ex.Message}";
-            }
-        });
 
     /// <summary>取った「作業前」「作業後」をそのままファイルへ残す（作業の証跡用）。</summary>
     private void SaveSide(bool before)

@@ -464,8 +464,6 @@ internal static class TabHelp
 
         できる操作
         ・各一覧を Excel（絞り込み付き）か CSV で保存する
-        ・「設定をバックアップ」で、ファブリックの設定を丸ごとファイルに残す
-        　（.json は APIC が返したそのまま、.txt は読みやすく整えたもの）
         """;
 
     /// <summary>ACI ─ ヘルス</summary>
