@@ -1,3 +1,4 @@
+using NetworkToys.Core.Design;
 using NetworkToys.Core.Metrics;
 using Xunit;
 
@@ -19,5 +20,16 @@ public class WifiSignalGuideTests
     public void Boundaries_read_as_expected(int rssi, string expected)
     {
         Assert.Equal(expected, WifiSignalGuide.Describe(rssi));
+    }
+
+    [Theory]
+    [InlineData(-30, SeverityKind.Ok)]
+    [InlineData(-67, SeverityKind.Ok)]
+    [InlineData(-68, SeverityKind.Notice)]
+    [InlineData(-75, SeverityKind.Notice)]
+    [InlineData(-76, SeverityKind.Alert)]
+    public void Colours_follow_the_same_thresholds(int rssi, SeverityKind expected)
+    {
+        Assert.Equal(expected, WifiSignalGuide.KindOf(rssi));
     }
 }

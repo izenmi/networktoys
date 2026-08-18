@@ -1,3 +1,5 @@
+using NetworkToys.Core.Design;
+
 namespace NetworkToys.Core.Metrics;
 
 /// <summary>
@@ -13,5 +15,17 @@ public static class WifiSignalGuide
         >= -67 => "実用圏",
         >= -75 => "弱い",
         _ => "不安定",
+    };
+
+    /// <summary>
+    /// 一覧の行を塗り分けるための区分。<see cref="Describe"/> と同じ閾値で切る
+    /// （実用下限の -67 までは緑、-75 までは黄、それより下は赤）。
+    /// 色だけに頼らないよう、行には dBm の数値も出したままにすること。
+    /// </summary>
+    public static SeverityKind KindOf(int rssi) => rssi switch
+    {
+        >= -67 => SeverityKind.Ok,
+        >= -75 => SeverityKind.Notice,
+        _ => SeverityKind.Alert,
     };
 }

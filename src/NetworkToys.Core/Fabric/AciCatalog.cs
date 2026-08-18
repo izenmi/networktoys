@@ -820,6 +820,14 @@ public static class AciCatalog
         => $"/api/mo/uni/tn-{Uri.EscapeDataString(tenantName)}.json"
            + "?rsp-subtree=full&rsp-prop-include=config-only";
 
+    /// <summary>
+    /// ファブリックの設定を丸ごと（バックアップ用）。テナントと同じく
+    /// <b><c>config-only</c> を必ず付ける</b> — 付けると稼働値が混ざり、
+    /// 別の日に取ったものと見比べられなくなる。
+    /// </summary>
+    public static string FabricExportPath()
+        => "/api/mo/uni.json?rsp-subtree=full&rsp-prop-include=config-only";
+
     /// <summary>ページの指定を足す。すでに絞り込みが付いていれば <c>&amp;</c> で継ぐ。</summary>
     public static string PagePath(string path, int page, int pageSize = PageSize)
         => $"{path}{(path.Contains('?', StringComparison.Ordinal) ? '&' : '?')}page={page}&page-size={pageSize}";

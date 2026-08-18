@@ -85,6 +85,12 @@ internal static class HandoverService
         if (panels.SubnetInput.Length > 0) shell.Subnet.Input = panels.SubnetInput;
         shell.Connections.Filter = panels.ConnectionFilter;
         shell.Wfp.Filter = panels.WfpFilter;
+
+        // WFP から昇格したなら、開いた先では止めずに拾い始める。
+        // 権限が足りなくて撮れなかったから昇格したのであって、
+        // また「一時停止」に入っていては押し直す手間が増える（2026-08-18 ユーザー指示）
+        if (document.SelectedTab == "WFP")
+            shell.Wfp.IsPaused = false;
     }
 
     private static void CaptureTargets(MonitorViewModel monitor, List<HandoverTarget> into)

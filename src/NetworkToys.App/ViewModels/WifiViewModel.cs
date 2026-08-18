@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using NetworkToys.App.Mvvm;
 using NetworkToys.App.Services;
+using NetworkToys.Core.Design;
 using NetworkToys.Core.Metrics;
 using NetworkToys.Core.Reporting;
 
@@ -27,6 +28,9 @@ public sealed class AccessPointViewModel
         // 電波の強さを 0〜1 に均す。-30dBm で満杯、-90dBm で空とする
         Strength = Math.Clamp((ap.Rssi + 90) / 60.0, 0, 1);
 
+        // 行の塗り分け。閾値は Core に置いてある（文字の側は dBm を出したままにする）
+        SeverityKind = WifiSignalGuide.KindOf(ap.Rssi);
+
         // 見出しクリックの並べ替え用。表示は整形済み文字列だが、ソートは数値で行う
         RssiValue = ap.Rssi;
         ChannelValue = ap.Channel;
@@ -46,6 +50,9 @@ public sealed class AccessPointViewModel
     public string Band { get; }
     public bool IsConnected { get; }
     public double Strength { get; }
+
+    /// <summary>電波の強さの区分。<b>XAML の DataTrigger が名前で見ている。</b></summary>
+    public SeverityKind SeverityKind { get; }
 }
 
 /// <summary>チャンネル混雑ビューの 1 本。</summary>
