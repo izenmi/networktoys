@@ -3462,6 +3462,27 @@
                                     <Border Background="{DynamicResource Brush.Surface}"
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
+                                        <DockPanel>
+                                        <!-- 見出し。列の幅は行のテンプレートと同じ数にすること。
+                                             左右の余白は「見出し 4,0,18,3 ／ 行は PlainRowContainer」の規約どおり -->
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="230" />
+                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="200" />
+                                                <ColumnDefinition Width="100" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="拠点" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="1" Text="台数" Style="{StaticResource Caption}"
+                                                       HorizontalAlignment="Right" Margin="0,0,10,0" />
+                                            <TextBlock Grid.Column="2" Text="割合" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="3" Text="送信 ／ 受信" Style="{StaticResource Caption}" />
+                                            <TextBlock Grid.Column="4" Text="合計" Style="{StaticResource Caption}"
+                                                       HorizontalAlignment="Right" />
+                                        </Grid>
+                                        <Border DockPanel.Dock="Top" Height="1"
+                                                Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
                                         <ListBox ItemsSource="{Binding TrafficBars}"
                                                  ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                  Background="Transparent" BorderThickness="0"
@@ -3520,6 +3541,7 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
+                                        </DockPanel>
                                     </Border>
 
                                 </DockPanel>
