@@ -964,8 +964,29 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnOpenUsage(object sender, RoutedEventArgs e)
-        => OpenInBrowser("https://github.com/izenmi/networktoys/blob/main/docs/USAGE.md");
+    /// <summary>
+    /// 使い方を出す。<b>Markdown は組んで見せる</b>（2026-08-18 ユーザー指示。
+    /// 生の <c>#</c> や <c>|</c> の並びは画面で読むものとして辛い）。
+    ///
+    /// <b>exe に埋め込んである</b>ので、ネットワークが無くても、
+    /// zip から exe だけ取り出されていても読める（配布物では隣にも置いてある）。
+    /// </summary>
+    private void OnShowUsage(object sender, RoutedEventArgs e)
+    {
+        if (ReadEmbedded("使い方.md") is not { Length: > 0 } markdown)
+        {
+            TextViewDialog.Show(
+                this,
+                "使い方",
+                "使い方を読み込めませんでした。\n"
+                + "配布物の「使い方.md」か、リポジトリの docs/USAGE.md をご覧ください。\n"
+                + "https://github.com/izenmi/networktoys/blob/main/docs/USAGE.md");
+
+            return;
+        }
+
+        UsageDialog.Show(this, "使い方", markdown);
+    }
 
     /// <summary>
     /// 最新版を確かめる。<b>アプリからは通信しない</b> — 既定のブラウザで
@@ -992,22 +1013,6 @@ public partial class MainWindow : Window
         {
             CrashLog.Write(ex, "MainWindow.OpenInBrowser");
         }
-    }
-
-    /// <summary>
-    /// 使い方を出す。
-    ///
-    /// <b>exe に埋め込んである</b>ので、zip から exe だけ取り出されていても読める
-    /// （配布物では exe の隣にも「使い方.md」として置いてある）。
-    /// </summary>
-    private void OnShowUsage(object sender, RoutedEventArgs e)
-    {
-        string text = ReadEmbedded("使い方.md")
-            ?? "使い方を読み込めませんでした。\n"
-             + "配布物の「使い方.md」か、リポジトリの docs/USAGE.md をご覧ください。\n"
-             + "https://github.com/izenmi/networktoys/blob/main/docs/USAGE.md";
-
-        TextViewDialog.Show(this, "使い方", text);
     }
 
     /// <summary>

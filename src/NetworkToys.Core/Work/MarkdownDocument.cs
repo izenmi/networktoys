@@ -1,0 +1,280 @@
+namespace NetworkToys.Core.Work;
+
+/// <summary>文中のひとかたまり。<b>太字と等幅だけ</b>を見分ける。</summary>
+/// <param name="Text">そのまま出す文字。</param>
+/// <param name="Bold"><c>**…**</c> だったか。</param>
+/// <param name="Code">バッククォートで囲まれていたか。</param>
+public sealed record MarkdownInline(string Text, bool Bold = false, bool Code = false);
+
+/// <summary>表の 1 マス。</summary>
+public sealed record MarkdownCell(IReadOnlyList<MarkdownInline> Text);
+
+/// <summary>文書のかたまり。</summary>
+public abstract record MarkdownBlock;
+
+/// <param name="Level">1 が最上位（<c>#</c>）。</param>
+public sealed record MarkdownHeading(int Level, IReadOnlyList<MarkdownInline> Text) : MarkdownBlock;
+
+public sealed record MarkdownParagraph(IReadOnlyList<MarkdownInline> Text) : MarkdownBlock;
+
+/// <param name="Ordered">番号付きか。</param>
+public sealed record MarkdownList(bool Ordered, IReadOnlyList<IReadOnlyList<MarkdownInline>> Items)
+    : MarkdownBlock;
+
+public sealed record MarkdownTable(
+    IReadOnlyList<MarkdownCell> Header,
+    IReadOnlyList<IReadOnlyList<MarkdownCell>> Rows) : MarkdownBlock;
+
+/// <summary>コードブロック（``` で囲まれたもの）。中身は解釈しない。</summary>
+public sealed record MarkdownCode(string Text) : MarkdownBlock;
+
+public sealed record MarkdownRule : MarkdownBlock;
+
+/// <summary>
+/// Markdown を、画面に組み立てられる形へほどく。
+///
+/// <b>ライブラリを足さない。</b>読ませたいのは自分たちで書いた 1 本
+/// （<c>docs/USAGE.md</c>）だけで、そこに出てくる書き方は
+/// 見出し・段落・箇条書き・表・コード・区切り線と、太字・等幅しか無い。
+/// xlsx や docx を標準ライブラリで書いているのと同じ判断。
+///
+/// <b>読めない書き方は、そのままの文字として出す。</b>例外にしない —
+/// 使い方が 1 行のために読めなくなる方が困る。
+/// </summary>
+public static class MarkdownDocument
+{
+    public static IReadOnlyList<MarkdownBlock> Parse(string? text)
+    {
+        var blocks = new List<MarkdownBlock>();
+
+        if (string.IsNullOrWhiteSpace(text)) return blocks;
+
+        string[] lines = text.ReplaceLineEndings("\n").Split('\n');
+
+        var paragraph = new List<string>();
+
+        void FlushParagraph()
+        {
+            if (paragraph.Count == 0) return;
+
+            // 日本語の文章なので、行の継ぎ目に空白を入れない
+            blocks.Add(new MarkdownParagraph(Inlines(string.Concat(paragraph))));
+            paragraph.Clear();
+        }
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].TrimEnd();
+            string trimmed = line.TrimStart();
+
+            if (trimmed.Length == 0)
+            {
+                FlushParagraph();
+                continue;
+            }
+
+            // コードブロック。閉じが無ければ最後まで
+            if (trimmed.StartsWith("```", StringComparison.Ordinal))
+            {
+                FlushParagraph();
+
+                var code = new List<string>();
+                i++;
+
+                while (i < lines.Length && !lines[i].TrimStart().StartsWith("```", StringComparison.Ordinal))
+                {
+                    code.Add(lines[i]);
+                    i++;
+                }
+
+                blocks.Add(new MarkdownCode(string.Join('\n', code)));
+                continue;
+            }
+
+            if (IsRule(trimmed))
+            {
+                FlushParagraph();
+                blocks.Add(new MarkdownRule());
+                continue;
+            }
+
+            if (HeadingLevel(trimmed) is { } level)
+            {
+                FlushParagraph();
+                blocks.Add(new MarkdownHeading(level, Inlines(trimmed[(level + 1)..].Trim())));
+                continue;
+            }
+
+            if (trimmed.StartsWith('|'))
+            {
+                FlushParagraph();
+
+                var rows = new List<string>();
+
+                while (i < lines.Length && lines[i].TrimStart().StartsWith('|'))
+                {
+                    rows.Add(lines[i].Trim());
+                    i++;
+                }
+
+                i--;   // for の i++ と相殺する
+
+                blocks.Add(Table(rows));
+                continue;
+            }
+
+            if (BulletText(trimmed) is { } bullet)
+            {
+                FlushParagraph();
+
+                var items = new List<IReadOnlyList<MarkdownInline>> { Inlines(bullet) };
+
+                while (i + 1 < lines.Length && BulletText(lines[i + 1].TrimStart()) is { } next)
+                {
+                    items.Add(Inlines(next));
+                    i++;
+                }
+
+                blocks.Add(new MarkdownList(Ordered: false, items));
+                continue;
+            }
+
+            if (OrderedText(trimmed) is { } ordered)
+            {
+                FlushParagraph();
+
+                var items = new List<IReadOnlyList<MarkdownInline>> { Inlines(ordered) };
+
+                while (i + 1 < lines.Length && OrderedText(lines[i + 1].TrimStart()) is { } next)
+                {
+                    items.Add(Inlines(next));
+                    i++;
+                }
+
+                blocks.Add(new MarkdownList(Ordered: true, items));
+                continue;
+            }
+
+            paragraph.Add(trimmed);
+        }
+
+        FlushParagraph();
+
+        return blocks;
+    }
+
+    /// <summary>
+    /// 太字（<c>**…**</c>）と等幅（<c>`…`</c>）にほどく。
+    /// <b>閉じていない印はただの文字として扱う</b>（消さない）。
+    /// </summary>
+    public static IReadOnlyList<MarkdownInline> Inlines(string? text)
+    {
+        var parts = new List<MarkdownInline>();
+
+        if (string.IsNullOrEmpty(text)) return parts;
+
+        var plain = new System.Text.StringBuilder();
+
+        void FlushPlain()
+        {
+            if (plain.Length == 0) return;
+
+            parts.Add(new MarkdownInline(plain.ToString()));
+            plain.Clear();
+        }
+
+        for (int i = 0; i < text.Length;)
+        {
+            if (text[i] == '`')
+            {
+                int end = text.IndexOf('`', i + 1);
+
+                if (end > i)
+                {
+                    FlushPlain();
+                    parts.Add(new MarkdownInline(text[(i + 1)..end], Code: true));
+                    i = end + 1;
+                    continue;
+                }
+            }
+            else if (text[i] == '*' && i + 1 < text.Length && text[i + 1] == '*')
+            {
+                int end = text.IndexOf("**", i + 2, StringComparison.Ordinal);
+
+                if (end > i)
+                {
+                    FlushPlain();
+                    parts.Add(new MarkdownInline(text[(i + 2)..end], Bold: true));
+                    i = end + 2;
+                    continue;
+                }
+            }
+
+            plain.Append(text[i]);
+            i++;
+        }
+
+        FlushPlain();
+
+        return parts;
+    }
+
+    private static MarkdownTable Table(IReadOnlyList<string> rows)
+    {
+        var cells = new List<IReadOnlyList<MarkdownCell>>();
+
+        foreach (string row in rows)
+        {
+            // 区切りの行（|---|---|）は見出しの下線。中身ではない
+            if (IsTableSeparator(row)) continue;
+
+            cells.Add([.. Split(row).Select(c => new MarkdownCell(Inlines(c)))]);
+        }
+
+        return cells.Count == 0
+            ? new MarkdownTable([], [])
+            : new MarkdownTable(cells[0], [.. cells.Skip(1)]);
+    }
+
+    /// <summary>行を <c>|</c> で割る。前後の <c>|</c> は落とす。</summary>
+    private static IEnumerable<string> Split(string row)
+    {
+        string text = row.Trim();
+
+        if (text.StartsWith('|')) text = text[1..];
+        if (text.EndsWith('|')) text = text[..^1];
+
+        return text.Split('|').Select(c => c.Trim());
+    }
+
+    private static bool IsTableSeparator(string row)
+        => Split(row).All(c => c.Length > 0 && c.All(ch => ch is '-' or ':' or ' '));
+
+    private static bool IsRule(string line)
+        => line.Length >= 3 && (line.All(c => c == '-') || line.All(c => c == '*') || line.All(c => c == '_'));
+
+    private static int? HeadingLevel(string line)
+    {
+        int level = 0;
+
+        while (level < line.Length && line[level] == '#') level++;
+
+        return level is > 0 and <= 6 && level < line.Length && line[level] == ' ' ? level : null;
+    }
+
+    private static string? BulletText(string line)
+        => (line.StartsWith("- ", StringComparison.Ordinal) || line.StartsWith("* ", StringComparison.Ordinal))
+            ? line[2..].Trim()
+            : null;
+
+    private static string? OrderedText(string line)
+    {
+        int digits = 0;
+
+        while (digits < line.Length && char.IsAsciiDigit(line[digits])) digits++;
+
+        return digits > 0 && digits + 1 < line.Length && line[digits] == '.' && line[digits + 1] == ' '
+            ? line[(digits + 2)..].Trim()
+            : null;
+    }
+}

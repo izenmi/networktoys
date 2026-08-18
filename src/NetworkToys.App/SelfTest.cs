@@ -1046,19 +1046,27 @@ internal static class SelfTest
                    "MIT の本文が入っていない");
         });
 
-        Check("使い方が exe に埋め込まれ、配布物にも置かれている", () =>
+        Check("使い方を組んで見せられる（配布物にも入っている）", () =>
         {
             // 持ち出して使う道具なので、ネットワークの無い現場でも読めるようにする
             // （2026-08-18 ユーザー指示）
-            string? usage = Views.MainWindow.ReadEmbedded("使い方.md");
-
-            Assert(usage is { Length: > 2000 }, $"使い方を読めない（{usage?.Length ?? -1} 文字）");
-            Assert(usage!.Contains("NetworkToys", StringComparison.Ordinal), "中身が使い方ではない");
-
-            // exe の隣にも置いてある（zip をそのまま渡す相手はこちらを読む）
             string beside = Path.Combine(AppContext.BaseDirectory, "使い方.md");
 
             Assert(File.Exists(beside), $"配布物に使い方が入っていない: {beside}");
+
+            string? markdown = Views.MainWindow.ReadEmbedded("使い方.md");
+
+            Assert(markdown is { Length: > 2000 }, $"使い方を読めない（{markdown?.Length ?? -1} 文字）");
+
+            // 生の Markdown ではなく、組んだものを見せる
+            IReadOnlyList<Core.Work.MarkdownBlock> blocks = Core.Work.MarkdownDocument.Parse(markdown);
+
+            Assert(blocks.OfType<Core.Work.MarkdownHeading>().Any(), "見出しを読み取れていない");
+            Assert(blocks.OfType<Core.Work.MarkdownTable>().Any(), "表を読み取れていない");
+            Assert(blocks.OfType<Core.Work.MarkdownList>().Any(), "箇条書きを読み取れていない");
+
+            // 実際に窓の中身まで組めること（FlowDocument の組み立てで落ちないこと）
+            Views.UsageDialog.Preview(markdown!);
         });
 
         Check("文字サイズを変えられる", () =>

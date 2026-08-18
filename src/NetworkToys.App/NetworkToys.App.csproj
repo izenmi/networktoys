@@ -58,9 +58,9 @@
          更新は tools/oui/build_oui.py を手で実行する。 -->
     <EmbeddedResource Include="Resources/oui.tsv.gz" />
 
-    <!-- 使い方（docs/USAGE.md）。exe の隣に「使い方.md」として置き、exe にも埋め込む
-         （2026-08-18 ユーザー指示）。持ち出して使う道具なので、zip から exe だけ
-         取り出されても「ヘルプ → 使い方」で読めるようにする。 -->
+    <!-- 使い方（docs/USAGE.md）。配布物に「使い方.md」として置き、exe にも埋め込む
+         （2026-08-18 ユーザー指示）。中身は Markdown なので拡張子も .md。
+         アプリの中では「ヘルプ → 使い方」で組んで見せる（生の Markdown は出さない）。 -->
     <Content Include="../../docs/USAGE.md" Link="使い方.md"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <EmbeddedResource Include="../../docs/USAGE.md" LogicalName="使い方.md" />
