@@ -743,7 +743,7 @@ public sealed class VerifyViewModel : ObservableObject
 
         string? error = ProxySettings.Apply(plan);
 
-        Notice = error is null
+        Status = error is null
             ? $"⚠ ブラウザで見るために、Windows のプロキシ設定を「{proxy.ShortName}」に変えています。"
               + "すべての判定が終わると元に戻します。"
             : $"⚠ Windows のプロキシ設定を変えられませんでした: {error}";
@@ -766,7 +766,7 @@ public sealed class VerifyViewModel : ObservableObject
             _ => new ProxyPlan(NetworkToys.Core.Net.ProxyMode.None, "", "", ""),
         };
 
-        Notice = ProxySettings.Apply(plan) is { } error
+        Status = ProxySettings.Apply(plan) is { } error
             ? $"⚠ Windows のプロキシ設定を元に戻せませんでした（{error}）。IP設定タブで確かめてください。"
             : $"Windows のプロキシ設定を元（{original.Summary}）に戻しました。";
     }
