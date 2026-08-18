@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520" font-family="IPAGothic, sans-serif">
+  <rect width="1120" height="520" fill="#FFFFFF"/>
+  <text x="20" y="34" font-size="24" font-weight="bold" fill="#1F2933">「つながらない」を、どこで切るか</text>
+  <text x="20" y="60" font-size="16" fill="#4A5560">左から順に見ていくと、原因のある層で必ず止まる</text>
+
+  <!-- 4 つの層 -->
+  <g>
+    <rect x="20" y="86" width="250" height="330" rx="10" fill="#F3F5F7" stroke="#9AA6B2" stroke-width="2"/>
+    <rect x="290" y="86" width="250" height="330" rx="10" fill="#EAF3FB" stroke="#5AA0D8" stroke-width="2"/>
+    <rect x="560" y="86" width="250" height="330" rx="10" fill="#FFF4E6" stroke="#E39B3C" stroke-width="2"/>
+    <rect x="830" y="86" width="270" height="330" rx="10" fill="#EAFBF2" stroke="#3FA97B" stroke-width="2"/>
+  </g>
+
+  <g font-size="19" font-weight="bold" fill="#1F2933">
+    <text x="40" y="120">① この PC の中</text>
+    <text x="310" y="120">② 出口・名前</text>
+    <text x="580" y="120">③ 経路の途中</text>
+    <text x="850" y="120">④ 相手</text>
+  </g>
+
+  <g font-size="15" fill="#4A5560">
+    <text x="40" y="146">アプリは出そうとしたか</text>
+    <text x="310" y="146">正しい相手へ向かっているか</text>
+    <text x="580" y="146">途中で落ちていないか</text>
+    <text x="850" y="146">相手が受けているか</text>
+  </g>
+
+  <!-- 各層のタブ -->
+  <g font-size="16" fill="#1F2933">
+    <rect x="40" y="166" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="56" y="192">通信状況</text>
+    <text x="238" y="192" font-size="13" fill="#4A5560" text-anchor="end">誰がどこへ</text>
+
+    <rect x="40" y="216" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="56" y="242">WFP</text>
+    <text x="238" y="242" font-size="13" fill="#4A5560" text-anchor="end">自分の FW が落とした</text>
+
+    <rect x="40" y="266" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="56" y="292">IP設定</text>
+    <text x="238" y="292" font-size="13" fill="#4A5560" text-anchor="end">IP・GW・DNS</text>
+
+    <rect x="310" y="166" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#B9D6EC"/>
+    <text x="326" y="192">DNS</text>
+    <text x="508" y="192" font-size="13" fill="#4A5560" text-anchor="end">社内と外で違う</text>
+
+    <rect x="310" y="216" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#B9D6EC"/>
+    <text x="326" y="242">業務確認</text>
+    <text x="508" y="242" font-size="13" fill="#4A5560" text-anchor="end">プロキシ別に試す</text>
+
+    <rect x="310" y="266" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#B9D6EC"/>
+    <text x="326" y="292">Wi-Fi</text>
+    <text x="508" y="292" font-size="13" fill="#4A5560" text-anchor="end">電波・混雑</text>
+
+    <rect x="580" y="166" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#F0CD9C"/>
+    <text x="596" y="192">Traceroute</text>
+    <text x="778" y="192" font-size="13" fill="#4A5560" text-anchor="end">どこまで届く</text>
+
+    <rect x="580" y="216" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#F0CD9C"/>
+    <text x="596" y="242">Path MTU</text>
+    <text x="778" y="242" font-size="13" fill="#4A5560" text-anchor="end">大きい通信だけ</text>
+
+    <rect x="580" y="266" width="210" height="40" rx="6" fill="#FFFFFF" stroke="#F0CD9C"/>
+    <text x="596" y="292">ログ採取</text>
+    <text x="778" y="292" font-size="13" fill="#4A5560" text-anchor="end">機器側を見る</text>
+
+    <rect x="850" y="166" width="230" height="40" rx="6" fill="#FFFFFF" stroke="#A9DCC4"/>
+    <text x="866" y="192">Ping</text>
+    <text x="1068" y="192" font-size="13" fill="#4A5560" text-anchor="end">届くか</text>
+
+    <rect x="850" y="216" width="230" height="40" rx="6" fill="#FFFFFF" stroke="#A9DCC4"/>
+    <text x="866" y="242">TCP Ping</text>
+    <text x="1068" y="242" font-size="13" fill="#4A5560" text-anchor="end">拒否＝生きている</text>
+
+    <rect x="850" y="266" width="230" height="40" rx="6" fill="#FFFFFF" stroke="#A9DCC4"/>
+    <text x="866" y="292">スキャン</text>
+    <text x="1068" y="292" font-size="13" fill="#4A5560" text-anchor="end">そもそも居るのか</text>
+  </g>
+
+  <!-- 判断の手がかり -->
+  <g font-size="14" fill="#4A5560">
+    <rect x="40" y="326" width="210" height="72" rx="6" fill="#FFFFFF" stroke="#E4E8EC"/>
+    <text x="56" y="350" font-size="14" fill="#1F2933">出ていない</text>
+    <text x="56" y="372">→ FW・プロキシ・</text>
+    <text x="56" y="392">　 IP 設定を疑う</text>
+
+    <rect x="310" y="326" width="210" height="72" rx="6" fill="#FFFFFF" stroke="#E4E8EC"/>
+    <text x="326" y="350" font-size="14" fill="#1F2933">別の相手へ出ている</text>
+    <text x="326" y="372">→ 名前解決・PAC・</text>
+    <text x="326" y="392">　 プロキシの向き先</text>
+
+    <rect x="580" y="326" width="210" height="72" rx="6" fill="#FFFFFF" stroke="#E4E8EC"/>
+    <text x="596" y="350" font-size="14" fill="#1F2933">途中で止まる</text>
+    <text x="596" y="372">→ ACL・ルーティング・</text>
+    <text x="596" y="392">　 MTU</text>
+
+    <rect x="850" y="326" width="230" height="72" rx="6" fill="#FFFFFF" stroke="#E4E8EC"/>
+    <text x="866" y="350" font-size="14" fill="#1F2933">届いているが応答しない</text>
+    <text x="866" y="372">→ サービス停止・</text>
+    <text x="866" y="392">　 相手側の FW</text>
+  </g>
+
+  <g fill="#8A96A3">
+    <polygon points="272,240 288,250 272,260"/>
+    <polygon points="542,240 558,250 542,260"/>
+    <polygon points="812,240 828,250 812,260"/>
+  </g>
+
+  <rect x="20" y="436" width="1080" height="64" rx="8" fill="#F3F5F7" stroke="#C8D0D8"/>
+  <text x="40" y="462" font-size="16" fill="#1F2933">要点: TCP Ping の「拒否」は経路が通っている証拠。「無応答」とは意味がまったく違う。</text>
+  <text x="40" y="486" font-size="16" fill="#1F2933">　　　WFP に出れば PC 側、出なければ外 ─ 最初の 1 手でここが割れる。</text>
+</svg>

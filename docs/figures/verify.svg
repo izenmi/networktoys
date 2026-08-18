@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520" font-family="IPAGothic, sans-serif">
+  <rect width="1120" height="520" fill="#FFFFFF"/>
+  <text x="20" y="34" font-size="24" font-weight="bold" fill="#1F2933">業務確認試験 ─ 項目 × プロキシで総当たりする</text>
+  <text x="20" y="60" font-size="16" fill="#4A5560">同じ項目の行が隣り合うので、どのプロキシで何が落ちるかが横並びで分かる</text>
+
+  <!-- 入力 -->
+  <rect x="20" y="86" width="300" height="180" rx="10" fill="#EAF3FB" stroke="#5AA0D8" stroke-width="2"/>
+  <text x="40" y="114" font-size="17" font-weight="bold" fill="#1F2933">① 試験項目</text>
+  <g font-size="15" fill="#1F2933">
+    <text x="40" y="144">社内ポータル（HTTP）</text>
+    <text x="40" y="170">Microsoft 365（HTTP）</text>
+    <text x="40" y="196">メール送信（SMTP）</text>
+    <text x="40" y="222">Teams（HTTPS ＋ 音声 UDP）</text>
+    <text x="40" y="248">回線速度（速度）</text>
+  </g>
+
+  <rect x="20" y="286" width="300" height="150" rx="10" fill="#FFF4E6" stroke="#E39B3C" stroke-width="2"/>
+  <text x="40" y="314" font-size="17" font-weight="bold" fill="#1F2933">② 試すプロキシ</text>
+  <g font-size="15" fill="#1F2933">
+    <text x="40" y="344">直接（プロキシなし）</text>
+    <text x="40" y="370">いまの設定</text>
+    <text x="40" y="396">新プロキシ（PAC）</text>
+    <text x="40" y="422">旧プロキシ（固定）</text>
+  </g>
+
+  <!-- 実行 -->
+  <g fill="#8A96A3">
+    <polygon points="332,250 356,262 332,274"/>
+  </g>
+
+  <rect x="370" y="86" width="330" height="350" rx="10" fill="#F3F5F7" stroke="#9AA6B2" stroke-width="2"/>
+  <text x="390" y="114" font-size="17" font-weight="bold" fill="#1F2933">③ 判定のしかた</text>
+  <g font-size="14" fill="#1F2933">
+    <rect x="390" y="130" width="290" height="66" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="404" y="152" font-weight="bold">HTTP は本文まで見る</text>
+    <text x="404" y="174" font-size="13" fill="#4A5560">遮断ページは HTTP 200 で返るので、</text>
+    <text x="404" y="190" font-size="13" fill="#4A5560">コードだけでは合格に見えてしまう</text>
+
+    <rect x="390" y="206" width="290" height="66" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="404" y="228" font-weight="bold">PAC は URL ごとに引き直す</text>
+    <text x="404" y="250" font-size="13" fill="#4A5560">宛先で答えが変わるため。証跡には</text>
+    <text x="404" y="266" font-size="13" fill="#4A5560">実際に選ばれたプロキシまで残す</text>
+
+    <rect x="390" y="282" width="290" height="66" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="404" y="304" font-weight="bold">音声は STUN で確かめる</text>
+    <text x="404" y="326" font-size="13" fill="#4A5560">ただ UDP を投げても、無応答では</text>
+    <text x="404" y="342" font-size="13" fill="#4A5560">開いているか塞がれているか不明</text>
+
+    <rect x="390" y="358" width="290" height="62" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="404" y="380" font-weight="bold">合否は 3 段</text>
+    <text x="404" y="402" font-size="13" fill="#4A5560">△ 注意 =「通るが目安を割っている」</text>
+  </g>
+
+  <g fill="#8A96A3">
+    <polygon points="712,250 736,262 712,274"/>
+  </g>
+
+  <!-- 結果 -->
+  <rect x="750" y="86" width="350" height="350" rx="10" fill="#EAFBF2" stroke="#3FA97B" stroke-width="2"/>
+  <text x="770" y="114" font-size="17" font-weight="bold" fill="#1F2933">④ 結果（1 行 = 項目 × プロキシ）</text>
+
+  <g font-size="14">
+    <rect x="770" y="130" width="310" height="28" fill="#DFF0E7"/>
+    <text x="782" y="149" fill="#1F2933">項目</text>
+    <text x="960" y="149" fill="#1F2933">プロキシ</text>
+    <text x="1060" y="149" fill="#1F2933" text-anchor="end">合否</text>
+
+    <text x="782" y="180" fill="#1F2933">社内ポータル</text>
+    <text x="960" y="180" fill="#4A5560">直接</text>
+    <text x="1060" y="180" fill="#2F6B52" text-anchor="end">○</text>
+
+    <text x="782" y="208" fill="#1F2933">社内ポータル</text>
+    <text x="960" y="208" fill="#4A5560">新 PAC</text>
+    <text x="1060" y="208" fill="#2F6B52" text-anchor="end">○</text>
+
+    <text x="782" y="236" fill="#1F2933">Microsoft 365</text>
+    <text x="960" y="236" fill="#4A5560">直接</text>
+    <text x="1060" y="236" fill="#A8324A" text-anchor="end">✕</text>
+
+    <text x="782" y="264" fill="#1F2933">Microsoft 365</text>
+    <text x="960" y="264" fill="#4A5560">新 PAC</text>
+    <text x="1060" y="264" fill="#2F6B52" text-anchor="end">○</text>
+
+    <text x="782" y="292" fill="#1F2933">メール送信</text>
+    <text x="960" y="292" fill="#4A5560">直接のみ</text>
+    <text x="1060" y="292" fill="#2F6B52" text-anchor="end">○</text>
+
+    <text x="782" y="320" fill="#1F2933">Teams 音声</text>
+    <text x="960" y="320" fill="#4A5560">直接</text>
+    <text x="1060" y="320" fill="#B5761F" text-anchor="end">△</text>
+
+    <text x="782" y="348" fill="#1F2933">回線速度</text>
+    <text x="960" y="348" fill="#4A5560">新 PAC</text>
+    <text x="1060" y="348" fill="#B5761F" text-anchor="end">△</text>
+  </g>
+
+  <text x="770" y="390" font-size="13" fill="#4A5560">TCP・メール・DNS はプロキシを通らないので</text>
+  <text x="770" y="410" font-size="13" fill="#4A5560">何本選んでも 1 回だけ試験する</text>
+
+  <rect x="20" y="452" width="1080" height="56" rx="8" fill="#F3F5F7" stroke="#C8D0D8"/>
+  <text x="40" y="476" font-size="16" fill="#1F2933">Windows のプロキシ設定は書き換えない ─ 接続ごとにプロキシを指定して試すので、他のアプリを巻き込まない。</text>
+  <text x="40" y="498" font-size="16" fill="#1F2933">結果はそのまま HTML / CSV で出せる（試験成績書に貼れる形）。</text>
+</svg>

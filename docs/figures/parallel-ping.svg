@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="470" viewBox="0 0 1120 470" font-family="IPAGothic, sans-serif">
+  <rect width="1120" height="470" fill="#FFFFFF"/>
+  <text x="20" y="34" font-size="24" font-weight="bold" fill="#1F2933">なぜ「並列」だと待たされないのか</text>
+
+  <!-- 直列 -->
+  <rect x="20" y="58" width="1080" height="176" rx="10" fill="#FDF0F2" stroke="#E4899A" stroke-width="2"/>
+  <text x="40" y="88" font-size="19" font-weight="bold" fill="#1F2933">1 宛先ずつ順に打つ場合（従来の ping ツール）</text>
+  <text x="40" y="112" font-size="15" fill="#7A4652">落ちている 1 台のタイムアウトを、後ろの全員が待つ</text>
+
+  <g font-size="15" fill="#1F2933">
+    <text x="40" y="150">GW</text>
+    <text x="40" y="182">SV1</text>
+    <text x="40" y="214">SV2（応答なし）</text>
+  </g>
+
+  <g>
+    <rect x="190" y="136" width="70" height="20" rx="4" fill="#7FC1EE"/>
+    <rect x="270" y="168" width="70" height="20" rx="4" fill="#7FC1EE"/>
+    <rect x="350" y="200" width="300" height="20" rx="4" fill="#E4899A"/>
+    <text x="360" y="215" font-size="13" fill="#FFFFFF">タイムアウト待ち（2 秒）</text>
+    <rect x="660" y="136" width="70" height="20" rx="4" fill="#7FC1EE"/>
+    <rect x="740" y="168" width="70" height="20" rx="4" fill="#7FC1EE"/>
+    <rect x="820" y="200" width="260" height="20" rx="4" fill="#E4899A"/>
+  </g>
+  <text x="660" y="130" font-size="13" fill="#7A4652">← 2 周目はここまで遅れる</text>
+
+  <!-- 並列 -->
+  <rect x="20" y="252" width="1080" height="176" rx="10" fill="#EAFBF2" stroke="#3FA97B" stroke-width="2"/>
+  <text x="40" y="282" font-size="19" font-weight="bold" fill="#1F2933">宛先ごとに独立した周期で打つ場合（NetworkToys）</text>
+  <text x="40" y="306" font-size="15" fill="#2F6B52">応答しない相手は、他の相手を 1 ミリ秒も待たせない</text>
+
+  <g font-size="15" fill="#1F2933">
+    <text x="40" y="344">GW</text>
+    <text x="40" y="376">SV1</text>
+    <text x="40" y="408">SV2（応答なし）</text>
+  </g>
+
+  <g>
+    <rect x="190" y="330" width="70" height="20" rx="4" fill="#68C79B"/>
+    <rect x="390" y="330" width="70" height="20" rx="4" fill="#68C79B"/>
+    <rect x="590" y="330" width="70" height="20" rx="4" fill="#68C79B"/>
+    <rect x="790" y="330" width="70" height="20" rx="4" fill="#68C79B"/>
+    <rect x="990" y="330" width="70" height="20" rx="4" fill="#68C79B"/>
+
+    <rect x="190" y="362" width="70" height="20" rx="4" fill="#68C79B"/>
+    <rect x="390" y="362" width="70" height="20" rx="4" fill="#68C79B"/>
+    <rect x="590" y="362" width="70" height="20" rx="4" fill="#68C79B"/>
+    <rect x="790" y="362" width="70" height="20" rx="4" fill="#68C79B"/>
+    <rect x="990" y="362" width="70" height="20" rx="4" fill="#68C79B"/>
+
+    <rect x="190" y="394" width="170" height="20" rx="4" fill="#E4899A"/>
+    <rect x="390" y="394" width="170" height="20" rx="4" fill="#E4899A"/>
+    <rect x="590" y="394" width="170" height="20" rx="4" fill="#E4899A"/>
+    <rect x="790" y="394" width="170" height="20" rx="4" fill="#E4899A"/>
+  </g>
+
+  <text x="190" y="452" font-size="15" fill="#4A5560">時間 →　　同じ 1 秒周期でも、生きている相手の結果は遅れずに出続ける</text>
+</svg>

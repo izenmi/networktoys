@@ -531,7 +531,7 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 
 ## 配る資料（docx）
 
-`docs/紹介資料.md` / `docs/設計資料.md` を `tools/docs/build_docx.py` で `.docx` に焼く（**手で実行**）。
+`docs/紹介資料.md` / `docs/技術資料.md` / `docs/設計資料.md` を `tools/docs/build_docx.py` で `.docx` に焼く（**手で実行**）。
 焼いたものもリポジトリに置いてある（受け取る人が Word で開くだけで済むように）。
 
 - **ライブラリを足さない。** docx は zip に XML を 4 枚入れただけのもので、標準の `zipfile` で足りる
@@ -543,6 +543,15 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **実物を開いて確かめられない**ので、スクリプト自身が焼く前に検査する（整形式・要素の並び・rPr の重複・
   表の直後の段落・本文末尾の `sectPr`）。ここを緩めない。
 - 内容を直したら **`.md` を直して焼き直す**。`.docx` を直接いじらない。
+- **図の原本は SVG**（`docs/figures/*.svg`）。`sh tools/docs/build_figures.sh` で PNG に焼き、
+  資料には `![説明](figures/x.png)` と書く。**PNG もリポジトリに置く** — docx を焼くときに
+  rsvg-convert を要求しないため。**docx に SVG は入れない**（読めない Word の版がある）。
+  図は本文いっぱい（A4 の余白を引いた 9070 twips）に合わせ、高さは元の縦横比から出す。
+  **`wp:docPr` の id と `rId` は 1 から通し**で、`document.xml.rels` の並びと必ず揃える。
+  揃え（`w:jc`）は `w:ind` の後・`w:outlineLvl` の前（要素順の検査に入れてある）。
+- **図は焼いて目で見る。**この開発環境には `rsvg-convert` があるので PNG にして確認できる
+  （日本語は IPAGothic で描かれる）。**箱から文字がはみ出していないか**は、
+  実際に見るまで分からない（実際に 2 度直した）。
 
 ## 設定の保存先
 

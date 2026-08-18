@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560" font-family="IPAGothic, sans-serif">
+  <rect width="1120" height="560" fill="#FFFFFF"/>
+  <text x="20" y="34" font-size="24" font-weight="bold" fill="#1F2933">機器との会話をどう組み立てているか（ログ採取）</text>
+  <text x="20" y="60" font-size="16" fill="#4A5560">対話端末が相手なので、「送って待つ」の作り方がそのまま品質になる</text>
+
+  <!-- 柱 -->
+  <rect x="60" y="86" width="220" height="40" rx="8" fill="#EAF3FB" stroke="#5AA0D8" stroke-width="2"/>
+  <text x="170" y="113" font-size="17" font-weight="bold" fill="#1F2933" text-anchor="middle">NetworkToys</text>
+
+  <rect x="500" y="86" width="220" height="40" rx="8" fill="#EAFBF2" stroke="#3FA97B" stroke-width="2"/>
+  <text x="610" y="113" font-size="17" font-weight="bold" fill="#1F2933" text-anchor="middle">Cisco 機器</text>
+
+  <line x1="170" y1="126" x2="170" y2="500" stroke="#B9C4CF" stroke-width="2" stroke-dasharray="6 6"/>
+  <line x1="610" y1="126" x2="610" y2="500" stroke="#B9C4CF" stroke-width="2" stroke-dasharray="6 6"/>
+
+  <!-- やり取り -->
+  <g stroke="#5AA0D8" stroke-width="2.5" fill="none">
+    <path d="M170 160 H 600"/>
+    <path d="M170 244 H 600"/>
+    <path d="M170 328 H 600"/>
+    <path d="M170 424 H 600"/>
+  </g>
+  <g fill="#5AA0D8">
+    <polygon points="600,154 612,160 600,166"/>
+    <polygon points="600,238 612,244 600,250"/>
+    <polygon points="600,322 612,328 600,334"/>
+    <polygon points="600,418 612,424 600,430"/>
+  </g>
+
+  <g stroke="#3FA97B" stroke-width="2.5" fill="none">
+    <path d="M610 200 H 180"/>
+    <path d="M610 286 H 180"/>
+    <path d="M610 372 H 180"/>
+  </g>
+  <g fill="#3FA97B">
+    <polygon points="180,194 168,200 180,206"/>
+    <polygon points="180,280 168,286 180,292"/>
+    <polygon points="180,366 168,372 180,378"/>
+  </g>
+
+  <g font-size="15" fill="#1F2933">
+    <text x="200" y="152">SSH / Telnet で接続 → ユーザー名・パスワード</text>
+    <text x="200" y="192">プロンプトが返る（例: SW01#）</text>
+    <text x="200" y="236">ページャ無効化を 1 本ずつ試す</text>
+    <text x="200" y="278">断られなかった 1 本目で打ち切る</text>
+    <text x="200" y="320">show コマンドを 1 本送る</text>
+    <text x="200" y="364">出力 → 最後にプロンプトが返る</text>
+    <text x="200" y="416">プロンプトを見てから、次の 1 本を送る</text>
+  </g>
+
+  <!-- 気をつけている点 -->
+  <rect x="760" y="86" width="340" height="414" rx="10" fill="#F3F5F7" stroke="#9AA6B2" stroke-width="2"/>
+  <text x="780" y="116" font-size="17" font-weight="bold" fill="#1F2933">ここで効いている決まり</text>
+
+  <g font-size="14" fill="#1F2933">
+    <rect x="780" y="132" width="300" height="62" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="794" y="154" font-weight="bold">プロンプトは推測せず学習</text>
+    <text x="794" y="176" font-size="13" fill="#4A5560">行末・ホスト名一致・記号の 3 条件</text>
+
+    <rect x="780" y="204" width="300" height="62" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="794" y="226" font-weight="bold">SSH では Enter を 1 回だけ</text>
+    <text x="794" y="248" font-size="13" fill="#4A5560">CR LF が Enter 2 回になる機器がある</text>
+
+    <rect x="780" y="276" width="300" height="62" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="794" y="298" font-weight="bold">送る前にプロンプトを待つ</text>
+    <text x="794" y="320" font-size="13" fill="#4A5560">待てなければ、その 1 本は送らない</text>
+
+    <rect x="780" y="348" width="300" height="62" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="794" y="370" font-weight="bold">パスワード 2 回で即中断</text>
+    <text x="794" y="392" font-size="13" fill="#4A5560">再試行しない（アカウントを固めない）</text>
+
+    <rect x="780" y="420" width="300" height="62" rx="6" fill="#FFFFFF" stroke="#C8D0D8"/>
+    <text x="794" y="442" font-weight="bold">危険なコマンドは送らない</text>
+    <text x="794" y="464" font-size="13" fill="#4A5560">reload / configure / write / erase …</text>
+  </g>
+
+  <!-- 保存 -->
+  <rect x="60" y="452" width="640" height="48" rx="8" fill="#EAFBF2" stroke="#3FA97B" stroke-width="2"/>
+  <text x="80" y="481" font-size="16" fill="#1F2933">1 台 1 ファイルで保存（コマンドごとの見出し ＋ 末尾に生ログ）。同時 8 台まで並行。</text>
+
+  <rect x="20" y="518" width="1080" height="32" rx="6" fill="#FDF0F2" stroke="#E4899A"/>
+  <text x="40" y="540" font-size="15" fill="#1F2933">生ログに残すのは「機器から届いた文字」だけ。送った文字は残さない ─ パスワードをファイルに落とさないため。</text>
+</svg>

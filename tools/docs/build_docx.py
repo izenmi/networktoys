@@ -15,6 +15,7 @@ xlsx を自前で書いている（Core/Reporting/XlsxWriter.cs）のと同じ�
     1. 番号       → 数字はそのまま文字として置く
     > 注記        → 字下げした淡色の段落
     | 表 | 組み | → 罫線つきの表（1 行目が見出し。2 行目の |---| は読み飛ばす）
+    ![説明](figures/x.png) → 図（幅いっぱいに縮めて置き、説明を下に添える）
     ---           → 改ページ
     **太字** `等幅`
 
@@ -33,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DOCUMENTS = [
     ("docs/紹介資料.md", "docs/NetworkToys-紹介資料.docx"),
     ("docs/設計資料.md", "docs/NetworkToys-設計資料.docx"),
+    ("docs/技術資料.md", "docs/NetworkToys-技術資料.docx"),
 ]
 
 # 本文の書体。日本語は eastAsia 側を見るので、必ず両方に書く
@@ -47,6 +49,7 @@ CONTENT_TYPES = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
 <Default Extension="xml" ContentType="application/xml"/>
+<Default Extension="png" ContentType="image/png"/>
 <Override PartName="/word/document.xml" \
 ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 <Override PartName="/word/styles.xml" \
@@ -60,12 +63,86 @@ Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/office
 Target="word/document.xml"/>
 </Relationships>"""
 
-DOCUMENT_RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" \
-Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" \
-Target="styles.xml"/>
-</Relationships>"""
+RELATIONSHIP = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+
+def document_rels():
+    """styles.xml と、図 1 枚ごとの関係。**rId は picture() の採番と揃える**こと。"""
+    links = [f'<Relationship Id="rId1" Type="{RELATIONSHIP}/styles" Target="styles.xml"/>']
+
+    for number in range(1, len(IMAGES) + 1):
+        links.append(
+            f'<Relationship Id="rId{number + 1}" Type="{RELATIONSHIP}/image" '
+            f'Target="media/image{number}.png"/>'
+        )
+
+    return (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + "".join(links)
+        + "</Relationships>"
+    )
+
+
+# 本文の幅（EMU）。A4 縦・左右余白 1418 twips ぶんを引いた残り。1 twip = 635 EMU
+CONTENT_WIDTH_EMU = (11906 - 1418 * 2) * 635
+
+# この文書で使う図。document() を呼ぶたびに組み直す
+IMAGES = []
+
+
+def png_size(path):
+    """PNG の幅と高さ。IHDR の 8 バイトを読むだけ（ライブラリは足さない）。"""
+    data = path.read_bytes()
+
+    assert data[:8] == b"\x89PNG\r\n\x1a\n", f"PNG ではない: {path}"
+
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
+def picture(alt, source):
+    """図を 1 枚置く。幅は本文いっぱいに揃え、高さは元の縦横比から出す。"""
+    path = ROOT / "docs" / source
+    width, height = png_size(path)
+
+    cx = CONTENT_WIDTH_EMU
+    cy = int(cx * height / width)
+
+    IMAGES.append(path)
+    number = len(IMAGES)
+    rel = f"rId{number + 1}"          # rId1 は styles.xml
+
+    drawing = (
+        '<w:drawing>'
+        '<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+        'distT="0" distB="0" distL="0" distR="0">'
+        f'<wp:extent cx="{cx}" cy="{cy}"/>'
+        f'<wp:docPr id="{number}" name="図 {number}" descr="{html.escape(alt)}"/>'
+        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        f'<pic:nvPicPr><pic:cNvPr id="{number}" name="図 {number}"/><pic:cNvPicPr/></pic:nvPicPr>'
+        '<pic:blipFill>'
+        f'<a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="{rel}"/>'
+        '<a:stretch><a:fillRect/></a:stretch>'
+        '</pic:blipFill>'
+        '<pic:spPr>'
+        f'<a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+        '</pic:spPr>'
+        '</pic:pic>'
+        '</a:graphicData>'
+        '</a:graphic>'
+        '</wp:inline>'
+        '</w:drawing>'
+    )
+
+    body = (
+        '<w:p><w:pPr><w:spacing w:before="160" w:after="60"/><w:jc w:val="center"/></w:pPr>'
+        f'<w:r>{drawing}</w:r></w:p>'
+    )
+
+    return body + paragraph(alt, color="5A5A5A", italic=True)
 
 
 def fonts(ascii_font=ASCII_FONT, jp_font=JP_FONT):
@@ -256,7 +333,11 @@ def convert(markdown):
 
         at += 1
 
-        if stripped == "---":
+        if stripped.startswith("!["):
+            match = re.fullmatch(r"!\[(.*?)\]\((.+?)\)", stripped)
+            assert match, f"図の書き方が読めない: {stripped}"
+            body.append(picture(match.group(1), match.group(2)))
+        elif stripped == "---":
             body.append(page_break())
         elif stripped.startswith("#### "):
             body.append(paragraph(stripped[5:], "Heading3"))
@@ -287,6 +368,8 @@ def document(markdown):
         'w:header="851" w:footer="992" w:gutter="0"/></w:sectPr>'
     )
 
+    IMAGES.clear()
+
     return (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         f"<w:document {W}><w:body>{convert(markdown)}{section}</w:body></w:document>"
@@ -305,13 +388,19 @@ def build(source, destination):
         for name, text in (
             ("[Content_Types].xml", CONTENT_TYPES),
             ("_rels/.rels", RELS),
-            ("word/_rels/document.xml.rels", DOCUMENT_RELS),
             ("word/styles.xml", STYLES),
+            # 図の一覧は document() を組み立てた時点で決まるので、先に呼ぶ
             ("word/document.xml", document(markdown)),
+            ("word/_rels/document.xml.rels", None),
         ):
             info = zipfile.ZipInfo(name, date_time=stamp)
             info.compress_type = zipfile.ZIP_DEFLATED
-            book.writestr(info, text)
+            book.writestr(info, document_rels() if text is None else text)
+
+        for number, path in enumerate(IMAGES, start=1):
+            info = zipfile.ZipInfo(f"word/media/image{number}.png", date_time=stamp)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            book.writestr(info, path.read_bytes())
 
     print(f"{destination}  ({out.stat().st_size:,} bytes)")
 
@@ -329,7 +418,8 @@ def check(markdown):
 
     # pPr / rPr の中で守るべき並び（この道具が出す要素だけ）
     order = {
-        "pPr": ["pStyle", "keepNext", "spacing", "ind", "outlineLvl", "rPr"],
+        # 揃え(jc)は ind の後・outlineLvl の前（CT_PPrBase の並び）
+        "pPr": ["pStyle", "keepNext", "spacing", "ind", "jc", "outlineLvl", "rPr"],
         "rPr": ["rStyle", "rFonts", "b", "i", "color", "sz", "szCs"],
     }
 

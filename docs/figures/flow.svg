@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="470" viewBox="0 0 1120 470" font-family="IPAGothic, sans-serif">
+  <rect width="1120" height="470" fill="#FFFFFF"/>
+
+  <text x="20" y="34" font-size="24" font-weight="bold" fill="#1F2933">作業の流れと、そのとき使う画面</text>
+
+  <rect x="20" y="60" width="340" height="330" rx="10" fill="#EAF3FB" stroke="#5AA0D8" stroke-width="2"/>
+  <rect x="390" y="60" width="340" height="330" rx="10" fill="#FFF4E6" stroke="#E39B3C" stroke-width="2"/>
+  <rect x="760" y="60" width="340" height="330" rx="10" fill="#EAFBF2" stroke="#3FA97B" stroke-width="2"/>
+
+  <g fill="#1F2933">
+    <text x="40" y="94" font-size="21" font-weight="bold">① 作業前</text>
+    <text x="410" y="94" font-size="21" font-weight="bold">② 作業中</text>
+    <text x="780" y="94" font-size="21" font-weight="bold">③ 作業後</text>
+  </g>
+  <g font-size="16" fill="#4A5560">
+    <text x="40" y="124">いまの状態を測って残す</text>
+    <text x="410" y="124">落ちた瞬間を見逃さない</text>
+    <text x="780" y="124">変化を説明できる形にする</text>
+  </g>
+
+  <g fill="#1F2933">
+    <rect x="40" y="146" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#B9D6EC"/>
+    <text x="56" y="173" font-size="16" font-weight="bold">Ping / TCP Ping</text>
+    <text x="56" y="173" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">宛先をまとめて測る</text>
+    <rect x="40" y="196" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#B9D6EC"/>
+    <text x="56" y="223" font-size="16" font-weight="bold">ログ採取</text>
+    <text x="56" y="223" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">show を機器から集める</text>
+    <rect x="40" y="246" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#B9D6EC"/>
+    <text x="56" y="273" font-size="16" font-weight="bold">ACI / Meraki</text>
+    <text x="56" y="273" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">作業前の状態を控える</text>
+    <rect x="40" y="296" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#B9D6EC"/>
+    <text x="56" y="323" font-size="16" font-weight="bold">業務確認</text>
+    <text x="56" y="323" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">現状で通ることを確認</text>
+    <rect x="410" y="146" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#F0CD9C"/>
+    <text x="426" y="173" font-size="16" font-weight="bold">Ping</text>
+    <text x="426" y="173" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">流しっぱなしで見張る</text>
+    <rect x="410" y="196" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#F0CD9C"/>
+    <text x="426" y="223" font-size="16" font-weight="bold">記録</text>
+    <text x="426" y="223" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">発生と復旧を時刻で残す</text>
+    <rect x="410" y="246" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#F0CD9C"/>
+    <text x="426" y="273" font-size="16" font-weight="bold">切り分け</text>
+    <text x="426" y="273" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">WFP / 通信状況 / 経路 / DNS</text>
+    <rect x="780" y="146" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#A9DCC4"/>
+    <text x="796" y="173" font-size="16" font-weight="bold">ログ採取</text>
+    <text x="796" y="173" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">もう一度集める</text>
+    <rect x="780" y="196" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#A9DCC4"/>
+    <text x="796" y="223" font-size="16" font-weight="bold">差分比較</text>
+    <text x="796" y="223" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">前後を突き合わせる</text>
+    <rect x="780" y="246" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#A9DCC4"/>
+    <text x="796" y="273" font-size="16" font-weight="bold">業務確認</text>
+    <text x="796" y="273" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">同じ試験をもう一度</text>
+    <rect x="780" y="296" width="300" height="42" rx="6" fill="#FFFFFF" stroke="#A9DCC4"/>
+    <text x="796" y="323" font-size="16" font-weight="bold">レポート</text>
+    <text x="796" y="323" font-size="15" fill="#4A5560" text-anchor="end" transform="translate(268,0)">HTML / CSV / 画面 PNG</text>
+  </g>
+
+  <g fill="#8A96A3">
+    <polygon points="362,215 388,225 362,235"/>
+    <polygon points="732,215 758,225 732,235"/>
+  </g>
+
+  <rect x="20" y="410" width="1080" height="44" rx="8" fill="#F3F5F7" stroke="#C8D0D8"/>
+  <text x="40" y="439" font-size="16" fill="#1F2933">残るもの: 測定の記録（応答・ロス・不通の時刻）／ 機器の出力 ／ 設定の差分 ／ 業務確認の合否</text>
+</svg>

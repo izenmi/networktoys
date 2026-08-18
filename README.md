@@ -8,7 +8,7 @@ ping のほかに TCP 接続・DNS・traceroute・IP スキャン・無線 LAN�
 
 画面ごとの詳しい使い方は **[docs/USAGE.md](docs/USAGE.md)** にあります。
 
-配って読んでもらう用に、**[紹介資料](docs/NetworkToys-紹介資料.docx)** と **[設計資料](docs/NetworkToys-設計資料.docx)**（Word 形式）も置いてあります。中身は `docs/紹介資料.md` / `docs/設計資料.md` で、`python3 tools/docs/build_docx.py` で焼き直します。
+配って読んでもらう用に、**[紹介資料](docs/NetworkToys-紹介資料.docx)** ／ **[技術資料](docs/NetworkToys-技術資料.docx)**（ネットワークエンジニア向けに、使っている仕組みと使いどころを図解したもの）／ **[設計資料](docs/NetworkToys-設計資料.docx)**（Word 形式）も置いてあります。中身は `docs/*.md` で、`python3 tools/docs/build_docx.py` で焼き直します（図は `sh tools/docs/build_figures.sh` で SVG から PNG に焼きます）。
 
 ## できること
 
