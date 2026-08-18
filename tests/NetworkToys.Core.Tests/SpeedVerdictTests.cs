@@ -177,6 +177,24 @@ public class SpeedVerdictTests
     }
 
     [Fact]
+    public void Upload_targets_keep_their_query_when_the_range_is_added_or_removed()
+    {
+        // 実機の宛先はこの形（2026-08-18 のログより）
+        const string url = "https://ipv4-c141-tyo001-ix.1.oca.nflxvideo.net/speedtest?c=jp&n=53813&v=91";
+
+        Assert.Equal(url, FastComPlan.UploadUrl(url));
+
+        Assert.Equal(
+            "https://ipv4-c141-tyo001-ix.1.oca.nflxvideo.net/speedtest/range/0-100?c=jp&n=53813&v=91",
+            FastComPlan.RangeUrl(url, 100));
+
+        // すでに範囲が付いている版では、いったん落としてから付け直す
+        Assert.Equal(
+            "https://a.example/speedtest/range/0-100?c=jp",
+            FastComPlan.RangeUrl("https://a.example/speedtest/range/0-26214400?c=jp", 100));
+    }
+
+    [Fact]
     public void Plain_http_targets_are_upgraded_to_https()
     {
         // 平文だと途中のプロキシに中身を見られて止められる（上りが 403 / 503 になった）

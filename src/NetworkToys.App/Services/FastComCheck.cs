@@ -144,7 +144,7 @@ internal static class FastComCheck
         string? reason = results.Select(r => r.Reason).FirstOrDefault(r => r is { Length: > 0 });
 
         // どこへ送って断られたのかが分からないと、プロキシの設定に手が出せない
-        string where = targets.Count > 0 ? $"・宛先 {UploadUrl(targets[0])}" : "";
+        string where = targets.Count > 0 ? $"・宛先 {FastComPlan.UploadUrl(targets[0])}" : "";
 
         return new SpeedSample(
             0,
@@ -176,11 +176,24 @@ internal static class FastComCheck
                 new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain") { CharSet = "UTF-8" };
 
             using HttpResponseMessage response = await client
-                .PostAsync(UploadUrl(url), content, token).ConfigureAwait(false);
+                .PostAsync(FastComPlan.UploadUrl(url), content, token).ConfigureAwait(false);
 
-            return response.IsSuccessStatusCode
+            if (response.IsSuccessStatusCode) return (UploadBytesPerStream, null);
+
+            string first = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}".TrimEnd();
+
+            // 断られたら、範囲付きの形でもう一度だけ試す。
+            // <b>版によって受け口が違う</b>（素の URL を受ける版と、/range/… を要る版がある）
+            using var retryContent = new ByteArrayContent(payload);
+            retryContent.Headers.ContentType =
+                new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain") { CharSet = "UTF-8" };
+
+            using HttpResponseMessage retry = await client
+                .PostAsync(FastComPlan.RangeUrl(url, UploadBytesPerStream), retryContent, token).ConfigureAwait(false);
+
+            return retry.IsSuccessStatusCode
                 ? (UploadBytesPerStream, null)
-                : (0, $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}".TrimEnd());
+                : (0, $"{first} / 範囲付きでも HTTP {(int)retry.StatusCode}");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -190,19 +203,6 @@ internal static class FastComCheck
         {
             return (0, ex.Message);
         }
-    }
-
-    /// <summary>上りの宛先。<c>/range/…</c> が付いていれば落とす。</summary>
-    internal static string UploadUrl(string url)
-    {
-        int range = url.IndexOf("/range/", StringComparison.OrdinalIgnoreCase);
-
-        if (range < 0) return url;
-
-        int query = url.IndexOf('?', StringComparison.Ordinal);
-
-        // 範囲の後ろに ? が付く形（…/range/0-100?c=jp）でも、問い合わせは残す
-        return query > range ? url[..range] + url[query..] : url[..range];
     }
 
     /// <summary>読み捨てながらバイト数だけ数える。1 本が失敗しても 0 として続ける。</summary>

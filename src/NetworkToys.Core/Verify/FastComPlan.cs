@@ -102,6 +102,37 @@ public static partial class FastComPlan
             ? "https://" + url["http://".Length..]
             : url;
 
+    /// <summary>
+    /// 上りの宛先。<c>/range/…</c> が付いていれば落とす。
+    /// <b>問い合わせ（?c=jp…）は残す</b> — 落とすと先方に断られる。
+    /// </summary>
+    public static string UploadUrl(string url)
+    {
+        int range = url.IndexOf("/range/", StringComparison.OrdinalIgnoreCase);
+
+        if (range < 0) return url;
+
+        int query = url.IndexOf('?', StringComparison.Ordinal);
+
+        return query > range ? url[..range] + url[query..] : url[..range];
+    }
+
+    /// <summary>
+    /// 範囲付きの宛先（<c>…/speedtest/range/0-N?c=jp</c>）。
+    ///
+    /// <b>受け口は版で違う</b>ので、素の URL で断られたときに試す形として持つ
+    /// （実機で 403 が返った。2026-08-18）。
+    /// </summary>
+    public static string RangeUrl(string url, long bytes)
+    {
+        string plain = UploadUrl(url);
+        int query = plain.IndexOf('?', StringComparison.Ordinal);
+
+        return query < 0
+            ? $"{plain.TrimEnd('/')}/range/0-{bytes}"
+            : $"{plain[..query].TrimEnd('/')}/range/0-{bytes}{plain[query..]}";
+    }
+
     /// <summary>どこで躓いたかを、次に何を見ればよいか分かる文言にする。</summary>
     public static string DescribeFailure(FastComStep step) => step switch
     {
