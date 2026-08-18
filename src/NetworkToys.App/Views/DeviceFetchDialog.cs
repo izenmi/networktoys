@@ -33,13 +33,21 @@ internal sealed class DeviceFetchDialog : Window
     private readonly RadioButton _ssh = new() { Content = "SSH", IsChecked = true, Margin = new Thickness(0, 0, 10, 0) };
     private readonly RadioButton _telnet = new() { Content = "Telnet" };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
+    private readonly Button _pick = new() { Content = "宛先から", Margin = new Thickness(6, 0, 0, 0) };
+
     private readonly Button _fetch = new() { Content = "取得", MinWidth = 96, Margin = new Thickness(0, 0, 8, 0) };
     private readonly Button _cancel = new() { Content = "やめる", MinWidth = 96, IsCancel = true };
 
     private CancellationTokenSource? _cts;
 
-    internal DeviceFetchDialog(string title, string command)
+    /// <summary>Ping / TCP に登録してある宛先。<b>空なら「宛先から」は押せない。</b></summary>
+    private readonly IReadOnlyList<(string Host, string Memo)> _targets;
+
+    internal DeviceFetchDialog(
+        string title, string command, IReadOnlyList<(string Host, string Memo)>? targets = null)
     {
+        _targets = targets ?? [];
+
         Title = title;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         SizeToContent = SizeToContent.Height;
@@ -76,6 +84,18 @@ internal sealed class DeviceFetchDialog : Window
 
         _fetch.Click += async (_, _) => await FetchAsync().ConfigureAwait(true);
 
+        _pick.SetResourceReference(StyleProperty, "Button.Subtle");
+        _pick.IsEnabled = _targets.Count > 0;
+        _pick.ToolTip = _targets.Count > 0
+            ? "Ping / TCP タブに登録してある宛先から選びます。打ち込んでも構いません。"
+            : "Ping / TCP タブに宛先が登録されていません。";
+
+        _pick.Click += (_, _) =>
+        {
+            if (TargetPickerDialog.Pick(this, _targets) is [var first, ..])
+                _host.Text = first.Host;
+        };
+
         var protocol = new StackPanel { Orientation = Orientation.Horizontal };
         protocol.Children.Add(_ssh);
         protocol.Children.Add(_telnet);
@@ -91,7 +111,14 @@ internal sealed class DeviceFetchDialog : Window
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        AddRow(form, "接続先", _host);
+        // 接続先は打ってもよいし、Ping の宛先から選んでもよい（2026-08-18 ユーザー指示）。
+        // ComboBox の IsEditable はこのアプリのテンプレートでは使えないので、
+        // 素の TextBox に「選ぶ」ボタンを添える形にする
+        var destination = new StackPanel { Orientation = Orientation.Horizontal };
+        destination.Children.Add(_host);
+        destination.Children.Add(_pick);
+
+        AddRow(form, "接続先", destination);
         AddRow(form, "方式", protocol);
         AddRow(form, "ユーザー", _user);
         AddRow(form, "パスワード", _password);
@@ -133,9 +160,12 @@ internal sealed class DeviceFetchDialog : Window
     /// 小窓を出して、機器から 1 本取ってくる。
     /// <paramref name="command"/> は比較する対象に合わせた既定（打ち替えられる）。
     /// </summary>
-    public static string? Fetch(Window owner, string title, string command)
+    /// <param name="targets">接続先の候補（Ping / TCP の宛先）。<b>打ち込みも受ける。</b></param>
+    public static string? Fetch(
+        Window owner, string title, string command,
+        IReadOnlyList<(string Host, string Memo)>? targets = null)
     {
-        var dialog = new DeviceFetchDialog(title, command) { Owner = owner };
+        var dialog = new DeviceFetchDialog(title, command, targets) { Owner = owner };
 
         return dialog.ShowDialog() == true ? dialog.Output : null;
     }

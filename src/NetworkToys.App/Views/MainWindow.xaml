@@ -362,7 +362,6 @@
                                     <Separator />
                                     <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
                                     <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
-                                    <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
                                 </ContextMenu>
                             </Border.ContextMenu>
                             <ContentPresenter />
@@ -417,7 +416,6 @@
                                     <Separator />
                                     <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
                                     <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
-                                    <MenuItem Header="宛先名をコピー" Click="OnCopyHostFromRow" />
                                 </ContextMenu>
                             </Border.ContextMenu>
                             <ContentPresenter />

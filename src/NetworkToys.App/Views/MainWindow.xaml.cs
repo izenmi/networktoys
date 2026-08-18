@@ -208,7 +208,11 @@ public partial class MainWindow : Window
 
         string command = NetworkToys.Core.Work.DeviceComparison.CommandFor(compare.SelectedMode.Kind);
 
-        if (DeviceFetchDialog.Fetch(this, before ? "機器から取得（作業前）" : "機器から取得（作業後）", command)
+        if (DeviceFetchDialog.Fetch(
+                this,
+                before ? "機器から取得（作業前）" : "機器から取得（作業後）",
+                command,
+                KnownTargets())
             is not { Length: > 0 } output)
         {
             return;
@@ -1184,9 +1188,12 @@ public partial class MainWindow : Window
     /// Ping と TCP の宛先から、取り込む相手を選んでもらう。
     /// 全部入れると使わない機器まで並ぶので、絞り込みつきの選択画面を出す。
     /// </summary>
-    private void ImportTargetsIntoCollect()
+    /// <summary>
+    /// Ping / TCP に登録してある宛先。<b>同じ宛先が両方にあることがあるので畳む</b>。
+    /// 収集タブへの取り込みと、差分比較の「機器から」の両方で使う。
+    /// </summary>
+    private IReadOnlyList<(string Host, string Memo)> KnownTargets()
     {
-        // 同じ宛先が Ping と TCP の両方にあることがあるので、先に畳む
         Dictionary<string, string> unique = [];
 
         foreach ((string host, string memo) in
@@ -1199,6 +1206,13 @@ public partial class MainWindow : Window
                 unique[host] = memo;
         }
 
+        return [.. unique.Select(p => (p.Key, p.Value))];
+    }
+
+    private void ImportTargetsIntoCollect()
+    {
+        IReadOnlyList<(string Host, string Memo)> unique = KnownTargets();
+
         if (unique.Count == 0)
         {
             ConfirmDialog.Show(this, "宛先がありません",
@@ -1206,8 +1220,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        IReadOnlyList<(string Host, string Memo)> picked = TargetPickerDialog.Pick(
-            this, unique.Select(p => (p.Key, p.Value)));
+        IReadOnlyList<(string Host, string Memo)> picked = TargetPickerDialog.Pick(this, unique);
 
         if (picked.Count > 0)
             _shell.Collect.Import(picked);
@@ -1362,21 +1375,33 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 解決済みのアドレスを写す。IP で登録した宛先や、まだ引けていない宛先では
-    /// 空になるので、そのときは書いてある文字列をそのまま渡す。
+    /// その宛先の <b>IP アドレス</b>を写す（2026-08-18 ユーザー指示。宛先名は写さない）。
+    ///
+    /// 名前で登録した宛先は、引けるまでアドレスが空になる。<b>そのときに名前を写さない</b> —
+    /// 「アドレスをコピー」と書いてあるのに名前が入っていると、貼り付けた先で気づけない。
+    /// IP で登録してあれば、書いてある文字列がそのまま答えになる。
     /// </summary>
     private void OnCopyAddressFromRow(object sender, RoutedEventArgs e)
     {
         if (RowOf(sender) is not { } row) return;
 
-        CopyText(string.IsNullOrWhiteSpace(row.Address) ? row.Host : row.Address);
+        string address = row.Address.Length > 0
+            ? row.Address
+            : System.Net.IPAddress.TryParse(row.Host, out _) ? row.Host : "";
+
+        if (address.Length == 0)
+        {
+            ScreenOf(row).StatusMessage =
+                $"「{row.Host}」はまだ名前を引けていないので、IP アドレスを写せません。";
+            return;
+        }
+
+        CopyText(address);
     }
 
-    private void OnCopyHostFromRow(object sender, RoutedEventArgs e)
-    {
-        if (RowOf(sender) is { } row)
-            CopyText(row.Host);
-    }
+    /// <summary>その行がどちらの画面のものか（Ping と TCP で宛先リストが分かれている）。</summary>
+    private ViewModels.MonitorViewModel ScreenOf(ViewModels.TargetRowViewModel row)
+        => _shell.Tcp.Rows.Contains(row) ? _shell.Tcp : _shell.Monitor;
 
     // ===== 一覧から次の道具へ送る（スキャン・接続・遮断・Meraki・syslog・Trap） =====
     //

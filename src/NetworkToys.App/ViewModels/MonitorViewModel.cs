@@ -462,7 +462,7 @@ public sealed class MonitorViewModel : ObservableObject
     public string StatusMessage
     {
         get => _statusMessage;
-        private set => SetProperty(ref _statusMessage, value);
+        internal set => SetProperty(ref _statusMessage, value);
     }
 
     public string CountText => $"{Rows.Count} 件";
