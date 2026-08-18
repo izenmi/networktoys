@@ -121,8 +121,6 @@ public sealed class VerifyViewModel : ObservableObject
         ApplyTemplateCommand = new RelayCommand(ApplyTemplate, () => !IsBusy);
         StartCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && Rows.Count > 0);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
-        SaveCommand = new RelayCommand(Save, () => Results.Count > 0);
-        SaveHtmlCommand = new RelayCommand(SaveHtml, () => Results.Count > 0);
         LoadItemsCommand = new RelayCommand(LoadItems, () => !IsBusy);
         MarkPassCommand = new RelayCommand<CheckResult>(r => Mark(r, CheckVerdict.Pass));
         MarkFailCommand = new RelayCommand<CheckResult>(r => Mark(r, CheckVerdict.Fail));
@@ -167,13 +165,6 @@ public sealed class VerifyViewModel : ObservableObject
     public RelayCommand ApplyTemplateCommand { get; }
     public RelayCommand StartCommand { get; }
     public RelayCommand CancelCommand { get; }
-    public RelayCommand SaveCommand { get; }
-
-    /// <summary>
-    /// 試験結果を HTML の報告書にする。CSV は試験成績書へ貼るためのもので、
-    /// <b>そのまま人に渡す・添付する形</b>は別に要る。
-    /// </summary>
-    public RelayCommand SaveHtmlCommand { get; }
 
     /// <summary>試験項目をファイルから読み込む。現場ごとに使い分けるため。</summary>
     public RelayCommand LoadItemsCommand { get; }
@@ -437,8 +428,6 @@ public sealed class VerifyViewModel : ObservableObject
         Results.Clear();
         _done = 0;
         _total = 0;
-        SaveCommand.RaiseCanExecuteChanged();
-        SaveHtmlCommand.RaiseCanExecuteChanged();
         RaiseProgress();
 
         foreach (VerifyRowViewModel row in Rows)
@@ -503,8 +492,6 @@ public sealed class VerifyViewModel : ObservableObject
             _cts?.Dispose();
             _cts = null;
             IsBusy = false;
-            SaveCommand.RaiseCanExecuteChanged();
-            SaveHtmlCommand.RaiseCanExecuteChanged();
             RaiseProgress();
         }
     }
@@ -568,8 +555,6 @@ public sealed class VerifyViewModel : ObservableObject
             _cts?.Dispose();
             _cts = null;
             IsBusy = false;
-            SaveCommand.RaiseCanExecuteChanged();
-            SaveHtmlCommand.RaiseCanExecuteChanged();
             RaiseProgress();
         }
     }
@@ -779,43 +764,6 @@ public sealed class VerifyViewModel : ObservableObject
         return at < 0 ? address : address[(at + 3)..].TrimEnd('/');
     }
 
-    private void Save()
-    {
-        if (Services.CsvExport.Save("verify", CheckReport.ToCsv([.. Results])) is { } message)
-            Status = message;
-    }
-
-    /// <summary>
-    /// 試験の結果を HTML の報告書にする。
-    ///
-    /// <b>1 ファイル完結</b>なのでそのままメールに添付でき、客先のオフライン環境でも開ける
-    /// （記録タブの書き出しと同じ作り）。試したプロキシの一覧も証跡として載せる。
-    /// </summary>
-    private void SaveHtml()
-    {
-        var dialog = new SaveFileDialog
-        {
-            Title = "試験結果を HTML で保存する",
-            FileName = $"業務確認試験-{DateTime.Now:yyyyMMdd-HHmm}.html",
-            DefaultExt = "html",
-            Filter = "HTML レポート (*.html)|*.html|すべてのファイル (*.*)|*.*",
-            AddExtension = true,
-        };
-
-        if (dialog.ShowDialog() != true) return;
-
-        try
-        {
-            ReportService.SaveHtml(dialog.FileName, BuildReport());
-
-            Status = $"{Path.GetFileName(dialog.FileName)} に書き出しました（{Results.Count} 件）。";
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Status = $"保存できませんでした: {ex.Message}";
-        }
-    }
-
     /// <summary>試験だけの報告書。記録タブから呼ばれるときは測定結果と合わさる。</summary>
     internal Core.Reporting.ReportData BuildReport()
     {
@@ -942,8 +890,6 @@ public sealed class VerifyViewModel : ObservableObject
         Results.Clear();
         _done = 0;
         _total = 0;
-        SaveCommand.RaiseCanExecuteChanged();
-        SaveHtmlCommand.RaiseCanExecuteChanged();
         RaiseProgress();
 
         foreach (VerifyRowViewModel row in Rows)

@@ -2002,12 +2002,14 @@
                                     ToolTip="一覧で選んでいる 1 項目を、押したときに選ぶプロキシで試します。" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
-                            <Button Content="CSV で保存" Command="{Binding SaveCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
-                                    ToolTip="試験成績書へ貼れる形で書き出します。" />
-                            <Button Content="HTML で保存" Command="{Binding SaveHtmlCommand}"
+                            <!-- 報告書はファイルメニューと同じもの（測定の結果も一緒に入る）。
+                                 ここだけ別のものが出ると、どちらを渡したのか分からなくなる
+                                 （2026-08-18 ユーザー指示） -->
+                            <Button Content="HTML で保存"
+                                    Command="{Binding DataContext.Report.SaveHtmlCommand,
+                                              RelativeSource={RelativeSource AncestorType=Window}}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
-                                    ToolTip="そのままメールに添付できる報告書にします。1 ファイル完結なのでオフラインでも開けます。" />
+                                    ToolTip="そのままメールに添付できる報告書にします（ファイルメニューの「レポートを HTML で保存」と同じもの）。" />
                         </WrapPanel>
 
                         <!--
