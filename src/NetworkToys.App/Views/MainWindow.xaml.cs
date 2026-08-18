@@ -988,25 +988,6 @@ public partial class MainWindow : Window
         UsageDialog.Show(this, "使い方", markdown);
     }
 
-    private void OnOpenIssues(object sender, RoutedEventArgs e)
-        => OpenInBrowser("https://github.com/izenmi/networktoys/issues");
-
-    private void OpenInBrowser(string url)
-    {
-        try
-        {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true,
-            });
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write(ex, "MainWindow.OpenInBrowser");
-        }
-    }
-
     /// <summary>
     /// 同梱物の著作権表示とライセンス本文を出す。
     ///
@@ -1087,8 +1068,7 @@ public partial class MainWindow : Window
             this,
             "バージョン情報",
             $"NetworkToys {version}\n\n" +
-            "色々できるネットワーク診断ツール\n" +
-            "https://github.com/izenmi/networktoys\n\n" +
+            "色々できるネットワーク診断ツール\n\n" +
             $"{where}\n{AppData.Directory()}");
     }
 

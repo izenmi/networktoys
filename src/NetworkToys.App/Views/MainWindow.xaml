@@ -556,12 +556,11 @@
                 <MenuItem x:Name="ScaleExtraLarge" Header="文字サイズ 特大" IsCheckable="True"
                           Tag="1.5" Click="OnScaleMenu" />
                 <Separator />
-                <!-- 列幅はドラッグで変えられて設定に残るが、戻す手段が無かった -->
+                <!-- 列幅はドラッグで変えられる（保存はしないが、その場で戻したいとき用） -->
                 <MenuItem Header="列幅を既定に戻す" Click="OnResetColumns" />
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)" Style="{StaticResource MenuBarItem}">
                 <MenuItem Header="使い方" Click="OnShowUsage" />
-                <MenuItem Header="問題を報告" Click="OnOpenIssues" />
                 <Separator />
                 <MenuItem Header="ライセンス情報" Click="OnShowLicenses" />
                 <MenuItem Header="バージョン情報" Click="OnAbout" />
