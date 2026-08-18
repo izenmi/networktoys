@@ -281,7 +281,25 @@ public sealed class DnacViewModel : ObservableObject, IDisposable
         long end = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         long start = end - ((long)SelectedTimespan.Seconds * 1000);
 
-        IReadOnlyList<string> pages = await client.ClientsAsync(start, end, token).ConfigureAwait(true);
+        IReadOnlyList<string> pages;
+
+        try
+        {
+            pages = await client.ClientsAsync(start, end, token).ConfigureAwait(true);
+        }
+        catch (DnacApiException ex) when (ex.Message.Contains("404", StringComparison.Ordinal)
+                                          || ex.Message.Contains("400", StringComparison.Ordinal))
+        {
+            // 2.3.5 系には端末を並べる問い合わせ先が無い（Assurance の一覧は 2.3.7.6 以降、
+            // Endpoint Analytics は別売りの機能）。生の 404 だけでは何をすればよいか分からない
+            Replace(ClientRows, []);
+
+            Status = "この版の Catalyst Center には、端末を一覧にする問い合わせ先がありません。";
+            Notice = "⚠ 端末の一覧は 2.3.7.6 以降（または Endpoint Analytics を入れた環境）の機能です。"
+                   + "1 台ずつなら「端末」タブで IP か MAC から引けます。";
+
+            return;
+        }
 
         Record(client, pages.Count > 0 ? pages[^1] : "");
 

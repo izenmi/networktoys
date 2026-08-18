@@ -129,8 +129,8 @@ public static class WlcShow
                 State: DescribeApState(state, joined: true),
                 StateKind: SeverityKind.Ok,
                 IsJoined: true,
-                Ip: row[IpHeads],
-                Mac: row[MacHeads],
+                Ip: Word(row[IpHeads]),
+                Mac: Word(row[MacHeads]),
                 Model: row[ModelHeads],
                 Version: row["version", "sw version", "ap version"],
                 Radios: row[SlotHeads],
@@ -184,7 +184,7 @@ public static class WlcShow
 
             rows.Add(new WlcJoinRow(
                 Name: name,
-                Mac: row[MacHeads],
+                Mac: Word(row[MacHeads]),
                 State: DescribeApState(state, joined),
                 StateKind: joined ? SeverityKind.Ok : SeverityKind.Alert,
                 LastJoin: row["last successful join time", "last join time", "last successful join"],
@@ -219,7 +219,7 @@ public static class WlcShow
 
         foreach (ShowRow row in Table(text))
         {
-            string mac = row[MacHeads];
+            string mac = Word(row[MacHeads]);
             if (mac.Length == 0 || !mac.Contains('.', StringComparison.Ordinal)) continue;
 
             // 版によって見出しが「Type ID」で、中身が「WLAN 1」の形になる。数字だけ取る
@@ -237,7 +237,7 @@ public static class WlcShow
                 Vendor: vendorOf?.Invoke(mac) ?? "",
                 ApName: row[ApNameHeads],
                 Ssid: ssidById.TryGetValue(wlanId, out string? ssid) ? ssid : row[SsidHeads],
-                Radio: row[ProtocolHeads],
+                Radio: Word(row[ProtocolHeads]),
                 Rssi: 0,
                 RssiText: "—",
                 Quality: "—",
@@ -356,7 +356,7 @@ public static class WlcShow
             rows.Add(new WlcRrmRow(
                 ApName: name,
                 Radio: radio,
-                Channel: row[ChannelHeads],
+                Channel: Word(row[ChannelHeads]),
                 Power: row[PowerHeads],
                 Utilization: -1,
                 UtilizationText: "—",
@@ -386,7 +386,7 @@ public static class WlcShow
                 Bssid: bssid,
                 Vendor: "",
                 Ssid: row[SsidHeads],
-                Channel: row[ChannelHeads],
+                Channel: Word(row[ChannelHeads]),
                 Rssi: Number(rssi),
                 RssiText: Or(rssi, "—"),
                 DetectedBy: row["detecting ap", "detected by", "ap name"],
@@ -477,6 +477,20 @@ public static class WlcShow
         }
 
         return [.. cells.Select(c => c ?? "")];
+    }
+
+    /// <summary>
+    /// 値の 1 語目だけを返す。
+    ///
+    /// <b>見出しの語が空白 1 つで隣り合っていると、2 つの列を 1 つとして読む</b>
+    /// （<c>Protocol Method</c> がそれ。見出しからは切れ目が分からない）。
+    /// 1 語で足りる欄（MAC・IP・電波の種別・チャンネル）は、そこから 1 語目を採る。
+    /// </summary>
+    private static string Word(string value)
+    {
+        int space = value.IndexOf(' ', StringComparison.Ordinal);
+
+        return space < 0 ? value : value[..space];
     }
 
     /// <summary>その位置がどの列か。<b>いちばん近い見出しに寄せる</b>（桁は版で少しずれる）。</summary>

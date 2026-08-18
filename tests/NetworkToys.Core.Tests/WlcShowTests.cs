@@ -114,6 +114,7 @@ public sealed class WlcShowTests
         Assert.Equal("1122.3344.5501", rows[0].Mac);
         Assert.Equal("AP-1F-01", rows[0].ApName);
         Assert.Equal("Corp-WiFi", rows[0].Ssid);
+        // 見出しが「Protocol Method」と空白 1 つで並ぶ版がある。1 語目を採る
         Assert.Equal("11ac", rows[0].Radio);
         Assert.Equal("● 通信中", rows[0].State);
 
