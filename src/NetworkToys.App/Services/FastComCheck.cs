@@ -49,6 +49,15 @@ internal static class FastComCheck
         using HttpClientHandler handler = HttpCheck.CreateHandler(proxy, resolved);
         using var client = new HttpClient(handler) { Timeout = Timeout };
 
+        // ブラウザからの通信として扱ってもらう。名乗らないと、プロキシに
+        // 「アプリからの通信」として弾かれる現場がある（2026-08-18 に上りが 403/503 だった）
+        client.DefaultRequestHeaders.TryAddWithoutValidation(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+            + "Chrome/124.0 Safari/537.36 NetworkToys");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://fast.com");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://fast.com/");
+
         string usedProxy = HttpCheck.DescribeProxy(proxy, resolved);
 
         try
@@ -153,9 +162,15 @@ internal static class FastComCheck
     {
         try
         {
-            using var content = new ByteArrayContent(new byte[UploadBytesPerStream]);
+            // <b>ブラウザ版と同じ形で送る。</b>fast.com の JS は文字列を XHR で送るので
+            // Content-Type は text/plain になる。application/octet-stream で送ると、
+            // プロキシに 403 / 503 で弾かれる現場があった（2026-08-18 実測）
+            var payload = new byte[UploadBytesPerStream];
+            payload.AsSpan().Fill((byte)'0');
+
+            using var content = new ByteArrayContent(payload);
             content.Headers.ContentType =
-                new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+                new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain") { CharSet = "UTF-8" };
 
             using HttpResponseMessage response = await client
                 .PostAsync(UploadUrl(url), content, token).ConfigureAwait(false);
