@@ -28,6 +28,9 @@ public sealed record MarkdownTable(
 /// <summary>コードブロック（``` で囲まれたもの）。中身は解釈しない。</summary>
 public sealed record MarkdownCode(string Text) : MarkdownBlock;
 
+/// <summary>引用（<c>&gt; </c> で始まる行）。囲みとして見せる。</summary>
+public sealed record MarkdownQuote(IReadOnlyList<MarkdownInline> Text) : MarkdownBlock;
+
 public sealed record MarkdownRule : MarkdownBlock;
 
 /// <summary>
@@ -120,6 +123,22 @@ public static class MarkdownDocument
                 i--;   // for の i++ と相殺する
 
                 blocks.Add(Table(rows));
+                continue;
+            }
+
+            if (QuoteText(trimmed) is { } quote)
+            {
+                FlushParagraph();
+
+                var quoted = new List<string> { quote };
+
+                while (i + 1 < lines.Length && QuoteText(lines[i + 1].TrimStart()) is { } next)
+                {
+                    quoted.Add(next);
+                    i++;
+                }
+
+                blocks.Add(new MarkdownQuote(Inlines(string.Concat(quoted))));
                 continue;
             }
 
@@ -260,6 +279,14 @@ public static class MarkdownDocument
         while (level < line.Length && line[level] == '#') level++;
 
         return level is > 0 and <= 6 && level < line.Length && line[level] == ' ' ? level : null;
+    }
+
+    /// <summary>引用の行。<c>&gt;</c> だけの行は空文字として続きに繋ぐ。</summary>
+    private static string? QuoteText(string line)
+    {
+        if (!line.StartsWith('>')) return null;
+
+        return line.Length > 1 ? line[1..].Trim() : "";
     }
 
     private static string? BulletText(string line)

@@ -111,6 +111,10 @@ internal sealed class UsageDialog : Window
                     document.Blocks.Add(Code(code.Text));
                     break;
 
+                case MarkdownQuote quote:
+                    document.Blocks.Add(Quote(quote.Text));
+                    break;
+
                 case MarkdownRule:
                     document.Blocks.Add(Rule());
                     break;
@@ -243,6 +247,26 @@ internal sealed class UsageDialog : Window
 
         section.SetResourceReference(Block.BackgroundProperty, "Brush.SurfaceAlt");
         section.SetResourceReference(Block.BorderBrushProperty, "Brush.Border");
+
+        return section;
+    }
+
+    /// <summary>引用。左に縦線を引いて、本文と見分けが付くようにする。</summary>
+    private static Section Quote(IReadOnlyList<MarkdownInline> text)
+    {
+        var paragraph = new Paragraph { Margin = new Thickness(0), LineHeight = 21 };
+
+        foreach (Inline inline in Inlines(text)) paragraph.Inlines.Add(inline);
+
+        var section = new Section(paragraph)
+        {
+            Margin = new Thickness(0, 0, 0, 10),
+            Padding = new Thickness(10, 7, 10, 7),
+            BorderThickness = new Thickness(3, 0, 0, 0),
+        };
+
+        section.SetResourceReference(Block.BackgroundProperty, "Brush.SurfaceAlt");
+        section.SetResourceReference(Block.BorderBrushProperty, "Brush.Accent.Bg");
 
         return section;
     }

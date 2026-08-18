@@ -83,6 +83,27 @@ public class MarkdownDocumentTests
     }
 
     [Fact]
+    public void Quotes_become_their_own_block()
+    {
+        const string text = """
+            > **この文書は、アプリの中からも読めます。**
+            > ヘルプ → 使い方 を開いてください。
+
+            本文。
+            """;
+
+        IReadOnlyList<MarkdownBlock> blocks = MarkdownDocument.Parse(text);
+
+        MarkdownQuote quote = blocks.OfType<MarkdownQuote>().Single();
+
+        // 「>」は印。文字としては残さない
+        Assert.StartsWith("この文書は", Text(quote.Text), StringComparison.Ordinal);
+        Assert.DoesNotContain(">", Text(quote.Text), StringComparison.Ordinal);
+
+        Assert.Single(blocks.OfType<MarkdownParagraph>());
+    }
+
+    [Fact]
     public void Code_blocks_are_kept_as_they_are()
     {
         const string text = """
