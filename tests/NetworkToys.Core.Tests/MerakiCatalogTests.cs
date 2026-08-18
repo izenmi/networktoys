@@ -472,54 +472,37 @@ public class MerakiCatalogTests
     }
 
     [Fact]
-    public void Uplink_history_keeps_the_volume_of_each_interval()
-    {
-        // 区間ごとの合計（キロバイト）。毎秒には直さない
-        const string json = """
-            [ {"startTime":"2026-08-17T00:00:00Z","endTime":"2026-08-17T00:10:00Z",
-               "byInterface":[{"interface":"wan1","sent":300000,"received":300000}]},
-              {"startTime":"2026-08-17T00:10:00Z","endTime":"2026-08-17T00:20:00Z",
-               "byInterface":[{"interface":"wan1","sent":600000,"received":0}]} ]
-            """;
-
-        MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseUplinkHistory([json], "本社");
-
-        Assert.Equal([600000, 600000], series.Values);
-        Assert.Contains("585.9 MB", series.Summary, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void A_series_with_nothing_in_it_says_so_instead_of_drawing_zero()
-    {
-        MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseUplinkHistory(["[]"], "本社");
-
-        Assert.Empty(series.Values);
-        Assert.Equal("—", series.Summary);
-    }
-
-    [Fact]
-    public void Traffic_is_the_volume_that_flowed_in_the_period()
+    public void Traffic_is_summed_per_site_not_per_uplink()
     {
         // 応答は期間内の合計（キロバイト）。毎秒には直さない
         const string json = """
             [ {"name":"本社","byUplink":[
                  {"interface":"wan1","sent":1024,"received":2048},
-                 {"interface":"wan2","sent":0,"received":0}]} ]
+                 {"interface":"wan2","sent":1024,"received":0}]},
+              {"name":"大阪","byUplink":[
+                 {"interface":"wan1","sent":0,"received":0}]} ]
             """;
 
         IReadOnlyList<MerakiTrafficRow> rows = MerakiCatalog.ParseTraffic([json]);
 
+        // 拠点ごとに 1 行（WAN1 と WAN2 は足す）
         Assert.Equal(2, rows.Count);
-        Assert.Equal("wan1", rows[0].Uplink);
-
-        Assert.Equal("1.0 MB", rows[0].Sent);
+        Assert.Equal("本社", rows[0].Network);
+        Assert.Equal("2.0 MB", rows[0].Sent);
         Assert.Equal("2.0 MB", rows[0].Received);
-        Assert.Equal("3.0 MB", rows[0].Total);
+        Assert.Equal("4.0 MB", rows[0].Total);
 
-        // 回線ごとに 1 行。まとめると、どちらを使っているか見えなくなる
-        Assert.Equal("wan2", rows[1].Uplink);
+        Assert.Equal("大阪", rows[1].Network);
         Assert.Equal("0 KB", rows[1].Total);
     }
+
+    [Theory]
+    [InlineData(512, "512 KB")]
+    [InlineData(2048, "2.0 MB")]
+    [InlineData(2 * 1024 * 1024, "2.0 GB")]
+    [InlineData(3.5 * 1024 * 1024 * 1024, "3.50 TB")]
+    public void Volumes_grow_into_the_next_unit(double kilobytes, string expected)
+        => Assert.Equal(expected, MerakiCatalog.FormatKilobytes(kilobytes));
 
     [Fact]
     public void Traffic_without_uplinks_is_skipped_not_fatal()

@@ -3359,7 +3359,6 @@
                         </TabItem>
 
 
-                        <!-- 利用率（MX の device utilization ＋ 回線の推移） -->
                         <!-- 拠点ごとの通信量（期間内に流れた量） -->
                         <TabItem Header="通信量">
                             <Border Style="{StaticResource Card}">
@@ -3385,53 +3384,12 @@
                                         </ComboBox>
                                         <Button Content="取得" Command="{Binding FetchTrafficCommand}" Margin="0,0,6,0" />
                                         <Button Content="CSV で保存" Command="{Binding SaveTrafficCommand}"
-                                                Style="{StaticResource Button.Subtle}" />
+                                                Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
+                                        <!-- 「直近 1 日」だけでは、いつからいつまでかが分からない -->
+                                        <TextBlock Text="{Binding TrafficPeriod}" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
 
-                                <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Surface}"
-                                        BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
-                                        CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                                    <controls:SeriesChart Values="{Binding UsageSeries}"
-                                                          Maximum="{Binding UsageMaximum}"
-                                                          Unit="{Binding UsageUnit}"
-                                                          MinHeight="120" />
-                                </Border>
-
-                                <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,6">
-                                    <TextBlock Text="回線ごとの推移（WAN）" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center" Margin="0,0,12,2" />
-                                    <TextBlock Text="拠点" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center" Margin="0,0,5,2" />
-                                    <ComboBox Width="180" Margin="0,0,12,2"
-                                              ItemsSource="{Binding NetworkRows}"
-                                              SelectedItem="{Binding SelectedNetwork}"
-                                              ToolTip="推移を見る拠点を 1 つ選びます。先に「取得」を押すと一覧に入ります。">
-                                        <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Name}" />
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-
-                                    <TextBlock Text="期間" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center" Margin="0,0,5,2" />
-                                    <ComboBox Width="110" Margin="0,0,12,2"
-                                              ItemsSource="{Binding Timespans}"
-                                              SelectedItem="{Binding SelectedTimespan}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Name}" />
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-
-                                    <Button Content="取得" Command="{Binding FetchUsageCommand}" Margin="0,0,12,2" />
-
-                                    <!-- グラフだけでは数字が読めないので、最大と平均を必ず添える -->
-                                    <TextBlock Text="{Binding UsageSummary}" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center" />
-                                </WrapPanel>
 
                                     <Border Background="{DynamicResource Brush.Surface}"
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
@@ -3445,25 +3403,21 @@
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid Height="{DynamicResource Size.RowHeight.Wide}">
+                                                        <!-- 拠点ごとに 1 行（回線ごとには割らない。2026-08-18 ユーザー指示） -->
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="170" />
-                                                            <ColumnDefinition Width="60" />
+                                                            <ColumnDefinition Width="230" />
                                                             <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="180" />
-                                                            <ColumnDefinition Width="90" />
+                                                            <ColumnDefinition Width="200" />
+                                                            <ColumnDefinition Width="100" />
                                                         </Grid.ColumnDefinitions>
 
                                                         <TextBlock Grid.Column="0" Text="{Binding Device}"
                                                                    FontSize="{DynamicResource Size.Caption}"
                                                                    VerticalAlignment="Center"
                                                                    TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock Grid.Column="1" Text="{Binding Model}"
-                                                                   Style="{StaticResource Mono}"
-                                                                   FontSize="{DynamicResource Size.Caption}"
-                                                                   VerticalAlignment="Center" />
 
                                                         <!-- 棒は星（比率）で伸ばす。画面幅を測らずに済む -->
-                                                        <Grid Grid.Column="2" Margin="0,4,8,4">
+                                                        <Grid Grid.Column="1" Margin="0,4,8,4">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="{Binding Bar}" />
                                                                 <ColumnDefinition Width="{Binding Rest}" />
@@ -3473,12 +3427,12 @@
                                                                     CornerRadius="{DynamicResource Radius.Badge}" />
                                                         </Grid>
 
-                                                        <TextBlock Grid.Column="3" Text="{Binding Network}"
+                                                        <TextBlock Grid.Column="2" Text="{Binding Network}"
                                                                    Style="{StaticResource Mono}"
                                                                    FontSize="{DynamicResource Size.Caption}"
                                                                    VerticalAlignment="Center"
                                                                    TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock Grid.Column="4" Text="{Binding ValueText}"
+                                                        <TextBlock Grid.Column="3" Text="{Binding ValueText}"
                                                                    Style="{StaticResource Mono}"
                                                                    FontSize="{DynamicResource Size.Caption}"
                                                                    VerticalAlignment="Center"

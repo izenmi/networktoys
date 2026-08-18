@@ -67,11 +67,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     private string _globalIpText = "—";
     private bool _showConnection = true;
     private bool _allNetworks;
-    private IReadOnlyList<double> _usageSeries = [];
-    private double _usageMaximum = 100;
-    private string _usageUnit = "%";
-    private string _usageSummary = "—";
     private IReadOnlyList<MerakiTrafficRow> _trafficRows = [];
+
+    private string _trafficPeriod = "";
     private bool _isBusy;
     private CancellationTokenSource? _cts;
 
@@ -108,8 +106,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SaveAlertsCommand = new RelayCommand(() => Save("alerts", MerakiCatalog.ToCsv([.. AlertRows])),
             () => AlertRows.Count > 0);
 
-        FetchUsageCommand = new RelayCommand(() => _ = FetchUsageAsync(),
-            () => !IsBusy && ApiKey.Length > 0 && SelectedNetwork is not null);
         FetchTrafficCommand = new RelayCommand(() => _ = FetchTrafficAsync(),
             () => !IsBusy && ApiKey.Length > 0 && SelectedOrganization is not null);
         SaveTrafficCommand = new RelayCommand(() => Save("traffic", MerakiCatalog.ToCsv(_trafficRows)),
@@ -148,35 +144,18 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     public ObservableCollection<MerakiAlertRow> AlertRows { get; } = [];
 
 
-    /// <summary>回線の通信量の推移（折れ線に渡す値。古い順）。</summary>
-    public IReadOnlyList<double> UsageSeries
-    {
-        get => _usageSeries;
-        private set => SetProperty(ref _usageSeries, value);
-    }
-
-    /// <summary>縦軸の上限。その期間の最大に合わせる。</summary>
-    public double UsageMaximum
-    {
-        get => _usageMaximum;
-        private set => SetProperty(ref _usageMaximum, value);
-    }
-
-    public string UsageUnit
-    {
-        get => _usageUnit;
-        private set => SetProperty(ref _usageUnit, value);
-    }
-
-    /// <summary>最大と平均。グラフだけでは数字が読めないので必ず添える。</summary>
-    public string UsageSummary
-    {
-        get => _usageSummary;
-        private set => SetProperty(ref _usageSummary, value);
-    }
-
     /// <summary>拠点ごとの通信量（棒）。</summary>
     public ObservableCollection<MerakiBarViewModel> TrafficBars { get; } = [];
+
+    /// <summary>
+    /// 通信量を数えた期間。<b>「直近 1 日」だけでは、いつからいつまでか分からない</b>ので
+    /// 日時で出す（2026-08-18 ユーザー指示）。取る前は空。
+    /// </summary>
+    public string TrafficPeriod
+    {
+        get => _trafficPeriod;
+        private set => SetProperty(ref _trafficPeriod, value);
+    }
 
     public IReadOnlyList<MerakiTimespan> Timespans { get; } =
     [
@@ -211,8 +190,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
     /// <summary>組織のアラートを取る。</summary>
     public RelayCommand FetchAlertsCommand { get; }
-
-    public RelayCommand FetchUsageCommand { get; }
 
     /// <summary>MX ごとの利用率を取る（device utilization）。</summary>
 
@@ -342,7 +319,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             FetchSitesCommand.RaiseCanExecuteChanged();
             FetchDhcpCommand.RaiseCanExecuteChanged();
             FetchAlertsCommand.RaiseCanExecuteChanged();
-            FetchUsageCommand.RaiseCanExecuteChanged();
             FetchTrafficCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
         }
@@ -1109,66 +1085,6 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// 回線（WAN）の使用量の推移。<b>拠点を 1 つ選んで、その期間の中を見る</b>。
-    /// 区切りの細かさは期間から決める（60 点くらいに収まるように）。
-    /// </summary>
-    private async Task FetchUsageAsync()
-    {
-        if (SelectedNetwork is not { } network)
-        {
-            Status = "拠点を選んでください（先に「取得」を押すと一覧に入ります）。";
-            return;
-        }
-
-        IsBusy = true;
-        _cts = new CancellationTokenSource();
-
-        try
-        {
-            MerakiTimespan timespan = SelectedTimespan;
-
-            // 点が多すぎると線が潰れる。少なすぎると変化が見えない
-            int resolution = Math.Max(timespan.Seconds / 60, 60);
-
-            Status = "回線の使用量の推移を取得しています…";
-
-            MerakiCatalog.MerakiSeries series = MerakiCatalog.ParseUplinkHistory(
-                await _dashboard.UplinkHistoryAsync(
-                    ApiKey, network.Id, timespan.Seconds, resolution, _cts.Token),
-                label: network.Name);
-
-            UsageSeries = series.Values;
-            UsageMaximum = series.Maximum;
-            UsageUnit = series.Unit;
-            UsageSummary = series.Summary;
-
-            Status = series.Values.Count == 0
-                ? "回線の使用量は取れませんでした（この拠点では持っていないことがあります）。"
-                : $"{network.Name}：回線の使用量 {series.Values.Count} 点（{timespan.Name}・{DateTime.Now:HH:mm:ss} 時点）。";
-        }
-        catch (MerakiApiException ex)
-        {
-            Status = ex.Message;
-        }
-        catch (OperationCanceledException)
-        {
-            Status = "中断しました。";
-        }
-        catch (Exception ex)
-        {
-            Status = $"取得に失敗しました: {ex.Message}";
-            CrashLog.Write(ex, "MerakiViewModel.FetchUsageAsync");
-        }
-        finally
-        {
-            IsBusy = false;
-            _cts?.Dispose();
-            _cts = null;
-            RefreshSaveCommands();
-        }
-    }
-
-    /// <summary>
     /// 拠点ごとの通信量。応答は期間内の合計なので、そのまま量として出す。
     /// <b>回線ごとに 1 行</b>（まとめるとどちらの回線が使われているか見えなくなる）。
     /// </summary>
@@ -1181,11 +1097,17 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
         try
         {
+            MerakiTimespan timespan = SelectedTimespan;
+
             Status = "拠点ごとの通信量を取得しています…";
+
+            // 数えた期間は、取りに行く直前の時刻から遡ったぶん
+            DateTime until = DateTime.Now;
+            DateTime since = until.AddSeconds(-timespan.Seconds);
 
             _trafficRows = MerakiCatalog.ParseTraffic(
                 await _dashboard.UplinkUsageAsync(
-                    ApiKey, organization.Id, SelectedTimespan.Seconds, _cts.Token));
+                    ApiKey, organization.Id, timespan.Seconds, _cts.Token));
 
             double max = _trafficRows.Count > 0 ? _trafficRows.Max(r => r.Kilobytes) : 0;
 
@@ -1195,16 +1117,18 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             {
                 TrafficBars.Add(new MerakiBarViewModel(
                     device: row.Network,
-                    model: row.Uplink,
+                    model: "",
                     network: $"↑ {row.Sent} ／ ↓ {row.Received}",
                     valueText: row.Total,
                     value: row.Kilobytes,
                     max: max));
             }
 
+            TrafficPeriod = $"{since:yyyy/MM/dd HH:mm} 〜 {until:yyyy/MM/dd HH:mm}";
+
             Status = _trafficRows.Count == 0
                 ? "通信量は取れませんでした（MX のある組織でだけ出ます）。"
-                : $"拠点の通信量 {_trafficRows.Count} 回線（{SelectedTimespan.Name}の合計・{DateTime.Now:HH:mm:ss} 時点）。";
+                : $"拠点の通信量 {_trafficRows.Count} 拠点（{TrafficPeriod} の合計）。";
         }
         catch (MerakiApiException ex)
         {
@@ -1249,9 +1173,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         DhcpRows.Clear();
         AlertRows.Clear();
         TrafficBars.Clear();
-        UsageSeries = [];
-        UsageSummary = "—";
         _trafficRows = [];
+        TrafficPeriod = "";
 
         SelectedOrganization = null;
         SelectedNetwork = null;

@@ -102,14 +102,6 @@ internal sealed class MerakiDashboard : IDisposable
             $"/organizations/{Escape(organizationId)}/appliance/uplinks/usage/byNetwork?timespan={timespanSeconds}",
             apiKey, token);
 
-    /// <summary>拠点の WAN 使用量の推移（区間ごとの合計バイト）。</summary>
-    public Task<IReadOnlyList<string>> UplinkHistoryAsync(
-        string apiKey, string networkId, int timespanSeconds, int resolutionSeconds, CancellationToken token)
-        => GetPagesAsync(
-            $"/networks/{Escape(networkId)}/appliance/uplinks/usageHistory"
-            + $"?timespan={timespanSeconds}&resolution={resolutionSeconds}",
-            apiKey, token);
-
     /// <summary>組織のアラート。版によっては持っていない（その場合は 404 が返る）。</summary>
     public Task<IReadOnlyList<string>> AlertsAsync(string apiKey, string organizationId, CancellationToken token)
         => GetPagesAsync($"/organizations/{Escape(organizationId)}/assurance/alerts?perPage=300", apiKey, token);

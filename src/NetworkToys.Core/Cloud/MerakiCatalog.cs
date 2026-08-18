@@ -84,7 +84,6 @@ public sealed record MerakiDhcpRow(
 /// <param name="Kilobytes">並べ替えと棒の長さに使う生の値（応答の単位のまま）。</param>
 public sealed record MerakiTrafficRow(
     string Network,
-    string Uplink,
     double Kilobytes,
     string Total,
     string Sent,
@@ -396,10 +395,14 @@ public static class MerakiCatalog
     }
 
     /// <summary>
-    /// 停止している機器の回線を落とす。
+    /// 止まっているアプライアンスの回線を落とす。
     ///
     /// 機器が落ちていれば回線も当然切れているので、一覧に並べても
     /// 「切れている回線」を数えるときの邪魔にしかならない（2026-08-17 ユーザー指示）。
+    ///
+    /// <b>機器一覧の状態だけでは足りない</b> — 稼働状況が「online」のまま古いことがあるので、
+    /// <b>その機器の回線が 1 本もつながっていない</b>ときも止まっているとみなす
+    /// （2026-08-18 に「まだ出てくる」と報告された）。
     /// <b>導入時確認では落とさない</b> — あちらは「取れなかった」と「切れている」を区別する。
     /// </summary>
     public static IReadOnlyList<MerakiUplinkRow> WithoutOfflineDevices(
@@ -408,13 +411,33 @@ public static class MerakiCatalog
         ArgumentNullException.ThrowIfNull(uplinks);
         ArgumentNullException.ThrowIfNull(devices);
 
+        MerakiUplinkRow[] rows = [.. uplinks];
+
         // シリアルの大小は応答によって揺れる（機器一覧と回線の突き合わせも同じ規則）
         var offline = new HashSet<string>(
-            devices.Where(d => d.State == OfflineState && d.Serial.Length > 0).Select(d => d.Serial),
+            devices.Where(d => IsDeviceOffline(d.State) && d.Serial.Length > 0).Select(d => d.Serial),
             StringComparer.OrdinalIgnoreCase);
 
-        return [.. uplinks.Where(u => !offline.Contains(u.Serial))];
+        foreach (IGrouping<string, MerakiUplinkRow> byDevice in
+                 rows.GroupBy(r => r.Serial, StringComparer.OrdinalIgnoreCase))
+        {
+            if (byDevice.Key.Length > 0 && byDevice.All(r => !IsUplinkUp(r.RawStatus)))
+                offline.Add(byDevice.Key);
+        }
+
+        return [.. rows.Where(u => !offline.Contains(u.Serial))];
     }
+
+    /// <summary>機器として止まっているか。休止も止まっている側に入れる。</summary>
+    private static bool IsDeviceOffline(string? state)
+        => state == OfflineState || state == DormantState;
+
+    /// <summary>
+    /// その回線がつながっているか。<c>ready</c> は冗長側の待機なので<b>つながっている</b>側
+    /// （導入時確認の判定と同じ規則）。
+    /// </summary>
+    private static bool IsUplinkUp(string? rawStatus)
+        => rawStatus is "active" or "ready" or "connecting";
 
     /// <summary>アップリンクのグローバル IP を 1 行にまとめる。重複は畳む。</summary>
     public static string GlobalIpSummary(IEnumerable<MerakiUplinkRow> rows)
@@ -469,15 +492,23 @@ public static class MerakiCatalog
         if (kilobytes < 1024) return kilobytes.ToString("F0", CultureInfo.InvariantCulture) + " KB";
 
         double megabytes = kilobytes / 1024;
-        return megabytes < 1024
-            ? megabytes.ToString("F1", CultureInfo.InvariantCulture) + " MB"
-            : (megabytes / 1024).ToString("F1", CultureInfo.InvariantCulture) + " GB";
+        if (megabytes < 1024) return megabytes.ToString("F1", CultureInfo.InvariantCulture) + " MB";
+
+        double gigabytes = megabytes / 1024;
+
+        // 1TB を超えても GB のままだと桁が読めない（2026-08-18 ユーザー指示）
+        return gigabytes < 1024
+            ? gigabytes.ToString("F1", CultureInfo.InvariantCulture) + " GB"
+            : (gigabytes / 1024).ToString("F2", CultureInfo.InvariantCulture) + " TB";
     }
 
     // ===== 状態の表示 =====
 
     /// <summary>停止している機器の状態表示。回線を省く判定でも見るので 1 か所に置く。</summary>
     public const string OfflineState = "✕ 停止";
+
+    /// <summary>休止している機器の状態表示。止まっている側として扱う。</summary>
+    public const string DormantState = "◌ 休止";
 
     /// <summary>
     /// 機器の状態。状態は色だけで表さない決まりなので記号を併記する
@@ -487,7 +518,7 @@ public static class MerakiCatalog
     {
         "online" => ("● 稼働", ConnectionStateKind.Ok),
         "alerting" => ("⊘ 警報", ConnectionStateKind.Info),
-        "dormant" => ("◌ 休止", ConnectionStateKind.Muted),
+        "dormant" => (DormantState, ConnectionStateKind.Muted),
         "offline" => (OfflineState, ConnectionStateKind.Muted),
         null or "" => ("—", ConnectionStateKind.Muted),
         // 知らない値は言い換えずにそのまま出す
@@ -657,12 +688,13 @@ public static class MerakiCatalog
     /// 拠点ごとの WAN の通信量。<b>応答は期間内の合計（単位はキロバイト）</b>なので、
     /// そのまま量として出す（毎秒に直さない。2026-08-17 ユーザー指示）。
     ///
-    /// 回線（wan1/wan2）ごとに 1 行にする。まとめてしまうと、
-    /// 「どちらの回線が使われているか」が見えなくなる。
+    /// <b>回線ごとには割らず、拠点で 1 行にまとめる</b>（2026-08-18 ユーザー指示）。
+    /// 見たいのは「どの拠点がどれだけ使ったか」で、WAN1 と WAN2 の内訳ではない。
     /// </summary>
     public static IReadOnlyList<MerakiTrafficRow> ParseTraffic(IEnumerable<string> pages)
     {
-        var rows = new List<MerakiTrafficRow>();
+        var byNetwork = new Dictionary<string, (double Sent, double Received)>(StringComparer.Ordinal);
+        var order = new List<string>();
 
         foreach (JsonElement item in Items(pages))
         {
@@ -676,74 +708,33 @@ public static class MerakiCatalog
             {
                 if (uplink.ValueKind != JsonValueKind.Object) continue;
 
-                double sent = Number(uplink, "sent");
-                double received = Number(uplink, "received");
+                if (!byNetwork.TryGetValue(network, out (double Sent, double Received) sum))
+                    order.Add(network);
 
-                rows.Add(new MerakiTrafficRow(
-                    Network: network,
-                    Uplink: Str(uplink, "interface"),
-                    Kilobytes: sent + received,
-                    Total: FormatKilobytes(sent + received),
-                    Sent: FormatKilobytes(sent),
-                    Received: FormatKilobytes(received)));
+                byNetwork[network] = (
+                    sum.Sent + Number(uplink, "sent"),
+                    sum.Received + Number(uplink, "received"));
             }
+        }
+
+        var rows = new List<MerakiTrafficRow>();
+
+        foreach (string network in order)
+        {
+            (double sent, double received) = byNetwork[network];
+
+            rows.Add(new MerakiTrafficRow(
+                Network: network,
+                Kilobytes: sent + received,
+                Total: FormatKilobytes(sent + received),
+                Sent: FormatKilobytes(sent),
+                Received: FormatKilobytes(received)));
         }
 
         return rows;
     }
 
     // ===== 利用率 =====
-
-    /// <summary>
-    /// 折れ線 1 本ぶん。<c>Values</c> は古い順。<c>Maximum</c> は縦軸の上限
-    /// （利用率なら 100、帯域なら値から決める）。
-    /// </summary>
-    public sealed record MerakiSeries(
-        string Label,
-        IReadOnlyList<double> Values,
-        double Maximum,
-        string Unit,
-        string Summary);
-
-    /// <summary>
-    /// 拠点の WAN の通信量の推移。応答は<b>区間ごとの合計（キロバイト）</b>で、
-    /// そのまま量として出す（毎秒に直さない。通信量タブと単位を揃える）。
-    /// </summary>
-    public static MerakiSeries ParseUplinkHistory(IEnumerable<string> pages, string label)
-    {
-        var values = new List<double>();
-
-        foreach (JsonElement item in Items(pages))
-        {
-            double total = 0;
-
-            if (item.TryGetProperty("byInterface", out JsonElement interfaces)
-                && interfaces.ValueKind == JsonValueKind.Array)
-            {
-                foreach (JsonElement each in interfaces.EnumerateArray())
-                    total += Number(each, "sent") + Number(each, "received");
-            }
-            else
-            {
-                total = Number(item, "sent") + Number(item, "received");
-            }
-
-            values.Add(total);
-        }
-
-        double max = values.Count > 0 ? values.Max() : 0;
-
-        return new MerakiSeries(
-            Label: label,
-            Values: values,
-            Maximum: max > 0 ? max : 1,
-            Unit: "",
-            Summary: values.Count == 0
-                ? "—"
-                : $"区間ごと 最大 {FormatKilobytes(max)} ／ 平均 {FormatKilobytes(values.Average())}");
-    }
-
-
 
     // ===== アラート =====
 
@@ -809,8 +800,8 @@ public static class MerakiCatalog
         [.. rows.Select(r => new[] { r.Network, r.Device, r.Vlan, r.Subnet, r.UsedText, r.FreeText, r.UsageText })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiTrafficRow> rows) => new(
-        ["拠点", "回線", "合計", "送信", "受信"],
-        [.. rows.Select(r => new[] { r.Network, r.Uplink, r.Total, r.Sent, r.Received })]);
+        ["拠点", "合計", "送信", "受信"],
+        [.. rows.Select(r => new[] { r.Network, r.Total, r.Sent, r.Received })]);
 
     public static CsvTable ToCsv(IReadOnlyList<MerakiAlertRow> rows) => new(
         ["重大度", "種別", "拠点", "機器", "発生", "内容"],
