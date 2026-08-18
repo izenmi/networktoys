@@ -40,6 +40,7 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
         "show ap summary",
         "show ap join stats summary",
         "show wireless client summary",
+        "show wireless device-tracking database mac",
         "show wireless wlan summary",
         "show ap dot11 24ghz summary",
         "show ap dot11 5ghz summary",
@@ -293,8 +294,13 @@ public sealed class WlcViewModel : ObservableObject, IDisposable
 
         IReadOnlyList<WlcSsidRow> ssids = WlcShow.ParseWlanSummary(wlans);
 
+        // 端末の一覧に IP は出ない。追跡データベースから MAC で引いて埋める。
+        // メーカーは MAC から引ける（OUI）ので、機器に聞かずに埋まる
+        IReadOnlyDictionary<string, string> ips =
+            WlcShow.ParseIpBindings(Output("show wireless device-tracking"));
+
         _allAps = WlcShow.ParseApSummary(aps, joins);
-        _allClients = WlcShow.ParseClientSummary(clients, ssids);
+        _allClients = WlcShow.ParseClientSummary(clients, ssids, ips, mac => OuiCatalog.FindVendor(mac) ?? "");
 
         Replace(SsidRows, ssids);
         Replace(JoinRows, WlcShow.ParseJoinStats(joins));

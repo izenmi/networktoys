@@ -203,7 +203,10 @@ public static class WlcShow
     /// （0 を入れて「強い」ように見せない）。SSID は WLAN の一覧から補う。
     /// </summary>
     public static IReadOnlyList<WlcClientRow> ParseClientSummary(
-        string? text, IReadOnlyList<WlcSsidRow>? wlans = null)
+        string? text,
+        IReadOnlyList<WlcSsidRow>? wlans = null,
+        IReadOnlyDictionary<string, string>? ipByMac = null,
+        Func<string, string>? vendorOf = null)
     {
         Dictionary<string, string> ssidById = new(StringComparer.OrdinalIgnoreCase);
 
@@ -224,10 +227,14 @@ public static class WlcShow
             string state = row["state", "status"];
             bool up = state.Contains("run", StringComparison.OrdinalIgnoreCase);
 
+            string ip = ipByMac is not null && ipByMac.TryGetValue(NormalizeMac(mac), out string? found)
+                ? found
+                : "";
+
             rows.Add(new WlcClientRow(
                 Mac: mac,
-                Ip: "",
-                Vendor: "",
+                Ip: ip,
+                Vendor: vendorOf?.Invoke(mac) ?? "",
                 ApName: row[ApNameHeads],
                 Ssid: ssidById.TryGetValue(wlanId, out string? ssid) ? ssid : row[SsidHeads],
                 Radio: row[ProtocolHeads],
@@ -243,6 +250,60 @@ public static class WlcShow
 
         return rows;
     }
+
+    /// <summary>
+    /// <c>show wireless device-tracking database mac</c> / <c>… ip</c> から MAC → IP を作る。
+    ///
+    /// <b>見出し名は版で違う</b>ので当てにしない。<b>MAC に見える語と IPv4 に見える語</b>を
+    /// 同じ行から拾う（端末の一覧に IP を埋めるためだけの表なので、これで足りる）。
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> ParseIpBindings(string? text)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string line in Split(text))
+        {
+            string mac = "";
+            string ip = "";
+
+            foreach ((_, string word) in Words(line))
+            {
+                if (mac.Length == 0 && LooksLikeMac(word)) mac = word;
+                else if (ip.Length == 0 && LooksLikeIpv4(word)) ip = word;
+            }
+
+            if (mac.Length > 0 && ip.Length > 0) map.TryAdd(NormalizeMac(mac), ip);
+        }
+
+        return map;
+    }
+
+    /// <summary>比べるための MAC（区切りを落とす）。表示は機器が返した形のまま。</summary>
+    private static string NormalizeMac(string? mac)
+    {
+        if (string.IsNullOrEmpty(mac)) return "";
+
+        var text = new System.Text.StringBuilder(mac.Length);
+
+        foreach (char c in mac)
+        {
+            if (c is ':' or '-' or '.' or ' ') continue;
+
+            text.Append(char.ToLowerInvariant(c));
+        }
+
+        return text.ToString();
+    }
+
+    private static bool LooksLikeMac(string word)
+        => NormalizeMac(word).Length == 12 && NormalizeMac(word).All(Uri.IsHexDigit)
+           && (word.Contains('.', StringComparison.Ordinal)
+               || word.Contains(':', StringComparison.Ordinal)
+               || word.Contains('-', StringComparison.Ordinal));
+
+    private static bool LooksLikeIpv4(string word)
+        => System.Net.IPAddress.TryParse(word, out System.Net.IPAddress? address)
+           && address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork;
 
     /// <summary><c>show wireless wlan summary</c>。SSID と WLAN 番号の対応もここから取る。</summary>
     public static IReadOnlyList<WlcSsidRow> ParseWlanSummary(string? text)
@@ -396,32 +457,46 @@ public static class WlcShow
     }
 
     /// <summary>
-    /// 1 行を列に割る。<b>まず 2 文字以上の空白で割ってみて</b>、
-    /// 数が合わなければ見出しの開始位置で切る（版で桁が動いても、どちらかで拾える）。
+    /// 1 行を列に割る。
+    ///
+    /// <b>語に割ってから、見出しの位置でどの列かを決める。</b>
+    /// 桁の切り方を「2 文字以上の空白」で決めると、
+    /// <c>aabb.ccdd.eeff AP-1F-01</c> のように<b>空白 1 つで隣り合う値</b>が
+    /// 1 つの語に化ける（2026-08-18 に「MAC の欄に AP 名まで入る」と報告された）。
+    /// 位置で決めれば、値の中に空白があっても（<c>WLAN 1</c>）同じ列にまとまる。
     /// </summary>
     private static string[] Cells(string line, (string Name, int Start)[] columns)
     {
-        string[] spaced = SplitOnGaps(line);
+        string[] cells = new string[columns.Length];
 
-        if (spaced.Length == columns.Length) return spaced;
+        foreach ((int at, string word) in Words(line))
+        {
+            int column = ColumnAt(columns, at);
 
-        var cells = new List<string>();
+            cells[column] = cells[column] is { Length: > 0 } already ? already + " " + word : word;
+        }
+
+        return [.. cells.Select(c => c ?? "")];
+    }
+
+    /// <summary>その位置がどの列か。<b>いちばん近い見出しに寄せる</b>（桁は版で少しずれる）。</summary>
+    private static int ColumnAt((string Name, int Start)[] columns, int at)
+    {
+        int best = 0;
 
         for (int c = 0; c < columns.Length; c++)
         {
-            int start = Math.Min(columns[c].Start, line.Length);
-            int end = c + 1 < columns.Length ? Math.Min(columns[c + 1].Start, line.Length) : line.Length;
-
-            cells.Add(start >= end ? "" : line[start..end].Trim());
+            // 見出しの開始位置を過ぎていれば、その列の候補
+            if (columns[c].Start <= at + 1) best = c;
+            else break;
         }
 
-        // 桁がずれて全部空になったときは、素の分割を使う（数が合わなくても無いよりまし）
-        return cells.Any(v => v.Length > 0) ? [.. cells] : spaced;
+        return best;
     }
 
-    private static string[] SplitOnGaps(string line)
+    /// <summary>空白で区切った語と、その開始位置。</summary>
+    private static IEnumerable<(int At, string Word)> Words(string line)
     {
-        var cells = new List<string>();
         int i = 0;
 
         while (i < line.Length)
@@ -431,17 +506,10 @@ public static class WlcShow
 
             int start = i;
 
-            while (i < line.Length)
-            {
-                if (line[i] != ' ') { i++; continue; }
-                if (i + 1 < line.Length && line[i + 1] != ' ') { i += 2; continue; }
-                break;
-            }
+            while (i < line.Length && line[i] != ' ') i++;
 
-            cells.Add(line[start..i].Trim());
+            yield return (start, line[start..i]);
         }
-
-        return [.. cells];
     }
 
     private static bool IsSeparator(string line)

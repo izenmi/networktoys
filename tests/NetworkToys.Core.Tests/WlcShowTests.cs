@@ -39,13 +39,14 @@ public sealed class WlcShowTests
         7    guest-profile     Guest-WiFi     Disabled [WPA2][PSK]
         """;
 
+    // 実機は MAC と AP 名のあいだが空白 1 つになる（ここで列がずれていた）
     private const string ClientSummary = """
         Number of Clients: 2
 
-        MAC Address     AP Name    Type ID   State      Protocol  Method    Role
-        ------------------------------------------------------------------------
-        1122.3344.5501  AP-1F-01   WLAN 1    Run        11ac      Dot1x     Local
-        1122.3344.5502  AP-1F-02   WLAN 7    Run        11ax      None      Local
+        MAC Address    AP Name                          Type ID   State        Protocol Method     Role
+        --------------------------------------------------------------------------------------------------
+        1122.3344.5501 AP-1F-01                         WLAN 1    Run          11ac     Dot1x      Local
+        1122.3344.5502 AP-1F-02                         WLAN 7    Run          11ax     None       Local
         """;
 
     [Fact]
@@ -108,14 +109,41 @@ public sealed class WlcShowTests
         IReadOnlyList<WlcClientRow> rows = WlcShow.ParseClientSummary(ClientSummary, wlans);
 
         Assert.Equal(2, rows.Count);
+
+        // MAC の欄に AP 名まで入っていた（2026-08-18 報告）。列は位置で決める
         Assert.Equal("1122.3344.5501", rows[0].Mac);
         Assert.Equal("AP-1F-01", rows[0].ApName);
         Assert.Equal("Corp-WiFi", rows[0].Ssid);
+        Assert.Equal("11ac", rows[0].Radio);
         Assert.Equal("● 通信中", rows[0].State);
+
+        Assert.Equal("Guest-WiFi", rows[1].Ssid);
 
         // show には出ない項目を 0 で埋めない（「電波が強い」ように見せない）
         Assert.Equal("—", rows[0].RssiText);
         Assert.Equal("", rows[0].Ip);
+    }
+
+    [Fact]
+    public void Ip_and_vendor_are_filled_from_the_tracking_database_and_the_mac()
+    {
+        // 見出しの名前は版で違うので当てにしない。MAC に見える語と IP に見える語を拾う
+        const string tracking = """
+            MAC Address     IP Address      VLAN  AP Name    State
+            -------------------------------------------------------
+            1122.3344.5501  192.168.20.31   20    AP-1F-01   REACHABLE
+            """;
+
+        IReadOnlyDictionary<string, string> ips = WlcShow.ParseIpBindings(tracking);
+
+        IReadOnlyList<WlcClientRow> rows = WlcShow.ParseClientSummary(
+            ClientSummary, null, ips, _ => "Apple");
+
+        Assert.Equal("192.168.20.31", rows[0].Ip);
+        Assert.Equal("Apple", rows[0].Vendor);
+
+        // 追跡データベースに無い端末は空のまま（0.0.0.0 などで埋めない）
+        Assert.Equal("", rows[1].Ip);
     }
 
     [Fact]
