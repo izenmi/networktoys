@@ -123,18 +123,33 @@ internal static class FastComCheck
     {
         long started = Stopwatch.GetTimestamp();
 
-        long[] counts = await Task.WhenAll(
+        (long Bytes, string? Reason)[] results = await Task.WhenAll(
             targets.Select(url => PushAsync(client, url, token))).ConfigureAwait(false);
 
-        long total = counts.Sum();
+        long total = results.Sum(r => r.Bytes);
 
-        return total > 0
-            ? new SpeedSample(total, Elapsed(started))
-            : new SpeedSample(0, Elapsed(started), "送信を受け付けてもらえませんでした");
+        if (total > 0) return new SpeedSample(total, Elapsed(started));
+
+        // <b>断られた理由をそのまま出す。</b>「受け付けてもらえませんでした」だけでは、
+        // プロキシが弾いたのか先方が断ったのか分からない（2026-08-18 報告）
+        string? reason = results.Select(r => r.Reason).FirstOrDefault(r => r is { Length: > 0 });
+
+        return new SpeedSample(
+            0,
+            Elapsed(started),
+            reason is { Length: > 0 }
+                ? $"送信を受け付けてもらえませんでした（{reason}）"
+                : "送信を受け付けてもらえませんでした");
     }
 
-    /// <summary>0 で埋めた作り物を送る。受け付けられなければ 0 として続ける。</summary>
-    private static async Task<long> PushAsync(HttpClient client, string url, CancellationToken token)
+    /// <summary>
+    /// 0 で埋めた作り物を送る。受け付けられなければ 0 として続ける。
+    ///
+    /// <b>宛先から <c>/range/…</c> を落とす</b> — 下りは範囲付きで取るが、
+    /// 上りは範囲を持たない同じ URL へ送るのが fast.com の作り。
+    /// </summary>
+    private static async Task<(long Bytes, string? Reason)> PushAsync(
+        HttpClient client, string url, CancellationToken token)
     {
         try
         {
@@ -143,9 +158,11 @@ internal static class FastComCheck
                 new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
 
             using HttpResponseMessage response = await client
-                .PostAsync(url, content, token).ConfigureAwait(false);
+                .PostAsync(UploadUrl(url), content, token).ConfigureAwait(false);
 
-            return response.IsSuccessStatusCode ? UploadBytesPerStream : 0;
+            return response.IsSuccessStatusCode
+                ? (UploadBytesPerStream, null)
+                : (0, $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}".TrimEnd());
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -153,8 +170,21 @@ internal static class FastComCheck
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
         {
-            return 0;
+            return (0, ex.Message);
         }
+    }
+
+    /// <summary>上りの宛先。<c>/range/…</c> が付いていれば落とす。</summary>
+    internal static string UploadUrl(string url)
+    {
+        int range = url.IndexOf("/range/", StringComparison.OrdinalIgnoreCase);
+
+        if (range < 0) return url;
+
+        int query = url.IndexOf('?', StringComparison.Ordinal);
+
+        // 範囲の後ろに ? が付く形（…/range/0-100?c=jp）でも、問い合わせは残す
+        return query > range ? url[..range] + url[query..] : url[..range];
     }
 
     /// <summary>読み捨てながらバイト数だけ数える。1 本が失敗しても 0 として続ける。</summary>

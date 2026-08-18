@@ -235,7 +235,13 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnVerifyRunOne(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.DataContext is not ViewModels.VerifyRowViewModel row) return;
+        // 行に小さな印を置くと何のボタンか伝わらない（2026-08-18 指摘）。
+        // 一覧で選んでいる行に対して、上のボタンから走らせる
+        if (VerifyItems.SelectedItem is not ViewModels.VerifyRowViewModel row)
+        {
+            _shell.Verify.Status = "先に、試したい項目の行を選んでください。";
+            return;
+        }
 
         ViewModels.VerifyViewModel verify = _shell.Verify;
 

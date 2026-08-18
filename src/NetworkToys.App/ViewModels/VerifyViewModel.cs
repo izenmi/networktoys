@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Win32;
 using NetworkToys.App.Mvvm;
 using NetworkToys.App.Services;
+using NetworkToys.Core.Net;
 using NetworkToys.Core.Verify;
 
 namespace NetworkToys.App.ViewModels;
@@ -218,7 +219,7 @@ public sealed class VerifyViewModel : ObservableObject
         }
     }
 
-    public string Status { get => _status; private set => SetProperty(ref _status, value); }
+    public string Status { get => _status; internal set => SetProperty(ref _status, value); }
 
     public bool IsBusy
     {
@@ -416,9 +417,14 @@ public sealed class VerifyViewModel : ObservableObject
 
     private async Task RunAsync()
     {
-        IReadOnlyList<CheckItem> items = [.. Rows.Select(r => r.ToItem()).Where(i => i.Name.Length > 0)];
+        IReadOnlyList<CheckItem> all = [.. Rows.Select(r => r.ToItem()).Where(i => i.Name.Length > 0)];
 
-        if (items.Count == 0)
+        // 目視の項目は、プロキシを切り替えながら 1 件ずつ回す（下の StartBrowserQueue）。
+        // まとめて開くと、どのプロキシで見た画面なのか分からなくなる（2026-08-18 ユーザー指示）
+        IReadOnlyList<CheckItem> items = [.. all.Where(i => i.Kind != CheckKind.Manual)];
+        IReadOnlyList<CheckItem> manual = [.. all.Where(i => i.Kind == CheckKind.Manual)];
+
+        if (all.Count == 0)
         {
             Status = "項目名の入っている行がありません。";
             return;
@@ -466,10 +472,15 @@ public sealed class VerifyViewModel : ObservableObject
 
         try
         {
-            await CheckRunner.RunAsync(
-                items, proxies, TeamsEndpoints.Default, progress, _cts.Token, finished);
+            if (items.Count > 0)
+            {
+                await CheckRunner.RunAsync(
+                    items, proxies, TeamsEndpoints.Default, progress, _cts.Token, finished);
+            }
 
             Status = CheckReport.Summarize([.. Results]);
+
+            StartBrowserQueue(manual, proxies);
         }
         catch (OperationCanceledException)
         {
@@ -650,6 +661,122 @@ public sealed class VerifyViewModel : ObservableObject
         ApplyToRows([.. Results]);
         RaiseProgress();
         Status = CheckReport.Summarize([.. Results]);
+
+        // 判定が入ったら、次のプロキシに切り替えて次の 1 件を開く
+        OpenNextForPerson();
+    }
+
+    // ===== 目視の項目（プロキシを切り替えながら 1 件ずつ） =====
+
+    /// <summary>まだ開いていない「目視の項目 × プロキシ」。</summary>
+    private readonly Queue<(CheckItem Item, ProxyChoice Proxy)> _browserQueue = new();
+
+    /// <summary>切り替える前の Windows のプロキシ設定。<b>終わったら必ず戻す。</b></summary>
+    private ProxyState? _originalProxy;
+
+    /// <summary>
+    /// 目視の項目を順番に開く。
+    ///
+    /// <b>ブラウザは Windows のプロキシ設定に従う</b>ので、プロキシごとに見るには
+    /// その設定を切り替えるしかない（2026-08-18 ユーザー指示）。
+    /// <b>切り替えたら必ず元に戻す</b> — 戻し忘れは、ほかのアプリまで巻き込む事故になる。
+    /// </summary>
+    private void StartBrowserQueue(IReadOnlyList<CheckItem> manual, IReadOnlyList<ProxyChoice> proxies)
+    {
+        _browserQueue.Clear();
+
+        if (manual.Count == 0) return;
+
+        // 1 つも選ばれていなければ、いまの設定のまま 1 周だけ
+        IReadOnlyList<ProxyChoice> targets = proxies.Count > 0 ? proxies : [ProxyChoice.System];
+
+        foreach (CheckItem item in manual)
+        {
+            foreach (ProxyChoice proxy in targets) _browserQueue.Enqueue((item, proxy));
+        }
+
+        OpenNextForPerson();
+    }
+
+    /// <summary>次の 1 件を開く。無ければ Windows の設定を元に戻す。</summary>
+    private void OpenNextForPerson()
+    {
+        if (_browserQueue.Count == 0)
+        {
+            RestoreProxy();
+            return;
+        }
+
+        // まだ判定していない目視の項目が残っているなら、そちらが先
+        if (Results.Any(r => r.NeedsPerson)) return;
+
+        (CheckItem item, ProxyChoice proxy) = _browserQueue.Dequeue();
+
+        string? failure = UseProxy(proxy);
+
+        CheckResult result = CheckRunner.OpenForPerson(item, proxy, failure);
+
+        Results.Add(result);
+        ApplyToRows([.. Results]);
+        RaiseProgress();
+
+        Status = $"「{item.Name}」を {proxy.ShortName} で開きました。見て ○ か ✕ を押してください。";
+    }
+
+    /// <summary>
+    /// ブラウザが従う設定（WinINET）を、そのプロキシに切り替える。
+    /// <b>「Windows のプロキシ設定」を選んだときは触らない</b>（いまの設定で見る、の意味）。
+    /// </summary>
+    private string? UseProxy(ProxyChoice proxy)
+    {
+        if (proxy.Mode == NetworkToys.Core.Verify.ProxyMode.System) return null;
+
+        _originalProxy ??= ProxySettings.Read();
+
+        ProxyPlan plan = proxy.Mode switch
+        {
+            NetworkToys.Core.Verify.ProxyMode.Pac => new ProxyPlan(NetworkToys.Core.Net.ProxyMode.Pac, proxy.Address, "", ""),
+            NetworkToys.Core.Verify.ProxyMode.Fixed => new ProxyPlan(
+                NetworkToys.Core.Net.ProxyMode.Fixed, "", StripScheme(proxy.Address), ""),
+            _ => new ProxyPlan(NetworkToys.Core.Net.ProxyMode.None, "", "", ""),
+        };
+
+        string? error = ProxySettings.Apply(plan);
+
+        Notice = error is null
+            ? $"⚠ ブラウザで見るために、Windows のプロキシ設定を「{proxy.ShortName}」に変えています。"
+              + "すべての判定が終わると元に戻します。"
+            : $"⚠ Windows のプロキシ設定を変えられませんでした: {error}";
+
+        return error;
+    }
+
+    /// <summary>切り替える前の設定へ戻す。<b>戻せなければ、そう言う。</b></summary>
+    private void RestoreProxy()
+    {
+        if (_originalProxy is not { } original) return;
+
+        _originalProxy = null;
+
+        ProxyPlan plan = original.Mode switch
+        {
+            NetworkToys.Core.Net.ProxyMode.Pac => new ProxyPlan(NetworkToys.Core.Net.ProxyMode.Pac, original.PacUrl, "", ""),
+            NetworkToys.Core.Net.ProxyMode.Fixed => new ProxyPlan(
+                NetworkToys.Core.Net.ProxyMode.Fixed, "", original.Server, original.Bypass),
+            _ => new ProxyPlan(NetworkToys.Core.Net.ProxyMode.None, "", "", ""),
+        };
+
+        Notice = ProxySettings.Apply(plan) is { } error
+            ? $"⚠ Windows のプロキシ設定を元に戻せませんでした（{error}）。IP設定タブで確かめてください。"
+            : $"Windows のプロキシ設定を元（{original.Summary}）に戻しました。";
+    }
+
+    /// <summary>WinINET の ProxyServer は <c>host:port</c>。<c>http://</c> は付けない。</summary>
+    private static string StripScheme(string address)
+    {
+        int at = address.IndexOf("://", StringComparison.Ordinal);
+
+        return at < 0 ? address : address[(at + 3)..].TrimEnd('/');
     }
 
     private void Save()
@@ -807,6 +934,10 @@ public sealed class VerifyViewModel : ObservableObject
     /// <summary>全消去から呼ばれる。</summary>
     public void Reset()
     {
+        // 目視の途中で片付けられても、Windows の設定は必ず戻す
+        _browserQueue.Clear();
+        RestoreProxy();
+
         _cts?.Cancel();
         Results.Clear();
         _done = 0;

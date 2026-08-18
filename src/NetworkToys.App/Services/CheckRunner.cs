@@ -208,7 +208,7 @@ internal static class CheckRunner
     /// 既定のブラウザで開くので、<b>Windows のプロキシ設定が効く</b>。
     /// 試験タブで選んだプロキシとは別物なので、その断りも書いておく。
     /// </summary>
-    private static CheckResult OpenForPerson(CheckItem item)
+    internal static CheckResult OpenForPerson(CheckItem item, ProxyChoice? proxy = null, string? proxyError = null)
     {
         string url = item.Target.Trim();
 
@@ -229,10 +229,16 @@ internal static class CheckRunner
 
         string what = item.Expect.Length > 0 ? $"「{item.Expect}」を確認してください。" : "";
 
-        return new CheckResult(item.Name, item.Kind, item.Target, "",
+        // どのプロキシで開いたのかを必ず添える。証跡に「どちらで見たか」が残らないと意味がない
+        string through = proxy is null
+            ? "（既定のブラウザなので Windows のプロキシ設定に従います）"
+            : proxyError is null
+                ? $"（Windows のプロキシ設定を「{proxy.ShortName}」に切り替えて開いています）"
+                : $"（プロキシを切り替えられませんでした: {proxyError}。いまの設定のまま開いています）";
+
+        return new CheckResult(item.Name, item.Kind, item.Target, proxy?.ShortName ?? "",
                                CheckVerdict.AwaitingPerson,
-                               $"ブラウザで開きました。{what}"
-                               + "（既定のブラウザなので Windows のプロキシ設定に従います）");
+                               $"ブラウザで開きました。{what}{through}");
     }
 
     /// <summary>
