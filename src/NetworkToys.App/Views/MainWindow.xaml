@@ -2135,17 +2135,30 @@
                                                     <Border Grid.Column="3" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                     <Border Grid.Column="4" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
 
-                                                    <Button Grid.Column="0" Content="✕"
-                                                            Style="{StaticResource Button.Subtle}"
-                                                            Command="{Binding DataContext.RemoveRowCommand,
-                                                                      RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                            CommandParameter="{Binding}"
-                                                            Width="16" Height="16"
-                                                            Padding="0" MinWidth="0" MinHeight="0"
-                                                            FontSize="{DynamicResource Size.Micro}"
-                                                            HorizontalAlignment="Left"
-                                                            VerticalAlignment="Center" Margin="2,0,0,0"
-                                                            ToolTip="この行を消します。" />
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                                                HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                        <Button Content="✕"
+                                                                Style="{StaticResource Button.Subtle}"
+                                                                Command="{Binding DataContext.RemoveRowCommand,
+                                                                          RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                CommandParameter="{Binding}"
+                                                                Width="16" Height="16"
+                                                                Padding="0" MinWidth="0" MinHeight="0"
+                                                                FontSize="{DynamicResource Size.Micro}"
+                                                                Margin="2,0,0,0"
+                                                                ToolTip="この行を消します。" />
+
+                                                        <!-- 手で切り分けるとき用。1 項目だけ、選んだプロキシで試す
+                                                             （2026-08-18 ユーザー指示） -->
+                                                        <Button Content="▶"
+                                                                Style="{StaticResource Button.Subtle}"
+                                                                Click="OnVerifyRunOne"
+                                                                Width="16" Height="16"
+                                                                Padding="0" MinWidth="0" MinHeight="0"
+                                                                FontSize="{DynamicResource Size.Micro}"
+                                                                Margin="3,0,0,0"
+                                                                ToolTip="この項目だけを、選んだプロキシで試します。" />
+                                                    </StackPanel>
 
                                                     <TextBox Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                                              FontSize="{DynamicResource Size.Caption}"

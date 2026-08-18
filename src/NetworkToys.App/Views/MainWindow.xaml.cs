@@ -232,6 +232,38 @@ public partial class MainWindow : Window
         else compare.AfterText = output;
     }
 
+    /// <summary>
+    /// 試験の 1 項目だけを、選んだプロキシで試す（2026-08-18 ユーザー指示）。
+    ///
+    /// <b>窓を開くのは画面の仕事</b>なので、プロキシの選択はここでメニューにして出す。
+    /// 定義してあるプロキシ（直接・Windows の設定・一覧に書いたもの）がそのまま並ぶ。
+    /// </summary>
+    private void OnVerifyRunOne(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not ViewModels.VerifyRowViewModel row) return;
+
+        ViewModels.VerifyViewModel verify = _shell.Verify;
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = sender as UIElement,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+        };
+
+        foreach (ViewModels.ProxyChoiceViewModel proxy in verify.Proxies)
+        {
+            ViewModels.ProxyChoiceViewModel captured = proxy;
+
+            var entry = new MenuItem { Header = proxy.Name, ToolTip = proxy.Summary };
+
+            entry.Click += (_, _) => _ = verify.RunOneAsync(row, captured.Choice);
+
+            menu.Items.Add(entry);
+        }
+
+        menu.IsOpen = menu.Items.Count > 0;
+    }
+
     private void OnDnacPasswordChanged(object sender, RoutedEventArgs e)
     {
         if (sender is PasswordBox box)

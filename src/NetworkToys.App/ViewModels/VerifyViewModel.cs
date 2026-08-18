@@ -497,6 +497,71 @@ public sealed class VerifyViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 1 項目だけ、指定したプロキシで試す（2026-08-18 ユーザー指示）。
+    ///
+    /// 手で確かめるときは<b>「この 1 件を、このプロキシで」</b>が要る。
+    /// まとめて実行は全項目 × 選んだプロキシぶん回るので、切り分けには重い。
+    /// <b>結果はいつもの一覧に足す</b>（別扱いにすると証跡が 2 か所に散る）。
+    /// </summary>
+    internal async Task RunOneAsync(VerifyRowViewModel row, ProxyChoice proxy)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(proxy);
+
+        if (IsBusy) return;
+
+        CheckItem item = row.ToItem();
+
+        if (item.Name.Length == 0)
+        {
+            Status = "項目名が空です。";
+            return;
+        }
+
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+
+        row.Status = "▶ 試験中";
+
+        var finished = new Progress<CheckResult>(result =>
+        {
+            Results.Add(result);
+            ApplyToRow(result.Name);
+            RaiseProgress();
+        });
+
+        try
+        {
+            await CheckRunner.RunAsync(
+                [item], [proxy], TeamsEndpoints.Default, null, _cts.Token, finished);
+
+            Status = item.UsesProxy
+                ? $"「{item.Name}」を {proxy.Name} で試しました。"
+                : $"「{item.Name}」を試しました（この種類はプロキシを通りません）。";
+        }
+        catch (OperationCanceledException)
+        {
+            if (row.Status == "▶ 試験中") row.Status = "◌ 未実行";
+
+            Status = "⊘ 中断しました。";
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "VerifyViewModel.RunOneAsync");
+            Status = $"試験に失敗しました: {ex.Message}";
+        }
+        finally
+        {
+            _cts?.Dispose();
+            _cts = null;
+            IsBusy = false;
+            SaveCommand.RaiseCanExecuteChanged();
+            SaveHtmlCommand.RaiseCanExecuteChanged();
+            RaiseProgress();
+        }
+    }
+
     /// <summary>いま試している行に印を付ける。まだ結果の出ていない行だけに触る。</summary>
     private void MarkRunning(string name)
     {

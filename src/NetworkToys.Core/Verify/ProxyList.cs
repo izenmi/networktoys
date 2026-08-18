@@ -160,6 +160,12 @@ public static class ProxyListParser
         if (line.Length == 0 || line.Contains(',', StringComparison.Ordinal)) return false;
         if (line.Contains(' ', StringComparison.Ordinal)) return false;
 
+        // ただの語を拾わない。アドレスなら「.」か「:」のどちらかは必ずある
+        // （"名前だけ" を http://名前だけ として受けてしまっていた）
+        if (!line.Contains('.', StringComparison.Ordinal)
+            && !line.Contains(':', StringComparison.Ordinal))
+            return false;
+
         bool looksLikePac = line.EndsWith(".pac", StringComparison.OrdinalIgnoreCase)
                             || line.Contains(".pac?", StringComparison.OrdinalIgnoreCase)
                             || line.Contains("/proxy.pac", StringComparison.OrdinalIgnoreCase);
