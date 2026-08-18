@@ -34,6 +34,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // 既定の大きさは広い画面向けなので、狭い画面では収まるところまで縮める
+        FitToScreen();
+
         // 「その他」の見出しは件数を数えて組み立てる（直書きにしない）
         UpdateOtherHeader();
 
@@ -339,6 +342,23 @@ public partial class MainWindow : Window
         if (index < 0 || index >= pane.Items.Count) return;
 
         pane.ScrollIntoView(pane.Items[index]);
+    }
+
+    /// <summary>
+    /// 既定の大きさを、いまの画面の作業領域（タスクバーを除いた広さ）に収める。
+    ///
+    /// XAML に書けるのは「広い画面での既定」だけで、<b>ノート PC ではみ出す</b>
+    /// （2026-08-18 に縦がはみ出すと報告された）。<c>WindowStartupLocation</c> が
+    /// 中央寄せなので、はみ出すと上下が画面の外へ出て操作できなくなる。
+    /// <b>広げはしない</b> — 既定より大きくすると、今度は表がまばらになる。
+    /// </summary>
+    private void FitToScreen()
+    {
+        Rect area = SystemParameters.WorkArea;
+
+        // 枠のぶんだけ余裕を見る（ぴったりだと影と枠が画面の縁にかかる）
+        Width = Math.Max(MinWidth, Math.Min(Width, area.Width - 16));
+        Height = Math.Max(MinHeight, Math.Min(Height, area.Height - 16));
     }
 
     /// <summary>

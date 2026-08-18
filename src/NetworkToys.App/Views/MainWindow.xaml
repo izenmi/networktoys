@@ -1,6 +1,8 @@
 <!-- 既定の大きさは「表がひととおり見える」ことを優先して広めに取る(2026-08-18 ユーザー指示)。
      以前はタブが一列に収まる最小(880x760)まで詰めていたが、列の多い表で右端が隠れていた。
      タブが一列に収まるかは自己診断が実測して確かめている。
+     ここに書けるのは「広い画面での既定」だけなので、画面からはみ出す分は
+     起動時に作業領域へ収める(MainWindow.FitToScreen)。
      狭めたい人は縮められるよう MinWidth / MinHeight は据え置き -->
 <Window x:Class="NetworkToys.App.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -10,7 +12,7 @@
         xmlns:help="clr-namespace:NetworkToys.App.Help"
         xmlns:net="clr-namespace:NetworkToys.Core.Net;assembly=NetworkToys.Core"
         Title="NetworkToys"
-        Width="1180" Height="900"
+        Width="1180" Height="800"
         MinWidth="700" MinHeight="480"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.Window.Backdrop}"
