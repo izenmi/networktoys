@@ -103,7 +103,7 @@ public class TextDiffTests
 
         Assert.False(result.TooLarge);
         Assert.Equal(3, result.Lines.Count(l => l.Kind == DiffKind.Added));
-        Assert.Empty(result.Lines.Where(l => l.Kind == DiffKind.Removed));
+        Assert.DoesNotContain(result.Lines, l => l.Kind == DiffKind.Removed);
     }
 
     [Fact]

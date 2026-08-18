@@ -219,7 +219,8 @@ public static class WlcShow
             string mac = row[MacHeads];
             if (mac.Length == 0 || !mac.Contains('.', StringComparison.Ordinal)) continue;
 
-            string wlanId = row["wlan id", "wlan", "id"];
+            // 版によって見出しが「Type ID」で、中身が「WLAN 1」の形になる。数字だけ取る
+            string wlanId = Digits(row["wlan id", "wlan", "id", "type id", "type"]);
             string state = row["state", "status"];
             bool up = state.Contains("run", StringComparison.OrdinalIgnoreCase);
 
@@ -259,11 +260,15 @@ public static class WlcShow
             bool enabled = state.Contains("enabled", StringComparison.OrdinalIgnoreCase)
                            || state.Contains("up", StringComparison.OrdinalIgnoreCase);
 
+            bool disabled = state.Contains("disabled", StringComparison.OrdinalIgnoreCase)
+                            || state.Contains("down", StringComparison.OrdinalIgnoreCase);
+
             rows.Add(new WlcSsidRow(
                 Ssid: Or(ssid, row[ProfileHeads]),
                 Profile: row[ProfileHeads],
                 Id: id,
-                State: enabled ? "● 有効" : Or(state, "◌ 無効"),
+                // 知らない値はそのまま出す（言い換えて意味を変えない）
+                State: enabled ? "● 有効" : disabled ? "◌ 無効" : Or(state, "—"),
                 StateKind: enabled ? SeverityKind.Ok : SeverityKind.Muted,
                 Clients: 0,
                 Band24: 0,
@@ -462,9 +467,18 @@ public static class WlcShow
         ? []
         : [.. text.ReplaceLineEndings("\n").Split('\n').Select(l => l.TrimEnd())];
 
+    /// <summary>
+    /// AP の状態。<b>「Not Joined」を「joined を含む」で拾わないこと</b> —
+    /// 打ち消しの語を先に見る（実際にここで落ちた）。
+    /// </summary>
     private static string DescribeApState(string? state, bool joined)
     {
         if (string.IsNullOrWhiteSpace(state)) return joined ? "● 接続" : "✕ 未接続";
+
+        if (state.Contains("not ", StringComparison.OrdinalIgnoreCase)
+            || state.Contains("fail", StringComparison.OrdinalIgnoreCase)
+            || state.Contains("down", StringComparison.OrdinalIgnoreCase))
+            return $"✕ {state}";
 
         if (state.Contains("registered", StringComparison.OrdinalIgnoreCase)
             || state.Contains("joined", StringComparison.OrdinalIgnoreCase)
@@ -472,6 +486,16 @@ public static class WlcShow
             return "● 接続";
 
         return $"✕ {state}";
+    }
+
+    /// <summary>「WLAN 1」「1」から番号だけを取る。数字が無ければ空。</summary>
+    private static string Digits(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+
+        var digits = new string([.. text.Where(char.IsDigit)]);
+
+        return digits;
     }
 
     private static int Number(string? text)
