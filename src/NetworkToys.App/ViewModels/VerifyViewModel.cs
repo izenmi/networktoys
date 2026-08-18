@@ -191,6 +191,12 @@ public sealed class VerifyViewModel : ObservableObject
     /// <summary>ひな型に付ける名前を聞く。画面側が差し込む（VM から窓を開かないため）。</summary>
     public Func<string, string?>? AskTemplateName { get; set; }
 
+    /// <summary>
+    /// ひな型を消してよいかを聞く。画面が結線する。
+    /// <b>結線前の既定は「いいえ」</b>（宛先リスト・ファイル転送と同じ決まり）。
+    /// </summary>
+    public Func<string, bool>? ConfirmDelete { get; set; }
+
     /// <summary>目視の項目に合格を付ける。</summary>
     public RelayCommand<CheckResult> MarkPassCommand { get; }
 
@@ -359,6 +365,11 @@ public sealed class VerifyViewModel : ObservableObject
             Status = "組み込みのひな型は消せません。";
             return;
         }
+
+        // 消すのは取り消せない。必ず聞く（2026-08-18 ユーザー指示。宛先リストと同じ扱い）。
+        // 結線前の既定は「いいえ」— 聞けないなら消さない方が安全
+        if (ConfirmDelete?.Invoke($"ひな型「{target.Name}」を消します。\n\nいまの試験項目は残ります。") != true)
+            return;
 
         Settings.Current.VerifyTemplates.Remove(target.Name);
 

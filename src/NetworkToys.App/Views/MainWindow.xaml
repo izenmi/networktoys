@@ -1987,7 +1987,7 @@
                                     ToolTip="いまの項目に名前を付けて、ひな型の一覧に残します（★ が付きます）。同じ名前で上書きもできます。" />
                             <Button Content="ひな型を消す" Command="{Binding DeleteTemplateCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
-                                    ToolTip="選んでいる自作のひな型（★）を消します。組み込みのひな型は消せません。" />
+                                    ToolTip="選んでいる自作のひな型（★）を消します（確認が出ます）。組み込みのひな型は消せません。" />
 
                             <Button Content="項目を読み込む" Command="{Binding LoadItemsCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"

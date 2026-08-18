@@ -1543,9 +1543,20 @@ internal static class SelfTest
                 // 組み込みは消せないこと（消せると次の起動で戻ってきて混乱する）
                 Assert(!shell.Verify.Templates[0].IsMine, "組み込みのひな型が自作扱いになっている");
 
+                // 消すのは取り消せない。聞かずに消えないこと（結線前の既定は「いいえ」）
+                Func<string, bool>? asking = shell.Verify.ConfirmDelete;
+
+                shell.Verify.ConfirmDelete = null;
+                shell.Verify.DeleteTemplateCommand.Execute(null);
+
+                Assert(shell.Verify.Templates.Count == builtin + 1, "確認せずにひな型を消している");
+
+                shell.Verify.ConfirmDelete = _ => true;
                 shell.Verify.DeleteTemplateCommand.Execute(null);
 
                 Assert(shell.Verify.Templates.Count == builtin, "消したのに選択肢が減っていない");
+
+                shell.Verify.ConfirmDelete = asking;
             }
             finally
             {

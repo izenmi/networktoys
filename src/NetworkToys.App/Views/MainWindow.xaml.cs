@@ -102,6 +102,9 @@ public partial class MainWindow : Window
             "いまの試験項目に名前を付けて残します。同じ名前があれば上書きします。",
             initial);
 
+        _shell.Verify.ConfirmDelete = message => ConfirmDialog.Confirm(
+            this, "ひな型を消す", message, okLabel: "消す");
+
         // ファイル転送も窓を開くのは画面の仕事。削除と上書きは取り消せないので必ず聞く
         _shell.Transfer.Confirm = message => ConfirmDialog.Confirm(
             this, "ファイル転送", message, okLabel: "実行する");
