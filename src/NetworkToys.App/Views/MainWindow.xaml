@@ -2468,7 +2468,7 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                         <Button Content="確認する" Command="{Binding FetchInstallCheckCommand}" Margin="0,0,6,0"
-                                                ToolTip="9 項目を順に確かめます。先に「取得」を押しておいてください。" />
+                                                ToolTip="7 項目を順に確かめます。先に「機器」タブの「取得」を押しておいてください。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveInstallCheckCommand}"
                                                 Style="{StaticResource Button.Subtle}"
                                                 ToolTip="判定をそのまま証跡として残せます。" />
@@ -2595,6 +2595,9 @@
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <!-- 重い取得はこのタブに閉じる（2026-08-18 ユーザー指示） -->
+                                        <Button Content="取得" Command="{Binding FetchDevicesCommand}" Margin="0,0,6,0"
+                                                ToolTip="機器の一覧・稼働状況・ファームの版と、MX の LAN アドレスを取ります。MX のある拠点の数だけ問い合わせるので、少し時間がかかります。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveDevicesCommand}" />
                                     </StackPanel>
 
@@ -2734,6 +2737,8 @@
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="取得" Command="{Binding FetchUplinksCommand}" Margin="0,0,6,0"
+                                                ToolTip="MX の WAN の状態を取ります。つながっていない回線と、止まっている機器の回線は出しません。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveUplinksCommand}" Margin="0,0,12,0" />
                                         <TextBlock Text="グローバル IP" Style="{StaticResource Caption}"
                                                    VerticalAlignment="Center" Margin="0,0,5,0" />
@@ -3124,7 +3129,7 @@
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                                         <Button Content="DHCP を確認" Command="{Binding FetchDhcpCommand}" Margin="0,0,12,0"
-                                                ToolTip="機器一覧にある MX を順に見ます。先に「取得」を押してください。" />
+                                                ToolTip="機器一覧にある MX を順に見ます。先に「機器」タブの「取得」を押してください。" />
                                         <Button Content="CSV で保存" Command="{Binding SaveDhcpCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="0,0,12,0" />
                                     </StackPanel>

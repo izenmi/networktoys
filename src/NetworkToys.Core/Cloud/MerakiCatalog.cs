@@ -395,7 +395,10 @@ public static class MerakiCatalog
     }
 
     /// <summary>
-    /// 止まっているアプライアンスの回線を落とす。
+    /// 一覧に出さない回線を落とす。
+    ///
+    /// ①<b>つながっていない回線そのもの</b>（未接続。単線の拠点の WAN2 がこれ。
+    /// 2026-08-18 ユーザー指示）②<b>止まっているアプライアンスの回線</b>。
     ///
     /// 機器が落ちていれば回線も当然切れているので、一覧に並べても
     /// 「切れている回線」を数えるときの邪魔にしかならない（2026-08-17 ユーザー指示）。
@@ -425,8 +428,13 @@ public static class MerakiCatalog
                 offline.Add(byDevice.Key);
         }
 
-        return [.. rows.Where(u => !offline.Contains(u.Serial))];
+        // 使っていない WAN2 が「未接続」で並ぶと、切れている回線を数えるときの邪魔になる
+        return [.. rows.Where(u => !offline.Contains(u.Serial) && !IsNeverConnected(u.RawStatus))];
     }
+
+    /// <summary>そもそも繋いでいない回線か（<c>not connected</c>）。障害とは区別する。</summary>
+    private static bool IsNeverConnected(string? rawStatus)
+        => string.Equals(rawStatus, "not connected", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>機器として止まっているか。休止も止まっている側に入れる。</summary>
     private static bool IsDeviceOffline(string? state)

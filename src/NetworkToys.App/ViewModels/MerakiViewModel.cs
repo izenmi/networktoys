@@ -78,6 +78,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         _selectedTimespan = Timespans[1];
 
         FetchCommand = new RelayCommand(() => _ = FetchAsync(), () => !IsBusy && ApiKey.Length > 0);
+        FetchDevicesCommand = new RelayCommand(() => _ = FetchDevicesAsync(),
+            () => !IsBusy && ApiKey.Length > 0 && SelectedOrganization is not null);
+        FetchUplinksCommand = new RelayCommand(() => _ = FetchUplinksAsync(),
+            () => !IsBusy && ApiKey.Length > 0 && SelectedOrganization is not null);
         FetchClientsCommand = new RelayCommand(
             () => _ = FetchClientsAsync(),
             () => !IsBusy && ApiKey.Length > 0 && (AllNetworks || SelectedNetwork is not null));
@@ -166,6 +170,13 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     ];
 
     public RelayCommand FetchCommand { get; }
+
+    /// <summary>機器タブの取得（機器・状態・ファーム・MX の LAN IP）。</summary>
+    public RelayCommand FetchDevicesCommand { get; }
+
+    /// <summary>アップリンクタブの取得。</summary>
+    public RelayCommand FetchUplinksCommand { get; }
+
     public RelayCommand FetchClientsCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand SaveDevicesCommand { get; }
@@ -316,6 +327,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             FetchCommand.RaiseCanExecuteChanged();
             FetchClientsCommand.RaiseCanExecuteChanged();
             FetchInstallCheckCommand.RaiseCanExecuteChanged();
+            FetchDevicesCommand.RaiseCanExecuteChanged();
+            FetchUplinksCommand.RaiseCanExecuteChanged();
             FetchSitesCommand.RaiseCanExecuteChanged();
             FetchDhcpCommand.RaiseCanExecuteChanged();
             FetchAlertsCommand.RaiseCanExecuteChanged();
@@ -325,8 +338,11 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// 組織配下をまとめて取る。組織が 1 つならそのまま続け、
-    /// 複数あるときは選んでもらってからもう一度押してもらう。
+    /// <b>最初の「取得」は組織と拠点の一覧だけ</b>（2026-08-18 ユーザー指示）。
+    ///
+    /// 以前はここで機器・回線・MX の LAN まで取っていたので、拠点の多い組織では
+    /// 待ち時間が長すぎた。<b>細かいものは、そのタブの「取得」で取りに行く。</b>
+    /// 組織が 1 つならそのまま続け、複数あるときは選んでもらってからもう一度押してもらう。
     /// </summary>
     private async Task FetchAsync()
     {
@@ -370,46 +386,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             Replace(NetworkRows, [.. networks.OrderBy(n => n.Name, StringComparer.CurrentCulture)]);
             SelectedNetwork ??= NetworkRows.FirstOrDefault();
 
-            Status = "機器一覧を取得しています…";
-            IReadOnlyList<string> devicePages = await _dashboard.DevicesAsync(ApiKey, organizationId, token);
-            IReadOnlyList<string> statusPages = await _dashboard.DeviceStatusesAsync(ApiKey, organizationId, token);
-
-            // 設定と違う版で動いている機器は firmware に版が入らないので、更新の記録から補う。
-            // 記録が引けない組織（権限）もあるので、取れなくても機器一覧は出す
-            IReadOnlyDictionary<string, string> versions =
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            try
-            {
-                Status = "ファームの版を確認しています…";
-                versions = MerakiCatalog.RunningVersions(
-                    await _dashboard.FirmwareUpgradesAsync(ApiKey, organizationId, token));
-            }
-            catch (MerakiApiException)
-            {
-                // 版が補えないだけ。一覧は「⚠ 設定と違う版」で出る
-            }
-
-            Replace(DeviceRows, MerakiCatalog.JoinDevices(devicePages, statusPages, networks, versions));
-
-            Status = "アップリンクの状態を取得しています…";
-            IReadOnlyList<string> uplinkPages = await _dashboard.UplinksAsync(ApiKey, organizationId, token);
-            IReadOnlyList<MerakiUplinkRow> uplinks = MerakiCatalog.ParseUplinks(uplinkPages, networks);
-
-            // 導入時確認だけは停止中の機器のぶんも見る（「取れなかった」と
-            // 「切れている」を区別するため）。一覧と CSV には出さない
-            _allUplinks = uplinks;
-
-            IReadOnlyList<MerakiUplinkRow> shown =
-                MerakiCatalog.WithoutOfflineDevices(uplinks, DeviceRows);
-
-            Replace(UplinkRows, shown);
-            GlobalIpText = MerakiCatalog.GlobalIpSummary(shown);
-
-            await FillApplianceIpsAsync(token);
-
-            Status = $"ネットワーク {NetworkRows.Count} 件 / 機器 {DeviceRows.Count} 台 / "
-                   + $"回線 {UplinkRows.Count} 本（{DateTime.Now:HH:mm:ss} 時点）。";
+            Status = $"ネットワーク {NetworkRows.Count} 件（{DateTime.Now:HH:mm:ss} 時点）。"
+                   + "各タブの「取得」で、その中身を取ってきます。";
 
             if (_dashboard.WasTruncated)
                 Notice = "⚠ 件数が多いため途中までしか取得できていません。ダッシュボードで全体を確認してください。";
@@ -436,6 +414,141 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             _cts = null;
 
             // 途中で失敗しても、取れたところまでは保存できるようにする
+            RefreshSaveCommands();
+        }
+    }
+
+    /// <summary>
+    /// 機器タブの「取得」。機器の一覧・稼働状況・ファームの版と、MX の LAN アドレス。
+    /// <b>ここがいちばん重い</b>（MX のある拠点の数だけ LAN 設定を引く）ので、
+    /// 最初の「取得」からは切り離してある。
+    /// </summary>
+    private async Task FetchDevicesAsync()
+    {
+        if (SelectedOrganization is not { } organization) return;
+
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        _dashboard.ResetTruncation();
+
+        try
+        {
+            CancellationToken token = _cts.Token;
+
+            Status = "機器一覧を取得しています…";
+
+            IReadOnlyList<string> devicePages = await _dashboard.DevicesAsync(ApiKey, organization.Id, token);
+            IReadOnlyList<string> statusPages =
+                await _dashboard.DeviceStatusesAsync(ApiKey, organization.Id, token);
+
+            // 設定と違う版で動いている機器は firmware に版が入らないので、更新の記録から補う。
+            // 記録が引けない組織（権限）もあるので、取れなくても機器一覧は出す
+            IReadOnlyDictionary<string, string> versions =
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                Status = "ファームの版を確認しています…";
+                versions = MerakiCatalog.RunningVersions(
+                    await _dashboard.FirmwareUpgradesAsync(ApiKey, organization.Id, token));
+            }
+            catch (MerakiApiException)
+            {
+                // 版が補えないだけ。一覧は「⚠ 設定と違う版」で出る
+            }
+
+            Replace(DeviceRows, MerakiCatalog.JoinDevices(
+                devicePages, statusPages, [.. NetworkRows], versions));
+
+            await FillApplianceIpsAsync(token);
+
+            Status = $"機器 {DeviceRows.Count} 台（{DateTime.Now:HH:mm:ss} 時点）。";
+
+            if (_dashboard.WasTruncated)
+                Notice = "⚠ 件数が多いため途中までしか取得できていません。ダッシュボードで全体を確認してください。";
+        }
+        catch (MerakiApiException ex)
+        {
+            Status = ex.Message;
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。";
+        }
+        catch (Exception ex)
+        {
+            Status = $"取得に失敗しました: {ex.Message}";
+            CrashLog.Write(ex, "MerakiViewModel.FetchDevicesAsync");
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+            RefreshSaveCommands();
+        }
+    }
+
+    /// <summary>
+    /// アップリンクタブの「取得」。<b>止まっている機器と未接続の回線は一覧に出さない</b>
+    /// （導入時確認は絞る前のものを見る）。
+    ///
+    /// 機器の一覧をまだ取っていないときは、状態の突き合わせができないぶん
+    /// 回線の状態だけで絞る（機器タブを先に取っておくと、より正確になる）。
+    /// </summary>
+    private async Task FetchUplinksAsync()
+    {
+        if (SelectedOrganization is not { } organization) return;
+
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        _dashboard.ResetTruncation();
+
+        try
+        {
+            Status = "アップリンクの状態を取得しています…";
+
+            IReadOnlyList<MerakiUplinkRow> uplinks = MerakiCatalog.ParseUplinks(
+                await _dashboard.UplinksAsync(ApiKey, organization.Id, _cts.Token),
+                [.. NetworkRows]);
+
+            // 導入時確認だけは絞る前のものを見る（「取れなかった」と
+            // 「切れている」を区別するため）。一覧と CSV には出さない
+            _allUplinks = uplinks;
+
+            IReadOnlyList<MerakiUplinkRow> shown =
+                MerakiCatalog.WithoutOfflineDevices(uplinks, DeviceRows);
+
+            Replace(UplinkRows, shown);
+            GlobalIpText = MerakiCatalog.GlobalIpSummary(shown);
+
+            int hidden = uplinks.Count - shown.Count;
+
+            Status = $"回線 {UplinkRows.Count} 本"
+                   + (hidden > 0 ? $"（つながっていない {hidden} 本は伏せています）" : "")
+                   + $"（{DateTime.Now:HH:mm:ss} 時点）。";
+
+            if (DeviceRows.Count == 0)
+                Notice = "⚠ 機器タブを先に取得しておくと、止まっている機器の回線をより確かに省けます。";
+        }
+        catch (MerakiApiException ex)
+        {
+            Status = ex.Message;
+        }
+        catch (OperationCanceledException)
+        {
+            Status = "中断しました。";
+        }
+        catch (Exception ex)
+        {
+            Status = $"取得に失敗しました: {ex.Message}";
+            CrashLog.Write(ex, "MerakiViewModel.FetchUplinksAsync");
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
             RefreshSaveCommands();
         }
     }
@@ -686,6 +799,16 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             CancellationToken token = _cts.Token;
             MerakiTimespan timespan = SelectedTimespan;
             string organizationId = SelectedOrganization?.Id ?? "";
+
+            // 回線はまだ取っていないことがある（最初の「取得」では取らなくなった）。
+            // org 単位で 1 回引くだけなので、ここで取りに行く
+            if (_allUplinks.Count == 0 && organizationId.Length > 0)
+            {
+                Status = "アップリンクの状態を取得しています…";
+
+                _allUplinks = MerakiCatalog.ParseUplinks(
+                    await _dashboard.UplinksAsync(ApiKey, organizationId, token), [.. NetworkRows]);
+            }
 
             MerakiDeviceRow[] devices = [.. DeviceRows.Where(d => d.Network == network.Name)];
             MerakiDeviceRow[] appliances = [.. devices.Where(d => IsModel(d, "MX"))];

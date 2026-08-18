@@ -224,6 +224,33 @@ public class MerakiCatalogTests
     }
 
     [Fact]
+    public void Uplinks_that_were_never_connected_are_not_listed()
+    {
+        // 単線の拠点の WAN2 は「未接続」で毎回並ぶ。切れている回線を数える邪魔になる
+        const string json = """
+            [ {"networkId":"N_111","serial":"Q2AA-1111-AAAA","uplinks":[
+                 {"interface":"wan1","status":"active","ip":"198.51.100.2"},
+                 {"interface":"wan2","status":"not connected"}]} ]
+            """;
+
+        IReadOnlyList<MerakiUplinkRow> rows = MerakiCatalog.WithoutOfflineDevices(
+            MerakiCatalog.ParseUplinks([json], []), []);
+
+        Assert.Single(rows);
+        Assert.Equal("wan1", rows[0].Interface);
+
+        // 障害（failed）は残す。見たいのはこちら
+        const string failed = """
+            [ {"networkId":"N_111","serial":"Q2AA-1111-AAAA","uplinks":[
+                 {"interface":"wan1","status":"active"},
+                 {"interface":"wan2","status":"failed"}]} ]
+            """;
+
+        Assert.Equal(2, MerakiCatalog.WithoutOfflineDevices(
+            MerakiCatalog.ParseUplinks([failed], []), []).Count);
+    }
+
+    [Fact]
     public void Global_ip_summary_folds_duplicates_and_handles_empty()
     {
         IReadOnlyList<MerakiUplinkRow> rows = MerakiCatalog.ParseUplinks([UplinksJson], []);
