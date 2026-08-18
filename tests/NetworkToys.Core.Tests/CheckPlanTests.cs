@@ -250,13 +250,33 @@ public class CheckPlanTests
     }
 
     [Theory]
-    [InlineData("名前だけ")]
+    [InlineData("名前だけ")]               // アドレスに見えない語は拾わない
     [InlineData("名前,proxy")]              // アドレスが無い
     [InlineData("名前,proxy,")]             // 空のアドレスは「直接」と区別が付かない
     [InlineData("名前,pac,")]
     [InlineData("名前,知らない種類,10.0.0.1:8080")]
     public void Proxy_lines_that_cannot_be_understood_are_dropped(string line)
         => Assert.Equal(2, ProxyListParser.Parse(line).Count);
+
+    [Fact]
+    public void An_address_written_on_its_own_is_still_understood()
+    {
+        // 名前と種類を省いて、PAC の URL だけ書かれることがある（2026-08-18 報告）。
+        // 弾くと一覧に出ず、「直接」しか選べないまま原因も分からない
+        IReadOnlyList<ProxyChoice> list = ProxyListParser.Parse(
+            "http://pac.example.jp/proxy.pac\n10.0.0.10:8080");
+
+        Assert.Equal(4, list.Count);
+
+        Assert.Equal(ProxyMode.Pac, list[2].Mode);
+        Assert.Equal("http://pac.example.jp/proxy.pac", list[2].Address);
+
+        // 名前はアドレスそのもの。勝手に付けると証跡でどれか分からなくなる
+        Assert.Equal("http://pac.example.jp/proxy.pac", list[2].Name);
+
+        Assert.Equal(ProxyMode.Fixed, list[3].Mode);
+        Assert.Equal("http://10.0.0.10:8080", list[3].Address);
+    }
 
     [Fact]
     public void A_duplicated_proxy_name_is_dropped()

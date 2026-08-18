@@ -22,8 +22,11 @@ internal sealed record TeamsEndpoints(string RelayHost, IReadOnlyList<int> Ports
 /// </summary>
 internal static class CheckRunner
 {
-    /// <summary>接続系の待ち時間。遅い社内サーバでも 5 秒あれば十分。</summary>
-    private const int ConnectTimeoutMs = 5000;
+    /// <summary>
+    /// 接続系の待ち時間。<b>HTTP と揃えて 10 秒</b>（2026-08-18 ユーザー指示）。
+    /// 種類ごとに違うと「どれくらい待たされるか」が読めない。
+    /// </summary>
+    private const int ConnectTimeoutMs = 10_000;
 
     /// <summary>UDP の待ち時間。落ちることが前提なので短くして再送に回す。</summary>
     private const int UdpTimeoutMs = 2000;

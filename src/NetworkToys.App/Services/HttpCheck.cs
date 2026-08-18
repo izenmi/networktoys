@@ -20,8 +20,8 @@ namespace NetworkToys.App.Services;
 /// </summary>
 internal static class HttpCheck
 {
-    /// <summary>1 回の試験に掛ける上限。遅いプロキシでも待ちすぎない。</summary>
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
+    /// <summary>1 回の試験に掛ける上限。<b>10 秒</b>（2026-08-18 ユーザー指示）。</summary>
+    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// 本文はこの長さまで読む。遮断ページの判定と「期待する文字列」探しに要るだけで、
@@ -148,10 +148,17 @@ internal static class HttpCheck
     }
 
     /// <summary>証跡に出すプロキシの名前。PAC は解決先まで出す。</summary>
+    /// <summary>
+    /// 証跡に残す「実際に使ったプロキシ」。
+    ///
+    /// <b>PAC は宛先ごとに答えが変わる</b>ので、その答えまで書く。
+    /// PAC が「直接」と答えたときに名前だけだと、<b>PAC を選んだのに直接出たように読める</b>
+    /// （2026-08-18 に「直接と出る」と報告された）。
+    /// </summary>
     internal static string DescribeProxy(ProxyChoice proxy, string resolved)
         => proxy.Mode switch
         {
-            ProxyMode.Pac => $"{proxy.Name}（{PacProxy.Describe(resolved)}）",
+            ProxyMode.Pac => $"{proxy.Name}（PAC の答え: {PacProxy.Describe(resolved)}）",
             _ => proxy.Name,
         };
 

@@ -87,7 +87,17 @@ public static class ProxyListParser
             if (line.Length == 0 || line.StartsWith('#') || line.StartsWith(';')) continue;
 
             string[] parts = line.Replace('\t', ',').Split(',', 3);
-            if (parts.Length < 3) continue;
+
+            // 名前と種類を省いて、アドレスだけ書かれることがある（2026-08-18 報告）。
+            // 「.pac で終わる URL は PAC、それ以外はプロキシ」と読んで受ける —
+            // 弾いて一覧に出ないと、直接しか選べないまま原因も分からない
+            if (parts.Length < 3)
+            {
+                if (!TryParseBare(line, out ProxyChoice bare) || !known.Add(bare.Name)) continue;
+
+                list.Add(bare);
+                continue;
+            }
 
             string name = parts[0].Trim();
             if (name.Length == 0 || !TryParseMode(parts[1], out ProxyMode mode)) continue;
@@ -135,6 +145,40 @@ public static class ProxyListParser
         ProxyMode.System => "system",
         _ => "proxy",
     };
+
+    /// <summary>
+    /// アドレスだけの 1 行を読む。<b>名前はアドレスそのもの</b>にする
+    /// （名前を勝手に付けると、証跡でどれか分からなくなる）。
+    /// <c>.pac</c> で終わる URL は PAC、それ以外はプロキシのアドレスとみなす。
+    /// </summary>
+    public static bool TryParseBare(string? text, out ProxyChoice choice)
+    {
+        choice = ProxyChoice.Direct;
+
+        string line = (text ?? "").Trim();
+
+        if (line.Length == 0 || line.Contains(',', StringComparison.Ordinal)) return false;
+        if (line.Contains(' ', StringComparison.Ordinal)) return false;
+
+        bool looksLikePac = line.EndsWith(".pac", StringComparison.OrdinalIgnoreCase)
+                            || line.Contains(".pac?", StringComparison.OrdinalIgnoreCase)
+                            || line.Contains("/proxy.pac", StringComparison.OrdinalIgnoreCase);
+
+        if (looksLikePac)
+        {
+            choice = new ProxyChoice(line, ProxyMode.Pac, line);
+            return true;
+        }
+
+        // ホスト:ポート か URL に見えるものだけ受ける（ただの語を拾わない）
+        string address = NormalizeProxy(line);
+
+        if (!Uri.TryCreate(address, UriKind.Absolute, out Uri? uri) || uri.Host.Length == 0)
+            return false;
+
+        choice = new ProxyChoice(line, ProxyMode.Fixed, address);
+        return true;
+    }
 
     public static bool TryParseMode(string? text, out ProxyMode mode)
     {
