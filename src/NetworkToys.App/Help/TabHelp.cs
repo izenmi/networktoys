@@ -903,29 +903,6 @@ internal static class TabHelp
         ・一覧を Excel（絞り込み付き）か CSV で保存する
         """;
 
-    /// <summary>Cisco Catalyst Center ─ CLI 実行</summary>
-    public const string DnacCli =
-        """
-        Cisco Catalyst Center ─ CLI 実行
-
-        この画面ですること
-        ・参照コマンドを 1 台へ流し、出力をそのまま見る
-
-        こんなときに
-        ・機器へ SSH で入れないが、show の中身だけ見たいとき
-
-        気をつけること
-        ・読み取り専用。流せるのは二重の網を通ったコマンドだけ
-        　（Catalyst Center 自身が認めた語であり、かつ危険な動詞でないもの）
-        ・打ち込む欄は持たない。一覧から選ぶ
-        ・中断できるのは、こちらが待つのをやめることだけ。機器での実行は取り消せない
-        ・終わるまで最大 1 分ほど待つ。それを過ぎたらその旨を出して止める
-
-        知っておくとよいこと
-        ・出力は表にしない。版によって桁が動くので、解釈すると中身がずれる
-        ・機器の一覧は「機器」タブで取ったものを使う。先にあちらを取得しておく
-        """;
-
     /// <summary>Meraki</summary>
     public const string Meraki =
         """

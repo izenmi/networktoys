@@ -238,20 +238,6 @@ public partial class MainWindow : Window
             response.Length > 0 ? response : "まだ何も取得していません。");
     }
 
-    /// <summary>
-    /// Catalyst Center 経由で流した CLI の出力をそのまま出す。<b>表にはしない</b> —
-    /// 版によって桁が動くので、解釈を書くと「表は出るが中身がずれている」になる。
-    /// </summary>
-    private void OnDnacShowCli(object sender, RoutedEventArgs e)
-    {
-        string output = _shell.Dnac.CliOutput;
-
-        TextViewDialog.Show(
-            this,
-            "コマンドの出力",
-            output.Length > 0 ? output : "まだ実行していません。");
-    }
-
     /// <summary>直前に取れた WLC の生の応答（と投げた URL）を出す。</summary>
     private void OnWlcShowResponse(object sender, RoutedEventArgs e)
     {

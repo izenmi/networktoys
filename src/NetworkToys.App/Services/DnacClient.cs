@@ -230,43 +230,6 @@ internal sealed class DnacClient : IDisposable
     }
 
     /// <summary>
-    /// 参照コマンドを流して出力を受け取る。
-    ///
-    /// <b>投げるコマンドを組み立てるのは呼び出し側の仕事</b>（Catalyst Center 自身の許可一覧と
-    /// <c>CiscoCommandGuard</c> の二重の網を通したものだけを渡すこと）。
-    /// ここは往復の面倒だけを見る。
-    ///
-    /// <b>中断してもこちらが待つのをやめるだけ</b>で、機器での実行は取り消せない。
-    /// </summary>
-    public async Task<string> ReadRequestAsync(
-        IReadOnlyList<string> deviceIds, IReadOnlyList<string> commands, CancellationToken token)
-    {
-        string accepted = await SendAsync(
-            HttpMethod.Post, DnacCatalog.ReadRequestPath,
-            DnacCatalog.ReadRequestBody(deviceIds, commands), null, null, token).ConfigureAwait(false);
-
-        string taskId = DnacCatalog.ParseTaskId(accepted);
-
-        if (taskId.Length == 0)
-            throw new DnacApiException("実行を受け付けてもらえませんでした（追跡番号が返りません）。");
-
-        // 2 秒おきに 30 回（約 60 秒）。終わらなければ黙って握らずにその旨を返す
-        for (int i = 0; i < 30; i++)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2), token).ConfigureAwait(false);
-
-            (bool done, string fileId, string? error) =
-                DnacCatalog.ParseTask(await GetAsync(DnacCatalog.TaskPath(taskId), token).ConfigureAwait(false));
-
-            if (error is not null) throw new DnacApiException(error);
-            if (done) return await GetAsync(DnacCatalog.FilePath(fileId), token).ConfigureAwait(false);
-        }
-
-        throw new DnacApiException(
-            "まだ終わっていません。Catalyst Center の画面から結果を確認してください。");
-    }
-
-    /// <summary>
     /// 1 往復。<b>宛先とメソッドの縛りはここ 1 か所</b>に閉じてある。
     /// </summary>
     private async Task<string> SendAsync(
@@ -278,9 +241,8 @@ internal sealed class DnacClient : IDisposable
         if (!path.StartsWith("/dna/", StringComparison.Ordinal))
             throw new DnacApiException($"想定していない宛先です: {path}");
 
-        if (method == HttpMethod.Post
-            && path != DnacCatalog.TokenPath
-            && path != DnacCatalog.ReadRequestPath)
+        // POST するのはログインだけ（コマンドを流す口は 2026-08-18 に畳んだ）
+        if (method == HttpMethod.Post && path != DnacCatalog.TokenPath)
             throw new DnacApiException($"書き込みになりうる宛先です: {path}");
 
         if (method != HttpMethod.Get && method != HttpMethod.Post)

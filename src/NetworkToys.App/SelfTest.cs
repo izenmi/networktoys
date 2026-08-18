@@ -791,8 +791,7 @@ internal static class SelfTest
             // 読み取り専用。POST はトークンの取得だけで、宛先は /dna/ の下だけ
             for (int i = 0; i < fake.Paths.Count; i++)
             {
-                Assert(fake.Methods[i] == "GET" || fake.Paths[i] == Core.Assurance.DnacCatalog.TokenPath
-                       || fake.Paths[i] == Core.Assurance.DnacCatalog.ReadRequestPath,
+                Assert(fake.Methods[i] == "GET" || fake.Paths[i] == Core.Assurance.DnacCatalog.TokenPath,
                        $"想定していない書き込みをしている: {fake.Methods[i]} {fake.Paths[i]}");
 
                 Assert(fake.Paths[i].StartsWith("/dna/", StringComparison.Ordinal),

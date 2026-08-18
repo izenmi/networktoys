@@ -699,8 +699,14 @@
                         <Grid>
                             <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
                                               RecognizesAccessKey="True" />
+                            <!--
+                                置き場所は「この見出しの下」。PlacementTarget を書かないと、
+                                Popup は視覚ツリーの親をたどれず画面の左端に出る
+                                （2026-08-18 に「メニューが左側に出る」と報告された）。
+                            -->
                             <Popup x:Name="PART_Popup"
                                    Placement="Bottom"
+                                   PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                    AllowsTransparency="True"
                                    Focusable="False"

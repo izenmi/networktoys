@@ -159,36 +159,6 @@ public static class DnacCatalog
         $"{Intent}/licenses/device/summary",
     ];
 
-    public static string[] LegitReadsPaths => [$"{Intent}/network-device-poller/cli/legit-reads"];
-    public const string ReadRequestPath = $"{Intent}/network-device-poller/cli/read-request";
-    public static string TaskPath(string taskId) => $"{Intent}/task/{Uri.EscapeDataString(taskId)}";
-    public static string FilePath(string fileId) => $"{Intent}/file/{Uri.EscapeDataString(fileId)}";
-
-    /// <summary>
-    /// 画面に並べる読み取りコマンド。
-    ///
-    /// <c>legit-reads</c> が返すのは <c>show</c> のような<b>語</b>なので、そのままでは流せない。
-    /// よく使う形をこちらで用意し、<b>許可一覧に前方一致するものだけ</b>を出す。
-    /// 自由入力にはしない（打ち間違いより、選ばせる方が安全で速い）。
-    /// </summary>
-    public static string[] CommonReads =>
-    [
-        "show version",
-        "show inventory",
-        "show ip interface brief",
-        "show interfaces status",
-        "show mac address-table",
-        "show ip arp",
-        "show cdp neighbors detail",
-        "show lldp neighbors detail",
-        "show vlan brief",
-        "show ip route",
-        "show spanning-tree summary",
-        "show processes cpu sorted",
-        "show environment",
-        "show logging",
-    ];
-
     // ===== リーフ名の候補（版で動く。ここに 1 行足せば直る） =====
 
     private static readonly string[] DeviceNameLeaf =
@@ -702,47 +672,7 @@ public static class DnacCatalog
 
     // ===== CLI（参照のみ） =====
 
-    /// <summary>Catalyst Center が「読み取り」と認めているコマンドの一覧。</summary>
-    public static IReadOnlyList<string> ParseLegitReads(IEnumerable<JsonElement> rows)
-    {
-        var commands = new List<string>();
 
-        foreach (JsonElement row in rows)
-        {
-            if (row.ValueKind == JsonValueKind.String && row.GetString() is { Length: > 0 } text)
-            {
-                commands.Add(text);
-                continue;
-            }
-
-            string name = DnacJson.First(row, "command", "name");
-            if (name.Length > 0) commands.Add(name);
-        }
-
-        return [.. commands.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal)];
-    }
-
-    /// <summary>
-    /// 流してよいコマンドか。<b>二重の網</b>にしてある:
-    /// ①Catalyst Center 自身が「読み取り」と認めた語に<b>前方一致</b>すること
-    /// （<c>legit-reads</c> は <c>show</c> のような語で返るので、完全一致にすると
-    /// <c>show version</c> すら通らない）
-    /// ②<see cref="CiscoCommandGuard"/> が <c>Blocked</c> と言わないこと（収集タブと同じ物差し）。
-    ///
-    /// 許可一覧が空（この版に無い・権限が足りない）のときは、②だけで見る。
-    /// </summary>
-    public static bool IsReadOnlyCommand(string? command, IReadOnlyList<string> legitReads)
-    {
-        string text = (command ?? "").Trim();
-
-        if (text.Length == 0) return false;
-
-        if (CiscoCommandGuard.Classify(text).Risk == CommandRisk.Blocked) return false;
-
-        if (legitReads.Count == 0) return true;
-
-        return legitReads.Any(word => StartsWithWord(text, word));
-    }
 
     /// <summary><b>語の切れ目で</b>見る（<c>shows</c> を <c>show</c> の仲間にしない）。</summary>
     private static bool StartsWithWord(string command, string word)
@@ -754,85 +684,6 @@ public static class DnacCatalog
         return command.Length == head.Length || command[head.Length] == ' ';
     }
 
-    /// <summary>読み取り要求の本文。<b>機器とコマンドだけ</b>を渡す。</summary>
-    public static string ReadRequestBody(IEnumerable<string> deviceIds, IEnumerable<string> commands)
-        => JsonSerializer.Serialize(new
-        {
-            name = "NetworkToys",
-            description = "read-only",
-            deviceUuids = deviceIds.ToArray(),
-            commands = commands.ToArray(),
-        });
-
-    /// <summary>受け付けた要求の追跡番号。</summary>
-    public static string ParseTaskId(string? json)
-        => DnacJson.One(json) is { } response ? DnacJson.First(response, "taskId", "id") : "";
-
-    /// <summary>
-    /// 追跡の結果。終わっていれば <c>fileId</c> が入る。
-    /// 失敗していれば理由を返す（<c>isError</c>）。
-    /// </summary>
-    public static (bool Done, string FileId, string? Error) ParseTask(string? json)
-    {
-        if (DnacJson.One(json) is not { } task) return (false, "", null);
-
-        if (DnacJson.First(task, "isError") == "true")
-            return (true, "", Or(DnacJson.First(task, "failureReason", "progress"), "実行できませんでした。"));
-
-        // progress は文字列の JSON（{"fileId":"…"} が入っている）
-        string progress = DnacJson.First(task, "progress");
-        string fileId = DnacJson.First(task, "fileId");
-
-        if (fileId.Length == 0 && progress.Contains("fileId", StringComparison.Ordinal))
-        {
-            if (DnacJson.One(progress) is { } inner) fileId = DnacJson.First(inner, "fileId");
-        }
-
-        return (fileId.Length > 0, fileId, null);
-    }
-
-    /// <summary>
-    /// 出力のファイル。機器ごと・コマンドごとに分かれて返るので、読める形に整えるだけ。
-    /// <b>表にはしない</b>（版で桁が動くものを表にすると、中身がずれたまま気づけない）。
-    /// </summary>
-    public static string RenderCliOutput(string? json)
-    {
-        IReadOnlyList<JsonElement> rows = DnacJson.Rows(json);
-
-        if (rows.Count == 0) return (json ?? "").Trim();
-
-        var text = new System.Text.StringBuilder();
-
-        foreach (JsonElement row in rows)
-        {
-            string device = DnacJson.First(row, "deviceUuid", "deviceId", "ipAddress");
-
-            if (device.Length > 0) text.AppendLine($"===== {device} =====");
-
-            foreach (string section in (string[])["commandResponses/SUCCESS", "commandResponses/FAILURE",
-                                                  "commandResponses/BLACKLISTED"])
-            {
-                if (DnacJson.First(row, section) is { Length: > 0 } dump)
-                    text.AppendLine(dump);
-            }
-
-            // 素直に取れないときは、その行をそのまま出す（捏造しない）
-            if (text.Length == 0) text.AppendLine(row.ToString());
-        }
-
-        return text.ToString().TrimEnd();
-    }
-
-    // ===== 小物 =====
-
-    /// <summary>ミリ秒のエポックを読める形に。0 や取れないものは空文字。</summary>
-    public static string DescribeTime(long? epochMilliseconds)
-    {
-        if (epochMilliseconds is not { } value || value <= 0) return "";
-
-        return DateTimeOffset.FromUnixTimeMilliseconds(value).ToLocalTime()
-            .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-    }
 
     private static string FirstDate(JsonElement row, params string[] paths)
     {
