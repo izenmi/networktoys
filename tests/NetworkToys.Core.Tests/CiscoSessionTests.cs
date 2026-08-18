@@ -178,6 +178,57 @@ public class CiscoSessionTests
     }
 
     [Fact]
+    public async Task The_pager_is_disabled_with_one_command_not_three()
+    {
+        // IOS 系に terminal pager 0 を投げると「% Invalid input」が出て、
+        // 使う人には失敗したように見える（2026-08-18 に報告された）
+        var sent = new List<string>();
+
+        var device = new FakeCiscoDevice("\r\nR1#", line =>
+        {
+            string text = line.Trim();
+
+            if (text.StartsWith("terminal ", StringComparison.Ordinal))
+            {
+                sent.Add(text);
+                return text == "terminal length 0" ? "\r\nR1#" : "\r\n% Invalid input detected\r\nR1#";
+            }
+
+            return "\r\nR1#";
+        });
+
+        DeviceCollectionResult result = await RunAsync(device, ["show clock"]);
+
+        Assert.Equal(new[] { "terminal length 0" }, sent.ToArray());
+        Assert.Contains("terminal length 0", result.PagerNote, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_device_that_only_knows_the_asa_form_still_gets_its_pager_off()
+    {
+        var sent = new List<string>();
+
+        var device = new FakeCiscoDevice("\r\nasa#", line =>
+        {
+            string text = line.Trim();
+
+            if (text.StartsWith("terminal ", StringComparison.Ordinal))
+            {
+                sent.Add(text);
+                return text == "terminal pager 0" ? "\r\nasa#" : "\r\n% Invalid input detected\r\nasa#";
+            }
+
+            return "\r\nasa#";
+        });
+
+        DeviceCollectionResult result = await RunAsync(device, ["show clock"]);
+
+        // 1 本目が断られたら次を試す。通ったところで止める
+        Assert.Equal(new[] { "terminal length 0", "terminal pager 0" }, sent.ToArray());
+        Assert.Contains("terminal pager 0", result.PagerNote, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task A_device_that_asks_for_the_password_twice_is_a_failed_login()
     {
         // 3 回目を送らないこと(TACACS+ 環境でアカウントを固めない)

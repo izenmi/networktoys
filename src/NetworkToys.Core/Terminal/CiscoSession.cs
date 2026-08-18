@@ -238,25 +238,45 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     }
 
     /// <summary>
-    /// ページャを止める。<b>機種で出し分けない。</b>全部投げて失敗を無視する。
-    /// 機種判定を誤るとページャが生き残って全コマンドが詰まるので、
-    /// 判定の誤りより無害な失敗を選ぶ。
+    /// ページャを止める。<b>機種で出し分けない</b>が、<b>通った時点でやめる</b>。
+    ///
+    /// 以前は 3 本とも投げていた。判定の誤りより無害な失敗を選ぶ、という考えは同じだが、
+    /// IOS-XE に <c>terminal pager 0</c> を投げると「% Invalid input」が出て、
+    /// 使う人には失敗したように見える（2026-08-18 に報告された）。
+    /// <b>先頭から順に投げて、機器が受け取ったところで止める</b> — IOS 系なら
+    /// <c>terminal length 0</c> だけ、ASA なら <c>terminal pager 0</c> だけになる。
     /// </summary>
     private async Task<string> DisablePagerAsync(CancellationToken token)
     {
         string[] candidates = ["terminal length 0", "terminal pager 0", "terminal width 0"];
-        int accepted = 0;
 
         foreach (string command in candidates)
         {
             CommandResult result = await RunOneAsync(0, command, token).ConfigureAwait(false);
 
-            if (result.Problem is null) accepted++;
+            if (result.Problem is null && !WasRejected(result.Output))
+                return $"無効化を実施（{command}）";
         }
 
-        return accepted == 0
-            ? "⚠ 無効化できませんでした（出力が途中で切れることがあります）"
-            : $"無効化を実施（{candidates.Length} 本中 {accepted} 本が有効）";
+        return "⚠ 無効化できませんでした（出力が途中で切れることがあります）";
+    }
+
+    /// <summary>
+    /// 機器がそのコマンドを断ったか。<b>文言は機種で違う</b>ので、
+    /// どれかに当たれば断られたとみなす（当たらなければ通ったものとして扱う）。
+    /// </summary>
+    private static bool WasRejected(string? output)
+    {
+        if (string.IsNullOrEmpty(output)) return false;
+
+        foreach (string mark in (string[])
+                 ["% Invalid input", "% Unknown command", "% Ambiguous command",
+                  "Invalid input detected", "% Incomplete command", "ERROR: %"])
+        {
+            if (output.Contains(mark, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        return false;
     }
 
     /// <summary>コマンドを 1 本投げて、プロンプトが返るまで読む。</summary>
