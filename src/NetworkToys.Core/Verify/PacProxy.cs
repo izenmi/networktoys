@@ -20,25 +20,35 @@ public static class PacProxy
     {
         if (string.IsNullOrWhiteSpace(list)) return "";
 
-        foreach (string raw in list.Split([';', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries))
+        // 並びは「種別 アドレス」を ; で区切ったもの（"PROXY a:8080; DIRECT"）。
+        // 種別の語は捨て、アドレスだけを採る
+        foreach (string part in list.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
-            string entry = raw.Trim();
+            string[] words = part.Split(
+                [' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            // PAC の書式がそのまま来ることもある（"PROXY a:8080"）
-            if (entry.Equals("PROXY", StringComparison.OrdinalIgnoreCase)) continue;
-            if (entry.Equals("DIRECT", StringComparison.OrdinalIgnoreCase)) continue;
+            if (words.Length == 0) continue;
 
-            // "PROXY" が付いたまま 1 語で来た場合
-            if (entry.StartsWith("PROXY", StringComparison.OrdinalIgnoreCase) && entry.Length > 5)
-                entry = entry[5..].Trim();
+            // DIRECT は「直接出る」。アドレスを持たない
+            if (words[0].Equals("DIRECT", StringComparison.OrdinalIgnoreCase)) continue;
 
-            if (entry.Length == 0) continue;
+            // 種別（PROXY / SOCKS / SOCKS5 / HTTPS…）が付いていれば落とす。
+            // <b>語を残すと "http://SOCKS5 host:1080" になり、URI として読めない</b>
+            // （2026-08-18 に「Invalid URI」で試験が止まると報告された）。
+            // 種別が無い並び（WinHTTP が均した "a:8080 b:8080"）は先頭を採る
+            string address = IsKind(words[0]) ? (words.Length > 1 ? words[1] : "") : words[0];
 
-            return ProxyListParser.NormalizeProxy(entry);
+            if (address.Length == 0 || address.Contains(' ', StringComparison.Ordinal)) continue;
+
+            return ProxyListParser.NormalizeProxy(address);
         }
 
         return "";
     }
+
+    /// <summary>PAC が書く種別の語か（アドレスではない）。</summary>
+    private static bool IsKind(string word) => word.ToUpperInvariant() is
+        "PROXY" or "SOCKS" or "SOCKS4" or "SOCKS5" or "HTTP" or "HTTPS" or "DIRECT";
 
     /// <summary>証跡に出す説明。直接出るときもそう書く（空欄だと抜けに見える）。</summary>
     public static string Describe(string resolved)

@@ -32,6 +32,26 @@ public enum ProxyMode
 /// </param>
 public sealed record ProxyChoice(string Name, ProxyMode Mode, string Address)
 {
+    /// <summary>
+    /// 一覧や証跡に出す短い名前。
+    ///
+    /// 名前を省いて<b>アドレスだけ書かれたとき、名前はアドレスそのもの</b>になる。
+    /// PAC の URL は長いので、<b>ファイル名だけ</b>にする（2026-08-18 ユーザー指示）。
+    /// 同じ名前のファイルが複数あるときのために、ホスト名を添える。
+    /// </summary>
+    public string ShortName
+    {
+        get
+        {
+            if (!Name.Contains("://", StringComparison.Ordinal)) return Name;
+            if (!Uri.TryCreate(Name, UriKind.Absolute, out Uri? uri)) return Name;
+
+            string file = uri.Segments.Length > 0 ? uri.Segments[^1].Trim('/') : "";
+
+            return file.Length > 0 ? $"{file}（{uri.Host}）" : uri.Host;
+        }
+    }
+
     /// <summary>常に選べる「直接」。プロキシ無しの結果と比べるために要る。</summary>
     public static ProxyChoice Direct { get; } = new("直接", ProxyMode.Direct, "");
 

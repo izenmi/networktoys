@@ -50,9 +50,33 @@ internal static class HttpCheck
         if (pacError is not null)
             return (new HttpOutcome(0, "", "", "", pacError), Elapsed(started), "");
 
-        using HttpClientHandler handler = CreateHandler(proxy, resolved);
-        using var client = new HttpClient(handler) { Timeout = Timeout };
+        HttpClientHandler handler;
 
+        try
+        {
+            handler = CreateHandler(proxy, resolved);
+        }
+        catch (UriFormatException ex)
+        {
+            // プロキシのアドレスとして読めない（PAC が SOCKS を返した、書き方が違う…）。
+            // ここで落とすと試験全体が「失敗」になるので、その 1 件の不合格にとどめる
+            // （2026-08-18 に「Invalid URI」で試験ごと止まると報告された）
+            return (
+                new HttpOutcome(0, "", "", "", $"プロキシのアドレスとして読めません（{resolved}）: {ex.Message}"),
+                Elapsed(started),
+                DescribeProxy(proxy, resolved));
+        }
+
+        using (handler)
+        using (var client = new HttpClient(handler) { Timeout = Timeout })
+        {
+            return await SendAsync(client, uri, proxy, resolved, started, token).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<(HttpOutcome Outcome, double ElapsedMs, string UsedProxy)> SendAsync(
+        HttpClient client, Uri uri, ProxyChoice proxy, string resolved, long started, CancellationToken token)
+    {
         string usedProxy = DescribeProxy(proxy, resolved);
 
         try
@@ -158,8 +182,9 @@ internal static class HttpCheck
     internal static string DescribeProxy(ProxyChoice proxy, string resolved)
         => proxy.Mode switch
         {
-            ProxyMode.Pac => $"{proxy.Name}（PAC の答え: {PacProxy.Describe(resolved)}）",
-            _ => proxy.Name,
+            // 名前が PAC の URL そのものになることがある。長いのでファイル名だけにする
+            ProxyMode.Pac => $"{proxy.ShortName}（PAC の答え: {PacProxy.Describe(resolved)}）",
+            _ => proxy.ShortName,
         };
 
     private static async Task<string> ReadHeadAsync(HttpResponseMessage response, CancellationToken token)

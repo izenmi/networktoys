@@ -87,7 +87,8 @@ public sealed class ProxyChoiceViewModel : ObservableObject
 
     internal ProxyChoice Choice { get; }
 
-    public string Name => Choice.Name;
+    /// <summary>一覧に出す名前。PAC の URL は長いのでファイル名だけにする。</summary>
+    public string Name => Choice.ShortName;
 
     public string Summary => Choice.Summary;
 

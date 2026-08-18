@@ -249,6 +249,11 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     /// </summary>
     public bool NeedsOrganization => Organizations.Count > 1 && SelectedOrganization is null;
 
+    /// <summary>
+    /// 見る拠点。<b>どのサブタブでも同じ選択を使う</b>（2026-08-18 ユーザー指示。
+    /// クライアントタブと同じ形にした）。機器・回線・DHCP・アラートは組織まとめで
+    /// 取ってあるので、<b>選び直しても取り直さず、出す行を絞るだけ</b>。
+    /// </summary>
     public MerakiNetworkRow? SelectedNetwork
     {
         get => _selectedNetwork;
@@ -258,6 +263,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
 
             FetchClientsCommand.RaiseCanExecuteChanged();
             FetchInstallCheckCommand.RaiseCanExecuteChanged();
+
+            ShowByNetwork();
         }
     }
 
@@ -290,11 +297,45 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     /// クライアントを全拠点から取るか。<b>拠点の数だけ呼び出しが増える</b>ので、
     /// 既定は選んだ拠点だけ。
     /// </summary>
+    /// <summary>
+    /// 拠点で絞らずに見るか。<b>どのサブタブでも同じ</b>（クライアントの取得先もこれで決まる）。
+    /// </summary>
     public bool AllNetworks
     {
         get => _allNetworks;
-        set { if (SetProperty(ref _allNetworks, value)) FetchClientsCommand.RaiseCanExecuteChanged(); }
+        set
+        {
+            if (!SetProperty(ref _allNetworks, value)) return;
+
+            FetchClientsCommand.RaiseCanExecuteChanged();
+            ShowByNetwork();
+        }
     }
+
+    /// <summary>
+    /// 選んだ拠点のぶんだけ一覧に出す。
+    /// <b>取ってきたものは捨てない</b>（絞り直すたびに取り直すと待たされる）。
+    /// </summary>
+    private void ShowByNetwork()
+    {
+        string? only = AllNetworks ? null : SelectedNetwork?.Name;
+
+        Replace(DeviceRows, Only(_allDevices, only, d => d.Network));
+        Replace(UplinkRows, Only(
+            MerakiCatalog.WithoutOfflineDevices(_allUplinks, _allDevices), only, u => u.Network));
+        Replace(DhcpRows, Only(_allDhcp, only, d => d.Network));
+        Replace(AlertRows, Only(_allAlerts, only, a => a.Network));
+
+        GlobalIpText = MerakiCatalog.GlobalIpSummary(UplinkRows);
+
+        RefreshSaveCommands();
+        FetchDhcpCommand.RaiseCanExecuteChanged();
+        FetchInstallCheckCommand.RaiseCanExecuteChanged();
+    }
+
+    private static IReadOnlyList<T> Only<T>(
+        IReadOnlyList<T> rows, string? network, Func<T, string> networkOf)
+        => network is null ? rows : [.. rows.Where(r => networkOf(r) == network)];
 
     /// <summary>利用率で見るか、通信量で見るか。</summary>
     /// <summary>アップリンクのグローバル IP をまとめた 1 行。</summary>
@@ -450,12 +491,14 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
                 // 版が補えないだけ。一覧は「⚠ 設定と違う版」で出る
             }
 
-            Replace(DeviceRows, MerakiCatalog.JoinDevices(
-                devicePages, statusPages, [.. NetworkRows], versions));
+            _allDevices = MerakiCatalog.JoinDevices(devicePages, statusPages, [.. NetworkRows], versions);
+            ShowByNetwork();
 
             await FillApplianceIpsAsync(token);
 
-            Status = $"機器 {DeviceRows.Count} 台（{DateTime.Now:HH:mm:ss} 時点）。";
+            Status = $"機器 {DeviceRows.Count} 台"
+                   + (AllNetworks || SelectedNetwork is null ? "" : $"（{SelectedNetwork.Name}）")
+                   + $"（{DateTime.Now:HH:mm:ss} 時点）。";
 
             if (_dashboard.WasTruncated)
                 Notice = "⚠ 件数が多いため途中までしか取得できていません。ダッシュボードで全体を確認してください。";
@@ -509,13 +552,9 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             // 「切れている」を区別するため）。一覧と CSV には出さない
             _allUplinks = uplinks;
 
-            IReadOnlyList<MerakiUplinkRow> shown =
-                MerakiCatalog.WithoutOfflineDevices(uplinks, DeviceRows);
+            ShowByNetwork();
 
-            Replace(UplinkRows, shown);
-            GlobalIpText = MerakiCatalog.GlobalIpSummary(shown);
-
-            int hidden = uplinks.Count - shown.Count;
+            int hidden = uplinks.Count - MerakiCatalog.WithoutOfflineDevices(uplinks, _allDevices).Count;
 
             Status = $"回線 {UplinkRows.Count} 本"
                    + (hidden > 0 ? $"（つながっていない {hidden} 本は伏せています）" : "")
@@ -606,7 +645,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             if (ips.Count > 0) byNetwork[name] = string.Join(" / ", ips);
         }
 
-        Replace(DeviceRows, MerakiCatalog.WithApplianceIps(DeviceRows, byNetwork));
+        _allDevices = MerakiCatalog.WithApplianceIps(_allDevices, byNetwork);
+        ShowByNetwork();
         ClearSlowNotice();
     }
 
@@ -753,6 +793,13 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     /// 停止中のぶんを落としてある</b>ので、導入時確認はこちらを見る。
     /// </summary>
     private IReadOnlyList<MerakiUplinkRow> _allUplinks = [];
+
+    /// <summary>取ってきたもの全部。画面には <see cref="ShowByNetwork"/> が絞って出す。</summary>
+    private IReadOnlyList<MerakiDeviceRow> _allDevices = [];
+
+    private IReadOnlyList<MerakiDhcpRow> _allDhcp = [];
+
+    private IReadOnlyList<MerakiAlertRow> _allAlerts = [];
 
     private static void Replace<T>(ObservableCollection<T> target, IReadOnlyList<T> rows)
     {
@@ -1104,7 +1151,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
             ClearSlowNotice();
 
             // 機器一覧の LAN IP にセグメントを足す（足すのは MX だけ）
-            Replace(DeviceRows, MerakiCatalog.WithSegments(DeviceRows, segments));
+            _allDevices = MerakiCatalog.WithSegments(_allDevices, segments);
+            ShowByNetwork();
 
             Status = $"拠点 {SiteRows.Count} 件を数えました（{timespan.Name}・{DateTime.Now:HH:mm:ss} 時点）。";
 
@@ -1171,7 +1219,8 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
                 }
             }
 
-            Replace(DhcpRows, rows);
+            _allDhcp = rows;
+            ShowByNetwork();
             ClearSlowNotice();
 
             Status = appliances.Length == 0
@@ -1208,8 +1257,10 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         {
             Status = "アラートを取得しています…";
 
-            Replace(AlertRows, MerakiCatalog.ParseAlerts(
-                await _dashboard.AlertsAsync(ApiKey, organization.Id, _cts.Token)));
+            _allAlerts = MerakiCatalog.ParseAlerts(
+                await _dashboard.AlertsAsync(ApiKey, organization.Id, _cts.Token));
+
+            ShowByNetwork();
 
             Status = $"アラート {AlertRows.Count} 件（{DateTime.Now:HH:mm:ss} 時点）。";
         }
@@ -1304,6 +1355,12 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SiteRows.Clear();
         DhcpRows.Clear();
         AlertRows.Clear();
+
+        // 絞る前の控えも捨てる（キーごと消すので、残しておく理由が無い）
+        _allDevices = [];
+        _allUplinks = [];
+        _allDhcp = [];
+        _allAlerts = [];
 
         SelectedOrganization = null;
         SelectedNetwork = null;

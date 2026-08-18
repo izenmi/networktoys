@@ -199,8 +199,13 @@ public class CheckPlanTests
     // PAC の書式がそのまま来た場合
     [InlineData("PROXY a.example.jp:8080", "http://a.example.jp:8080")]
     [InlineData("PROXY a.example.jp:8080; DIRECT", "http://a.example.jp:8080")]
+    // 種別が PROXY 以外でも、アドレスだけを採る（語を残すと URI として読めない）
+    [InlineData("SOCKS5 host.example.jp:1080", "http://host.example.jp:1080")]
+    [InlineData("HTTPS a.example.jp:8443; PROXY b.example.jp:8080", "http://a.example.jp:8443")]
     // 直接出るべき場合
     [InlineData("DIRECT", "")]
+    [InlineData("DIRECT; PROXY a.example.jp:8080", "http://a.example.jp:8080")]
+    [InlineData("PROXY", "")]
     [InlineData("", "")]
     [InlineData(null, "")]
     public void The_first_proxy_from_the_pac_result_is_used(string? list, string expected)
@@ -276,6 +281,19 @@ public class CheckPlanTests
 
         Assert.Equal(ProxyMode.Fixed, list[3].Mode);
         Assert.Equal("http://10.0.0.10:8080", list[3].Address);
+    }
+
+    [Fact]
+    public void A_pac_url_is_shown_by_its_file_name()
+    {
+        // アドレスだけ書くと名前は URL そのもの。証跡では長すぎる（2026-08-18 ユーザー指示）
+        ProxyChoice pac = ProxyListParser.Parse("http://pac.example.jp/scripts/proxy.pac")[2];
+
+        Assert.Equal("proxy.pac（pac.example.jp）", pac.ShortName);
+
+        // 名前を付けてあるものは、そのまま
+        Assert.Equal("Zscaler", ProxyListParser.Parse("Zscaler,pac,http://a.example.jp/x.pac")[2].ShortName);
+        Assert.Equal("直接", ProxyChoice.Direct.ShortName);
     }
 
     [Fact]

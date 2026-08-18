@@ -2006,45 +2006,58 @@
                                     ToolTip="そのままメールに添付できる報告書にします。1 ファイル完結なのでオフラインでも開けます。" />
                         </WrapPanel>
 
-                        <!-- プロキシ。定義（左）と、そのうちどれで試すか（右） -->
-                        <Border DockPanel.Dock="Top" MaxHeight="78" Margin="0,0,0,6"
+                        <!--
+                            プロキシ。<b>試す先を横に並べて、既定で全部見えるようにする</b>
+                            （2026-08-18 ユーザー指示。右の欄に縦積みしていたので、
+                            数本あるとスクロールしないと見えなかった）。
+                            定義（テキスト）は普段畳んでおく — 書き換えるのは最初だけ。
+                        -->
+                        <Border DockPanel.Dock="Top" Margin="0,0,0,6"
                                 Background="{DynamicResource Brush.Surface}"
                                 BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="240" />
-                                </Grid.ColumnDefinitions>
+                            <DockPanel>
+                                <WrapPanel DockPanel.Dock="Top">
+                                    <TextBlock Text="試すプロキシ" Style="{StaticResource Caption}"
+                                               VerticalAlignment="Center" Margin="0,0,10,3"
+                                               ToolTip="チェックしたプロキシごとに、同じ試験を 1 周ずつ回します。入れ替えの前後を並べて比べるための機能です。" />
 
-                                <DockPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <ItemsControl ItemsSource="{Binding Proxies}" Margin="0,0,10,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsSelected}"
+                                                          Margin="0,0,14,3"
+                                                          Content="{Binding Name}" ToolTip="{Binding Summary}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <ToggleButton x:Name="ProxyListToggle" Content="一覧を編集 ▾"
+                                                  Style="{StaticResource ToggleButton.Subtle}"
+                                                  Margin="0,0,0,3"
+                                                  ToolTip="プロキシの定義（名前・種類・アドレス）を書き換える欄を開きます。" />
+                                </WrapPanel>
+
+                                <DockPanel DockPanel.Dock="Top" Margin="0,6,0,0"
+                                           Visibility="{Binding IsChecked, ElementName=ProxyListToggle,
+                                                        Converter={StaticResource BoolToVisibility}}">
                                     <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Margin="0,0,0,3"
                                                Text="プロキシの一覧（1 行 1 件・名前,pac または proxy,アドレス。アドレスだけでも可）" />
                                     <TextBox Text="{Binding ProxyText, UpdateSourceTrigger=PropertyChanged}"
                                              FontFamily="{DynamicResource Font.Mono}"
                                              FontSize="{DynamicResource Size.Caption}"
                                              AcceptsReturn="True" TextWrapping="NoWrap"
+                                             Height="66"
                                              VerticalScrollBarVisibility="Auto"
                                              VerticalContentAlignment="Top"
                                              ToolTip="例: Zscaler,pac,http://pac.zscaler.net/example/proxy.pac&#10;アドレスだけ書いても構いません（.pac で終われば PAC、それ以外はプロキシとして扱います）。" />
                                 </DockPanel>
-
-                                <DockPanel Grid.Column="1">
-                                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Margin="0,0,0,3"
-                                               Text="試すプロキシ（選んだぶんだけ繰り返します）"
-                                               ToolTip="チェックしたプロキシごとに、同じ試験を 1 周ずつ回します。入れ替えの前後を並べて比べるための機能です。" />
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl ItemsSource="{Binding Proxies}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,0,2"
-                                                              Content="{Binding Name}" ToolTip="{Binding Summary}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
-                                </DockPanel>
-                            </Grid>
+                            </DockPanel>
                         </Border>
 
                         <!--
@@ -2622,10 +2635,28 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiDevices}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ組織にある機器を、拠点をまたいで一覧にします。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="機器を一覧にします。拠点で絞るか、全拠点かを選べます。" />
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <!-- どのサブタブでも同じ選択（2026-08-18 ユーザー指示）。
+                                             取ってあるものを絞るだけなので、選び直しても取り直さない -->
+                                        <TextBlock Text="拠点" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="180" Margin="0,0,6,0"
+                                                  ItemsSource="{Binding NetworkRows}"
+                                                  SelectedItem="{Binding SelectedNetwork}"
+                                                  ToolTip="この拠点のぶんだけ出します。「全拠点」を入れると絞りません。">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <CheckBox Content="全拠点" IsChecked="{Binding AllNetworks}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"
+                                                  ToolTip="拠点で絞らずに、組織のぶんをすべて出します。" />
                                         <!-- 重い取得はこのタブに閉じる（2026-08-18 ユーザー指示） -->
                                         <Button Content="取得" Command="{Binding FetchDevicesCommand}" Margin="0,0,6,0"
                                                 ToolTip="機器の一覧・稼働状況・ファームの版と、MX の LAN アドレスを取ります。MX のある拠点の数だけ問い合わせるので、少し時間がかかります。" />
@@ -2767,10 +2798,28 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiUplinks}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="選んだ組織の MX の WAN 回線の状態を見ます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="MX の WAN 回線の状態を見ます。拠点で絞れます。" />
                                     </DockPanel>
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <!-- どのサブタブでも同じ選択（2026-08-18 ユーザー指示）。
+                                             取ってあるものを絞るだけなので、選び直しても取り直さない -->
+                                        <TextBlock Text="拠点" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="180" Margin="0,0,6,0"
+                                                  ItemsSource="{Binding NetworkRows}"
+                                                  SelectedItem="{Binding SelectedNetwork}"
+                                                  ToolTip="この拠点のぶんだけ出します。「全拠点」を入れると絞りません。">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <CheckBox Content="全拠点" IsChecked="{Binding AllNetworks}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"
+                                                  ToolTip="拠点で絞らずに、組織のぶんをすべて出します。" />
                                         <Button Content="取得" Command="{Binding FetchUplinksCommand}" Margin="0,0,6,0"
                                                 ToolTip="MX の WAN の状態を取ります。つながっていない回線と、止まっている機器の回線は出しません。" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
@@ -3168,9 +3217,27 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiDhcp}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="MX ごとの DHCP の払い出し状況を並べます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="MX ごとの DHCP の払い出し状況を並べます。拠点で絞れます。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <!-- どのサブタブでも同じ選択（2026-08-18 ユーザー指示）。
+                                             取ってあるものを絞るだけなので、選び直しても取り直さない -->
+                                        <TextBlock Text="拠点" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="180" Margin="0,0,6,0"
+                                                  ItemsSource="{Binding NetworkRows}"
+                                                  SelectedItem="{Binding SelectedNetwork}"
+                                                  ToolTip="この拠点のぶんだけ出します。「全拠点」を入れると絞りません。">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <CheckBox Content="全拠点" IsChecked="{Binding AllNetworks}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"
+                                                  ToolTip="拠点で絞らずに、組織のぶんをすべて出します。" />
                                         <Button Content="DHCP を確認" Command="{Binding FetchDhcpCommand}" Margin="0,0,12,0"
                                                 ToolTip="機器一覧にある MX を順に見ます。先に「機器」タブの「取得」を押してください。" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
@@ -3306,9 +3373,27 @@
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <TextBlock DockPanel.Dock="Left" Style="{StaticResource TabInfoMark}"
                                                    ToolTip="{x:Static help:TabHelp.MerakiAlerts}" />
-                                        <TextBlock Style="{StaticResource TabIntro}" Text="組織で出ているアラートを並べます。" />
+                                        <TextBlock Style="{StaticResource TabIntro}" Text="組織で出ているアラートを並べます。拠点で絞れます。" />
                                     </DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <!-- どのサブタブでも同じ選択（2026-08-18 ユーザー指示）。
+                                             取ってあるものを絞るだけなので、選び直しても取り直さない -->
+                                        <TextBlock Text="拠点" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <ComboBox Width="180" Margin="0,0,6,0"
+                                                  ItemsSource="{Binding NetworkRows}"
+                                                  SelectedItem="{Binding SelectedNetwork}"
+                                                  ToolTip="この拠点のぶんだけ出します。「全拠点」を入れると絞りません。">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <CheckBox Content="全拠点" IsChecked="{Binding AllNetworks}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"
+                                                  ToolTip="拠点で絞らずに、組織のぶんをすべて出します。" />
                                         <Button Content="アラートを取得" Command="{Binding FetchAlertsCommand}" Margin="0,0,12,0" />
                                         <Button Content="Excel で保存" Command="{Binding SaveXlsxCommand}"
                                                 CommandParameter="alerts" Margin="0,0,6,0"
