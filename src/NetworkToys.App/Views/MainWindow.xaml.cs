@@ -741,7 +741,9 @@ public partial class MainWindow : Window
 
             HandoverDocument document = HandoverService.Capture(_shell);
 
-            document.SelectedTab = MainTabs.SelectedItem is TabItem tab ? tab.Header?.ToString() ?? "" : "";
+            // 押したボタンが載っているタブへ戻す。束ねたタブの中（通信状況）から押されても
+            // その画面で開き直せる — 外側の「その他」を控えると先頭の画面で開いてしまう
+            document.SelectedTab = (TabOf(sender) ?? ShownTab())?.Header?.ToString() ?? "";
             document.WindowMaximized = WindowState == WindowState.Maximized;
 
             // 最大化中は Left/Width が画面いっぱいの値になるので、元の大きさを控える
@@ -1776,6 +1778,34 @@ public partial class MainWindow : Window
     }
 
     /// <summary>そのタブが中に持っている切り替え。無ければ null。</summary>
+    /// <summary>
+    /// その要素が載っているタブ。<b>論理ツリーでたどる</b> —
+    /// タブの中身は視覚ツリーでは <c>TabItem</c> の下に無い（親 <c>TabControl</c> の
+    /// <c>ContentPresenter</c> の下に置かれる）ので、視覚ツリーでは素通りする。
+    /// </summary>
+    private static TabItem? TabOf(object? source)
+    {
+        for (DependencyObject? node = source as DependencyObject;
+             node is not null;
+             node = LogicalTreeHelper.GetParent(node))
+        {
+            if (node is TabItem tab) return tab;
+        }
+
+        return null;
+    }
+
+    /// <summary>いま見えているタブ。束ねたタブの中を選んでいるなら、その中身の方。</summary>
+    private TabItem? ShownTab()
+    {
+        TabItem? tab = MainTabs.SelectedItem as TabItem;
+
+        while (tab is not null && InnerTabsOf(tab) is { SelectedItem: TabItem child })
+            tab = child;
+
+        return tab;
+    }
+
     private static TabControl? InnerTabsOf(TabItem tab)
     {
         if (tab.Content is not DependencyObject node) return null;

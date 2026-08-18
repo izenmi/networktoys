@@ -4165,8 +4165,13 @@
 
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"
                                    Visibility="{Binding HasRateNotice, Converter={StaticResource BoolToVisibility}}">
-                            <Button DockPanel.Dock="Right" Content="管理者として再起動" Click="OnRelaunchAsAdmin"
-                                    Style="{StaticResource Button.Subtle}" Margin="8,0,0,0" VerticalAlignment="Center"
+                            <!-- 通信量には管理者権限が要る。WFP タブと同じく案内より先に目に入るよう
+                                 左端に置き、注意の配色で区別する（2026-08-18 ユーザー指示） -->
+                            <Button DockPanel.Dock="Left" Content="管理者として再起動" Click="OnRelaunchAsAdmin"
+                                    Background="{DynamicResource Brush.Warn.Bg}"
+                                    Foreground="{DynamicResource Brush.Warn.Fg}"
+                                    FontWeight="Bold" Padding="12,4"
+                                    Margin="0,0,10,0" VerticalAlignment="Center"
                                     Visibility="{Binding CanRelaunchAsAdmin, Converter={StaticResource BoolToVisibility}}"
                                     ToolTip="いったん終了して、管理者権限で起動し直します。測定中の結果は失われます。" />
                             <TextBlock Text="{Binding RateNotice}"
