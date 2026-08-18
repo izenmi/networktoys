@@ -618,12 +618,16 @@ public static class AciCatalog
         return rows;
     }
 
-    /// <summary>静的パスのタグ付け。APIC の値は言葉が短すぎて意味が取れないので言い換える。</summary>
+    /// <summary>
+    /// 静的パスのタグ付け。<b>機器側の言葉（Access / Trunk）で出す</b>
+    /// （2026-08-18 ユーザー指示。以前は「タグ付き／タグなし」と言い換えていた）。
+    /// <c>native</c> はタグの無い枠を 802.1p で受ける Access なので、そう添える。
+    /// </summary>
     public static string DescribeMode(string? mode) => mode switch
     {
-        "regular" => "タグ付き",
-        "native" => "ネイティブ",
-        "untagged" => "タグなし",
+        "regular" => "Trunk",
+        "native" => "Access (802.1p)",
+        "untagged" => "Access",
         null or "" => "—",
         _ => mode,
     };

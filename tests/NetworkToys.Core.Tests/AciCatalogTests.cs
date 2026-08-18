@@ -229,7 +229,7 @@ public class AciCatalogTests
 
         Assert.Equal("Web", rows[0].Epgs);
         Assert.Equal("vlan-100", rows[0].Vlans);
-        Assert.Equal("タグ付き", rows[0].Modes);
+        Assert.Equal("Trunk", rows[0].Modes);
 
         // 何も載っていない口は空。0 や「—」で埋めない
         Assert.Equal("", rows[1].Epgs);
@@ -271,7 +271,7 @@ public class AciCatalogTests
         // protpaths-103-104 は 103 と 104 の両方の口の話
         Assert.Equal("Web", rows[0].Epgs);
         Assert.Equal("vlan-100", rows[0].Vlans);
-        Assert.Equal("タグなし", rows[0].Modes);
+        Assert.Equal("Access", rows[0].Modes);
 
         // 束そのものも 1 行として出す（EPG は束の側に付くので、無いと割り当てが見えない）
         Assert.Equal("po1", rows[1].Interface);
@@ -351,9 +351,9 @@ public class AciCatalogTests
         Assert.Equal("101", rows[0].Node);
         Assert.Equal("eth1/1", rows[0].Path);
         Assert.Equal("vlan-100", rows[0].Encap);
-        Assert.Equal("タグ付き", rows[0].Mode);
+        Assert.Equal("Trunk", rows[0].Mode);
         Assert.Equal("103-104", rows[1].Node);
-        Assert.Equal("タグなし", rows[1].Mode);
+        Assert.Equal("Access", rows[1].Mode);
     }
 
     [Fact]
