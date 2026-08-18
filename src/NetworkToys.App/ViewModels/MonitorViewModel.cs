@@ -41,6 +41,8 @@ public sealed class MonitorViewModel : ObservableObject
     /// <summary>進行中の停止処理。二重に呼ばれたとき同じ完了を待たせる。</summary>
     private Task? _stopTask;
     private string _targetListText = string.Empty;
+
+    private string? _selectedListName;
     private string _listSummary = string.Empty;
     private TargetRowViewModel? _selectedRow;
     private TargetRowViewModel? _selectedAliveRow;
@@ -92,6 +94,14 @@ public sealed class MonitorViewModel : ObservableObject
         StartCommand = new RelayCommand(() => Start(_alwaysTcp), () => !IsRunning && Rows.Count > 0);
         StopCommand = new RelayCommand(() => _ = StopAsync(), () => IsRunning);
         ClearHistoryCommand = new RelayCommand(ClearHistory);
+
+        // コマンドを先に作る。SelectedListName の setter が DeleteListCommand を触るので、
+        // 逆順にすると生成の途中で落ちる（試験タブのひな型で実際に踏んだ）
+        SaveListCommand = new RelayCommand(SaveList);
+        DeleteListCommand = new RelayCommand(DeleteList, () => SelectedListName is { Length: > 0 });
+
+        foreach (string name in SavedListStore.Keys.OrderBy(n => n, StringComparer.CurrentCulture))
+            SavedLists.Add(name);
 
         _pump = new DispatcherTimer(DispatcherPriority.Background) { Interval = PumpInterval };
         _pump.Tick += OnPump;
@@ -304,6 +314,54 @@ public sealed class MonitorViewModel : ObservableObject
 
     /// <summary>TCP 専用の画面か。ポート欄などをこれで出し分ける。</summary>
     public bool IsTcpScreen => _alwaysTcp;
+
+    /// <summary>
+    /// 名前を付けて残した宛先リスト。<b>現場ごとに測る相手は決まっている</b>ので、
+    /// いくつか持って切り替えられるようにする（2026-08-17 ユーザー指示）。
+    /// Ping と TCP で別の入れ物を使う（測る相手が違う）。
+    /// </summary>
+    public ObservableCollection<string> SavedLists { get; } = [];
+
+    /// <summary>
+    /// 選んでいるリストの名前。<b>選び直すと画面の宛先がそれに入れ替わる</b>。
+    /// 入れ替える前に、いま出ているものは元の名前へ書き戻す（編集を黙って捨てない）。
+    /// </summary>
+    public string? SelectedListName
+    {
+        get => _selectedListName;
+        set
+        {
+            if (string.Equals(_selectedListName, value, StringComparison.Ordinal)) return;
+
+            // 切り替える前に、いまの中身を元の名前へ残す
+            if (_selectedListName is { Length: > 0 } previous && SavedListStore.ContainsKey(previous))
+                SavedListStore[previous] = TargetListText;
+
+            _selectedListName = value;
+            OnPropertyChanged();
+
+            if (value is { Length: > 0 } name && SavedListStore.TryGetValue(name, out string? text))
+                TargetListText = text;
+
+            DeleteListCommand.RaiseCanExecuteChanged();
+            SaveSettings();
+        }
+    }
+
+    /// <summary>いまの画面のリスト置き場。Ping と TCP で分かれている。</summary>
+    private Dictionary<string, string> SavedListStore
+        => _alwaysTcp ? Settings.Current.TcpTargetLists : Settings.Current.PingTargetLists;
+
+    /// <summary>いまの宛先に名前を付けて残す。</summary>
+    public RelayCommand SaveListCommand { get; }
+
+    /// <summary>選んでいるリストを消す。宛先そのものは画面に残す。</summary>
+    public RelayCommand DeleteListCommand { get; }
+
+    /// <summary>
+    /// 名前を聞くのは画面の仕事（VM から窓を開かない。試験タブのひな型と同じ）。
+    /// </summary>
+    public Func<string, string?>? AskListName { get; set; }
 
     /// <summary>宛先タブで編集するテキスト。書式は EXPing に合わせている。</summary>
     public string TargetListText
@@ -897,6 +955,80 @@ public sealed class MonitorViewModel : ObservableObject
         OnPropertyChanged(nameof(AliveHeader));
         OnPropertyChanged(nameof(DownHeader));
         OnPropertyChanged(nameof(HasDownRows));
+    }
+
+    /// <summary>
+    /// いまの宛先に名前を付けて残す。同じ名前なら上書き。
+    /// 名前を聞くのは画面側（<see cref="AskListName"/>）。
+    /// </summary>
+    private void SaveList()
+    {
+        if (AskListName?.Invoke(SelectedListName ?? "") is not { } asked) return;
+
+        string name = asked.Trim();
+
+        if (name.Length == 0)
+        {
+            StatusMessage = "リストの名前が空です。";
+            return;
+        }
+
+        SaveList(name, TargetListText);
+    }
+
+    /// <summary>名前と中身を決めて残す。自己診断からも呼べるように分けてある。</summary>
+    internal void SaveList(string name, string text)
+    {
+        SavedListStore[name] = text;
+
+        if (!SavedLists.Contains(name))
+        {
+            SavedLists.Add(name);
+
+            // 並べ替えは入れ直しで済ませる（数はせいぜい数十）
+            string[] sorted = [.. SavedLists.OrderBy(n => n, StringComparer.CurrentCulture)];
+
+            SavedLists.Clear();
+            foreach (string each in sorted) SavedLists.Add(each);
+        }
+
+        _selectedListName = name;
+        OnPropertyChanged(nameof(SelectedListName));
+        DeleteListCommand.RaiseCanExecuteChanged();
+
+        SaveSettings();
+        StatusMessage = $"宛先リスト「{name}」に残しました。";
+    }
+
+    /// <summary>
+    /// 選んでいるリストを消す。<b>画面の宛先はそのまま残す</b> —
+    /// 名前を消しただけで測定対象が消えると、測っている最中に事故になる。
+    /// </summary>
+    private void DeleteList()
+    {
+        if (SelectedListName is not { Length: > 0 } name) return;
+
+        SavedListStore.Remove(name);
+        SavedLists.Remove(name);
+
+        _selectedListName = null;
+        OnPropertyChanged(nameof(SelectedListName));
+        DeleteListCommand.RaiseCanExecuteChanged();
+
+        SaveSettings();
+        StatusMessage = $"宛先リスト「{name}」を消しました（いまの宛先はそのままです）。";
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            Settings.Save();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            StatusMessage = $"宛先リストを保存できませんでした: {ex.Message}";
+        }
     }
 
     private void Save()

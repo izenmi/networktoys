@@ -2424,6 +2424,58 @@ internal static class SelfTest
             }
         });
 
+        Check("宛先リストを名前を付けて残し、選び直すと入れ替わる", () =>
+        {
+            var monitor = new ViewModels.MonitorViewModel();
+
+            // 消えると困るので、検査で触った名前は最後に必ず片付ける
+            const string first = "自己診断A";
+            const string second = "自己診断B";
+
+            try
+            {
+                monitor.TargetListText = "192.0.2.1 一つ目";
+                monitor.SaveList(first, monitor.TargetListText);
+
+                monitor.TargetListText = "192.0.2.2 二つ目";
+                monitor.SaveList(second, monitor.TargetListText);
+
+                Assert(monitor.SavedLists.Contains(first) && monitor.SavedLists.Contains(second),
+                       "残したリストが一覧に出ていない");
+
+                // 選び直すと、その中身に入れ替わる
+                monitor.SelectedListName = first;
+
+                Assert(monitor.TargetListText.Contains("192.0.2.1", StringComparison.Ordinal),
+                       $"選び直しても宛先が入れ替わらない: {monitor.TargetListText}");
+
+                // 入れ替える前の編集は、元の名前へ残る（黙って捨てない）
+                monitor.TargetListText = "192.0.2.1 書き換えた";
+                monitor.SelectedListName = second;
+
+                Assert(monitor.TargetListText.Contains("192.0.2.2", StringComparison.Ordinal),
+                       "2 つ目のリストへ入れ替わらない");
+
+                monitor.SelectedListName = first;
+
+                Assert(monitor.TargetListText.Contains("書き換えた", StringComparison.Ordinal),
+                       "切り替える前の編集が残っていない");
+
+                // 消えるのは名前だけ。いま出ている宛先は残す
+                string kept = monitor.TargetListText;
+                monitor.DeleteListCommand.Execute(null);
+
+                Assert(!monitor.SavedLists.Contains(first), "消したリストが一覧に残っている");
+                Assert(monitor.TargetListText == kept, "リストを消したら宛先まで消えた");
+            }
+            finally
+            {
+                Settings.Current.PingTargetLists.Remove(first);
+                Settings.Current.PingTargetLists.Remove(second);
+                Settings.Save();
+            }
+        });
+
         Check("設定を exe と同じフォルダに置ける", () =>
         {
             string directory = AppData.Directory();

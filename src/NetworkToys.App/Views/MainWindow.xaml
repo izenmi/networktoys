@@ -666,6 +666,23 @@
                                     <Run FontFamily="{DynamicResource Font.Mono}">192.168.1.0/24</Run>
                                 </TextBlock>
 
+                                <!-- 名前を付けて残したリスト。現場ごとに測る相手は決まっているので
+                                     いくつか持って切り替えられるようにする（2026-08-17 ユーザー指示） -->
+                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                    <TextBlock Text="保存したリスト" Style="{StaticResource Caption}"
+                                               VerticalAlignment="Center" Margin="0,0,5,2" />
+                                    <ComboBox Width="180" Margin="0,0,6,2"
+                                              ItemsSource="{Binding SavedLists}"
+                                              SelectedItem="{Binding SelectedListName}"
+                                              ToolTip="選ぶと、その宛先リストに入れ替わります。いま出ているものは元の名前へ残します。" />
+                                    <Button Content="名前を付けて残す" Command="{Binding SaveListCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                            ToolTip="いまの宛先に名前を付けて残します。同じ名前なら上書きします。" />
+                                    <Button Content="消す" Command="{Binding DeleteListCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                            ToolTip="選んでいるリストを消します。いま出ている宛先はそのまま残ります。" />
+                                </WrapPanel>
+
                                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding ListSummary}"
                                            Style="{StaticResource Caption}" TextWrapping="Wrap"
                                            Margin="0,4,0,0" />
@@ -3549,6 +3566,23 @@
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap"
                                            Text="1 行に 1 宛先。末尾の :ポート が測る先です（例 srv-01:445）。省略すると上の既定ポートを使います。書き換えると自動で反映されます。" />
+                                <!-- 名前を付けて残したリスト。現場ごとに測る相手は決まっているので
+                                     いくつか持って切り替えられるようにする（2026-08-17 ユーザー指示） -->
+                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                    <TextBlock Text="保存したリスト" Style="{StaticResource Caption}"
+                                               VerticalAlignment="Center" Margin="0,0,5,2" />
+                                    <ComboBox Width="180" Margin="0,0,6,2"
+                                              ItemsSource="{Binding SavedLists}"
+                                              SelectedItem="{Binding SelectedListName}"
+                                              ToolTip="選ぶと、その宛先リストに入れ替わります。いま出ているものは元の名前へ残します。" />
+                                    <Button Content="名前を付けて残す" Command="{Binding SaveListCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                            ToolTip="いまの宛先に名前を付けて残します。同じ名前なら上書きします。" />
+                                    <Button Content="消す" Command="{Binding DeleteListCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                            ToolTip="選んでいるリストを消します。いま出ている宛先はそのまま残ります。" />
+                                </WrapPanel>
+
                                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding ListSummary}"
                                            Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,3,0,0" />
                                 <TextBox Text="{Binding TargetListText, UpdateSourceTrigger=PropertyChanged}"

@@ -75,6 +75,19 @@ public partial class MainWindow : Window
         _shell.Collect.RequestImport += (_, _) => ImportTargetsIntoCollect();
         _shell.Collect.SecretsCleared += (_, _) => ClearCollectPasswordBoxes();
 
+        // 宛先リストの名前を聞くのも画面の仕事（Ping と TCP で別々に持つ）
+        _shell.Monitor.AskListName = initial => TextPromptDialog.Ask(
+            this,
+            "宛先リストに名前を付けて残す",
+            "いまの宛先リストに名前を付けて残します。同じ名前があれば上書きします。",
+            initial);
+
+        _shell.Tcp.AskListName = initial => TextPromptDialog.Ask(
+            this,
+            "宛先リストに名前を付けて残す",
+            "いまの宛先リストに名前を付けて残します。同じ名前があれば上書きします。",
+            initial);
+
         // ひな型の名前を聞くのは画面の仕事（VM から窓を開かない）
         _shell.Verify.AskTemplateName = initial => TextPromptDialog.Ask(
             this,

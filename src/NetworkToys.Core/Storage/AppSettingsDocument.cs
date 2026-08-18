@@ -31,6 +31,17 @@ public sealed class AppSettingsDocument
     /// <summary>TCP 画面の宛先リストと測定の既定値。</summary>
     public TargetDocument Tcp { get; set; } = new();
 
+    /// <summary>
+    /// Ping 画面の<b>名前を付けて残した宛先リスト</b>（名前 → 宛先のテキスト）。
+    ///
+    /// 現場ごとに測る相手は決まっているので、いくつか持って切り替えられるようにする
+    /// （2026-08-17 ユーザー指示）。いま画面に出ているものは <see cref="Ping"/> の方。
+    /// </summary>
+    public Dictionary<string, string> PingTargetLists { get; set; } = [];
+
+    /// <summary>TCP 画面の名前を付けて残した宛先リスト。Ping と混ざらないよう分けてある。</summary>
+    public Dictionary<string, string> TcpTargetLists { get; set; } = [];
+
     /// <summary>IP 設定タブの名前付きプリセット。</summary>
     public List<IpPreset> IpPresets { get; set; } = [];
 

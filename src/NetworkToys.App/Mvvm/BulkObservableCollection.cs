@@ -13,7 +13,7 @@ namespace NetworkToys.App.Mvvm;
 /// 逐次更新（Ping の測定結果など）には使わないこと — あちらは
 /// 既存の行のプロパティを書き換える作りで、構造変化そのものが起きない。
 /// </summary>
-internal sealed class BulkObservableCollection<T> : ObservableCollection<T>
+public sealed class BulkObservableCollection<T> : ObservableCollection<T>
 {
     public void Reset(IEnumerable<T> items)
     {
