@@ -13,7 +13,13 @@ namespace NetworkToys.App.Services;
 /// <param name="SeenAddress">外から見えている自分のアドレス。読めなければ null。</param>
 /// <param name="Problem">駄目だった理由。成功なら null。</param>
 /// <param name="ElapsedMs">所要時間。</param>
-internal sealed record StunOutcome(bool Reachable, IPEndPoint? SeenAddress, string? Problem, double ElapsedMs);
+/// <param name="Sent">
+/// <b>実際に 1 バイトでも送れたか。</b>名前を引けない・ソケットが開けないのは
+/// 「塞がれている」とは<b>別物</b>で、そもそも確かめられていない
+/// （2026-08-19: 通話はできているのに「応答がありません」と出た、と報告された）。
+/// </param>
+internal sealed record StunOutcome(
+    bool Reachable, IPEndPoint? SeenAddress, string? Problem, double ElapsedMs, bool Sent = true);
 
 /// <summary>
 /// STUN の Binding Request を投げて、応答が返るかを見る。
@@ -43,7 +49,7 @@ internal static class StunProbe
         }
         catch (SocketException)
         {
-            return new StunOutcome(false, null, $"{host} の名前を解決できませんでした", Elapsed(started));
+            return new StunOutcome(false, null, $"{host} の名前を解決できませんでした", Elapsed(started), Sent: false);
         }
 
         // IPv4 を優先する。Teams のリレーは両方応答するが、
@@ -52,7 +58,7 @@ internal static class StunProbe
                           ?? addresses.FirstOrDefault();
 
         if (address is null)
-            return new StunOutcome(false, null, $"{host} のアドレスが得られませんでした", Elapsed(started));
+            return new StunOutcome(false, null, $"{host} のアドレスが得られませんでした", Elapsed(started), Sent: false);
 
         string? lastProblem = null;
 
@@ -88,7 +94,7 @@ internal static class StunProbe
             }
             catch (SocketException ex)
             {
-                return new StunOutcome(false, null, $"送信できませんでした（{ex.SocketErrorCode}）", Elapsed(started));
+                return new StunOutcome(false, null, $"送信できませんでした（{ex.SocketErrorCode}）", Elapsed(started), Sent: false);
             }
         }
 

@@ -294,6 +294,8 @@ internal static class CheckRunner
 
         // ここからが本題。ここが塞がれていると通話だけできない
         var blocked = new List<int>();
+        var reasons = new List<string>();
+        bool anySent = false;
         double udpMs = 0;
 
         foreach (int port in teams.Ports)
@@ -327,11 +329,31 @@ internal static class CheckRunner
             }
 
             blocked.Add(port);
+            anySent |= stun.Sent;
+
+            // 理由は捨てない。「名前を引けない」と「投げたが返らない」は別物で、
+            // まとめて「応答がありません」と書くと切り分けができない
+            // （2026-08-19: 通話はできているのに不合格になる、と報告された）
+            if (stun.Problem is { Length: > 0 } why) reasons.Add($"UDP {port}: {why}");
+        }
+
+        string detail = $"（{string.Join(" / ", notes)}）"
+                        + (reasons.Count > 0 ? $"　{string.Join(" / ", reasons.Distinct())}" : "");
+
+        // 1 バイトも送れていないなら「塞がれている」とは言えない。
+        // プロキシ環境ではリレーの名前をこの PC では引けないことがあり、
+        // それでも Teams 本体は通話できる。確かめられなかったものを不合格にしない
+        if (!anySent)
+        {
+            return Warn(item,
+                        $"音声の UDP を確かめられませんでした。{teams.RelayHost} へ問い合わせを送れていません"
+                        + $"（この PC で名前を引けないなど）。通話ができているなら差し支えありません{detail}",
+                        udpMs, via);
         }
 
         return Fail(item,
-                    $"UDP {string.Join("・", blocked)} のいずれも応答がありません。"
-                    + $"通話の音声が通りません（{string.Join(" / ", notes)}）",
+                    $"{teams.RelayHost} の UDP {string.Join("・", blocked)} のいずれも応答がありません。"
+                    + $"通話の音声が通りません{detail}",
                     udpMs, via);
     }
 
