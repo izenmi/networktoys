@@ -1850,10 +1850,16 @@
                                             Style="{StaticResource Button.Subtle}"
                                             HorizontalAlignment="Left" Margin="4,4,0,0" />
 
+                                    <!-- 行はつまみ（⋮）を掴んでドラッグすると並べ替えられる。
+                                         入力欄からは掴めないようにしてある（文字の選択と喧嘩するため） -->
                                     <ListBox x:Name="VerifyItems" ItemsSource="{Binding Rows}"
                                              Background="Transparent" BorderThickness="0"
                                              HorizontalContentAlignment="Stretch"
                                              ItemContainerStyle="{StaticResource PlainRowContainer}"
+                                             AllowDrop="True"
+                                             PreviewMouseMove="OnVerifyRowDrag"
+                                             DragOver="OnVerifyRowDragOver"
+                                             Drop="OnVerifyRowDrop"
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              ScrollViewer.VerticalScrollBarVisibility="Visible">
                                         <ListBox.ItemTemplate>
@@ -1876,6 +1882,15 @@
 
                                                     <StackPanel Grid.Column="0" Orientation="Horizontal"
                                                                 HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                        <!-- 並べ替えのつまみ（2026-08-19 ユーザー指示） -->
+                                                        <TextBlock Text="⋮" Width="12" Cursor="SizeAll"
+                                                                   Background="Transparent"
+                                                                   FontSize="{DynamicResource Size.Body}"
+                                                                   Foreground="{DynamicResource Brush.TextMuted}"
+                                                                   TextAlignment="Center" VerticalAlignment="Center"
+                                                                   PreviewMouseLeftButtonDown="OnVerifyRowGrab"
+                                                                   ToolTip="ドラッグすると行を並べ替えられます。" />
+
                                                         <Button Content="✕"
                                                                 Style="{StaticResource Button.Subtle}"
                                                                 Command="{Binding DataContext.RemoveRowCommand,

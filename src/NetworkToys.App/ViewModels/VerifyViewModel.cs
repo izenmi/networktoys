@@ -433,6 +433,25 @@ public sealed class VerifyViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 行を並べ替える（2026-08-19 ユーザー指示）。<b>落とした先の行の位置へ移す</b>。
+    /// 行の外（一覧の余白）へ落としたら末尾。並びはそのまま試験の順で、
+    /// 保存も証跡もこの順になる。
+    /// </summary>
+    public void MoveRow(VerifyRowViewModel? moving, VerifyRowViewModel? target)
+    {
+        if (moving is null) return;
+
+        int from = Rows.IndexOf(moving);
+        if (from < 0) return;
+
+        int to = target is null ? Rows.Count - 1 : Rows.IndexOf(target);
+
+        if (to < 0 || to == from) return;
+
+        Rows.Move(from, to);
+    }
+
     /// <summary>チェックの状態を控える。書き出すのは閉じるときの <see cref="SaveSettings"/>。</summary>
     private void RememberPicks()
         => _picked = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Key)];
@@ -682,61 +701,69 @@ public sealed class VerifyViewModel : ObservableObject
         OpenNextForPerson();
     }
 
-    // ===== 目視の項目（プロキシを切り替えながら 1 件ずつ） =====
+    // ===== 目視の項目（プロキシごとに、まとめて開く） =====
 
-    /// <summary>まだ開いていない「目視の項目 × プロキシ」。</summary>
-    private readonly Queue<(CheckItem Item, ProxyChoice Proxy)> _browserQueue = new();
+    /// <summary>まだ回っていないプロキシ。1 本ぶんで目視の項目を<b>まとめて</b>開く。</summary>
+    private readonly Queue<ProxyChoice> _browserRounds = new();
+
+    /// <summary>目視の項目。プロキシを変えるたびに同じ顔ぶれをもう一度開く。</summary>
+    private IReadOnlyList<CheckItem> _browserItems = [];
 
     /// <summary>切り替える前の Windows のプロキシ設定。<b>終わったら必ず戻す。</b></summary>
     private ProxyState? _originalProxy;
 
     /// <summary>
-    /// 目視の項目を順番に開く。
+    /// 目視の項目を、<b>プロキシ 1 本につき全部まとめて</b>開く。
     ///
     /// <b>ブラウザは Windows のプロキシ設定に従う</b>ので、プロキシごとに見るには
-    /// その設定を切り替えるしかない（2026-08-18 ユーザー指示）。
+    /// その設定を切り替えるしかない（2026-08-18 ユーザー指示）。切り替えは
+    /// <b>1 本につき 1 回</b>にして、そのプロキシで見る画面はまとめて開く
+    /// （2026-08-19 ユーザー指示。項目ごとに切り替えると、同じ画面を何度も開き直すことになる）。
     /// <b>切り替えたら必ず元に戻す</b> — 戻し忘れは、ほかのアプリまで巻き込む事故になる。
     /// </summary>
     private void StartBrowserQueue(IReadOnlyList<CheckItem> manual, IReadOnlyList<ProxyChoice> proxies)
     {
-        _browserQueue.Clear();
+        _browserRounds.Clear();
+        _browserItems = manual;
 
         if (manual.Count == 0) return;
 
         // 1 つも選ばれていなければ、いまの設定のまま 1 周だけ
-        IReadOnlyList<ProxyChoice> targets = proxies.Count > 0 ? proxies : [ProxyChoice.System];
-
-        foreach (CheckItem item in manual)
-        {
-            foreach (ProxyChoice proxy in targets) _browserQueue.Enqueue((item, proxy));
-        }
+        foreach (ProxyChoice proxy in proxies.Count > 0 ? proxies : [ProxyChoice.System])
+            _browserRounds.Enqueue(proxy);
 
         OpenNextForPerson();
     }
 
-    /// <summary>次の 1 件を開く。無ければ Windows の設定を元に戻す。</summary>
+    /// <summary>次のプロキシに切り替えて、目視の項目をまとめて開く。無ければ設定を元に戻す。</summary>
     private void OpenNextForPerson()
     {
-        if (_browserQueue.Count == 0)
+        // まだ判定していない目視の項目が残っているなら、そちらが先。
+        // 全部に ○ / ✕ が付いてから次のプロキシへ進む
+        if (Results.Any(r => r.NeedsPerson)) return;
+
+        if (_browserRounds.Count == 0)
         {
             RestoreProxy();
             return;
         }
 
-        // まだ判定していない目視の項目が残っているなら、そちらが先
-        if (Results.Any(r => r.NeedsPerson)) return;
-
-        (CheckItem item, ProxyChoice proxy) = _browserQueue.Dequeue();
+        ProxyChoice proxy = _browserRounds.Dequeue();
 
         string? failure = UseProxy(proxy);
 
-        CheckResult result = CheckRunner.OpenForPerson(item, proxy, failure);
+        foreach (CheckItem item in _browserItems)
+        {
+            Results.Add(CheckRunner.OpenForPerson(item, proxy, failure));
+        }
 
-        Results.Add(result);
         ApplyToRows([.. Results]);
         RaiseProgress();
 
-        Status = $"「{item.Name}」を {proxy.ShortName} で開きました。見て ○ か ✕ を押してください。";
+        Status = _browserItems.Count == 1
+            ? $"「{_browserItems[0].Name}」を {proxy.ShortName} で開きました。見て ○ か ✕ を押してください。"
+            : $"目視の {_browserItems.Count} 件を {proxy.ShortName} でまとめて開きました。"
+              + $"それぞれ ○ か ✕ を押してください（残り {_browserRounds.Count} 本のプロキシ）。";
     }
 
     /// <summary>
@@ -915,7 +942,8 @@ public sealed class VerifyViewModel : ObservableObject
     public void Reset()
     {
         // 目視の途中で片付けられても、Windows の設定は必ず戻す
-        _browserQueue.Clear();
+        _browserRounds.Clear();
+        _browserItems = [];
         RestoreProxy();
 
         _cts?.Cancel();

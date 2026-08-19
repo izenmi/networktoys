@@ -1669,6 +1669,85 @@ public partial class MainWindow : Window
         _shell.Verify.LoadItemsFrom(text, System.IO.Path.GetFileName(files[0]));
     }
 
+    /// <summary>掴んでいる試験項目の行。掴んでいなければ null。</summary>
+    private ViewModels.VerifyRowViewModel? _draggingRow;
+
+    /// <summary>掴んだ場所。ここから少し動いて初めてドラッグと見なす。</summary>
+    private Point _dragFrom;
+
+    /// <summary>
+    /// 試験項目の並べ替え。<b>つまみ（⋮）からだけ掴める</b> —
+    /// 行のほとんどは入力欄で、どこからでも掴めるようにすると文字の選択ができなくなる。
+    /// </summary>
+    private void OnVerifyRowGrab(object sender, MouseButtonEventArgs e)
+    {
+        _draggingRow = (sender as FrameworkElement)?.DataContext as ViewModels.VerifyRowViewModel;
+        _dragFrom = e.GetPosition(this);
+    }
+
+    /// <summary>
+    /// つまみを掴んだまま動かしたらドラッグを始める。<b>動きの検出は一覧側</b>で拾う —
+    /// つまみの上だけを見ていると、素早く動かしたときに始まらない。
+    /// </summary>
+    private void OnVerifyRowDrag(object sender, MouseEventArgs e)
+    {
+        if (_draggingRow is not { } row) return;
+
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            _draggingRow = null;   // 掴んだまま離されていた
+            return;
+        }
+
+        Vector moved = e.GetPosition(this) - _dragFrom;
+
+        if (Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        _draggingRow = null;
+
+        DragDrop.DoDragDrop(VerifyItems, new DataObject(typeof(ViewModels.VerifyRowViewModel), row),
+                            DragDropEffects.Move);
+    }
+
+    /// <summary>
+    /// 行を重ねている間。<b>ファイルの投げ込みには触らない</b>（外側の枠が受け持つ）ので、
+    /// 行のドラッグのときだけ答えて止める。
+    /// </summary>
+    private void OnVerifyRowDragOver(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(typeof(ViewModels.VerifyRowViewModel))) return;
+
+        e.Effects = DragDropEffects.Move;
+        e.Handled = true;
+    }
+
+    private void OnVerifyRowDrop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(ViewModels.VerifyRowViewModel)) is not ViewModels.VerifyRowViewModel moving)
+            return;
+
+        e.Handled = true;
+
+        _shell.Verify.MoveRow(moving, RowUnder<ViewModels.VerifyRowViewModel>(e));
+    }
+
+    /// <summary>落とした場所にある行。行の外（一覧の余白）なら null。</summary>
+    private static T? RowUnder<T>(DragEventArgs e) where T : class
+    {
+        for (DependencyObject? node = e.OriginalSource as DependencyObject;
+             node is not null;
+             node = ClickedParentOf(node))
+        {
+            if (node is ListBoxItem { DataContext: T row }) return row;
+        }
+
+        return null;
+    }
+
     /// <summary>一覧に重ねたとき。こちらは既定の動きが無いので DragOver で足りる。</summary>
     private void OnListDragOver(object sender, DragEventArgs e)
     {
