@@ -48,6 +48,7 @@ public sealed record AciPortRow(
     string Epgs,
     string Vlans,
     string Modes,
+    string AllowedVlans,
     string Reason,
     string LastChange,
     string Description = "")
@@ -362,6 +363,7 @@ public static class AciCatalog
             Epgs: Join(bound.Select(m => m.Epg)),
             Vlans: Join(bound.Select(m => m.Encap)),
             Modes: Join(bound.Select(m => m.Mode)),
+            AllowedVlans: AllowedVlanText(bound),
             Reason: actual?["operStQual"] ?? "",
             LastChange: actual?["lastLinkStChg"] ?? "",
             Description: mo["descr"]);
@@ -623,14 +625,89 @@ public static class AciCatalog
     /// （2026-08-18 ユーザー指示。以前は「タグ付き／タグなし」と言い換えていた）。
     /// <c>native</c> はタグの無い枠を 802.1p で受ける Access なので、そう添える。
     /// </summary>
+    /// <summary>タグ付き（Trunk）の表示。<b>許可 VLAN の判定もこの文字で行う</b>ので直書きしない。</summary>
+    public const string TrunkMode = "Trunk";
+
     public static string DescribeMode(string? mode) => mode switch
     {
-        "regular" => "Trunk",
+        "regular" => TrunkMode,
         "native" => "Access (802.1p)",
         "untagged" => "Access",
         null or "" => "—",
         _ => mode,
     };
+
+    /// <summary>
+    /// その口を<b>タグ付きで通れる VLAN</b>を、IOS の allowed vlan と同じ書き方でまとめる。
+    ///
+    /// <b>ACI に「許可 VLAN」という設定項目は無い。</b>口に載っている静的パス（EPG の
+    /// 割り当て）の encap が、そのままその口を通れる VLAN になる。だから
+    /// <b>Trunk で載っているものだけ</b>を拾い、連番は範囲に畳んで出す
+    /// （2026-08-19 ユーザー指示。Access は 1 本なので並べる意味が無い）。
+    ///
+    /// 数字にならない encap（VXLAN など）はそのままの文字で後ろに付ける。
+    /// </summary>
+    public static string AllowedVlanText(IEnumerable<AciEpgMemberRow>? bound)
+    {
+        if (bound is null) return "—";
+
+        var numbers = new SortedSet<int>();
+        var others = new List<string>();
+
+        foreach (AciEpgMemberRow row in bound)
+        {
+            if (!string.Equals(row.Mode, TrunkMode, StringComparison.Ordinal)) continue;
+
+            string encap = row.Encap ?? "";
+
+            if (VlanNumber(encap) is { } number) numbers.Add(number);
+            else if (encap.Length > 0 && !others.Contains(encap, StringComparer.Ordinal)) others.Add(encap);
+        }
+
+        if (numbers.Count == 0 && others.Count == 0) return "—";
+
+        var parts = new List<string>();
+        int start = -1;
+        int previous = -1;
+
+        foreach (int number in numbers)
+        {
+            if (start < 0)
+            {
+                start = previous = number;
+                continue;
+            }
+
+            if (number == previous + 1)
+            {
+                previous = number;
+                continue;
+            }
+
+            parts.Add(Range(start, previous));
+            start = previous = number;
+        }
+
+        if (start >= 0) parts.Add(Range(start, previous));
+
+        parts.AddRange(others);
+
+        return string.Join(", ", parts);
+
+        static string Range(int start, int end) => start == end ? $"{start}" : $"{start}-{end}";
+    }
+
+    /// <summary><c>vlan-100</c> のような encap から番号だけ取る。数字でなければ null。</summary>
+    private static int? VlanNumber(string encap)
+    {
+        int dash = encap.LastIndexOf('-');
+        string tail = dash >= 0 ? encap[(dash + 1)..] : encap;
+
+        return encap.StartsWith("vlan", StringComparison.OrdinalIgnoreCase)
+               && int.TryParse(tail, out int number)
+            ? number
+            : null;
+    }
 
     /// <summary>ドメインの DN から見せる名前だけ取る。</summary>
     private static string DomainName(string? tDn)
@@ -752,11 +829,11 @@ public static class AciCatalog
         [.. rows.Select(r => new[] { r.Time, r.Kind, r.Severity, r.Target, r.Text })]);
 
     public static CsvTable ToCsv(IReadOnlyList<AciPortRow> rows) => new(
-        ["ノード", "インターフェース", "説明", "管理", "状態", "速度", "用途", "ポートチャネル", "EPG", "VLAN", "タグ", "理由", "最終変化"],
+        ["ノード", "インターフェース", "説明", "管理", "状態", "速度", "用途", "ポートチャネル", "EPG", "VLAN", "タグ", "許可VLAN", "理由", "最終変化"],
         [.. rows.Select(r => new[]
         {
             r.Node, r.Interface, r.Description, r.AdminState, r.OperState, r.Speed, r.Usage,
-            r.PortChannel, r.Epgs, r.Vlans, r.Modes, r.Reason, r.LastChange,
+            r.PortChannel, r.Epgs, r.Vlans, r.Modes, r.AllowedVlans, r.Reason, r.LastChange,
         })]);
 
     public static CsvTable ToCsv(IReadOnlyList<AciBdRow> rows) => new(

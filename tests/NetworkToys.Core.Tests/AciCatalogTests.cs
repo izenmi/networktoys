@@ -342,6 +342,31 @@ public class AciCatalogTests
         Assert.Equal(0, rows[1].PathCount);
     }
 
+    [Theory]
+    // Trunk で載っているものだけ。連番は範囲に畳む（IOS の allowed vlan と同じ書き方）
+    [InlineData("Trunk:vlan-100,Trunk:vlan-101,Trunk:vlan-102", "100-102")]
+    [InlineData("Trunk:vlan-100,Trunk:vlan-102,Trunk:vlan-103,Trunk:vlan-200", "100, 102-103, 200")]
+    // 並び順は APIC 任せ。番号順に直して出す
+    [InlineData("Trunk:vlan-30,Trunk:vlan-10,Trunk:vlan-20", "10, 20, 30")]
+    // Access（タグなし）と Access (802.1p) は「許可 VLAN」に並べない
+    [InlineData("Access:vlan-10", "—")]
+    [InlineData("Access (802.1p):vlan-10,Trunk:vlan-11", "11")]
+    // 何も載っていない口
+    [InlineData("", "—")]
+    // 数字にならない encap はそのまま添える
+    [InlineData("Trunk:vxlan-16777100,Trunk:vlan-10", "10, vxlan-16777100")]
+    public void 許可VLANはTrunkで載っている分だけを範囲にまとめる(string bound, string expected)
+    {
+        AciEpgMemberRow[] rows =
+        [
+            .. bound.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => part.Split(':'))
+                .Select(part => new AciEpgMemberRow("dn", "EPG", "101", "eth1/1", part[1], part[0])),
+        ];
+
+        Assert.Equal(expected, AciCatalog.AllowedVlanText(rows));
+    }
+
     [Fact]
     public void Epg_members_carry_the_node_port_and_vlan()
     {

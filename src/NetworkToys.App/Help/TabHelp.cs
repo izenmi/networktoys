@@ -513,6 +513,7 @@ internal static class TabHelp
         EPG と VLAN の読み方
         ・割り当ては EPG 側の静的パスに書かれているものを突き合わせて出している
         ・タグは機器側の言葉で「Trunk／Access／Access (802.1p)」と出す
+        ・許可VLAN は、その口を Trunk で通れる VLAN（連番は範囲でまとめる）
         ・1 つのポートに複数の EPG が載っていれば、まとめて並べる（全文はマウスを載せる）
 
         ポートチャネル
