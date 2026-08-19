@@ -524,6 +524,9 @@ public sealed class VerifyViewModel : ObservableObject
         catch (OperationCanceledException)
         {
 
+            // 切り替えたままにしない。中断はいちばん戻し忘れが起きやすい道
+            RestoreProxy();
+
             // 中断しても、そこまでの結果は残す（消すと試験をやり直すことになる）
             foreach (VerifyRowViewModel row in Rows)
             {
@@ -534,6 +537,7 @@ public sealed class VerifyViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            RestoreProxy();
             CrashLog.Write(ex, "VerifyViewModel.RunAsync");
             Status = $"試験に失敗しました: {ex.Message}";
         }
@@ -793,6 +797,12 @@ public sealed class VerifyViewModel : ObservableObject
 
         return error;
     }
+
+    /// <summary>
+    /// アプリを閉じるときに呼ぶ。<b>目視の途中で閉じられても Windows の設定は戻す</b>
+    /// （2026-08-19 ユーザー指示。戻し忘れはほかのアプリまで巻き込む）。
+    /// </summary>
+    public void RestoreProxyIfChanged() => RestoreProxy();
 
     /// <summary>切り替える前の設定へ戻す。<b>戻せなければ、そう言う。</b></summary>
     private void RestoreProxy()

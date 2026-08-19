@@ -1972,6 +1972,10 @@ public partial class MainWindow : Window
 
             // 試験タブは項目とプロキシの定義だけ覚える(次に開いたとき続きから)
             _shell.Verify.SaveSettings();
+
+            // 目視の途中で閉じられても、切り替えた Windows のプロキシ設定は必ず戻す
+            // （WFP の記録設定と同じ考え方。置き去りにしない）
+            _shell.Verify.RestoreProxyIfChanged();
         }
         catch (Exception ex)
         {
