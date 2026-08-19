@@ -292,16 +292,25 @@ internal static class CheckRunner
 
         notes.Add($"HTTPS 443 ○（HTTP {web.StatusCode}）");
 
+        // 宛先を書いてあれば、そこを音声のリレーとして使う（2026-08-19 ユーザー指示）。
+        // 既定のリレー名は社内 DNS で引けないことがある（実機で SERVFAIL を確認）。
+        // UDP はプロキシを通らないので、引けない限り確かめようがない —
+        // 通話中の相手 IP をそのまま書いてもらえば、その道で確かめられる。
+        // host:port の形なら、そのポートだけを見る
+        (string relayHost, int onePort) = ParseRelay(item.Target, teams);
+
+        IReadOnlyList<int> ports = onePort > 0 ? [onePort] : teams.Ports;
+
         // ここからが本題。ここが塞がれていると通話だけできない
         var blocked = new List<int>();
         var reasons = new List<string>();
         bool anySent = false;
         double udpMs = 0;
 
-        foreach (int port in teams.Ports)
+        foreach (int port in ports)
         {
             StunOutcome stun = await StunProbe
-                .RunAsync(teams.RelayHost, port, UdpTimeoutMs, token).ConfigureAwait(false);
+                .RunAsync(relayHost, port, UdpTimeoutMs, token).ConfigureAwait(false);
 
             udpMs += stun.ElapsedMs;
 
@@ -313,7 +322,7 @@ internal static class CheckRunner
                 // 通る道が分かったので、その道で通話品質まで測る。
                 // ICMP ではなく音声が実際に使う UDP で測ることに意味がある
                 RttStatistics stats = await StunProbe.MeasureAsync(
-                    teams.RelayHost, port, QualitySamples, QualityIntervalMs, UdpTimeoutMs, token)
+                    relayHost, port, QualitySamples, QualityIntervalMs, UdpTimeoutMs, token)
                     .ConfigureAwait(false);
 
                 (bool acceptable, string quality) = CallQuality.Judge(stats);
@@ -346,15 +355,32 @@ internal static class CheckRunner
         if (!anySent)
         {
             return Warn(item,
-                        $"音声の UDP を確かめられませんでした。{teams.RelayHost} へ問い合わせを送れていません"
-                        + $"（この PC で名前を引けないなど）。通話ができているなら差し支えありません{summary}",
+                        $"音声の UDP を確かめられませんでした。{relayHost} へ問い合わせを送れていません"
+                        + "（この PC で名前を引けないなど）。通話ができているなら差し支えありません。"
+                        + $"宛先の欄に、通話中の相手のアドレスを書くとその道で確かめられます{summary}",
                         udpMs, via);
         }
 
         return Fail(item,
-                    $"{teams.RelayHost} の UDP {string.Join("・", blocked)} のいずれも応答がありません。"
+                    $"{relayHost} の UDP {string.Join("・", blocked)} のいずれも応答がありません。"
                     + $"通話の音声が通りません{summary}",
                     udpMs, via);
+    }
+
+    /// <summary>
+    /// Teams の宛先欄。空なら既定のリレー、書いてあればそれを使う
+    /// （<c>host</c> か <c>host:port</c>。ポートを書けばその 1 本だけを見る）。
+    /// </summary>
+    private static (string Host, int Port) ParseRelay(string? target, TeamsEndpoints teams)
+    {
+        string text = (target ?? "").Trim();
+
+        if (text.Length == 0) return (teams.RelayHost, 0);
+
+        (string host, int port) = CheckListParser.SplitTarget(text, CheckKind.Tcp);
+
+        // SplitTarget は種類ごとの既定ポートを足すので、書かれていないときは 0 に戻す
+        return (host, text.Contains(':', StringComparison.Ordinal) ? port : 0);
     }
 
     private static CheckResult Pass(CheckItem item, string detail, double ms, string proxy = "")
