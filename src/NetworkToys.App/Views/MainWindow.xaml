@@ -4385,10 +4385,17 @@
 
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
+                                <!--
+                                    計算結果は中身の幅にする。* にすると余った幅を全部吸って、
+                                    早見表が画面の右端まで飛んでいく（2026-08-19 ユーザー指示で左へ寄せた）。
+                                    結果が空のときに早見表が左端へ張り付かないよう、最低幅だけ持たせる。
+                                -->
+                                <ColumnDefinition Width="Auto" MinWidth="420" />
                                 <!-- 早見表の幅は中身に決めさせる。px で決め打つと
                                      文字サイズを大きくしたときにマスクが切れる -->
                                 <ColumnDefinition Width="Auto" />
+                                <!-- 余りはここに捨てる（左に寄せるための列） -->
+                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
                             <!-- 計算結果と分割案 -->
