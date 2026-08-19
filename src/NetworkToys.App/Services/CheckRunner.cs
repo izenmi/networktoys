@@ -68,6 +68,12 @@ internal static class CheckRunner
 
         var results = new List<CheckResult>(plan.Count);
 
+        // リレーのアドレスは<b>試験 1 回につき 1 度だけ</b>引いて、全部の行で使い回す。
+        // UDP はプロキシを通らないので、どのプロキシの行でも投げる先は同じ。
+        // 「片方のプロキシでは DoH が通り、もう片方では塞がれている」ときに、
+        // 通った方で引けたアドレスを両方の行で使えるようにする（2026-08-19 報告）
+        var relays = new RelayAddresses(targets);
+
         // 逐次に回す。並列にすると、遅いプロキシの試験が速い方の結果に影響しうるし、
         // 現場で「いま何を試しているか」が追えなくなる
         foreach ((CheckItem item, ProxyChoice proxy) in plan)
@@ -75,7 +81,7 @@ internal static class CheckRunner
             token.ThrowIfCancellationRequested();
             progress?.Report((results.Count, plan.Count, item.Name));
 
-            CheckResult result = await RunOneAsync(item, proxy, teams, token).ConfigureAwait(false);
+            CheckResult result = await RunOneAsync(item, proxy, teams, relays, token).ConfigureAwait(false);
 
             results.Add(result);
             finished?.Report(result);
@@ -87,7 +93,7 @@ internal static class CheckRunner
     }
 
     private static async Task<CheckResult> RunOneAsync(
-        CheckItem item, ProxyChoice proxy, TeamsEndpoints teams, CancellationToken token)
+        CheckItem item, ProxyChoice proxy, TeamsEndpoints teams, RelayAddresses relays, CancellationToken token)
     {
         // 種類ごとに要るものが揃っていなければ、試験せずにそう言う。
         // 空欄のまま「不合格」にすると、設定漏れと本当の異常が混ざる
@@ -101,7 +107,7 @@ internal static class CheckRunner
         {
             CheckKind.Http => await RunHttpAsync(item, proxy, token).ConfigureAwait(false),
             CheckKind.Dns => await RunDnsAsync(item, token).ConfigureAwait(false),
-            CheckKind.Teams => await RunTeamsAsync(item, proxy, teams, token).ConfigureAwait(false),
+            CheckKind.Teams => await RunTeamsAsync(item, proxy, teams, relays, token).ConfigureAwait(false),
             CheckKind.Download or CheckKind.Upload or CheckKind.FastCom
                 => await RunSpeedAsync(item, proxy, token).ConfigureAwait(false),
             CheckKind.Manual => OpenForPerson(item),
@@ -254,7 +260,7 @@ internal static class CheckRunner
     /// 同じ数字が並ぶが、それぞれの行を単独で読めるように毎回測る。
     /// </summary>
     private static async Task<CheckResult> RunTeamsAsync(
-        CheckItem item, ProxyChoice proxy, TeamsEndpoints teams, CancellationToken token)
+        CheckItem item, ProxyChoice proxy, TeamsEndpoints teams, RelayAddresses relays, CancellationToken token)
     {
         var notes = new List<string>();
 
@@ -310,7 +316,7 @@ internal static class CheckRunner
         // 経路も無い環境があった。人手で netstat を見なくても済むようにする）
         if (!probe.Sent && item.Target.Trim().Length == 0)
         {
-            (string? address, string how) = await ResolveOverHttpsAsync(relayHost, proxy, token)
+            (string? address, string how) = await relays.GetAsync(relayHost, proxy, token)
                 .ConfigureAwait(false);
 
             notes.Add(how);
@@ -389,6 +395,44 @@ internal static class CheckRunner
         return addresses.Count > 0
             ? (addresses[0], $"リレーのアドレスは HTTPS 経由で引きました（{host} → {addresses[0]}）")
             : (null, "名前を HTTPS 経由でも引けませんでした（応答に A レコードがありません）");
+    }
+
+    /// <summary>
+    /// リレーのアドレスを<b>試験 1 回につき 1 度だけ</b>引いて覚えておく入れ物。
+    ///
+    /// UDP はプロキシを通らないので、<b>どのプロキシの行でも投げる先は同じ</b>。
+    /// だから 1 本でも引ければ十分で、引けたアドレスは残りの行にも使う。
+    /// <b>選んでいるプロキシで引けなければ、ほかのプロキシでも試す</b>
+    /// （片方だけ DoH を塞いでいる環境が実際にあった。2026-08-19 報告）。
+    /// </summary>
+    private sealed class RelayAddresses(IReadOnlyList<ProxyChoice> proxies)
+    {
+        private readonly Dictionary<string, (string? Address, string How)> _found = new(StringComparer.OrdinalIgnoreCase);
+
+        public async Task<(string? Address, string How)> GetAsync(
+            string host, ProxyChoice preferred, CancellationToken token)
+        {
+            if (_found.TryGetValue(host, out (string? Address, string How) known)) return known;
+
+            (string? Address, string How) answer = (null, "名前を HTTPS 経由でも引けませんでした");
+
+            // まず選ばれているプロキシ、次にそれ以外。同じ道を 2 度は通らない
+            foreach (ProxyChoice choice in Order(preferred))
+            {
+                (string? address, string how) = await ResolveOverHttpsAsync(host, choice, token).ConfigureAwait(false);
+
+                answer = (address, address is null ? how : $"{how}／{choice.Name} 経由");
+
+                if (address is not null) break;
+            }
+
+            _found[host] = answer;
+
+            return answer;
+        }
+
+        private IEnumerable<ProxyChoice> Order(ProxyChoice preferred)
+            => new[] { preferred }.Concat(proxies.Where(p => !ReferenceEquals(p, preferred)));
     }
 
     /// <summary>音声のリレーへ UDP を投げた結果。</summary>
