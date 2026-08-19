@@ -53,31 +53,9 @@ public static class RecommendedChecks
         # 回線速度（上り）,速度上り,https://example.jp/upload|20
         """;
 
-    /// <summary>Microsoft 365 を使う現場向け。宛先が公開されているので書き換え不要。</summary>
-    public const string Microsoft365 = """
-        # Microsoft 365 の主要な経路
-
-        Teams が使える,Teams
-        Teams のサイトが開く,HTTP,https://teams.microsoft.com/
-        Outlook on the web が開く,HTTP,https://outlook.office365.com/
-        Exchange Online に繋がる,TCP,outlook.office365.com:443
-        名前が引ける,DNS,teams.microsoft.com
-        自分のホスト名が引ける,DNS
-
-        # ブラウザで開いて目視で確認します。
-        # SharePoint / OneDrive はサインインしていないと 403 になるので、HTTP では判定できません
-        # （経路は通っていても不合格に見えます。2026-08-18）
-        SharePoint が開く,手動,https://www.office.com/,自分のファイルが並ぶこと
-        Teams を開いてサインインできる,手動,https://teams.microsoft.com/,自分の名前が出ること
-
-        # 帯域。クラウドは速度がそのまま体感になるので一緒に測ります
-        回線速度,fast.com,,20
-        """;
-
     /// <summary>画面のコンボに出す選択肢。</summary>
     public static IReadOnlyList<(string Name, string Text)> Templates =>
     [
         ("標準（社内＋インターネット）", Standard),
-        ("Microsoft 365", Microsoft365),
     ];
 }

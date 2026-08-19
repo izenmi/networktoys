@@ -110,10 +110,7 @@ public class CheckPlanTests
 
             Assert.True(items.Count > 0, $"{name} が 1 件も読めない");
 
-            // 書き換え忘れで実在の他人へ試験を投げないよう、例示は予約ドメインに限る。
-            // Microsoft 365 のひな型だけは実在の宛先でよい（公開されている経路のため）
-            if (name.Contains("365", StringComparison.Ordinal)) continue;
-
+            // 書き換え忘れで実在の他人へ試験を投げないよう、例示は予約ドメインに限る
             foreach (CheckItem item in items)
             {
                 Assert.True(item.Target.Length == 0 || item.Target.Contains("example.jp", StringComparison.Ordinal),

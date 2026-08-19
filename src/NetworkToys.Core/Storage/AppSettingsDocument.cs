@@ -109,7 +109,7 @@ public sealed class AppSettingsDocument
     /// 自分で作った試験のひな型（名前 → 項目のテキスト）。
     ///
     /// 現場ごとに試す項目は決まっているので、<b>作ったものを名前を付けて残せる</b>ようにする。
-    /// 組み込みのひな型（標準 / Microsoft 365）とは別に持ち、同じ名前なら自分のものが勝つ。
+    /// 組み込みのひな型（標準）とは別に持ち、同じ名前なら自分のものが勝つ。
     /// </summary>
     public Dictionary<string, string> VerifyTemplates { get; set; } = [];
 }
