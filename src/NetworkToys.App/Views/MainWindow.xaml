@@ -110,12 +110,12 @@
                 <!-- 幅はヘッダと共有(ColumnLayout)。ヘッダの境目をドラッグすると全行が追随する。
                      備考は宛先の右隣(ユーザー指示)の可変幅で、余った幅を吸収する。 -->
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=State}" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Target}" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=State}" MinWidth="36" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Target}" MinWidth="60" />
                     <ColumnDefinition Width="*" MinWidth="120" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Rtt}" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Loss}" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Spark}" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Rtt}" MinWidth="36" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Loss}" MinWidth="36" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Spark}" MinWidth="60" />
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="Badge"
@@ -485,6 +485,12 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
             <!--
+                縦スクロールバーは常に場所を取る。出た瞬間に行だけ 14px 狭くなると、
+                可変幅(備考)より右の列が見出しとずれる（ほかの 16 表と同じ決まり）。
+                見出し側は右の余白でこの 14px を先に空けてある（11 + 14 = 25）。
+            -->
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Visible" />
+            <!--
                 仮想化の指定は ListBox 側に付ける。VirtualizingStackPanel は自分の
                 属性ではなく ItemsControl 側の添付プロパティを読むため、パネル要素に
                 書いた VirtualizationMode は参照されず、Recycling が効かないまま
@@ -715,9 +721,11 @@
                         <!-- 一覧のヘッダ。両方の欄で共通なので、分割の外に出して常に最上部へ置く。
                              列幅は TargetRowTemplate と合わせること -->
                         <StackPanel DockPanel.Dock="Top">
-                            <!-- 左右 11px は「カード枠 1 + カード余白 6 + 行余白 4」。
+                            <!-- 左 11px は「カード枠 1 + カード余白 6 + 行余白 4」。
+                                 右はそこに縦スクロールバーの 14px を足した 25px
+                                 （一覧は常にバーの場所を取るので、行の右端は常に 14px 内側にある）。
                                  行側の仕切り線とヘッダの仕切り線がぴったり重なる値なので変えないこと -->
-                            <Grid Margin="11,0,11,3">
+                            <Grid Margin="11,0,25,3">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=State, Mode=TwoWay}" MinWidth="36" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Instance}, Path=Target, Mode=TwoWay}" MinWidth="60" />
@@ -6214,7 +6222,6 @@
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.8]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.9]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.10]}" />
-                                                <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.10]}" />
                                                 </Grid.ColumnDefinitions>
                                                 <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />
                                                 <Border Grid.Column="1" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Brush.Row.Line}" IsHitTestVisible="False" />

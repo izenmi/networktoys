@@ -18,4 +18,15 @@
     <ProjectReference Include="../../src/NetworkToys.Core/NetworkToys.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    画面の XAML を「文字として」検査するために埋め込む（参照はしない。App は
+    net10.0-windows なので Core のテストからは参照できない）。
+    見出しと行で列の定義を二重に書く作りなので、片方だけ直すと列がずれる。
+    実機でしか気づけなかったこの手のずれを、CI で捕まえるための持ち込み。
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="../../src/NetworkToys.App/Views/MainWindow.xaml"
+                      LogicalName="MainWindow.xaml" />
+  </ItemGroup>
+
 </Project>
