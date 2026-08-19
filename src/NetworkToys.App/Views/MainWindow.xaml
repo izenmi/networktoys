@@ -1433,232 +1433,242 @@
                             <TextBlock Style="{StaticResource TabIntro}" Text="この PC の IP アドレスとプロキシを切り替えます。" />
                         </DockPanel>
 
-                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                            <TextBlock Text="アダプタ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="300"
-                                      ItemsSource="{Binding Adapters}"
-                                      SelectedItem="{Binding SelectedAdapter}"
-                                      Margin="0,0,6,2"
-                                      ToolTip="設定するアダプタ。抜けている(未接続の)アダプタも選べます。">
-                                <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock TextTrimming="CharacterEllipsis">
-                                            <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Summary, Mode=OneWay}" Foreground="{DynamicResource Brush.TextMuted}" />
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Button Content="再読み込み" Command="{Binding RefreshCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
-                        </WrapPanel>
+                        <!--
+                            窓が低いと下（プロキシの段）が隠れるので、説明の行だけ残して
+                            中身は縦に送れるようにする（2026-08-19 ユーザー指示）。
+                            横は送らない（今までどおり折り返す）。
+                        -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <DockPanel>
+                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                    <TextBlock Text="アダプタ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                    <ComboBox Width="300"
+                                              ItemsSource="{Binding Adapters}"
+                                              SelectedItem="{Binding SelectedAdapter}"
+                                              Margin="0,0,6,2"
+                                              ToolTip="設定するアダプタ。抜けている(未接続の)アダプタも選べます。">
+                                        <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock TextTrimming="CharacterEllipsis">
+                                                    <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Summary, Mode=OneWay}" Foreground="{DynamicResource Brush.TextMuted}" />
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <Button Content="再読み込み" Command="{Binding RefreshCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                                </WrapPanel>
 
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                   Foreground="{DynamicResource Brush.TextMuted}"
-                                   Text="{Binding SelectedAdapter.Description}" />
+                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           Text="{Binding SelectedAdapter.Description}" />
 
-                        <CheckBox DockPanel.Dock="Top" Content="DHCP で自動取得する" IsChecked="{Binding UseDhcp}"
-                                  Margin="0,0,0,6"
-                                  ToolTip="チェックを外すと下の固定 IP 設定を使います。" />
+                                <CheckBox DockPanel.Dock="Top" Content="DHCP で自動取得する" IsChecked="{Binding UseDhcp}"
+                                          Margin="0,0,0,6"
+                                          ToolTip="チェックを外すと下の固定 IP 設定を使います。" />
 
-                        <!-- グレーアウトは分かりづらい(ユーザー指摘)ので、DHCP のときは丸ごと畳む -->
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4"
-                              Visibility="{Binding UseStatic, Converter={StaticResource BoolToVisibility}}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="110" />
-                                <ColumnDefinition Width="200" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
+                                <!-- グレーアウトは分かりづらい(ユーザー指摘)ので、DHCP のときは丸ごと畳む -->
+                                <Grid DockPanel.Dock="Top" Margin="0,0,0,4"
+                                      Visibility="{Binding UseStatic, Converter={StaticResource BoolToVisibility}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="110" />
+                                        <ColumnDefinition Width="200" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="IP アドレス" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="IP アドレス" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="マスク" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Mask, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
-                                     ToolTip="255.255.255.0 でも 24 でも /24 でも書けます。" />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="マスク" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Mask, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                             ToolTip="255.255.255.0 でも 24 でも /24 でも書けます。" />
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="ゲートウェイ" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Gateway, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
-                                     ToolTip="空欄ならゲートウェイなしで設定します。" />
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="ゲートウェイ" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Gateway, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                             ToolTip="空欄ならゲートウェイなしで設定します。" />
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="優先 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Dns1, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="優先 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Dns1, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4" />
 
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="代替 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Dns2, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
-                                     ToolTip="DNS を両方空欄にすると、DNS の設定はクリアされます。" />
-                        </Grid>
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="代替 DNS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Dns2, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,4"
+                                             ToolTip="DNS を両方空欄にすると、DNS の設定はクリアされます。" />
+                                </Grid>
 
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding ValidationText}"
-                                   Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                   Foreground="{DynamicResource Brush.Warn.Fg}" />
+                                <TextBlock DockPanel.Dock="Top" Text="{Binding ValidationText}"
+                                           Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                           Foreground="{DynamicResource Brush.Warn.Fg}" />
 
-                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <TextBlock Text="プリセット" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <ComboBox Width="160"
-                                      ItemsSource="{Binding Presets}"
-                                      SelectedItem="{Binding SelectedPreset}"
-                                      Margin="0,0,5,2"
-                                      ToolTip="選ぶと内容が入力欄に入ります(適用はされません)。">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <!-- 同じものを選び直しても通知は飛ばないので、入れ直す口を分けてある -->
-                            <Button Content="入れ直す" Command="{Binding LoadPresetCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,8,2"
-                                    ToolTip="入力欄を、選んでいるプリセットの値に戻します(適用はされません)。" />
-                            <TextBlock Text="名前" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                            <TextBox Width="120" Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,6,2" ToolTip="現場名など(例: 現場A)。同じ名前は上書きされます。" />
-                            <Button Content="保存" Command="{Binding SavePresetCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,5,2"
-                                    ToolTip="いまの入力内容をこの名前で保存します。" />
-                            <Button Content="削除" Command="{Binding DeletePresetCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
-                        </WrapPanel>
+                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                    <TextBlock Text="プリセット" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                    <ComboBox Width="160"
+                                              ItemsSource="{Binding Presets}"
+                                              SelectedItem="{Binding SelectedPreset}"
+                                              Margin="0,0,5,2"
+                                              ToolTip="選ぶと内容が入力欄に入ります(適用はされません)。">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <!-- 同じものを選び直しても通知は飛ばないので、入れ直す口を分けてある -->
+                                    <Button Content="入れ直す" Command="{Binding LoadPresetCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="0,0,8,2"
+                                            ToolTip="入力欄を、選んでいるプリセットの値に戻します(適用はされません)。" />
+                                    <TextBlock Text="名前" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                    <TextBox Width="120" Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="0,0,6,2" ToolTip="現場名など(例: 現場A)。同じ名前は上書きされます。" />
+                                    <Button Content="保存" Command="{Binding SavePresetCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="0,0,5,2"
+                                            ToolTip="いまの入力内容をこの名前で保存します。" />
+                                    <Button Content="削除" Command="{Binding DeletePresetCommand}"
+                                            Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
+                                </WrapPanel>
 
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="適用" Click="OnApplyIpConfig" IsEnabled="{Binding CanApply}"
-                                    Margin="0,0,12,0"
-                                    ToolTip="確認の後、UAC の昇格を経て netsh で設定します。" />
-                            <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center" TextWrapping="Wrap" />
-                        </StackPanel>
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Button Content="適用" Click="OnApplyIpConfig" IsEnabled="{Binding CanApply}"
+                                            Margin="0,0,12,0"
+                                            ToolTip="確認の後、UAC の昇格を経て netsh で設定します。" />
+                                    <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
+                                               VerticalAlignment="Center" TextWrapping="Wrap" />
+                                </StackPanel>
 
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource Brush.TextMuted}"
-                                   Text="適用には管理者権限が必要です(UAC の確認が 1 回出ます)。アプリ自体は非管理者のまま動きます。この PC の通信が一時的に切れることがあります。" />
+                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           Text="適用には管理者権限が必要です(UAC の確認が 1 回出ます)。アプリ自体は非管理者のまま動きます。この PC の通信が一時的に切れることがあります。" />
 
-                        <!-- ===== プロキシ =====
-                             上段は WinINET(ログインしたユーザーの設定。ブラウザが従う。管理者権限は不要)。
-                             下段は WinHTTP(PC 全体で 1 つ。サービスや .NET のアプリが従う。適用は昇格が要る) -->
-                        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,8,0,8" />
+                                <!-- ===== プロキシ =====
+                                     上段は WinINET(ログインしたユーザーの設定。ブラウザが従う。管理者権限は不要)。
+                                     下段は WinHTTP(PC 全体で 1 つ。サービスや .NET のアプリが従う。適用は昇格が要る) -->
+                                <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,8,0,8" />
 
-                        <StackPanel DockPanel.Dock="Top" DataContext="{Binding Proxy}">
-                            <WrapPanel Margin="0,0,0,4">
-                                <TextBlock Text="プロキシ" VerticalAlignment="Center" Margin="0,0,8,2" />
-                                <ComboBox Width="190"
-                                          ItemsSource="{Binding Modes}"
-                                          SelectedItem="{Binding SelectedMode}"
-                                          Margin="0,0,8,2">
-                                    <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Name}" />
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                                <TextBlock Text="{Binding CurrentSummary}" Style="{StaticResource Caption}"
-                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                           ToolTip="{Binding CurrentSummary}" Margin="0,0,0,2" />
-                            </WrapPanel>
-
-                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                       Text="この欄はブラウザが従う設定（ログインしたユーザーごと）です。管理者権限は要りません。" />
-
-                            <!-- 選んだ方式の行だけ出す(グレーアウトは分かりづらい、というユーザー指摘) -->
-                            <WrapPanel Margin="0,0,0,4"
-                                       Visibility="{Binding IsPac, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="PAC の URL" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                                <TextBox Width="320" Text="{Binding PacUrl, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
-                                         ToolTip="例: http://proxy.example.co.jp/proxy.pac" />
-                            </WrapPanel>
-
-                            <WrapPanel Margin="0,0,0,4"
-                                       Visibility="{Binding IsFixed, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="サーバ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                                <TextBox Width="200" Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,2"
-                                         ToolTip="例: proxy.example.co.jp:8080(プロトコル別は http=…;https=… の書式)" />
-                                <TextBlock Text="除外" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                                <TextBox Width="220" Text="{Binding Bypass, UpdateSourceTrigger=PropertyChanged}"
-                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
-                                         ToolTip="プロキシを通さない宛先。; 区切り。&lt;local&gt; はローカルアドレスの意味。" />
-                            </WrapPanel>
-
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="プロキシを適用" Command="{Binding ApplyCommand}" Margin="0,0,12,0"
-                                        ToolTip="Windows のプロキシ設定(現在のユーザー)に反映します。管理者権限は不要です。" />
-                                <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
-                                           VerticalAlignment="Center" TextWrapping="Wrap" />
-                            </StackPanel>
-
-                            <!--
-                                WinHTTP は PC 全体で 1 つの別設定。サービスとして動くもの
-                                (Windows Update・監視エージェント・.NET のアプリ)はこちらに従う。
-                                「ブラウザは見えるのに更新だけ外に出られない」の典型的な原因で、
-                                画面から確かめる手段が無いまま放置されやすい。
-                            -->
-                            <Border Background="{DynamicResource Brush.SurfaceAlt}"
-                                    CornerRadius="{DynamicResource Radius.Control}"
-                                    Padding="8,6" Margin="0,10,0,0">
-                                <StackPanel>
+                                <StackPanel DockPanel.Dock="Top" DataContext="{Binding Proxy}">
                                     <WrapPanel Margin="0,0,0,4">
-                                        <TextBlock Text="WinHTTP（PC 全体）" VerticalAlignment="Center" Margin="0,0,8,2" />
-                                        <TextBlock Text="{Binding WinHttpSummary}" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                   ToolTip="{Binding WinHttpSummary}" Margin="0,0,0,2" />
-                                    </WrapPanel>
-
-                                    <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
-                                               Text="サービスとして動くもの（Windows Update・監視エージェント・.NET のアプリ）が従う設定です。ブラウザは見えるのに更新やエージェントだけ外に出られない、というときはここを確かめてください。適用には管理者権限が要ります（UAC の確認が 1 回出ます）。" />
-
-                                    <!-- 上段とは別の設定なので、選び方も入力欄もこちらで持つ。
-                                         PAC は WinHTTP が持てない仕様なので選択肢に出さない -->
-                                    <WrapPanel Margin="0,0,0,4">
-                                        <TextBlock Text="方式" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <TextBlock Text="プロキシ" VerticalAlignment="Center" Margin="0,0,8,2" />
                                         <ComboBox Width="190"
-                                                  ItemsSource="{Binding WinHttpModes}"
-                                                  SelectedItem="{Binding SelectedWinHttpMode}"
-                                                  Margin="0,0,8,2"
-                                                  ToolTip="WinHTTP は PAC（自動構成スクリプト）を扱えません。PAC の現場では、PAC が返す代表的なプロキシを「固定」で入れてください。">
-                                            <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                                  ItemsSource="{Binding Modes}"
+                                                  SelectedItem="{Binding SelectedMode}"
+                                                  Margin="0,0,8,2">
+                                            <!-- 閉じているときの表示に DisplayMemberPath は効かないので ItemTemplate を明示する -->
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding Name}" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
+                                        <TextBlock Text="{Binding CurrentSummary}" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding CurrentSummary}" Margin="0,0,0,2" />
                                     </WrapPanel>
+
+                                    <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                               Text="この欄はブラウザが従う設定（ログインしたユーザーごと）です。管理者権限は要りません。" />
 
                                     <!-- 選んだ方式の行だけ出す(グレーアウトは分かりづらい、というユーザー指摘) -->
                                     <WrapPanel Margin="0,0,0,4"
-                                               Visibility="{Binding WinHttpIsFixed, Converter={StaticResource BoolToVisibility}}">
+                                               Visibility="{Binding IsPac, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="PAC の URL" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                        <TextBox Width="320" Text="{Binding PacUrl, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
+                                                 ToolTip="例: http://proxy.example.co.jp/proxy.pac" />
+                                    </WrapPanel>
+
+                                    <WrapPanel Margin="0,0,0,4"
+                                               Visibility="{Binding IsFixed, Converter={StaticResource BoolToVisibility}}">
                                         <TextBlock Text="サーバ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <TextBox Width="200" Text="{Binding WinHttpServer, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Width="200" Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}"
                                                  FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,2"
-                                                 ToolTip="例: proxy.example.co.jp:8080" />
+                                                 ToolTip="例: proxy.example.co.jp:8080(プロトコル別は http=…;https=… の書式)" />
                                         <TextBlock Text="除外" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
-                                        <TextBox Width="220" Text="{Binding WinHttpBypass, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Width="220" Text="{Binding Bypass, UpdateSourceTrigger=PropertyChanged}"
                                                  FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
                                                  ToolTip="プロキシを通さない宛先。; 区切り。&lt;local&gt; はローカルアドレスの意味。" />
                                     </WrapPanel>
 
-                                    <Button Content="WinHTTP に適用" HorizontalAlignment="Left"
-                                            Command="{Binding ApplyWinHttpCommand}"
-                                            ToolTip="この欄の内容を PC 全体の WinHTTP 設定に反映します。UAC の確認が 1 回出ます。" />
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="プロキシを適用" Command="{Binding ApplyCommand}" Margin="0,0,12,0"
+                                                ToolTip="Windows のプロキシ設定(現在のユーザー)に反映します。管理者権限は不要です。" />
+                                        <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" TextWrapping="Wrap" />
+                                    </StackPanel>
 
-                        <Border />
+                                    <!--
+                                        WinHTTP は PC 全体で 1 つの別設定。サービスとして動くもの
+                                        (Windows Update・監視エージェント・.NET のアプリ)はこちらに従う。
+                                        「ブラウザは見えるのに更新だけ外に出られない」の典型的な原因で、
+                                        画面から確かめる手段が無いまま放置されやすい。
+                                    -->
+                                    <Border Background="{DynamicResource Brush.SurfaceAlt}"
+                                            CornerRadius="{DynamicResource Radius.Control}"
+                                            Padding="8,6" Margin="0,10,0,0">
+                                        <StackPanel>
+                                            <WrapPanel Margin="0,0,0,4">
+                                                <TextBlock Text="WinHTTP（PC 全体）" VerticalAlignment="Center" Margin="0,0,8,2" />
+                                                <TextBlock Text="{Binding WinHttpSummary}" Style="{StaticResource Caption}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding WinHttpSummary}" Margin="0,0,0,2" />
+                                            </WrapPanel>
+
+                                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                                       Text="サービスとして動くもの（Windows Update・監視エージェント・.NET のアプリ）が従う設定です。ブラウザは見えるのに更新やエージェントだけ外に出られない、というときはここを確かめてください。適用には管理者権限が要ります（UAC の確認が 1 回出ます）。" />
+
+                                            <!-- 上段とは別の設定なので、選び方も入力欄もこちらで持つ。
+                                                 PAC は WinHTTP が持てない仕様なので選択肢に出さない -->
+                                            <WrapPanel Margin="0,0,0,4">
+                                                <TextBlock Text="方式" Style="{StaticResource Caption}"
+                                                           VerticalAlignment="Center" Margin="0,0,5,2" />
+                                                <ComboBox Width="190"
+                                                          ItemsSource="{Binding WinHttpModes}"
+                                                          SelectedItem="{Binding SelectedWinHttpMode}"
+                                                          Margin="0,0,8,2"
+                                                          ToolTip="WinHTTP は PAC（自動構成スクリプト）を扱えません。PAC の現場では、PAC が返す代表的なプロキシを「固定」で入れてください。">
+                                                    <!-- 閉じているときの表示に DisplayMemberPath は効かない -->
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Name}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </WrapPanel>
+
+                                            <!-- 選んだ方式の行だけ出す(グレーアウトは分かりづらい、というユーザー指摘) -->
+                                            <WrapPanel Margin="0,0,0,4"
+                                                       Visibility="{Binding WinHttpIsFixed, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="サーバ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                                <TextBox Width="200" Text="{Binding WinHttpServer, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,2"
+                                                         ToolTip="例: proxy.example.co.jp:8080" />
+                                                <TextBlock Text="除外" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,2" />
+                                                <TextBox Width="220" Text="{Binding WinHttpBypass, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontFamily="{DynamicResource Font.Mono}" Margin="0,0,0,2"
+                                                         ToolTip="プロキシを通さない宛先。; 区切り。&lt;local&gt; はローカルアドレスの意味。" />
+                                            </WrapPanel>
+
+                                            <Button Content="WinHTTP に適用" HorizontalAlignment="Left"
+                                                    Command="{Binding ApplyWinHttpCommand}"
+                                                    ToolTip="この欄の内容を PC 全体の WinHTTP 設定に反映します。UAC の確認が 1 回出ます。" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <Border />
+                            </DockPanel>
+                        </ScrollViewer>
                     </DockPanel>
                 </Border>
             </TabItem>
