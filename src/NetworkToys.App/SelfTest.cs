@@ -1447,6 +1447,39 @@ internal static class SelfTest
             }
         });
 
+        Check("試験: プロキシのチェックが定義を書き換えても残る", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+            string original = shell.Verify.ProxyText;
+
+            try
+            {
+                // 名前を省いて URL だけ書いた行。画面には短い名前（proxy.pac）で出るので、
+                // 覚える鍵と引き当てる鍵が食い違うと、次に開いたときチェックが外れる
+                // （2026-08-19 報告）
+                shell.Verify.ProxyText = "http://pac.example.jp/proxy.pac";
+
+                ViewModels.ProxyChoiceViewModel row =
+                    shell.Verify.Proxies.Single(p => p.Name == "proxy.pac");
+
+                row.IsSelected = true;
+
+                // 定義を書き換えると選択肢は作り直される。チェックは引き継がれること
+                shell.Verify.ProxyText = "http://pac.example.jp/proxy.pac\n別のPAC,pac,http://pac.example.jp/other.pac";
+
+                Assert(shell.Verify.Proxies.Single(p => p.Name == "proxy.pac").IsSelected,
+                       "定義を書き換えるとチェックが外れる");
+                Assert(!shell.Verify.Proxies.Single(p => p.Name == "別のPAC").IsSelected,
+                       "触っていない行にチェックが付いている");
+            }
+            finally
+            {
+                shell.Verify.ProxyText = original;
+            }
+        });
+
         Check("試験: 放り込んだテキストから項目を読める", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

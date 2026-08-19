@@ -91,6 +91,15 @@ public sealed class ProxyChoiceViewModel : ObservableObject
     /// <summary>一覧に出す名前。PAC の URL は長いのでファイル名だけにする。</summary>
     public string Name => Choice.ShortName;
 
+    /// <summary>
+    /// チェックの状態を覚えるときの鍵。<b>書いたとおりの名前</b>を使う。
+    ///
+    /// 画面に出す <see cref="Name"/> は PAC の URL を縮めた別物なので、
+    /// こちらで覚えて <see cref="Name"/> で引き当てると<b>一致せず、次に開いたとき
+    /// チェックが外れる</b>（名前を省いて URL だけ書いた行で実際に起きた。2026-08-19 報告）。
+    /// </summary>
+    internal string Key => Choice.Name;
+
     public string Summary => Choice.Summary;
 
     public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
@@ -404,7 +413,7 @@ public sealed class VerifyViewModel : ObservableObject
         // チェックが外れると使い物にならない。
         // 起動直後は前回の選び（settings.json）から復元する（2026-08-18 ユーザー指示）
         if (Proxies.Count > 0)
-            _picked = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Name)];
+            _picked = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Key)];
 
         Proxies.Clear();
 
@@ -426,7 +435,7 @@ public sealed class VerifyViewModel : ObservableObject
 
     /// <summary>チェックの状態を控える。書き出すのは閉じるときの <see cref="SaveSettings"/>。</summary>
     private void RememberPicks()
-        => _picked = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Name)];
+        => _picked = [.. Proxies.Where(p => p.IsSelected).Select(p => p.Key)];
 
     private async Task RunAsync()
     {
