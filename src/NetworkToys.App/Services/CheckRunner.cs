@@ -242,8 +242,9 @@ internal static class CheckRunner
     }
 
     /// <summary>
-    /// Teams は 3 つ確かめる。名前が引けるか・<b>HTTPS がプロキシ越しに通るか</b>・
-    /// <b>音声の UDP が通るか</b>。
+    /// Teams は <b>HTTPS がプロキシ越しに通るか</b>と <b>音声の UDP が通るか</b>で判定する。
+    /// 名前解決も見るが<b>合否には使わない</b> — プロキシ環境では名前を引くのはプロキシ側で、
+    /// この PC で引けないのが普通だから（引けなくても Teams は使える）。
     ///
     /// <b>署名・チャット・在席は HTTPS なのでプロキシを通る。</b>だから選ばれた
     /// プロキシごとに試す。素の TCP で繋ぐとプロキシを迂回してしまい、
@@ -263,10 +264,16 @@ internal static class CheckRunner
 
         string via = proxy.Name;
 
-        if (!dns.Success || dns.Records.Count == 0)
-            return Fail(item, $"{teams.WebHost} の名前を解決できませんでした", dns.ElapsedMs, via);
+        // 名前解決は<b>手がかりであって合否ではない</b>（2026-08-19 ユーザー指示）。
+        // プロキシを使う環境では宛先の名前を引くのはプロキシの仕事で、
+        // この PC では引けないのが普通。引けないだけで不合格にすると、
+        // 実際には Teams が使える環境が落ちる。
+        // 本当に繋がらなければ、この後の HTTPS と UDP で必ず落ちる。
+        bool resolved = dns.Success && dns.Records.Count > 0;
 
-        notes.Add("名前解決 ○");
+        notes.Add(resolved
+            ? "名前解決 ○"
+            : $"名前解決 ✕（この PC では {teams.WebHost} を引けず。プロキシ経由なら問題ありません）");
 
         // ここはプロキシを通す。応答コードが何であれ、返ってきた時点で経路は通っている
         // （Teams はサインイン画面へ飛ばすので 200 とは限らない）
@@ -276,7 +283,12 @@ internal static class CheckRunner
         if (used.Length > 0) via = used;
 
         if (web.Error is { } webError)
-            return Fail(item, $"HTTPS 443 に繋がりません（{webError}）", webMs, via);
+        {
+            // 名前も引けていなければ、その事実も添える（切り分けの手がかりになる）
+            string name = resolved ? "" : $"／{teams.WebHost} の名前もこの PC では引けていません";
+
+            return Fail(item, $"HTTPS 443 に繋がりません（{webError}）{name}", webMs, via);
+        }
 
         notes.Add($"HTTPS 443 ○（HTTP {web.StatusCode}）");
 
