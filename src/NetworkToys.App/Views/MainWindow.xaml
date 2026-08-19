@@ -4457,8 +4457,13 @@
                                 </StackPanel>
                             </ScrollViewer>
 
-                            <!-- 早見表 -->
+                            <!-- 早見表。中身の高さぶんだけの枠にする（下まで伸ばすと
+                                 表の下に空の枠が続いて見える。2026-08-19 ユーザー指示）。
+                                 窓が低いときだけ中で送れるよう、高さの上限は親に合わせる -->
                             <Border Grid.Column="1"
+                                    Margin="16,0,0,0"
+                                    VerticalAlignment="Top"
+                                    MaxHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Grid}}"
                                     Background="{DynamicResource Brush.Surface}"
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource Brush.Border}"
