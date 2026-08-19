@@ -9,7 +9,7 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>NetworkToys</AssemblyName>
     <RootNamespace>NetworkToys.App</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.9.0</Version>
 
     <!-- Core と同じく警告をエラーにする。CI が唯一のコンパイラなので、
          いちばん検証しづらい WPF 側こそ警告止まりにしない -->
