@@ -228,7 +228,9 @@ public class AciCatalogTests
         IReadOnlyList<AciPortRow> rows = AciCatalog.ParsePorts(Mos(PortsJson), members);
 
         Assert.Equal("Web", rows[0].Epgs);
-        Assert.Equal("vlan-100", rows[0].Vlans);
+
+        // VLAN は番号だけ（vlan- は落とす。2026-08-19 ユーザー指示）
+        Assert.Equal("100", rows[0].Vlans);
         Assert.Equal("Trunk", rows[0].Modes);
 
         // 何も載っていない口は空。0 や「—」で埋めない
@@ -270,7 +272,7 @@ public class AciCatalogTests
 
         // protpaths-103-104 は 103 と 104 の両方の口の話
         Assert.Equal("Web", rows[0].Epgs);
-        Assert.Equal("vlan-100", rows[0].Vlans);
+        Assert.Equal("100", rows[0].Vlans);
         Assert.Equal("Access", rows[0].Modes);
 
         // 束そのものも 1 行として出す（EPG は束の側に付くので、無いと割り当てが見えない）
@@ -343,29 +345,45 @@ public class AciCatalogTests
     }
 
     [Theory]
-    // Trunk で載っているものだけ。連番は範囲に畳む（IOS の allowed vlan と同じ書き方）
+    // 連番は範囲に畳む。vlan- は落として番号だけにする
     [InlineData("Trunk:vlan-100,Trunk:vlan-101,Trunk:vlan-102", "100-102")]
     [InlineData("Trunk:vlan-100,Trunk:vlan-102,Trunk:vlan-103,Trunk:vlan-200", "100, 102-103, 200")]
     // 並び順は APIC 任せ。番号順に直して出す
     [InlineData("Trunk:vlan-30,Trunk:vlan-10,Trunk:vlan-20", "10, 20, 30")]
-    // Access（タグなし）と Access (802.1p) は「許可 VLAN」に並べない
-    [InlineData("Access:vlan-10", "—")]
-    [InlineData("Access (802.1p):vlan-10,Trunk:vlan-11", "11")]
+    // タグの有無は「タグ」の列が持つ。VLAN の列はどちらも同じように並べる
+    [InlineData("Access:vlan-10", "10")]
+    [InlineData("Access (802.1p):vlan-10,Trunk:vlan-11", "10-11")]
     // 何も載っていない口
     [InlineData("", "—")]
-    // 数字にならない encap はそのまま添える
+    // 数字にならない encap（VXLAN など）はそのまま添える
     [InlineData("Trunk:vxlan-16777100,Trunk:vlan-10", "10, vxlan-16777100")]
-    public void 許可VLANはTrunkで載っている分だけを範囲にまとめる(string bound, string expected)
+    public void VLANの列はオーバーレイぶんを番号だけで並べる(string bound, string expected)
     {
+        Assert.Equal(expected, AciCatalog.OverlayVlanText(Bound("uni/tn-Prod/ap-App/epg-Web", bound)));
+    }
+
+    [Fact]
+    public void VLANの列にアンダーレイは出さない()
+    {
+        // infra テナントの割り当てはファブリック自身が使うもの（アンダーレイ）。
+        // 現場が見たいのはテナントの通信ぶんだけ（2026-08-19 ユーザー指示）
         AciEpgMemberRow[] rows =
         [
-            .. bound.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(part => part.Split(':'))
-                .Select(part => new AciEpgMemberRow("dn", "EPG", "101", "eth1/1", part[1], part[0])),
+            .. Bound("uni/tn-infra/ap-access/epg-default", "Trunk:vlan-3967"),
+            .. Bound("uni/tn-Prod/ap-App/epg-Web", "Trunk:vlan-100"),
         ];
 
-        Assert.Equal(expected, AciCatalog.AllowedVlanText(rows));
+        Assert.Equal("100", AciCatalog.OverlayVlanText(rows));
+        Assert.Equal("—", AciCatalog.OverlayVlanText(Bound("uni/tn-infra/ap-access/epg-default", "Trunk:vlan-3967")));
     }
+
+    /// <summary>「モード:encap」の並びから、静的パスの行を組む。</summary>
+    private static AciEpgMemberRow[] Bound(string epgDn, string bound) =>
+    [
+        .. bound.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Split(':'))
+            .Select(part => new AciEpgMemberRow(epgDn, "EPG", "101", "eth1/1", part[1], part[0])),
+    ];
 
     [Fact]
     public void Epg_members_carry_the_node_port_and_vlan()

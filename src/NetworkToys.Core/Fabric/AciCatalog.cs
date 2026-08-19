@@ -48,7 +48,6 @@ public sealed record AciPortRow(
     string Epgs,
     string Vlans,
     string Modes,
-    string AllowedVlans,
     string Reason,
     string LastChange,
     string Description = "")
@@ -361,9 +360,8 @@ public static class AciCatalog
             Usage: DescribeUsage(mo["usage"]),
             PortChannel: portChannel,
             Epgs: Join(bound.Select(m => m.Epg)),
-            Vlans: Join(bound.Select(m => m.Encap)),
+            Vlans: OverlayVlanText(bound),
             Modes: Join(bound.Select(m => m.Mode)),
-            AllowedVlans: AllowedVlanText(bound),
             Reason: actual?["operStQual"] ?? "",
             LastChange: actual?["lastLinkStChg"] ?? "",
             Description: mo["descr"]);
@@ -625,7 +623,7 @@ public static class AciCatalog
     /// （2026-08-18 ユーザー指示。以前は「タグ付き／タグなし」と言い換えていた）。
     /// <c>native</c> はタグの無い枠を 802.1p で受ける Access なので、そう添える。
     /// </summary>
-    /// <summary>タグ付き（Trunk）の表示。<b>許可 VLAN の判定もこの文字で行う</b>ので直書きしない。</summary>
+    /// <summary>タグ付き（Trunk）の表示。画面と CSV でこの文字を使う。</summary>
     public const string TrunkMode = "Trunk";
 
     public static string DescribeMode(string? mode) => mode switch
@@ -637,17 +635,23 @@ public static class AciCatalog
         _ => mode,
     };
 
+    /// <summary>ファブリック自身が使うテナント。ここの割り当てはアンダーレイなので出さない。</summary>
+    private const string UnderlayTenant = "uni/tn-infra/";
+
     /// <summary>
-    /// その口を<b>タグ付きで通れる VLAN</b>を、IOS の allowed vlan と同じ書き方でまとめる。
+    /// その口を通れる VLAN。<b>オーバーレイ（テナントの通信）ぶんだけ</b>を出す
+    /// （2026-08-19 ユーザー指示）。
     ///
     /// <b>ACI に「許可 VLAN」という設定項目は無い。</b>口に載っている静的パス（EPG の
-    /// 割り当て）の encap が、そのままその口を通れる VLAN になる。だから
-    /// <b>Trunk で載っているものだけ</b>を拾い、連番は範囲に畳んで出す
-    /// （2026-08-19 ユーザー指示。Access は 1 本なので並べる意味が無い）。
+    /// 割り当て）の encap が、そのままその口を通れる VLAN になる。
     ///
+    /// 書き方は 3 つの決まりで整える:
+    /// ①<b><c>vlan-</c> は落として番号だけ</b>（機器の見え方に合わせる）
+    /// ②連番は範囲に畳む（<c>100-102, 200</c>）
+    /// ③<b><c>infra</c> テナント（＝アンダーレイ）の割り当ては出さない</b>。
     /// 数字にならない encap（VXLAN など）はそのままの文字で後ろに付ける。
     /// </summary>
-    public static string AllowedVlanText(IEnumerable<AciEpgMemberRow>? bound)
+    public static string OverlayVlanText(IEnumerable<AciEpgMemberRow>? bound)
     {
         if (bound is null) return "—";
 
@@ -656,7 +660,7 @@ public static class AciCatalog
 
         foreach (AciEpgMemberRow row in bound)
         {
-            if (!string.Equals(row.Mode, TrunkMode, StringComparison.Ordinal)) continue;
+            if ((row.EpgDn ?? "").StartsWith(UnderlayTenant, StringComparison.OrdinalIgnoreCase)) continue;
 
             string encap = row.Encap ?? "";
 
@@ -829,11 +833,11 @@ public static class AciCatalog
         [.. rows.Select(r => new[] { r.Time, r.Kind, r.Severity, r.Target, r.Text })]);
 
     public static CsvTable ToCsv(IReadOnlyList<AciPortRow> rows) => new(
-        ["ノード", "インターフェース", "説明", "管理", "状態", "速度", "用途", "ポートチャネル", "EPG", "VLAN", "タグ", "許可VLAN", "理由", "最終変化"],
+        ["ノード", "インターフェース", "説明", "管理", "状態", "速度", "用途", "ポートチャネル", "EPG", "VLAN", "タグ", "理由", "最終変化"],
         [.. rows.Select(r => new[]
         {
             r.Node, r.Interface, r.Description, r.AdminState, r.OperState, r.Speed, r.Usage,
-            r.PortChannel, r.Epgs, r.Vlans, r.Modes, r.AllowedVlans, r.Reason, r.LastChange,
+            r.PortChannel, r.Epgs, r.Vlans, r.Modes, r.Reason, r.LastChange,
         })]);
 
     public static CsvTable ToCsv(IReadOnlyList<AciBdRow> rows) => new(
