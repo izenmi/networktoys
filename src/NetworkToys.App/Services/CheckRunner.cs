@@ -337,8 +337,8 @@ internal static class CheckRunner
             if (stun.Problem is { Length: > 0 } why) reasons.Add($"UDP {port}: {why}");
         }
 
-        string detail = $"（{string.Join(" / ", notes)}）"
-                        + (reasons.Count > 0 ? $"　{string.Join(" / ", reasons.Distinct())}" : "");
+        string summary = $"（{string.Join(" / ", notes)}）"
+                         + (reasons.Count > 0 ? $"　{string.Join(" / ", reasons.Distinct())}" : "");
 
         // 1 バイトも送れていないなら「塞がれている」とは言えない。
         // プロキシ環境ではリレーの名前をこの PC では引けないことがあり、
@@ -347,13 +347,13 @@ internal static class CheckRunner
         {
             return Warn(item,
                         $"音声の UDP を確かめられませんでした。{teams.RelayHost} へ問い合わせを送れていません"
-                        + $"（この PC で名前を引けないなど）。通話ができているなら差し支えありません{detail}",
+                        + $"（この PC で名前を引けないなど）。通話ができているなら差し支えありません{summary}",
                         udpMs, via);
         }
 
         return Fail(item,
                     $"{teams.RelayHost} の UDP {string.Join("・", blocked)} のいずれも応答がありません。"
-                    + $"通話の音声が通りません{detail}",
+                    + $"通話の音声が通りません{summary}",
                     udpMs, via);
     }
 
