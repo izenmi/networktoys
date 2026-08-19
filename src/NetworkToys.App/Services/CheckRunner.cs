@@ -302,69 +302,132 @@ internal static class CheckRunner
         IReadOnlyList<int> ports = onePort > 0 ? [onePort] : teams.Ports;
 
         // ここからが本題。ここが塞がれていると通話だけできない
-        var blocked = new List<int>();
-        var reasons = new List<string>();
-        bool anySent = false;
-        double udpMs = 0;
+        RelayProbe probe = await ProbeRelayAsync(relayHost, ports, token).ConfigureAwait(false);
 
-        foreach (int port in ports)
+        // 1 バイトも出せなかった＝この PC で名前を引けていない。
+        // <b>HTTPS はプロキシを通る</b>ので、DoH でアドレスだけ引いて投げ直す
+        // （2026-08-19 ユーザー指示。社内 DNS が SERVFAIL を返し、外向きの DNS へは
+        // 経路も無い環境があった。人手で netstat を見なくても済むようにする）
+        if (!probe.Sent && item.Target.Trim().Length == 0)
         {
-            StunOutcome stun = await StunProbe
-                .RunAsync(relayHost, port, UdpTimeoutMs, token).ConfigureAwait(false);
+            (string? address, string how) = await ResolveOverHttpsAsync(relayHost, proxy, token)
+                .ConfigureAwait(false);
 
-            udpMs += stun.ElapsedMs;
+            notes.Add(how);
 
-            if (stun.Reachable)
+            if (address is not null)
             {
-                notes.Add($"UDP {port} ○");
-                if (stun.SeenAddress is { } seen) notes.Add($"外から見えるアドレス {seen.Address}");
-
-                // 通る道が分かったので、その道で通話品質まで測る。
-                // ICMP ではなく音声が実際に使う UDP で測ることに意味がある
-                RttStatistics stats = await StunProbe.MeasureAsync(
-                    relayHost, port, QualitySamples, QualityIntervalMs, UdpTimeoutMs, token)
-                    .ConfigureAwait(false);
-
-                (bool acceptable, string quality) = CallQuality.Judge(stats);
-                notes.Add(quality);
-                notes.Add("音声の UDP はプロキシを通りません");
-
-                string detail = string.Join(" / ", notes);
-
-                // 目安を割っていても通話はできる。不合格ではなく注意にする
-                return acceptable
-                    ? Pass(item, detail, udpMs, via)
-                    : Warn(item, detail, udpMs, via);
+                relayHost = address;
+                probe = await ProbeRelayAsync(address, ports, token).ConfigureAwait(false);
             }
+        }
 
-            blocked.Add(port);
-            anySent |= stun.Sent;
+        double udpMs = probe.ElapsedMs;
 
-            // 理由は捨てない。「名前を引けない」と「投げたが返らない」は別物で、
-            // まとめて「応答がありません」と書くと切り分けができない
-            // （2026-08-19: 通話はできているのに不合格になる、と報告された）
-            if (stun.Problem is { Length: > 0 } why) reasons.Add($"UDP {port}: {why}");
+        if (probe.Reachable)
+        {
+            notes.Add($"UDP {probe.Port} ○");
+            if (probe.Seen is { } seen) notes.Add($"外から見えるアドレス {seen.Address}");
+
+            // 通る道が分かったので、その道で通話品質まで測る。
+            // ICMP ではなく音声が実際に使う UDP で測ることに意味がある
+            RttStatistics stats = await StunProbe.MeasureAsync(
+                relayHost, probe.Port, QualitySamples, QualityIntervalMs, UdpTimeoutMs, token)
+                .ConfigureAwait(false);
+
+            (bool acceptable, string quality) = CallQuality.Judge(stats);
+            notes.Add(quality);
+            notes.Add("音声の UDP はプロキシを通りません");
+
+            string detail = string.Join(" / ", notes);
+
+            // 目安を割っていても通話はできる。不合格ではなく注意にする
+            return acceptable
+                ? Pass(item, detail, udpMs, via)
+                : Warn(item, detail, udpMs, via);
         }
 
         string summary = $"（{string.Join(" / ", notes)}）"
-                         + (reasons.Count > 0 ? $"　{string.Join(" / ", reasons.Distinct())}" : "");
+                         + (probe.Reasons.Count > 0 ? $"　{string.Join(" / ", probe.Reasons.Distinct())}" : "");
 
         // 1 バイトも送れていないなら「塞がれている」とは言えない。
-        // プロキシ環境ではリレーの名前をこの PC では引けないことがあり、
-        // それでも Teams 本体は通話できる。確かめられなかったものを不合格にしない
-        if (!anySent)
+        // 確かめられなかったものを不合格にしない
+        if (!probe.Sent)
         {
             return Warn(item,
                         $"音声の UDP を確かめられませんでした。{relayHost} へ問い合わせを送れていません"
-                        + "（この PC で名前を引けないなど）。通話ができているなら差し支えありません。"
-                        + $"宛先の欄に、通話中の相手のアドレスを書くとその道で確かめられます{summary}",
+                        + "（この PC で名前を引けず、HTTPS 経由でも引けませんでした）。"
+                        + "通話ができているなら差し支えありません。"
+                        + $"宛先の欄にリレーのアドレスを書くと、その道で確かめられます{summary}",
                         udpMs, via);
         }
 
         return Fail(item,
-                    $"{relayHost} の UDP {string.Join("・", blocked)} のいずれも応答がありません。"
+                    $"{relayHost} の UDP {string.Join("・", probe.Blocked)} のいずれも応答がありません。"
                     + $"通話の音声が通りません{summary}",
                     udpMs, via);
+    }
+
+    /// <summary>
+    /// 名前を <b>HTTPS 経由（DoH）</b>で引く。UDP 53 は外向きの経路が無い環境があるので使わない。
+    ///
+    /// <b>プロキシは試験でいま選んでいるものをそのまま使う</b>（ブラウザと同じ道で引く）。
+    /// 引けなかった理由も文字で返す — 結果の欄に出して切り分けに使う。
+    /// </summary>
+    private static async Task<(string? Address, string How)> ResolveOverHttpsAsync(
+        string host, ProxyChoice proxy, CancellationToken token)
+    {
+        string url = DohLookup.UrlFor(DohLookup.GoogleResolver, host);
+
+        (HttpOutcome outcome, _, _) = await HttpCheck.RunAsync(url, proxy, token).ConfigureAwait(false);
+
+        if (outcome.Error is { } error)
+            return (null, $"名前を HTTPS 経由でも引けませんでした（{error}）");
+
+        IReadOnlyList<string> addresses = DohLookup.ReadAddresses(outcome.Body);
+
+        return addresses.Count > 0
+            ? (addresses[0], $"リレーのアドレスは HTTPS 経由で引きました（{host} → {addresses[0]}）")
+            : (null, "名前を HTTPS 経由でも引けませんでした（応答に A レコードがありません）");
+    }
+
+    /// <summary>音声のリレーへ UDP を投げた結果。</summary>
+    /// <param name="Sent">1 バイトでも送れたか。名前を引けないと送れていない。</param>
+    private sealed record RelayProbe(
+        bool Reachable,
+        int Port,
+        System.Net.IPEndPoint? Seen,
+        bool Sent,
+        IReadOnlyList<int> Blocked,
+        IReadOnlyList<string> Reasons,
+        double ElapsedMs);
+
+    /// <summary>ポートを順に試して、最初に応答した 1 本で止める。</summary>
+    private static async Task<RelayProbe> ProbeRelayAsync(
+        string host, IReadOnlyList<int> ports, CancellationToken token)
+    {
+        var blocked = new List<int>();
+        var reasons = new List<string>();
+        bool sent = false;
+        double ms = 0;
+
+        foreach (int port in ports)
+        {
+            StunOutcome stun = await StunProbe.RunAsync(host, port, UdpTimeoutMs, token).ConfigureAwait(false);
+
+            ms += stun.ElapsedMs;
+            sent |= stun.Sent;
+
+            if (stun.Reachable) return new RelayProbe(true, port, stun.SeenAddress, true, blocked, reasons, ms);
+
+            blocked.Add(port);
+
+            // 理由は捨てない。「名前を引けない」と「投げたが返らない」は別物で、
+            // まとめて「応答がありません」と書くと切り分けができない
+            if (stun.Problem is { Length: > 0 } why) reasons.Add($"UDP {port}: {why}");
+        }
+
+        return new RelayProbe(false, 0, null, sent, blocked, reasons, ms);
     }
 
     /// <summary>
