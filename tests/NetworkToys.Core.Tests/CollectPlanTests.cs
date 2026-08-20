@@ -371,4 +371,59 @@ public class DeviceReportTests
         Assert.StartsWith("192.168.10.1_", DeviceReport.FileName(result));
         Assert.EndsWith(".txt", DeviceReport.FileName(result));
     }
+
+    [Fact]
+    public void CSVはパスワードとenableとメモを列で読み取れる()
+    {
+        const string text = """
+            # 注釈は読み飛ばす
+            192.168.1.1,ssh,admin,LoginPass,EnablePass,本社コアSW
+            192.168.1.2,telnet,admin,LoginPass
+            10.0.0.1,ssh,ops,,,メモだけ, カンマ入り
+            """;
+
+        DeviceListParser.CsvParseResult parsed = DeviceListParser.ParseCsv(text, defaultUseSsh: true);
+
+        Assert.Equal(3, parsed.Devices.Count);
+        Assert.Empty(parsed.Errors);
+
+        DeviceListParser.ImportedDevice first = parsed.Devices[0];
+        Assert.Equal("192.168.1.1", first.Entry.Host);
+        Assert.True(first.Entry.UseSsh);
+        Assert.Equal("admin", first.Entry.UserName);
+        Assert.Equal("LoginPass", first.Password);
+        Assert.Equal("EnablePass", first.EnablePassword);
+        Assert.Equal("本社コアSW", first.Entry.Memo);
+
+        // enable とメモが無い行
+        Assert.False(parsed.Devices[1].Entry.UseSsh);
+        Assert.Equal("LoginPass", parsed.Devices[1].Password);
+        Assert.Equal("", parsed.Devices[1].EnablePassword);
+        Assert.Equal("", parsed.Devices[1].Entry.Memo);
+
+        // パスワードを空で飛ばしてメモだけ書く。メモの中のカンマは繋ぎ直す
+        Assert.Equal("", parsed.Devices[2].Password);
+        Assert.Equal("メモだけ, カンマ入り", parsed.Devices[2].Entry.Memo);
+    }
+
+    [Fact]
+    public void CSVで方式を省いた行はユーザー名から読む()
+    {
+        DeviceListParser.CsvParseResult parsed =
+            DeviceListParser.ParseCsv("192.168.1.5,admin,Pass1", defaultUseSsh: true);
+
+        DeviceListParser.ImportedDevice device = Assert.Single(parsed.Devices);
+
+        Assert.True(device.Entry.UseSsh);
+        Assert.Equal("admin", device.Entry.UserName);
+        Assert.Equal("Pass1", device.Password);
+    }
+
+    [Fact]
+    public void 設定ファイルの書き出しにパスワードの入れ物は無い()
+    {
+        // DeviceEntry は settings.json へ往復する。パスワードは ImportedDevice の側だけが持ち、
+        // Format が書く行にパスワードが混ざる道は型の上で存在しないことを固定する
+        Assert.DoesNotContain("Password", typeof(DeviceEntry).GetProperties().Select(p => p.Name));
+    }
 }

@@ -90,6 +90,93 @@ public static class DeviceListParser
 {
     public const int DefaultLimit = 200;
 
+    /// <summary>CSV から取り込んだ 1 台。<b>パスワードは <see cref="DeviceEntry"/> に持たせない</b>
+    /// — あちらは settings.json へ往復するので、入れ物を分けて書き戻る道を絶つ。</summary>
+    public sealed record ImportedDevice(DeviceEntry Entry, string Password, string EnablePassword);
+
+    public sealed record CsvParseResult(
+        IReadOnlyList<ImportedDevice> Devices,
+        int CommentLines,
+        IReadOnlyList<string> Errors);
+
+    /// <summary>
+    /// 取り込み用 CSV の解釈。列は
+    /// <c>宛先,ssh|telnet,ユーザー名,パスワード,enable,メモ</c>（2026-08-20 ユーザー指示で
+    /// パスワードの列を足した）。設定ファイルの書式（<see cref="Parse"/>）とは別で、
+    /// <b>この書式を書き出すのはひな型だけ・実物のパスワードを書き出す口は作らない</b>。
+    /// </summary>
+    public static CsvParseResult ParseCsv(string? text, bool defaultUseSsh, int limit = DefaultLimit)
+    {
+        List<ImportedDevice> devices = [];
+        List<string> errors = [];
+        int comments = 0;
+
+        if (string.IsNullOrWhiteSpace(text))
+            return new CsvParseResult(devices, 0, errors);
+
+        string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Split('\n');
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].Trim().Trim('　');
+            if (line.Length == 0) continue;
+
+            if (line[0] is '!' or '#' or ';')
+            {
+                comments++;
+                continue;
+            }
+
+            if (devices.Count >= limit)
+            {
+                errors.Add($"{limit} 台を超えたため、{i + 1} 行目以降は読み飛ばしました。");
+                break;
+            }
+
+            string[] fields = line.Split([',', '\t'], StringSplitOptions.TrimEntries);
+            string host = fields[0];
+
+            if (host.Length == 0)
+            {
+                errors.Add($"{i + 1} 行目: 宛先がありません。");
+                continue;
+            }
+
+            // 2 番目が ssh / telnet でなければ、方式を省いた行として読む（Parse と同じ寛容さ）
+            bool useSsh = defaultUseSsh;
+            int next = 1;
+
+            if (fields.Length > 1)
+            {
+                if (string.Equals(fields[1], "ssh", StringComparison.OrdinalIgnoreCase))
+                {
+                    useSsh = true;
+                    next = 2;
+                }
+                else if (string.Equals(fields[1], "telnet", StringComparison.OrdinalIgnoreCase))
+                {
+                    useSsh = false;
+                    next = 2;
+                }
+            }
+
+            string At(int offset) => fields.Length > next + offset ? fields[next + offset] : "";
+
+            devices.Add(new ImportedDevice(
+                new DeviceEntry(
+                    Host: host,
+                    UseSsh: useSsh,
+                    UserName: At(0),
+                    Memo: fields.Length > next + 3 ? string.Join(", ", fields[(next + 3)..]) : ""),
+                Password: At(1),
+                EnablePassword: At(2)));
+        }
+
+        return new CsvParseResult(devices, comments, errors);
+    }
+
     public static DeviceListParseResult Parse(string? text, bool defaultUseSsh, int limit = DefaultLimit)
     {
         List<DeviceEntry> devices = [];

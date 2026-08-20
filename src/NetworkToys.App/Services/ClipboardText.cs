@@ -12,9 +12,11 @@ namespace NetworkToys.App.Services;
 /// </summary>
 internal static class ClipboardText
 {
-    public static void Copy(string text)
+    /// <returns>コピーできたか。<b>呼ぶ側は結果を画面に出す</b>（押しても無反応だと
+    /// 写ったのか分からない。2026-08-20 ユーザー指示）。</returns>
+    public static bool Copy(string text)
     {
-        if (string.IsNullOrEmpty(text)) return;
+        if (string.IsNullOrEmpty(text)) return false;
 
         Exception? last = null;
 
@@ -25,7 +27,7 @@ internal static class ClipboardText
                 // SetText と違い、掴まれていても例外の代わりに false を返す版がある。
                 // copy:true は終了後もクリップボードに残す指定
                 Clipboard.SetDataObject(text, copy: true);
-                return;
+                return true;
             }
             catch (Exception ex)
             {
@@ -35,5 +37,7 @@ internal static class ClipboardText
         }
 
         if (last is not null) CrashLog.Write(last, "Clipboard.SetDataObject");
+
+        return false;
     }
 }

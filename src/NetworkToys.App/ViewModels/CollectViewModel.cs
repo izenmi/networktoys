@@ -140,6 +140,9 @@ public sealed class CollectViewModel : ObservableObject
     /// <summary>収集が終わって伏せ字欄を空にしてほしい、という合図。</summary>
     public event EventHandler? SecretsCleared;
 
+    /// <summary>CSV からパスワードを取り込んだので、伏せ字欄へ映してほしいという合図。</summary>
+    public event EventHandler? SecretsImported;
+
     public ObservableCollection<CollectRowViewModel> Rows { get; } = [];
 
     public IReadOnlyList<CollectPreset> Presets { get; }
@@ -303,10 +306,12 @@ public sealed class CollectViewModel : ObservableObject
     private const string CsvTemplate =
         """
         # ログ採取の機器一覧。1 行 1 台で、この行のような # で始まる行は読み飛ばします。
-        # 列は左から  宛先(IP かホスト名) , 接続方法(ssh か telnet) , ユーザー名 , メモ
-        # ユーザー名とメモは空でも構いません。パスワードは書けません(取り込んだ後に画面で入れます)。
-        192.168.1.1,ssh,admin,本社コアSW
-        192.168.1.2,telnet,,旧ルータ
+        # 列は左から  宛先(IP かホスト名) , 接続方法(ssh か telnet) , ユーザー名 , パスワード , enable , メモ
+        # ユーザー名から後ろは空でも構いません(パスワードは取り込んだ後に画面でも入れられます)。
+        # ※ パスワードを書いたファイルは、使い終わったら消してください。アプリはこのファイルを書き出しません。
+        192.168.1.1,ssh,admin,LoginPass,EnablePass,本社コアSW
+        192.168.1.2,telnet,admin,LoginPass,,旧ルータ(enable なし)
+        10.0.0.1,ssh,ops,,,パスワードは画面で入れる
         """;
 
     private void ImportCsv()
@@ -325,7 +330,7 @@ public sealed class CollectViewModel : ObservableObject
             return;
         }
 
-        DeviceListParseResult parsed = DeviceListParser.Parse(text, defaultUseSsh: true);
+        DeviceListParser.CsvParseResult parsed = DeviceListParser.ParseCsv(text, defaultUseSsh: true);
 
         if (parsed.Devices.Count == 0)
         {
@@ -338,24 +343,41 @@ public sealed class CollectViewModel : ObservableObject
         // 宛先リストからの取り込みと同じ足し方(既にある宛先は飛ばす)
         HashSet<string> known = [.. Rows.Select(r => r.Host)];
         int added = 0;
+        int withSecrets = 0;
 
-        foreach (DeviceEntry entry in parsed.Devices)
+        foreach (DeviceListParser.ImportedDevice device in parsed.Devices)
         {
-            if (!known.Add(entry.Host)) continue;
+            if (!known.Add(device.Entry.Host)) continue;
 
             // ユーザー名が書かれていなければ、前に使ったものを埋める
-            DeviceEntry filled = entry.UserName.Length > 0
-                ? entry
-                : entry with { UserName = Settings.Current.CollectUserNames.GetValueOrDefault(entry.Host, "") };
+            DeviceEntry filled = device.Entry.UserName.Length > 0
+                ? device.Entry
+                : device.Entry with { UserName = Settings.Current.CollectUserNames.GetValueOrDefault(device.Entry.Host, "") };
 
-            AddRow(filled);
+            CollectRowViewModel row = AddRow(filled);
+
+            // パスワードは行の VM にだけ入れる（設定には書かない決まり。CSV の側は
+            // ユーザーの手元のファイルで、書き出す口はひな型だけ）
+            if (device.Password.Length > 0 || device.EnablePassword.Length > 0)
+            {
+                row.Password = device.Password;
+                row.EnablePassword = device.EnablePassword;
+                withSecrets++;
+            }
+
             added++;
         }
 
+        // PasswordBox はバインドを持たないので、画面側に「入れ直して」と合図する
+        if (withSecrets > 0) SecretsImported?.Invoke(this, EventArgs.Empty);
+
         string skipped = parsed.Devices.Count - added > 0 ? $"（{parsed.Devices.Count - added} 台は追加済み）" : "";
         string errors = parsed.Errors.Count > 0 ? $"　⚠ {parsed.Errors[0]}" : "";
+        string secrets = withSecrets > 0
+            ? $"パスワードも {withSecrets} 台ぶん取り込みました。"
+            : "パスワードを入れてください。";
 
-        LastImportSummary = $"CSV から {added} 台を追加しました{skipped}。パスワードを入れてください。{errors}";
+        LastImportSummary = $"CSV から {added} 台を追加しました{skipped}。{secrets}{errors}";
         Status = LastImportSummary;
     }
 
@@ -384,10 +406,14 @@ public sealed class CollectViewModel : ObservableObject
         }
     }
 
-    private void AddRow(DeviceEntry entry)
+    private CollectRowViewModel AddRow(DeviceEntry entry)
     {
-        Rows.Add(new CollectRowViewModel(entry));
+        var row = new CollectRowViewModel(entry);
+
+        Rows.Add(row);
         StartCommand.RaiseCanExecuteChanged();
+
+        return row;
     }
 
     private void RemoveRow(CollectRowViewModel? row)

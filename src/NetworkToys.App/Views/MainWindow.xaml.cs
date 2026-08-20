@@ -78,6 +78,11 @@ public partial class MainWindow : Window
         _shell.Collect.RequestImport += (_, _) => ImportTargetsIntoCollect();
         _shell.Collect.SecretsCleared += (_, _) => ClearCollectPasswordBoxes();
 
+        // CSV から取り込んだパスワードを伏せ字欄へ映す。行はいま足されたばかりで
+        // 実体化がまだなので、レイアウトが済んでから流し込む
+        _shell.Collect.SecretsImported += (_, _) => Dispatcher.BeginInvoke(
+            FillCollectPasswordBoxes, System.Windows.Threading.DispatcherPriority.Loaded);
+
         // 宛先リストの名前を聞くのも画面の仕事（Ping と TCP で別々に持つ）
         // 別の名前を打ったのに既存とぶつかるときだけ、上書きしてよいか聞く。
         // いま選んでいる名前のままの保存（意図した更新）には聞かない（2026-08-20 の UI 改善）
@@ -1306,6 +1311,25 @@ public partial class MainWindow : Window
     /// 収集が終わったら画面の伏せ字欄も空にする
     /// （VM 側の値を消しても <see cref="PasswordBox"/> の中身は残るため）。
     /// </summary>
+    /// <summary>
+    /// 行 VM のパスワードを伏せ字欄へ映す。PasswordBox はバインドを持たないので、
+    /// CSV から取り込んだ直後はこちらから押し込むしかない（欄が空のままだと
+    /// 「入っていない」と誤読して打ち直してしまう）。
+    /// </summary>
+    private void FillCollectPasswordBoxes()
+    {
+        foreach (PasswordBox box in FindPasswordBoxes(this))
+        {
+            if (box.DataContext is not CollectRowViewModel row) continue;
+
+            string wanted = Equals(box.Tag, "enable") ? row.EnablePassword : row.Password;
+
+            // 同じ値の入れ直しでも PasswordChanged は飛ぶが、書き戻る値も同じなので害はない
+            if (box.Tag is "login" or "enable" && box.Password != wanted)
+                box.Password = wanted;
+        }
+    }
+
     private void ClearCollectPasswordBoxes()
     {
         // 起点をウィンドウ全体にする。収集タブを束ねたとき、親が選ばれていないと
@@ -1583,7 +1607,14 @@ public partial class MainWindow : Window
 
     private void OnCopyRowAddress(object sender, RoutedEventArgs e) => CopyText(AddressOf(sender));
 
-    private static void CopyText(string text) => Services.ClipboardText.Copy(text);
+    private void CopyText(string text)
+    {
+        // 押しても無反応だと写ったのか分からない（2026-08-20 ユーザー指示）
+        if (Services.ClipboardText.Copy(text))
+            ShowNotice($"✓ コピーしました: {text}");
+        else
+            ShowNotice("コピーできませんでした", isProblem: true);
+    }
 
     /// <summary>
     /// 無線画面は開かれたときに初めて API を叩く。

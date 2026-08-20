@@ -14,7 +14,10 @@ public sealed class FtpViewModel : FileServerViewModel
 
     public FtpViewModel(string? localAddress) : base("ftp", 21, localAddress)
     {
-        CopyCommandCommand = new RelayCommand(() => ClipboardText.Copy(CommandLine));
+        // 押しても無反応だと写ったのか分からない（2026-08-20 ユーザー指示）
+        CopyCommandCommand = new RelayCommand(() => Status = ClipboardText.Copy(CommandLine)
+            ? "✓ コマンドをコピーしました（パスワード入り）。機器の CLI に貼り付けてください。"
+            : "コピーできませんでした。もう一度お試しください。");
     }
 
     /// <summary>

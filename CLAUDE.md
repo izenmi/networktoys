@@ -164,8 +164,12 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **機器の一覧だけ仮想化を切る。** 行コンテナを使い回すと `PasswordBox` はバインドを持たないので `DataContext` が変わっても中身が入れ替わらず、**スクロールしただけで別の機器の欄に前のパスワードが載る**（そのまま送信されうる）。「一覧は仮想化必須」への明示的な例外。
 - 収集した出力は `collect\` **直下**に置く（2026-08-20 ユーザー指示で回ごとのフォルダをやめた。
   ファイル名に機器名と日時が入るので混ざらない）。**`logs\` には置かない** — `SessionLogService.CleanupOldLogs` が 30 日で `.log` を消す。
-- **機器一覧の CSV は `DeviceListParser` の書式そのもの**（`宛先,ssh|telnet,ユーザー名,メモ`）。
-  取り込みもひな型の書き出しも同じ書式で、**2 本目の書式を作らない**。パスワードの列は作らない。
+- **機器一覧の CSV は `DeviceListParser.ParseCsv`**（`宛先,ssh|telnet,ユーザー名,パスワード,enable,メモ`。
+  2026-08-20 ユーザー指示でパスワードの列を足した）。**パスワードは `ImportedDevice` の側だけが持ち、
+  `DeviceEntry` には入れない** — あちらは settings.json へ往復する（型で分けてあり、xUnit が
+  `DeviceEntry` にパスワードのプロパティが無いことを固定している）。**この書式を書き出すのは
+  ひな型だけ**（実物のパスワードを書き出す口は作らない）。取り込んだパスワードは
+  `SecretsImported` → `FillCollectPasswordBoxes` で伏せ字欄へ映す（PasswordBox はバインド不可のため）。
 - **`Path.GetInvalidFileNameChars()` を使わない。** Linux では `/` と NUL しか返さず、開発機と CI でテストの結果が変わる。禁止文字は明示列挙する。
 
 ### 差分の取り方（差分比較・ACI の差分比較）
