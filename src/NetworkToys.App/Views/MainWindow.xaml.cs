@@ -1107,7 +1107,8 @@ public partial class MainWindow : Window
              + "リポジトリの THIRD-PARTY-NOTICES.txt をご覧ください。\n"
              + "https://github.com/izenmi/networktoys/blob/main/THIRD-PARTY-NOTICES.txt";
 
-        TextViewDialog.Show(this, "ライセンス情報", text);
+        // ライセンス本文は桁を揃えて書かれているので折り返さない（罫線と字下げが崩れる）
+        TextViewDialog.Show(this, "ライセンス情報", text, wrap: false);
     }
 
     /// <summary>埋め込んだライセンス本文。読めなければ null。</summary>
