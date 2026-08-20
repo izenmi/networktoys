@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 
 namespace NetworkToys.Core.Addressing;
@@ -11,6 +12,7 @@ namespace NetworkToys.Core.Addressing;
 /// </summary>
 public sealed record IpPlan(
     string InterfaceName,
+    int InterfaceIndex,
     bool Dhcp,
     IPAddress? Address,
     int PrefixLength,
@@ -23,7 +25,7 @@ public sealed record IpPlan(
     /// warning は「適用はできるが確認してほしい」(ゲートウェイがサブネット外、など)。
     /// </summary>
     public static IpPlan? Parse(
-        string interfaceName, bool dhcp,
+        string interfaceName, int interfaceIndex, bool dhcp,
         string address, string mask, string gateway, string dns1, string dns2,
         out string? error, out string? warning)
     {
@@ -46,7 +48,7 @@ public sealed record IpPlan(
         }
 
         if (dhcp)
-            return new IpPlan(name, true, null, 0, null, null, null);
+            return new IpPlan(name, interfaceIndex, true, null, 0, null, null, null);
 
         address = (address ?? "").Trim();
         mask = (mask ?? "").Trim();
@@ -114,7 +116,7 @@ public sealed record IpPlan(
                 warning ??= "ブロードキャストアドレスを指定しています。";
         }
 
-        return new IpPlan(name, false, ip, prefix, gw, d1, d2);
+        return new IpPlan(name, interfaceIndex, false, ip, prefix, gw, d1, d2);
     }
 
     /// <summary>
@@ -124,27 +126,36 @@ public sealed record IpPlan(
     /// </summary>
     public IReadOnlyList<string> ToNetshScript()
     {
+        // name= には名前でなく番号を渡す。日本語のアダプタ名は文字コード事故の入口で、
+        // スクリプトの書き方と netsh の読み方が食い違うと ERROR_INVALID_NAME
+        // (「ファイル名、ディレクトリ名、またはボリューム ラベルの構文が間違っています」)に
+        // なる(2026-08-21 実機報告)。番号は純 ASCII なのでこの罠が構造的に消える。
+        // 番号が取れなかったアダプタ(IPv4 が無効など)だけ名前で渡す
+        string target = InterfaceIndex > 0
+            ? InterfaceIndex.ToString(CultureInfo.InvariantCulture)
+            : $"\"{InterfaceName}\"";
+
         var lines = new List<string>(3);
 
         if (Dhcp)
         {
-            lines.Add($"interface ipv4 set address name=\"{InterfaceName}\" source=dhcp");
-            lines.Add($"interface ipv4 set dnsservers name=\"{InterfaceName}\" source=dhcp");
+            lines.Add($"interface ipv4 set address name={target} source=dhcp");
+            lines.Add($"interface ipv4 set dnsservers name={target} source=dhcp");
             return lines;
         }
 
         string maskText = IpMath.FromUInt32(IpMath.PrefixToMask(PrefixLength)).ToString();
-        string addressLine = $"interface ipv4 set address name=\"{InterfaceName}\" static {Address} {maskText}";
+        string addressLine = $"interface ipv4 set address name={target} static {Address} {maskText}";
         if (Gateway is not null)
             addressLine += $" {Gateway}";
         lines.Add(addressLine);
 
         lines.Add(Dns1 is not null
-            ? $"interface ipv4 set dnsservers name=\"{InterfaceName}\" static {Dns1} primary validate=no"
-            : $"interface ipv4 set dnsservers name=\"{InterfaceName}\" static none validate=no");
+            ? $"interface ipv4 set dnsservers name={target} static {Dns1} primary validate=no"
+            : $"interface ipv4 set dnsservers name={target} static none validate=no");
 
         if (Dns2 is not null)
-            lines.Add($"interface ipv4 add dnsservers name=\"{InterfaceName}\" {Dns2} index=2 validate=no");
+            lines.Add($"interface ipv4 add dnsservers name={target} {Dns2} index=2 validate=no");
 
         return lines;
     }

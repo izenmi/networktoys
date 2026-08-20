@@ -44,6 +44,7 @@ internal sealed record NetworkSnapshot(
 public sealed record NetworkAdapterInfo(
     string Name,
     string Description,
+    int InterfaceIndex,
     bool IsUp,
     bool IsDhcp,
     IPAddress? Address,
@@ -103,13 +104,16 @@ internal static class NetworkEnvironment
                 }
 
                 bool isDhcp = false;
+                int interfaceIndex = 0;
                 try
                 {
-                    isDhcp = properties.GetIPv4Properties().IsDhcpEnabled;
+                    IPv4InterfaceProperties v4 = properties.GetIPv4Properties();
+                    isDhcp = v4.IsDhcpEnabled;
+                    interfaceIndex = v4.Index;
                 }
                 catch (NetworkInformationException)
                 {
-                    // IPv4 が無効なアダプタでは取れない。固定扱いにしておく
+                    // IPv4 が無効なアダプタでは取れない。固定扱い・番号なし(=名前で渡す)にしておく
                 }
 
                 IPAddress? gateway = properties.GatewayAddresses
@@ -121,6 +125,7 @@ internal static class NetworkEnvironment
                 adapters.Add(new NetworkAdapterInfo(
                     nic.Name,
                     nic.Description,
+                    interfaceIndex,
                     nic.OperationalStatus == OperationalStatus.Up,
                     isDhcp,
                     unicast?.Address,

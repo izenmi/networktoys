@@ -258,7 +258,7 @@ public sealed class IpConfigViewModel : ObservableObject
         if (SelectedAdapter is not { } adapter || IsApplying)
             return;
 
-        IpPlan? plan = IpPlan.Parse(adapter.Name, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
+        IpPlan? plan = IpPlan.Parse(adapter.Name, adapter.InterfaceIndex, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
             out string? error, out _);
         if (plan is null)
         {
@@ -409,7 +409,7 @@ public sealed class IpConfigViewModel : ObservableObject
             return;
         }
 
-        IpPlan? plan = IpPlan.Parse(SelectedAdapter.Name, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
+        IpPlan? plan = IpPlan.Parse(SelectedAdapter.Name, SelectedAdapter.InterfaceIndex, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
             out string? error, out string? warning);
 
         _hasError = plan is null;

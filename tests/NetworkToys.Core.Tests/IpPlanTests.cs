@@ -6,12 +6,12 @@ namespace NetworkToys.Core.Tests;
 public class IpPlanTests
 {
     private static IpPlan? Parse(
-        string name = "イーサネット", bool dhcp = false,
+        string name = "イーサネット", int index = 0, bool dhcp = false,
         string address = "192.168.1.10", string mask = "255.255.255.0",
         string gateway = "", string dns1 = "", string dns2 = "",
         string? expectError = null, string? expectWarningContains = null)
     {
-        IpPlan? plan = IpPlan.Parse(name, dhcp, address, mask, gateway, dns1, dns2,
+        IpPlan? plan = IpPlan.Parse(name, index, dhcp, address, mask, gateway, dns1, dns2,
             out string? error, out string? warning);
 
         if (expectError is null)
@@ -112,6 +112,29 @@ public class IpPlanTests
     }
 
     // ===== ToNetshScript =====
+
+    [Fact]
+    public void 番号が取れたアダプタは名前でなく番号で流す()
+    {
+        // 日本語のアダプタ名は文字コード事故の入口(netsh が ERROR_INVALID_NAME を返した実例あり)。
+        // 番号は純 ASCII なので、スクリプトの文字コードに依らず届く
+        IpPlan plan = Parse(index: 12, gateway: "192.168.1.1", dns1: "8.8.8.8", dns2: "8.8.4.4")!;
+
+        Assert.Equal(new[]
+        {
+            "interface ipv4 set address name=12 static 192.168.1.10 255.255.255.0 192.168.1.1",
+            "interface ipv4 set dnsservers name=12 static 8.8.8.8 primary validate=no",
+            "interface ipv4 add dnsservers name=12 8.8.4.4 index=2 validate=no",
+        }, plan.ToNetshScript());
+
+        IpPlan viaDhcp = Parse(index: 12, dhcp: true)!;
+
+        Assert.Equal(new[]
+        {
+            "interface ipv4 set address name=12 source=dhcp",
+            "interface ipv4 set dnsservers name=12 source=dhcp",
+        }, viaDhcp.ToNetshScript());
+    }
 
     [Fact]
     public void Full_static_config_produces_three_lines()
