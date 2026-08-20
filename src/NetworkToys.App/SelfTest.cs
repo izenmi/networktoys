@@ -1104,6 +1104,24 @@ internal static class SelfTest
                    $"引数の形が違う: {args}");
         });
 
+        Check("昇格 netsh の出力はコードページを見分けて読む", () =>
+        {
+            // 実機で netsh がどの形で書くかは環境次第(UTF-16 だった実例あり)。4 形とも固定する
+            const string text = "要素が見つかりません。 OK 1 行目";
+
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+            var utf16 = System.Text.Encoding.Unicode;
+            byte[] bom = [0xFF, 0xFE, .. utf16.GetBytes(text)];
+
+            Assert(Services.ElevatedNetsh.DecodeConsoleOutput(bom) == text, "BOM 付き UTF-16 が読めない");
+            Assert(Services.ElevatedNetsh.DecodeConsoleOutput(utf16.GetBytes(text + "\r\n")) == text + "\r\n",
+                   "BOM 無し UTF-16 が読めない");
+            Assert(Services.ElevatedNetsh.DecodeConsoleOutput(System.Text.Encoding.UTF8.GetBytes(text)) == text,
+                   "UTF-8 が読めない");
+            Assert(Services.ElevatedNetsh.DecodeConsoleOutput(System.Text.Encoding.GetEncoding(932).GetBytes(text)) == text,
+                   "cp932 が読めない");
+        });
+
         Check("一覧から次の道具へ送れる（行の型からアドレスが取れる）", () =>
         {
             // メニューは 6 つの一覧で 1 つの定義を使い回すので、

@@ -111,9 +111,9 @@ internal static class ElevatedNetsh
 
         try
         {
-            // リダイレクトされたコンソール出力は OEM コードページ(日本語環境では cp932)
-            string[] lines = [.. File.ReadAllLines(outputPath, OemEncoding())
-                .Select(l => l.Trim())
+            string[] lines = [.. DecodeConsoleOutput(File.ReadAllBytes(outputPath))
+                .Split('\n')
+                .Select(l => l.Trim('\r', ' ', '\t'))
                 .Where(l => l.Length > 0)];
 
             if (lines.Length == 0) return fallback;
@@ -128,22 +128,24 @@ internal static class ElevatedNetsh
         }
     }
 
-    private static Encoding OemEncoding()
+    /// <summary>
+    /// リダイレクトされた netsh の出力を文字にする。<b>コードページを決め打ちしない</b> —
+    /// netsh はリダイレクト先へ UTF-16 で書くことがあり、cp932 で読むと化ける
+    /// (2026-08-21 に実機で化けた)。BOM か NUL バイトの有無で UTF-16LE を見分け、
+    /// それ以外は UTF-8 厳密 → cp932 の順(ファイル読み込みと同じ判定)。
+    /// </summary>
+    internal static string DecodeConsoleOutput(byte[] bytes)
     {
-        try
-        {
-            if (!_encodingRegistered)
-            {
-                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-                _encodingRegistered = true;
-            }
+        if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+            return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
 
-            return Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
-        {
-            return Encoding.UTF8;
-        }
+        // cp932/UTF-8 のテキストに NUL は現れない。UTF-16 なら改行(0A 00)や
+        // 空白(20 00)で必ず入るので、1 つでもあれば UTF-16LE とみなす
+        // (日本語主体の文は「奇数位置の NUL が多い」では拾えない — 漢字の上位バイトは NUL でない)
+        if (bytes.Length >= 4 && bytes.Length % 2 == 0 && Array.IndexOf(bytes, (byte)0) >= 0)
+            return Encoding.Unicode.GetString(bytes);
+
+        return DroppedText.Decode(bytes);
     }
 
     private static Encoding AnsiEncoding()
