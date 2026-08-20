@@ -552,9 +552,40 @@
                                        RadiusX="2" RadiusY="2" />
                         </Grid>
                     </Border>
+                    <ControlTemplate.Triggers>
+                        <!--
+                            割合を持たない待ち（IsIndeterminate）は、満タンの帯が明滅する。
+                            WPF は不定モードで PART_Indicator を全幅にするだけなので、
+                            そのままだと 100% 完了と見分けが付かない。流れる帯のアニメは
+                            実機で見ずに調整できないため、確実に動く明滅にとどめる（2026-08-20）。
+                        -->
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard x:Name="IndeterminatePulse">
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetName="PART_Indicator"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="1.0" To="0.25" Duration="0:0:0.7" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="IndeterminatePulse" />
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!--
+        実行中の帯。どの画面でも同じ場所（操作列の直下）・同じ太さで出す（2026-08-20 の UI 改善）。
+        キー付きスタイルは暗黙スタイルを継承しないので BasedOn を明示する。
+    -->
+    <Style x:Key="BusyBar" TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+        <Setter Property="Height" Value="3" />
+        <Setter Property="Margin" Value="0,0,0,4" />
     </Style>
 
     <!--

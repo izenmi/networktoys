@@ -105,6 +105,18 @@ public class MainWindowTableTests
         Assert.Equal($"11,0,{11 + ScrollBarWidth},3", header.Attribute("Margin")?.Value);
     }
 
+    [Fact]
+    public void 進行の帯はすべて共通スタイルで描く()
+    {
+        // 高さや余白を直書きすると、画面ごとに帯の見た目がずれていく
+        // （2026-08-20 の UI 改善で BusyBar に統一した）
+        foreach (Match bar in Regex.Matches(Xaml(), @"<ProgressBar[^>]*>", RegexOptions.Singleline))
+        {
+            Assert.True(bar.Value.Contains("Style=\"{StaticResource BusyBar}\"", StringComparison.Ordinal),
+                        $"BusyBar でない ProgressBar: {Regex.Replace(bar.Value, @"\s+", " ")}");
+        }
+    }
+
     /// <summary>表ごとに、見つかった列定義の「形」を並べる。</summary>
     private static IEnumerable<(string Table, List<string> Shapes)> ColumnShapes()
     {

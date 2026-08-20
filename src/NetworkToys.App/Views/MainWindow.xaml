@@ -648,8 +648,13 @@
                             <TextBox Width="180" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
                                      FontFamily="{DynamicResource Font.Mono}" Margin="0,0,12,0"
                                      ToolTip="宛先・備考・解決したアドレスの部分一致で絞り込みます。測定は続きます。" />
+                            <!-- 進行状態。TCP タブと同じ位置に出す（メニュー帯右端だけでは
+                                 見落とす。2026-08-20 の UI 改善） -->
+                            <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       Margin="0,0,12,0" />
                             <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="330"
                                        Text="行を右クリックすると、SSH/Telnet 接続や経路調査ができます。" />
                         </StackPanel>
 
@@ -2017,7 +2022,7 @@
                                     </DockPanel>
 
                                     <!-- 進み具合。細く 1 本引くだけで、押したあと動いていることは伝わる -->
-                                    <ProgressBar DockPanel.Dock="Top" Height="3" Margin="0,0,0,4"
+                                    <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}"
                                                  Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100"
                                                  Visibility="{Binding HasProgress, Converter={StaticResource BoolToVisibility}}" />
                                     <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
@@ -2168,6 +2173,7 @@
                                 <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
+                            <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
 
                             <!-- 位置情報が許可されていないときの案内 -->
                             <Border Background="{DynamicResource Brush.Warn.Bg}"
@@ -2535,6 +2541,7 @@
                             <Button Content="中断" Command="{Binding CancelCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
                         </WrapPanel>
+                        <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
 
                         <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"
                                    Foreground="{DynamicResource Brush.Warn.Fg}" TextWrapping="Wrap"
@@ -3781,6 +3788,7 @@
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </WrapPanel>
+                        <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
 
                         <!-- 経路が変わった記録 -->
                         <Border DockPanel.Dock="Bottom" Margin="0,6,0,0" MaxHeight="96"
@@ -3946,8 +3954,11 @@
                                         ToolTip="スキャン結果(IP・RTT・ホスト名・MAC・ベンダー・開放ポート)を CSV に保存します。" />
                             </WrapPanel>
 
-                            <!-- RangeBase.Value は既定が TwoWay。読み取り専用プロパティに繋ぐので OneWay を明示する -->
-                            <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Margin="0,5,0,0" />
+                            <!-- RangeBase.Value は既定が TwoWay。読み取り専用プロパティに繋ぐので OneWay を明示する。
+                                 走っていない間は出さない（0% の帯が常に居ると、動いていないのに動きかけに見える） -->
+                            <ProgressBar Style="{StaticResource BusyBar}" Margin="0,5,0,4"
+                                         Value="{Binding Progress, Mode=OneWay}" Maximum="100"
+                                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
 
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        Margin="0,6,0,0" TextWrapping="Wrap" />
@@ -4073,6 +4084,7 @@
                             <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
+                        <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
 
                         <!-- 問い合わせ先 -->
                         <DockPanel DockPanel.Dock="Left" Width="164" Margin="0,0,10,0">
@@ -5174,6 +5186,7 @@
                             <Button Content="保存先を開く" Command="{Binding OpenFolderCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,0,2" />
                         </WrapPanel>
+                        <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
 
                         <TextBlock DockPanel.Dock="Top" Text="{Binding Notice}"
                                    Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,4"
@@ -5545,7 +5558,8 @@
                                 </Style>
                             </StackPanel.Style>
                             <!-- RangeBase.Value は既定が TwoWay。読み取り専用プロパティに繋ぐので OneWay を明示する -->
-                            <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100" />
+                            <ProgressBar Style="{StaticResource BusyBar}" Margin="0"
+                                         Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100" />
                             <TextBlock Text="{Binding ProgressText}" Style="{StaticResource Caption}" Margin="0,4,0,0" />
                         </StackPanel>
 
@@ -5765,6 +5779,7 @@
                             <Button Content="CSV で保存" Command="{Binding SaveCommand}"
                                     Style="{StaticResource Button.Subtle}" />
                         </StackPanel>
+                        <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
 
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <TextBlock Text="OID" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
@@ -5894,6 +5909,7 @@
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,0,2"
                                     ToolTip="直前に取れた生の応答(JSON)を出します。表が空のときの切り分け用です。" />
                         </WrapPanel>
+                        <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
 
                         <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}"
                                    Foreground="{DynamicResource Brush.Warn.Fg}" TextWrapping="Wrap"
