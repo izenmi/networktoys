@@ -856,7 +856,7 @@ public partial class MainWindow : Window
             using (FileStream stream = File.Create(path))
                 CaptureWindow().Save(stream);
 
-            ShowNotice("✓ 保存しました");
+            ShowNotice("✓ 保存しました（クリックで開く）", openPath: path);
         }
         catch (Exception ex)
         {
@@ -943,9 +943,40 @@ public partial class MainWindow : Window
     /// 2 秒では保存の成否を見逃すので、通常 5 秒・<paramref name="isProblem"/> なら 10 秒
     /// （2026-08-20 の UI 改善。失敗はゆっくり読めるように）。
     /// </summary>
-    private void ShowNotice(string text, bool isProblem = false)
+    /// <summary>知らせのクリックで開くファイル。無ければ普通の知らせ（クリックしても何も起きない）。</summary>
+    private string? _noticeOpenPath;
+
+    /// <summary>
+    /// 知らせのクリック。開く対象があるときだけ、explorer でそのファイルを選択表示する。
+    /// 結線は常時（付け外しの設計をしない — 外し忘れの道を作らないため）。
+    /// </summary>
+    private void OnNoticeClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_noticeOpenPath is not { Length: > 0 } path) return;
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{path}\"",
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex, "MainWindow.OnNoticeClick");
+        }
+    }
+
+    // internal は自己診断のため（開く対象の有無でカーソルが付け外しされることを見る）
+    internal void ShowNotice(string text, bool isProblem = false, string? openPath = null)
     {
         _noticeTimer?.Stop();
+
+        // 開く対象は知らせごとに必ず入れ替える（前のパスを引きずらない）
+        _noticeOpenPath = openPath;
+        HeaderNotice.Cursor = openPath is null ? null : Cursors.Hand;
 
         HeaderNotice.Text = text;
 
@@ -954,6 +985,8 @@ public partial class MainWindow : Window
         {
             _noticeTimer.Stop();
             HeaderNotice.Text = "";
+            _noticeOpenPath = null;
+            HeaderNotice.Cursor = null;
         };
         _noticeTimer.Start();
     }
@@ -1614,6 +1647,50 @@ public partial class MainWindow : Window
     }
 
     private void OnCopyRowAddress(object sender, RoutedEventArgs e) => CopyText(AddressOf(sender));
+
+    /// <summary>
+    /// 行の見えている値をタブ区切りでコピーする（2026-08-20 の UX 改善。チケットへ 1 行貼る用）。
+    /// <b>行の型ごとの文字列化は書かない</b> — メニューが載っていた行の視覚ツリーを
+    /// 文書順に下り、TextBlock の文字を集める。TextBox / PasswordBox は拾わない
+    /// （編集欄と秘密を写さないため）。
+    /// </summary>
+    private void OnCopyRow(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Parent: ContextMenu { PlacementTarget: DependencyObject row } }) return;
+
+        CopyText(RowTextOf(row));
+    }
+
+    /// <summary>行の中の TextBlock の文字を文書順にタブ区切りで並べる。internal は自己診断のため。</summary>
+    internal static string RowTextOf(DependencyObject row)
+    {
+        var cells = new List<string>();
+
+        void Walk(DependencyObject node)
+        {
+            int count = VisualTreeHelper.GetChildrenCount(node);
+
+            for (int i = 0; i < count; i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(node, i);
+
+                if (child is TextBlock { Text.Length: > 0 } cell)
+                {
+                    cells.Add(cell.Text);
+                    continue;   // TextBlock の中（Run）は Text が拾っている
+                }
+
+                // 編集欄と伏せ字は写さない
+                if (child is TextBox or PasswordBox) continue;
+
+                Walk(child);
+            }
+        }
+
+        Walk(row);
+
+        return string.Join("\t", cells);
+    }
 
     private void CopyText(string text)
     {

@@ -52,6 +52,7 @@
             <Separator />
             <MenuItem Header="TCP Ping に追加" Click="OnSendToTcp" />
             <MenuItem Header="アドレスをコピー" Click="OnCopyRowAddress" />
+            <MenuItem Header="行をコピー" Click="OnCopyRow" ToolTip="行の見えている値をタブ区切りでコピーします（Excel やチケットに貼れます）。" />
         </ContextMenu>
 
         <!-- 通信の相手（接続・遮断・Meraki のクライアント）。機器として扱う項目は出さない -->
@@ -64,6 +65,7 @@
             <MenuItem Header="DNS 解決" Click="OnSendToDns" />
             <Separator />
             <MenuItem Header="アドレスをコピー" Click="OnCopyRowAddress" />
+            <MenuItem Header="行をコピー" Click="OnCopyRow" ToolTip="行の見えている値をタブ区切りでコピーします（Excel やチケットに貼れます）。" />
         </ContextMenu>
 
         <!--
@@ -423,6 +425,7 @@
                                     <Separator />
                                     <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
                                     <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
+                                    <MenuItem Header="行をコピー" Click="OnCopyRow" ToolTip="行の見えている値をタブ区切りでコピーします（Excel やチケットに貼れます）。" />
                                 </ContextMenu>
                             </Border.ContextMenu>
                             <ContentPresenter />
@@ -482,6 +485,7 @@
                                     <Separator />
                                     <MenuItem Header="TCP Ping に追加" Click="OnAddToTcpFromRow" />
                                     <MenuItem Header="アドレスをコピー" Click="OnCopyAddressFromRow" />
+                                    <MenuItem Header="行をコピー" Click="OnCopyRow" ToolTip="行の見えている値をタブ区切りでコピーします（Excel やチケットに貼れます）。" />
                                 </ContextMenu>
                             </Border.ContextMenu>
                             <ContentPresenter />
@@ -662,7 +666,7 @@
                        TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
 
             <!-- 操作の結果を短く知らせる場所(画面保存・ファイルの読み込みなど)。数秒で消える -->
-            <TextBlock x:Name="HeaderNotice" Style="{StaticResource Caption}"
+            <TextBlock x:Name="HeaderNotice" MouseLeftButtonDown="OnNoticeClick" Style="{StaticResource Caption}"
                        VerticalAlignment="Center" Margin="0,0,10,0" />
 
             <!-- 配色の切り替え。メニューにもあるが、押す頻度が高いので右上にも置く

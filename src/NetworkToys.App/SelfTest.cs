@@ -867,6 +867,54 @@ internal static class SelfTest
             dialog.Close();
         });
 
+        Check("行のコピーは見えている文字だけをタブ区切りで並べる", () =>
+        {
+            // 行の型ごとの文字列化を書かない代わりに、走査の決まり
+            // （TextBlock を文書順・TextBox と PasswordBox は写さない）をここで固定する
+            var row = new System.Windows.Controls.StackPanel();
+
+            row.Children.Add(new System.Windows.Controls.TextBlock { Text = "192.168.1.1" });
+            row.Children.Add(new System.Windows.Controls.TextBox { Text = "編集欄は写さない" });
+            row.Children.Add(new System.Windows.Controls.PasswordBox { Password = "himitsu" });
+
+            var inner = new System.Windows.Controls.StackPanel();
+            inner.Children.Add(new System.Windows.Controls.TextBlock { Text = "● 応答" });
+            inner.Children.Add(new System.Windows.Controls.TextBlock { Text = "" });   // 空は拾わない
+            row.Children.Add(inner);
+
+            // 視覚ツリーで数えるので、一度実体化する
+            var host = new Window
+            {
+                Content = row, Width = 200, Height = 80,
+                ShowInTaskbar = false, ShowActivated = false,
+                WindowStartupLocation = WindowStartupLocation.Manual, Left = -10000, Top = -10000,
+            };
+            host.Show();
+            host.UpdateLayout();
+
+            string text = Views.MainWindow.RowTextOf(row);
+
+            host.Close();
+
+            Assert(text == "192.168.1.1\t● 応答", $"結合が違う: 「{text}」");
+        });
+
+        Check("知らせは開く対象があるときだけカーソルが変わる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // explorer は起動しない（クリックまではしない）。Cursor の付け外しだけを見る
+            window!.ShowNotice("✓ 保存しました（クリックで開く）", openPath: "C:\\dummy.png");
+            Assert(window.HeaderNotice.Cursor == System.Windows.Input.Cursors.Hand,
+                   "開ける知らせなのにカーソルが手の形でない");
+
+            window.ShowNotice("ふつうの知らせ");
+            Assert(window.HeaderNotice.Cursor is null, "ふつうの知らせでカーソルが戻っていない");
+            Assert(window.HeaderNotice.Text == "ふつうの知らせ", "知らせの文字が入っていない");
+
+            window.ShowNotice("", isProblem: false);   // 後始末（空文字で消す）
+        });
+
         Check("収集: 認証情報の一括入力の小窓を表示できる", () =>
         {
             // 窓はコードで組んでいるので、リソースキーの打ち間違いは実行時にしか出ない
