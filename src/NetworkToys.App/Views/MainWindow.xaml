@@ -599,11 +599,6 @@
                 <Separator />
                 <!-- 列幅はドラッグで変えられる（保存はしないが、その場で戻したいとき用） -->
                 <MenuItem Header="列幅を既定に戻す(_R)" Click="OnResetColumns" />
-                <Separator />
-                <!-- 「その他」16 画面へのキーボード動線（Alt+V → O → 矢印 → Enter）。
-                     メニューバーは葉項目専用（サブメニュー不可）なので、見出しクリックと
-                     同じドロップダウンを降ろす -->
-                <MenuItem Header="その他の画面(_O)..." Click="OnOtherScreensMenu" />
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)" Style="{StaticResource MenuBarItem}">
                 <MenuItem Header="使い方(_U)" Click="OnShowUsage" />
@@ -620,9 +615,8 @@
         -->
         <StackPanel Grid.Row="0" Orientation="Horizontal"
                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
-            <TextBlock Text="{Binding Monitor.StatusMessage}" Style="{StaticResource Caption}"
-                       VerticalAlignment="Center" MaxWidth="320"
-                       TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
+            <!-- Ping の進行状態はタブの中に出す（帯の常駐表示は 2026-08-20 ユーザー指示で削除。
+                 「宛先を書いて〜」の案内が常に居座って煩かった） -->
 
             <TextBlock Text="{Binding Report.Status}" Style="{StaticResource Caption}"
                        VerticalAlignment="Center" MaxWidth="320"

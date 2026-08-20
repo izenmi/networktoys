@@ -1884,10 +1884,9 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 「その他」のドロップダウンを降ろす。見出しクリックと表示メニューの
-    /// 「その他の画面(_O)...」の両方から使う（2026-08-20 の UX 改善で
-    /// キーボード動線 Alt+V → O を足した。メニューバーは葉項目専用なので、
-    /// サブメニューではなく同じ ContextMenu を出す — 出る場所も学習も 1 つで済む）。
+    /// 「その他」のドロップダウンを降ろす（見出しクリックから）。
+    /// 表示メニューにも同じ動線を置いたことがあるが、不要とのユーザー指示で
+    /// 2026-08-20 に削除した。再提案しないこと。
     /// </summary>
     private void OpenOtherTabsMenu()
     {
@@ -1939,8 +1938,6 @@ public partial class MainWindow : Window
 
         menu.IsOpen = true;
     }
-
-    private void OnOtherScreensMenu(object sender, RoutedEventArgs e) => OpenOtherTabsMenu();
 
     /// <summary>
     /// ⓘ をクリックしたら、ホバーの説明と同じ文面を別窓で出す（選択もコピーもできる）。
