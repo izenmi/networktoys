@@ -542,6 +542,8 @@
                 <!-- 消す操作もここに置く（2026-08-16 ユーザー指示で「測定」メニューを畳んだ）。
                      開始と停止は Ping タブの中だけ。F5 / Shift+F5 は InputBindings 側に残る -->
                 <MenuItem Header="Ping の測定結果だけ消す" Click="OnClearPingResults" />
+                <!-- 重さがまるで違う 2 つを隣接させない（押し間違い対策。2026-08-20） -->
+                <Separator />
                 <MenuItem Header="すべて消す（起動直後に戻す）" Click="OnClearAll" />
                 <Separator />
                 <MenuItem Header="終了" Click="OnExit" />
@@ -1259,7 +1261,7 @@
                                         <Button Content="機器から" Click="OnDiffFetchBefore"
                                                 Style="{StaticResource Button.Subtle}" Margin="5,0,0,0"
                                                 ToolTip="機器へ入って、比較する対象の show を 1 本流し、その出力をこの欄に入れます。" />
-                                        <Button Content="保存" Command="{Binding SaveBeforeCommand}"
+                                        <Button Content="テキストで保存" Command="{Binding SaveBeforeCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="5,0,0,0" />
                                     </StackPanel>
                                     <TextBox Text="{Binding BeforeText, UpdateSourceTrigger=PropertyChanged}"
@@ -1282,7 +1284,7 @@
                                         <Button Content="機器から" Click="OnDiffFetchAfter"
                                                 Style="{StaticResource Button.Subtle}" Margin="5,0,0,0"
                                                 ToolTip="機器へ入って、比較する対象の show を 1 本流し、その出力をこの欄に入れます。" />
-                                        <Button Content="保存" Command="{Binding SaveAfterCommand}"
+                                        <Button Content="テキストで保存" Command="{Binding SaveAfterCommand}"
                                                 Style="{StaticResource Button.Subtle}" Margin="5,0,0,0" />
                                     </StackPanel>
                                     <TextBox Text="{Binding AfterText, UpdateSourceTrigger=PropertyChanged}"
@@ -2160,7 +2162,7 @@
                                            MaxWidth="280" TextTrimming="CharacterEllipsis"
                                            ToolTip="{Binding ConnectionSummary}" />
                                 <Button Content="更新" Command="{Binding RefreshCommand}" Margin="0,0,6,0" />
-                                <Button Content="保存" Command="{Binding SaveCommand}"
+                                <Button Content="テキストで保存" Command="{Binding SaveCommand}"
                                         Style="{StaticResource Button.Subtle}" Margin="0,0,10,0"
                                         ToolTip="いまの接続情報と周辺 AP の一覧をテキストで保存します。" />
                                 <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"

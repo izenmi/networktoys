@@ -204,7 +204,7 @@ public sealed class CollectViewModel : ObservableObject
             string text = $"実行 {parsed.RunnableCount} 本 / 注釈 {parsed.CommentLines} 行";
 
             if (blocked > 0) text += $"　⛔ 実行しません {blocked} 本";
-            if (warned > 0) text += $"　▲ 確認 {warned} 本";
+            if (warned > 0) text += $"　△ 確認 {warned} 本";
 
             return text;
         }
@@ -430,7 +430,8 @@ public sealed class CollectViewModel : ObservableObject
         var progress = new Progress<CollectProgress>(p =>
         {
             foreach (CollectRowViewModel row in Rows.Where(r => r.Host == p.Host))
-                row.Status = "● " + p.Message;
+                // 進行中は ▶。● は Ping の「応答あり」専用（記号の規約は CLAUDE.md）
+                row.Status = "▶ " + p.Message;
         });
 
         int done = 0;
@@ -497,8 +498,8 @@ public sealed class CollectViewModel : ObservableObject
                 string mode = result.ReachedEnable ? "" : "（ユーザーモードのまま）";
 
                 row.Status = problems == 0
-                    ? $"✔ 完了 {result.Commands.Count} 本{mode}"
-                    : $"▲ 一部失敗 {result.Commands.Count - problems}/{result.Commands.Count} 本{mode}";
+                    ? $"✓ 完了 {result.Commands.Count} 本{mode}"
+                    : $"△ 一部失敗 {result.Commands.Count - problems}/{result.Commands.Count} 本{mode}";
 
                 done++;
             }
