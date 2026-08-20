@@ -115,6 +115,9 @@ internal static class TabHelp
         ・出るのはこの PC が落としたものだけ。相手側や経路上の機器で落ちた通信は出ない
         ・プロセスが「—」でも不具合ではない。受信の遮断は通信が届く前に落ちるので、
         　持ち主のアプリがそもそも存在しない
+
+        できる操作
+        ・行を右クリック → 相手のアドレスを Ping・TCP Ping・経路調査へ送れる
         """;
 
     /// <summary>IP設定</summary>
@@ -252,6 +255,7 @@ internal static class TabHelp
 
         できる操作
         ・見つけた相手を、そのまま Ping の宛先へ追加する
+        ・行を右クリック → SSH/Telnet 接続・経路調査・ログ採取の機器への追加もできる
         """;
 
     /// <summary>DNS</summary>
@@ -288,6 +292,9 @@ internal static class TabHelp
         ・通信量（送受信 B/秒）だけは管理者権限が要る（ETW という OS の仕組みの制限）
         ・非管理者では「—」になり、画面の案内から昇格して起動し直せる
         ・接続の一覧そのものは、非管理者でも見える
+
+        できる操作
+        ・行を右クリック → 相手のアドレスを Ping・TCP Ping・経路調査へ送れる
         """;
 
     /// <summary>サブネット計算</summary>
@@ -876,6 +883,9 @@ internal static class TabHelp
         ・「warning 以上」「err 以上」に絞れる。絞っても待受は止まらない
         ・受信した内容は logs\ にも残る
         ・初回は Windows ファイアウォールの許可が要る
+
+        できる操作
+        ・行を右クリック → 送信元の IP を Ping や経路調査へ渡せる
         """;
 
     /// <summary>SNMP Trap</summary>
@@ -894,5 +904,8 @@ internal static class TabHelp
         ・varbind は件数で打ち切らない（肝心の中身が 7 個目以降に来る機器があるため）
         ・長い行は一覧で省略し、全文はマウスを載せると出る
         ・初回は Windows ファイアウォールの許可が要る
+
+        できる操作
+        ・行を右クリック → 送信元の IP を Ping や経路調査へ渡せる
         """;
 }
