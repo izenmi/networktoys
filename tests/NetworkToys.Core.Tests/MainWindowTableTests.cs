@@ -137,14 +137,17 @@ public class MainWindowTableTests
     [Fact]
     public void 分割の仕切りは潰れ防止の下限とセットで置く()
     {
-        // GridSplitter で星のトラックを 0 まで潰せると、戻す手掛かりが無くなる。
+        // 仕切りで星のトラックを 0 まで潰せると、戻す手掛かりが無くなる。
         // 仕切りを含む Grid の星トラックは、必ず MinWidth / MinHeight を持つこと
         XDocument document = XDocument.Parse(Xaml());
 
+        // 仕切りは GridSplitter ではなく PaneGrip スタイルの Thumb
+        // （GridSplitter は星＋Min で端まで引くと跳ね戻る癖があり置き換えた）
         XElement[] hosts =
         [
-            .. document.Descendants(Presentation + "GridSplitter")
-                .Select(splitter => splitter.Ancestors(Presentation + "Grid").First())
+            .. document.Descendants(Presentation + "Thumb")
+                .Where(t => t.Attribute("Style")?.Value.Contains("PaneGrip", StringComparison.Ordinal) == true)
+                .Select(grip => grip.Ancestors(Presentation + "Grid").First())
                 .Distinct(),
         ];
 

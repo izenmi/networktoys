@@ -101,22 +101,34 @@
             比率は保存しない（列幅と同じ決まり）。星のトラックには必ず Min を入れること
             （xUnit が突き合わせる。潰れると戻す手掛かりが無くなる）。
         -->
-        <Style x:Key="PaneSplitter.V" TargetType="GridSplitter">
+        <!--
+            GridSplitter は使わない。星サイズ＋Min の組で端までドラッグすると
+            比率が跳ね戻る既知の癖がある（2026-08-20 に実機で報告された）。
+            列幅ドラッグと同じ「Thumb ＋ 掴んでからの総移動量 ＋ 明示クランプ」で、
+            Min にぴったり止まる動きを自前で持つ。
+        -->
+        <Style x:Key="PaneGrip.V" TargetType="Thumb">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="VerticalAlignment" Value="Stretch" />
-            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Cursor" Value="SizeWE" />
             <Setter Property="Focusable" Value="False" />
-            <Setter Property="ResizeBehavior" Value="PreviousAndNext" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Tag" Value="cols" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="Bd" Background="Transparent" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        <Style x:Key="PaneSplitter.H" TargetType="GridSplitter" BasedOn="{StaticResource PaneSplitter.V}">
+        <Style x:Key="PaneGrip.H" TargetType="Thumb" BasedOn="{StaticResource PaneGrip.V}">
             <Setter Property="Cursor" Value="SizeNS" />
-            <Setter Property="ResizeDirection" Value="Rows" />
+            <Setter Property="Tag" Value="rows" />
         </Style>
 
         <!--
@@ -1339,7 +1351,7 @@
                                     <ColumnDefinition Width="*" MinWidth="120" />
                                 </Grid.ColumnDefinitions>
 
-                                <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter.V}" />
+                                <Thumb Grid.Column="1" Style="{StaticResource PaneGrip.V}" DragStarted="OnPaneGrab" DragDelta="OnPaneDrag" />
 
                                 <DockPanel Grid.Column="0" Margin="0,0,5,0">
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
@@ -1485,8 +1497,9 @@
                                     <Border Grid.Row="2" Grid.Column="1" Width="1" Margin="5,0"
                                             Background="{DynamicResource Brush.Border}" IsHitTestVisible="False" />
                                     <!-- 比率の仕切り。掴みやすいよう 11px 全部を当たり判定にする -->
-                                    <GridSplitter Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
-                                                  Style="{StaticResource PaneSplitter.V}" />
+                                    <Thumb Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
+                                           Style="{StaticResource PaneGrip.V}"
+                                           DragStarted="OnPaneGrab" DragDelta="OnPaneDrag" />
 
 <ListBox x:Name="DiffListAfter" Grid.Row="2"
                                                  Grid.Column="2"
@@ -2073,7 +2086,7 @@
                             </Border>
 
                             <!-- 下: 結果。1 行 = 1 項目 × 1 プロキシ -->
-                            <GridSplitter Grid.Row="1" Style="{StaticResource PaneSplitter.H}" />
+                            <Thumb Grid.Row="1" Style="{StaticResource PaneGrip.H}" DragStarted="OnPaneGrab" DragDelta="OnPaneDrag" />
 
                             <Border Grid.Row="2" Background="{DynamicResource Brush.Surface}"
                                     BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
@@ -5807,7 +5820,7 @@
                                 <ColumnDefinition Width="*" MinWidth="150" />
                             </Grid.ColumnDefinitions>
 
-                            <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter.V}" />
+                            <Thumb Grid.Column="1" Style="{StaticResource PaneGrip.V}" DragStarted="OnPaneGrab" DragDelta="OnPaneDrag" />
 
                             <!-- ===== 左: この PC ===== -->
                             <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}"
@@ -7365,7 +7378,7 @@
                                             <ColumnDefinition Width="*" MinWidth="120" />
                                         </Grid.ColumnDefinitions>
 
-                                        <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter.V}" />
+                                        <Thumb Grid.Column="1" Style="{StaticResource PaneGrip.V}" DragStarted="OnPaneGrab" DragDelta="OnPaneDrag" />
 
                                             <DockPanel Grid.Column="0">
                                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
@@ -7427,7 +7440,7 @@
                                             <ColumnDefinition Width="*" MinWidth="120" />
                                         </Grid.ColumnDefinitions>
 
-                                        <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter.V}" />
+                                        <Thumb Grid.Column="1" Style="{StaticResource PaneGrip.V}" DragStarted="OnPaneGrab" DragDelta="OnPaneDrag" />
 
                                             <DockPanel Grid.Column="0">
                                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"

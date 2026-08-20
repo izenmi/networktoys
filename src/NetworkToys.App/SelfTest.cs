@@ -867,6 +867,22 @@ internal static class SelfTest
             dialog.Close();
         });
 
+        Check("仕切りのドラッグは Min にぴったり止まり、跳ね戻らない", () =>
+        {
+            // GridSplitter を置き換えた理由そのもの（2026-08-20 実機報告）。
+            // 端まで引いても Min を割らず、丸めた値がそのまま返ること
+            Assert(Views.MainWindow.PaneClamp(-1000, 300, 120, 300, 120) == -180,
+                   "左（上）の Min で止まらない");
+            Assert(Views.MainWindow.PaneClamp(+1000, 300, 120, 300, 120) == 180,
+                   "右（下）の Min で止まらない");
+            Assert(Views.MainWindow.PaneClamp(50, 300, 120, 300, 120) == 50,
+                   "範囲内の移動が丸められている");
+
+            // 窓が縮んで既に Min を割っているときは、その向きへ動かさない
+            Assert(Views.MainWindow.PaneClamp(-10, 100, 120, 300, 120) == 0,
+                   "Min 割れの側へさらに動いてしまう");
+        });
+
         Check("行のコピーは見えている文字だけをタブ区切りで並べる", () =>
         {
             // 行の型ごとの文字列化を書かない代わりに、走査の決まり

@@ -2048,6 +2048,90 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    // ===== 分割の仕切り（GridSplitter の代わり） =====
+    //
+    // GridSplitter は星サイズ＋Min の組で端までドラッグすると比率が跳ね戻る
+    // （2026-08-20 に実機で報告された）。列幅ドラッグと同じ流儀
+    // （掴んでからの総移動量＋明示クランプ）で、Min にぴったり止める。
+
+    private Grid? _paneGrid;
+    private int _paneIndex;
+    private bool _paneCols;
+    private double _paneStartPrev;
+    private double _paneStartNext;
+    private double _paneStartPos;
+
+    private void OnPaneGrab(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+    {
+        if (sender is not Thumb thumb) return;
+
+        // 仕切りの親 Grid。テンプレートの Border から上がることは無い（Thumb 自身が子）
+        DependencyObject? node = VisualTreeHelper.GetParent(thumb);
+        while (node is not null && node is not Grid) node = VisualTreeHelper.GetParent(node);
+        if (node is not Grid grid) return;
+
+        _paneGrid = grid;
+        _paneCols = Equals(thumb.Tag, "cols");
+        _paneIndex = _paneCols ? Grid.GetColumn(thumb) : Grid.GetRow(thumb);
+
+        if (_paneCols)
+        {
+            _paneStartPrev = grid.ColumnDefinitions[_paneIndex - 1].ActualWidth;
+            _paneStartNext = grid.ColumnDefinitions[_paneIndex + 1].ActualWidth;
+            _paneStartPos = Mouse.GetPosition(this).X;
+        }
+        else
+        {
+            _paneStartPrev = grid.RowDefinitions[_paneIndex - 1].ActualHeight;
+            _paneStartNext = grid.RowDefinitions[_paneIndex + 1].ActualHeight;
+            _paneStartPos = Mouse.GetPosition(this).Y;
+        }
+    }
+
+    private void OnPaneDrag(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (_paneGrid is not { } grid) return;
+
+        // Thumb は自分も動くので、1 回ぶんの差分は足し込まない（列幅ドラッグと同じ理由）。
+        // 総移動量を Min の範囲でクランプするので、端まで引いても跳ね戻らない
+        double total = (_paneCols ? Mouse.GetPosition(this).X : Mouse.GetPosition(this).Y) - _paneStartPos;
+
+        if (_paneCols)
+        {
+            ColumnDefinition prev = grid.ColumnDefinitions[_paneIndex - 1];
+            ColumnDefinition next = grid.ColumnDefinitions[_paneIndex + 1];
+            double d = PaneClamp(total, _paneStartPrev, prev.MinWidth, _paneStartNext, next.MinWidth);
+
+            // 星の重みをピクセル比で入れ直す。見た目はいまの寸法のままで、
+            // 窓を伸縮したときは今までどおり比率で追随する
+            prev.Width = new GridLength(_paneStartPrev + d, GridUnitType.Star);
+            next.Width = new GridLength(_paneStartNext - d, GridUnitType.Star);
+        }
+        else
+        {
+            RowDefinition prev = grid.RowDefinitions[_paneIndex - 1];
+            RowDefinition next = grid.RowDefinitions[_paneIndex + 1];
+            double d = PaneClamp(total, _paneStartPrev, prev.MinHeight, _paneStartNext, next.MinHeight);
+
+            prev.Height = new GridLength(_paneStartPrev + d, GridUnitType.Star);
+            next.Height = new GridLength(_paneStartNext - d, GridUnitType.Star);
+        }
+    }
+
+    /// <summary>
+    /// 仕切りの移動量を、両側が Min を割らない範囲に丸める。
+    /// 窓が縮んでいて既に Min を割っているときは、その向きへは動かさない（0 で止める）。
+    /// internal は自己診断のため。
+    /// </summary>
+    internal static double PaneClamp(
+        double total, double startPrev, double minPrev, double startNext, double minNext)
+    {
+        double lower = -Math.Max(0, startPrev - minPrev);
+        double upper = Math.Max(0, startNext - minNext);
+
+        return Math.Clamp(total, lower, upper);
+    }
+
     /// <summary>そのタブが中に持っている切り替え。無ければ null。</summary>
     /// <summary>
     /// その要素が載っているタブ。<b>論理ツリーでたどる</b> —
