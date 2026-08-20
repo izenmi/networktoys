@@ -26,7 +26,11 @@ public sealed class SnmpGetViewModel : ObservableObject
     private string _community = "public";
     private SnmpVersion _version = SnmpVersion.V2c;
     private string _oidText = "1.3.6.1.2.1.1.1.0";
-    private string _status = string.Empty;
+    /// <summary>何もしていないときの案内。<b>初期値と Reset の戻し先を空文字にしない</b>
+    /// （何をすれば動くかが見えない画面になる。2026-08-20 の UI 改善）。</summary>
+    private const string IdleHint = "機器の IP とコミュニティを入れて「取得」を押してください。";
+
+    private string _status = IdleHint;
     private bool _isBusy;
     private CancellationTokenSource? _cts;
 
@@ -163,6 +167,6 @@ public sealed class SnmpGetViewModel : ObservableObject
         Rows.Clear();
         Community = "public";
         OidText = "1.3.6.1.2.1.1.1.0";
-        Status = string.Empty;
+        Status = IdleHint;
     }
 }

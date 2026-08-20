@@ -47,7 +47,11 @@ public abstract class FileServerViewModel : ObservableObject
 
     private string _port;
     private bool _isRunning;
-    private string _status = string.Empty;
+    /// <summary>何もしていないときの案内。<b>初期値と Reset の戻し先を空文字にしない</b>
+    /// （何をすれば動くかが見えない画面になる。2026-08-20 の UI 改善）。</summary>
+    private const string IdleHint = "「開始」を押すと待ち受けが始まります。";
+
+    private string _status = IdleHint;
     private string _filter = string.Empty;
     private int _minSeverity = -1;
 
@@ -278,6 +282,6 @@ public abstract class FileServerViewModel : ObservableObject
     {
         Stop();
         ClearLog();
-        Status = string.Empty;
+        Status = IdleHint;
     }
 }

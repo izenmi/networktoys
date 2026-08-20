@@ -76,7 +76,11 @@ public sealed class TransferViewModel : ObservableObject
 
     private string _localPath = string.Empty;
     private string _remotePath = "/";
-    private string _status = string.Empty;
+    /// <summary>何もしていないときの案内。<b>初期値と Reset の戻し先を空文字にしない</b>
+    /// （何をすれば動くかが見えない画面になる。2026-08-20 の UI 改善）。</summary>
+    private const string IdleHint = "接続先を入れて「接続」を押すと、相手のファイル一覧が出ます。";
+
+    private string _status = IdleHint;
     private string _fingerprint = string.Empty;
     private string _progressText = string.Empty;
     private double _progressPercent;

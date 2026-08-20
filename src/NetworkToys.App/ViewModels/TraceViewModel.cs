@@ -97,7 +97,11 @@ public sealed class TraceViewModel : ObservableObject
     private static readonly TimeSpan WatchInterval = TimeSpan.FromSeconds(60);
 
     private string _host = "8.8.8.8";
-    private string _status = string.Empty;
+    /// <summary>何もしていないときの案内。<b>初期値と Reset の戻し先を空文字にしない</b>
+    /// （何をすれば動くかが見えない画面になる。2026-08-20 の UI 改善）。</summary>
+    private const string IdleHint = "宛先を入れて「調べる」を押すと経路が出ます。";
+
+    private string _status = IdleHint;
     private string _mtuText = string.Empty;
     private bool _isBusy;
     private bool _isWatching;
@@ -439,7 +443,7 @@ public sealed class TraceViewModel : ObservableObject
 
         Host = "8.8.8.8";
         MtuText = string.Empty;
-        Status = string.Empty;
+        Status = IdleHint;
     }
 
 }

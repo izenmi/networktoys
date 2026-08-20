@@ -1447,6 +1447,36 @@ internal static class SelfTest
             }
         });
 
+        Check("どの画面も、起動直後に何をすればよいかが出ている", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 初期 Status が空だと、ヘッダと罫線だけの画面が出て壊れて見える
+            // （2026-08-20 の UI 改善。Report はメニュー帯常駐のため意図して空のまま）
+            var shell = (ViewModels.ShellViewModel)window!.DataContext;
+
+            (string Name, string Status)[] shown =
+            [
+                ("Ping", shell.Monitor.StatusMessage),
+                ("TCP", shell.Tcp.StatusMessage),
+                ("DNS", shell.Dns.Status),
+                ("Meraki", shell.Meraki.Status),
+                ("SNMP Get", shell.SnmpGet.Status),
+                ("スキャン", shell.Scan.Status),
+                ("転送", shell.Transfer.Status),
+                ("経路", shell.Trace.Status),
+                ("FTP", shell.Ftp.Status),
+                ("TFTP", shell.Tftp.Status),
+                ("SFTP", shell.Sftp.Status),
+                ("syslog", shell.Syslog.Status),
+                ("Trap", shell.SnmpTrap.Status),
+            ];
+
+            string[] empty = [.. shown.Where(s => s.Status.Length == 0).Select(s => s.Name)];
+
+            Assert(empty.Length == 0, "初期 Status が空の画面がある: " + string.Join(" / ", empty));
+        });
+
         Check("試験: プロキシのチェックが定義を書き換えても残る", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

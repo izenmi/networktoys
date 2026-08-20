@@ -50,7 +50,11 @@ public sealed class MonitorViewModel : ObservableObject
 
     /// <summary>選択の同期中か。一覧側のセッターが同期の書き戻しに反応しないようにする。</summary>
     private bool _syncingSelection;
-    private string _statusMessage = string.Empty;
+    /// <summary>何もしていないときの案内。<b>初期値と Reset の戻し先を空文字にしない</b>
+    /// （何をすれば動くかが見えない画面になる。2026-08-20 の UI 改善）。</summary>
+    private const string IdleHint = "宛先を書いて「開始」を押すと測り始めます。";
+
+    private string _statusMessage = IdleHint;
     private string _detailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
     private DispatcherTimer? _listDebounce;
     private string _tcpPort = "443";
@@ -1100,7 +1104,7 @@ public sealed class MonitorViewModel : ObservableObject
         SelectedRow = null;
         DetailText = "行を選ぶと、その宛先の詳しい統計が出ます。";
         TcpPort = "443";
-        StatusMessage = string.Empty;
+        StatusMessage = IdleHint;
     }
 
     /// <summary>

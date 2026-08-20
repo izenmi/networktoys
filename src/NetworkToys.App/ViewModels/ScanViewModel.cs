@@ -55,7 +55,11 @@ public sealed class ScanViewModel : ObservableObject
 
     private string _rangeText;
     private string _preview = string.Empty;
-    private string _status = string.Empty;
+    /// <summary>何もしていないときの案内。<b>初期値と Reset の戻し先を空文字にしない</b>
+    /// （何をすれば動くかが見えない画面になる。2026-08-20 の UI 改善）。</summary>
+    private const string IdleHint = "範囲を入れて「スキャン」を押すと、応答した機器が一覧に出ます。";
+
+    private string _status = IdleHint;
     private bool _isBusy;
     // 逆引きは引けない相手の方が多く、待ちのぶんスキャンが延びるので既定は OFF
     private bool _resolveNames;
@@ -245,7 +249,7 @@ public sealed class ScanViewModel : ObservableObject
         ResolveNames = false;
         ScanPorts = false;
         Progress = 0;
-        Status = string.Empty;
+        Status = IdleHint;
     }
 
 }

@@ -36,7 +36,11 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
     private MerakiOrganizationItem? _selectedOrganization;
     private MerakiNetworkRow? _selectedNetwork;
     private MerakiTimespan _selectedTimespan;
-    private string _status = "";
+    /// <summary>何もしていないときの案内。<b>初期値と Reset の戻し先を空文字にしない</b>
+    /// （何をすれば動くかが見えない画面になる。2026-08-20 の UI 改善）。</summary>
+    private const string IdleHint = "API キーを入れて「取得」を押すと一覧が出ます。";
+
+    private string _status = IdleHint;
     private string _notice = "";
     private string _globalIpText = "—";
     private bool _showConnection = true;
@@ -1382,7 +1386,7 @@ public sealed class MerakiViewModel : ObservableObject, IDisposable
         SelectedNetwork = null;
         GlobalIpText = "—";
         ShowConnection = true;
-        Status = "";
+        Status = IdleHint;
         ApiKey = "";
         ApiKeyCleared?.Invoke(this, EventArgs.Empty);
 
