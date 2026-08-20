@@ -95,6 +95,29 @@
         </Style>
 
         <!--
+            画面を左右/上下に割る比率の仕切り。透明で、指すと淡く浮く。
+            比率は保存しない（列幅と同じ決まり）。星のトラックには必ず Min を入れること
+            （xUnit が突き合わせる。潰れると戻す手掛かりが無くなる）。
+        -->
+        <Style x:Key="PaneSplitter.V" TargetType="GridSplitter">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="SizeWE" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="ResizeBehavior" Value="PreviousAndNext" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="PaneSplitter.H" TargetType="GridSplitter" BasedOn="{StaticResource PaneSplitter.V}">
+            <Setter Property="Cursor" Value="SizeNS" />
+            <Setter Property="ResizeDirection" Value="Rows" />
+        </Style>
+
+        <!--
             切り詰められた長文のセル。クリックで全文を別窓（コピー可）に出す
             （2026-08-20 の UX 改善。ToolTip はコピーできず、すぐ消える）。
             TextTrimming でも Text プロパティは全文を持っているので、ハンドラは
@@ -1307,9 +1330,12 @@
                                     </Style>
                                 </Grid.Style>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" MinWidth="120" />
+                                    <ColumnDefinition Width="11" />
+                                    <ColumnDefinition Width="*" MinWidth="120" />
                                 </Grid.ColumnDefinitions>
+
+                                <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter.V}" />
 
                                 <DockPanel Grid.Column="0" Margin="0,0,5,0">
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
@@ -1334,7 +1360,7 @@
                                              ToolTip="機器から落とした設定のファイルを、この欄に放り込んでも読み込めます（いまの内容は置き換わります）。" />
                                 </DockPanel>
 
-                                <DockPanel Grid.Column="1" Margin="5,0,0,0">
+                                <DockPanel Grid.Column="2" Margin="5,0,0,0">
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
                                         <TextBlock Text="作業後" VerticalAlignment="Center" />
                                         <Button Content="ファイルから" Command="{Binding LoadAfterCommand}"
@@ -1410,33 +1436,30 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- 左右の見出し。区切りの罫線は下の一覧と同じ位置に置く。
-                                     中の 11 は 貼り付け欄と同じ左右 5px ＋ 罫線 1px -->
-                                <Grid DockPanel.Dock="Top" Margin="0,0,0,3">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="11" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="作業前" Style="{StaticResource Caption}" Margin="42,0,0,0" />
-                                    <TextBlock Grid.Column="2" Text="作業後" Style="{StaticResource Caption}" Margin="42,0,0,0" />
-                                </Grid>
-                                <Border DockPanel.Dock="Top" Height="1"
-                                        Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
-
                                 <!--
-                                    左右は別々の一覧にして、それぞれで横スクロールする（長い行のため）。
-                                    縦だけは code-behind で互いに合わせる — ずれると見比べにならない。
-                                    行数も行の高さも同じなので、offset をそのまま写せば揃う。
+                                    左右の見出しと一覧を 1 つの Grid に載せる（2026-08-20 の UX 改善）。
+                                    仕切り（GridSplitter）で比率を動かしたとき、見出しが一覧と同じ列に
+                                    居ないと付いてこない。**別々の Grid に戻さないこと。**
+                                    中の 11 は 貼り付け欄と同じ左右 5px ＋ 罫線 1px。
                                 -->
                                 <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" MinHeight="80" />
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" MinWidth="120" />
                                         <ColumnDefinition Width="11" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" MinWidth="120" />
                                     </Grid.ColumnDefinitions>
 
-                                        <ListBox x:Name="DiffList"
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="作業前" Style="{StaticResource Caption}" Margin="42,0,0,3" />
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="作業後" Style="{StaticResource Caption}" Margin="42,0,0,3" />
+                                    <Border Grid.Row="1" Grid.ColumnSpan="3" Height="1"
+                                            Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
+
+<ListBox x:Name="DiffList" Grid.Row="2"
                                                  Grid.Column="0"
                                                  Tag="{Binding ElementName=DiffListAfter}"
                                                  ItemsSource="{Binding Rows}"
@@ -1455,10 +1478,13 @@
                                         </ListBox>
 
                                     <!-- 作業前と作業後の区切り。左右の余白は貼り付け欄と同じ 5px -->
-                                    <Border Grid.Column="1" Width="1" Margin="5,0"
-                                            Background="{DynamicResource Brush.Border}" />
+                                    <Border Grid.Row="2" Grid.Column="1" Width="1" Margin="5,0"
+                                            Background="{DynamicResource Brush.Border}" IsHitTestVisible="False" />
+                                    <!-- 比率の仕切り。掴みやすいよう 11px 全部を当たり判定にする -->
+                                    <GridSplitter Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
+                                                  Style="{StaticResource PaneSplitter.V}" />
 
-                                        <ListBox x:Name="DiffListAfter"
+<ListBox x:Name="DiffListAfter" Grid.Row="2"
                                                  Grid.Column="2"
                                                  Tag="{Binding ElementName=DiffList}"
                                                  ItemsSource="{Binding Rows}"
@@ -1882,6 +1908,7 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="0.7*" MinHeight="64" />
+                                <RowDefinition Height="6" />
                                 <RowDefinition Height="*" MinHeight="80" />
                             </Grid.RowDefinitions>
 
@@ -2042,7 +2069,9 @@
                             </Border>
 
                             <!-- 下: 結果。1 行 = 1 項目 × 1 プロキシ -->
-                            <Border Grid.Row="1" Background="{DynamicResource Brush.Surface}"
+                            <GridSplitter Grid.Row="1" Style="{StaticResource PaneSplitter.H}" />
+
+                            <Border Grid.Row="2" Background="{DynamicResource Brush.Surface}"
                                     BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                     CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                 <DockPanel>
@@ -5769,10 +5798,12 @@
                         <!-- 2 ペイン。左がこの PC、右が接続先 -->
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" MinWidth="150" />
                                 <ColumnDefinition Width="10" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" MinWidth="150" />
                             </Grid.ColumnDefinitions>
+
+                            <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter.V}" />
 
                             <!-- ===== 左: この PC ===== -->
                             <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}"
@@ -7325,10 +7356,12 @@
                                                 </Style>
                                             </Grid.Style>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" MinWidth="120" />
                                             <ColumnDefinition Width="11" />
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" MinWidth="120" />
                                         </Grid.ColumnDefinitions>
+
+                                        <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter.V}" />
 
                                             <DockPanel Grid.Column="0">
                                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
@@ -7349,7 +7382,7 @@
 
                                             <!-- 作業前と作業後の区切り。左右の余白は差分比較タブと同じ 5px -->
                                             <Border Grid.Column="1" Width="1" Margin="5,0"
-                                                    Background="{DynamicResource Brush.Border}" />
+                                                    Background="{DynamicResource Brush.Border}" IsHitTestVisible="False" />
 
                                             <DockPanel Grid.Column="2">
                                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
@@ -7385,10 +7418,12 @@
                                                 </Style>
                                             </Grid.Style>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" MinWidth="120" />
                                             <ColumnDefinition Width="11" />
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" MinWidth="120" />
                                         </Grid.ColumnDefinitions>
+
+                                        <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter.V}" />
 
                                             <DockPanel Grid.Column="0">
                                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"
@@ -7416,7 +7451,7 @@
 
                                             <!-- 作業前と作業後の区切り。左右の余白は差分比較タブと同じ 5px -->
                                             <Border Grid.Column="1" Width="1" Margin="5,0"
-                                                    Background="{DynamicResource Brush.Border}" />
+                                                    Background="{DynamicResource Brush.Border}" IsHitTestVisible="False" />
 
                                             <DockPanel Grid.Column="2">
                                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}"

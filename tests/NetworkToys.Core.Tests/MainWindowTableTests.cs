@@ -135,6 +135,42 @@ public class MainWindowTableTests
     }
 
     [Fact]
+    public void 分割の仕切りは潰れ防止の下限とセットで置く()
+    {
+        // GridSplitter で星のトラックを 0 まで潰せると、戻す手掛かりが無くなる。
+        // 仕切りを含む Grid の星トラックは、必ず MinWidth / MinHeight を持つこと
+        XDocument document = XDocument.Parse(Xaml());
+
+        XElement[] hosts =
+        [
+            .. document.Descendants(Presentation + "GridSplitter")
+                .Select(splitter => splitter.Ancestors(Presentation + "Grid").First())
+                .Distinct(),
+        ];
+
+        Assert.Equal(6, hosts.Length);
+
+        foreach (XElement grid in hosts)
+        {
+            foreach (XElement track in grid.Elements(Presentation + "Grid.ColumnDefinitions")
+                         .Elements(Presentation + "ColumnDefinition"))
+            {
+                if (track.Attribute("Width")?.Value.Contains('*') == true)
+                    Assert.True(track.Attribute("MinWidth") is not null,
+                                "仕切りのある Grid の星列に MinWidth が無い");
+            }
+
+            foreach (XElement track in grid.Elements(Presentation + "Grid.RowDefinitions")
+                         .Elements(Presentation + "RowDefinition"))
+            {
+                if (track.Attribute("Height")?.Value.Contains('*') == true)
+                    Assert.True(track.Attribute("MinHeight") is not null,
+                                "仕切りのある Grid の星行に MinHeight が無い");
+            }
+        }
+    }
+
+    [Fact]
     public void 進行の帯はすべて共通スタイルで描く()
     {
         // 高さや余白を直書きすると、画面ごとに帯の見た目がずれていく
