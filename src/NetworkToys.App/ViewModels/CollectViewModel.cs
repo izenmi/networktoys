@@ -123,6 +123,9 @@ public sealed class CollectViewModel : ObservableObject
         RemoveDeviceCommand = new RelayCommand<CollectRowViewModel>(RemoveRow);
         ImportFromTargetsCommand = new RelayCommand(() => RequestImport?.Invoke(this, EventArgs.Empty));
         StartCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && Rows.Count > 0);
+        RetryFailedCommand = new RelayCommand(
+            () => _ = RunAsync(failedOnly: true),
+            () => !IsBusy && Rows.Any(r => IsFailedStatus(r.Status)));
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         OpenFolderCommand = new RelayCommand(OpenFolder, () => _lastFolder.Length > 0);
 
@@ -175,6 +178,9 @@ public sealed class CollectViewModel : ObservableObject
     public RelayCommand<CollectRowViewModel> RemoveDeviceCommand { get; }
     public RelayCommand ImportFromTargetsCommand { get; }
     public RelayCommand StartCommand { get; }
+
+    /// <summary>「✕ 失敗」「⛔ パスワード未入力」の行だけをもう一度収集する（2026-08-20 の機能改善）。</summary>
+    public RelayCommand RetryFailedCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
 
@@ -245,6 +251,7 @@ public sealed class CollectViewModel : ObservableObject
             if (!SetProperty(ref _isBusy, value)) return;
 
             StartCommand.RaiseCanExecuteChanged();
+            RetryFailedCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
         }
     }
@@ -459,6 +466,7 @@ public sealed class CollectViewModel : ObservableObject
 
         Rows.Add(row);
         StartCommand.RaiseCanExecuteChanged();
+        RetryFailedCommand.RaiseCanExecuteChanged();
 
         return row;
     }
@@ -469,9 +477,17 @@ public sealed class CollectViewModel : ObservableObject
 
         Rows.Remove(row);
         StartCommand.RaiseCanExecuteChanged();
+        RetryFailedCommand.RaiseCanExecuteChanged();
     }
 
-    private async Task RunAsync()
+    /// <summary>
+    /// 失敗した行かどうか。<b>✕（失敗）と ⛔（パスワード未入力）だけ</b>を失敗とみなす。
+    /// △ 一部失敗は含めない（出力は取れている）。internal は自己診断のため。
+    /// </summary>
+    internal static bool IsFailedStatus(string status)
+        => status.StartsWith('✕') || status.StartsWith('⛔');
+
+    private async Task RunAsync(bool failedOnly = false)
     {
         CommandListParseResult parsed = CommandListParser.Parse(CommandText);
 
@@ -485,10 +501,14 @@ public sealed class CollectViewModel : ObservableObject
             return;
         }
 
-        CollectRowViewModel[] targets = [.. Rows.Where(r => r.Host.Trim().Length > 0)];
+        // 「失敗だけ再実行」は ✕（失敗）と ⛔（パスワード未入力で飛ばした）の行だけ。
+        // △ 一部失敗は対象にしない — 出力は取れており、上書き再収集は証跡を汚す
+        CollectRowViewModel[] targets = [.. Rows.Where(r =>
+            r.Host.Trim().Length > 0 && (!failedOnly || IsFailedStatus(r.Status)))];
+
         if (targets.Length == 0)
         {
-            Status = "機器が 1 台も入っていません。";
+            Status = failedOnly ? "失敗した機器はありません。" : "機器が 1 台も入っていません。";
             return;
         }
 
@@ -588,7 +608,10 @@ public sealed class CollectViewModel : ObservableObject
 
             _lastFolder = folder;
             OpenFolderCommand.RaiseCanExecuteChanged();
-            Status = $"収集しました。{done} 台成功 / {failed} 台失敗　保存先: {folder}";
+            Status = failed > 0
+                ? $"収集しました。{done} 台成功 / {failed} 台失敗　保存先: {folder}　"
+                  + "認証情報を入れ直してから「失敗した機器だけ再実行」でやり直せます。"
+                : $"収集しました。{done} 台成功 / {failed} 台失敗　保存先: {folder}";
         }
         catch (OperationCanceledException)
         {
@@ -613,6 +636,7 @@ public sealed class CollectViewModel : ObservableObject
                 row.ClearSecrets();
 
             SecretsCleared?.Invoke(this, EventArgs.Empty);
+            RetryFailedCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -674,6 +698,7 @@ public sealed class CollectViewModel : ObservableObject
 
         Rows.Clear();
         StartCommand.RaiseCanExecuteChanged();
+        RetryFailedCommand.RaiseCanExecuteChanged();
         CommandText = RecommendedCommands.Ios;
         Status = "宛先リストから取り込むか、機器を直接書いて「収集を開始」を押します。";
         Notice = "";

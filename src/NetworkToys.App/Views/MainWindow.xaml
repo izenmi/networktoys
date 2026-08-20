@@ -5393,6 +5393,9 @@
                                        VerticalAlignment="Center" Margin="0,0,16,2" />
 
                             <Button Content="収集を開始" Command="{Binding StartCommand}" Margin="0,0,6,2" />
+                            <Button Content="失敗した機器だけ再実行" Command="{Binding RetryFailedCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                    ToolTip="✕ 失敗と ⛔ パスワード未入力の行だけを、もう一度収集します。成功した機器へは接続しません。&#10;パスワードは収集のたびに消える決まりなので、先に入れ直してください（「全行に認証情報を入れる」が速い）。" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,2" />
                             <Button Content="保存先を開く" Command="{Binding OpenFolderCommand}"

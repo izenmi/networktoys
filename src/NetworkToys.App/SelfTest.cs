@@ -931,6 +931,34 @@ internal static class SelfTest
             window.ShowNotice("", isProblem: false);   // 後始末（空文字で消す）
         });
 
+        Check("収集: 「失敗だけ再実行」は失敗の行があるときだけ押せる", () =>
+        {
+            // 失敗の定義（✕ と ⛔ だけ。△ 一部失敗は出力が取れているので含めない）
+            Assert(ViewModels.CollectViewModel.IsFailedStatus("✕ 失敗: 接続できませんでした"), "✕ が失敗扱いでない");
+            Assert(ViewModels.CollectViewModel.IsFailedStatus("⛔ パスワード未入力"), "⛔ が失敗扱いでない");
+            Assert(!ViewModels.CollectViewModel.IsFailedStatus("✓ 完了 5 本"), "✓ が失敗扱いになっている");
+            Assert(!ViewModels.CollectViewModel.IsFailedStatus("△ 一部失敗 4/5 本"), "△ が失敗扱いになっている");
+            Assert(!ViewModels.CollectViewModel.IsFailedStatus("◌ 待機"), "◌ が失敗扱いになっている");
+            Assert(!ViewModels.CollectViewModel.IsFailedStatus("▶ 接続しています"), "▶ が失敗扱いになっている");
+
+            // ボタンの押せる条件が行の状態に追随すること（ネットワークには触らない）
+            var vm = new ViewModels.CollectViewModel();
+
+            try
+            {
+                vm.AddDeviceCommand.Execute(null);
+                Assert(!vm.RetryFailedCommand.CanExecute(null), "失敗が無いのに押せる");
+
+                vm.Rows[0].Status = "✕ 失敗: 検査用";
+                vm.RetryFailedCommand.RaiseCanExecuteChanged();
+                Assert(vm.RetryFailedCommand.CanExecute(null), "失敗があるのに押せない");
+            }
+            finally
+            {
+                while (vm.Rows.Count > 0) vm.RemoveDeviceCommand.Execute(vm.Rows[0]);
+            }
+        });
+
         Check("収集: 認証情報の一括入力の小窓を表示できる", () =>
         {
             // 窓はコードで組んでいるので、リソースキーの打ち間違いは実行時にしか出ない
