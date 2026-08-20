@@ -1948,6 +1948,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 切り詰められた長文のセルをクリックしたら、全文を別窓で出す（選択もコピーもできる）。
+    /// TextTrimming は見た目だけで、Text プロパティは全文を持っている。
+    /// </summary>
+    private void OnExpandableCellClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not TextBlock { Text.Length: > 0 } cell) return;
+
+        TextViewDialog.Show(this, "詳細", cell.Text);
+        e.Handled = true;
+    }
+
+    /// <summary>
     /// ⓘ をクリックしたら、ホバーの説明と同じ文面を別窓で出す（選択もコピーもできる）。
     /// 本文 1 行目がタブ名という TabHelp の決まりがあるので、タイトルは固定でよい。
     /// </summary>

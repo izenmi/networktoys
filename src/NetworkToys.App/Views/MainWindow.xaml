@@ -94,6 +94,22 @@
             <EventSetter Event="MouseLeftButtonDown" Handler="OnTabInfoClick" />
         </Style>
 
+        <!--
+            切り詰められた長文のセル。クリックで全文を別窓（コピー可）に出す
+            （2026-08-20 の UX 改善。ToolTip はコピーできず、すぐ消える）。
+            TextTrimming でも Text プロパティは全文を持っているので、ハンドラは
+            sender の Text を出すだけでよい。ToolTip は残す（ホバーでも読める）。
+        -->
+        <Style x:Key="ExpandableCell" TargetType="TextBlock">
+            <Setter Property="Cursor" Value="Hand" />
+            <EventSetter Event="MouseLeftButtonDown" Handler="OnExpandableCellClick" />
+        </Style>
+        <!-- Caption スタイルのセル用（スタイルは 1 つしか当てられないため BasedOn 版を持つ） -->
+        <Style x:Key="ExpandableCell.Caption" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Setter Property="Cursor" Value="Hand" />
+            <EventSetter Event="MouseLeftButtonDown" Handler="OnExpandableCellClick" />
+        </Style>
+
         <!-- 値の表示欄。読み取り専用の TextBox にして、選択してコピーできるようにする -->
         <Style x:Key="CopyableValue" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="IsReadOnly" Value="True" />
@@ -2079,7 +2095,7 @@
                                         </StackPanel>
 
                                         <!-- 実行中は「試験中… 5/12 項目名」、終わると要約や保存の結果 -->
-                                        <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}"
+                                        <TextBlock Text="{Binding Status}" Style="{StaticResource ExpandableCell.Caption}"
                                                    VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}" />
                                     </DockPanel>
@@ -2182,6 +2198,7 @@
                                                                FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
                                                                HorizontalAlignment="Right" Margin="0,0,10,0" />
                                                     <TextBlock Grid.Column="4" Text="{Binding Detail}"
+                                                               Style="{StaticResource ExpandableCell}"
                                                                FontSize="{DynamicResource Size.Caption}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}" />
                                                 </Grid>
@@ -2741,6 +2758,7 @@
                                                                     ToolTip="目視で問題があったので不合格にします。" />
                                                         </StackPanel>
                                                         <TextBlock Grid.Column="3" Text="{Binding Detail}"
+                                                                   Style="{StaticResource ExpandableCell}"
                                                                    FontSize="{DynamicResource Size.Caption}"
                                                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                                    ToolTip="{Binding Detail}" />
@@ -3651,6 +3669,7 @@
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="5" Text="{Binding Detail}"
+                                                           Style="{StaticResource ExpandableCell}"
                                                            FontSize="{DynamicResource Size.Caption}"
                                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}" />
                                             </Grid>
@@ -5504,6 +5523,7 @@
                                                              ToolTip="機器の覚え書き。集めたファイルの先頭にも書き出されます。" />
 
                                                     <TextBlock Grid.Column="7" Text="{Binding Status}"
+                                                               Style="{StaticResource ExpandableCell}"
                                                                FontSize="{DynamicResource Size.Caption}"
                                                                VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis"
