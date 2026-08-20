@@ -1559,8 +1559,21 @@
                                     <Button Content="適用" Click="OnApplyIpConfig" IsEnabled="{Binding CanApply}"
                                             Margin="0,0,12,0"
                                             ToolTip="確認の後、UAC の昇格を経て netsh で設定します。" />
-                                    <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding ResultText}"
+                                               VerticalAlignment="Center" TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ResultKind}" Value="Ok">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ResultKind}" Value="Alert">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </StackPanel>
 
                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" TextWrapping="Wrap"
@@ -1618,8 +1631,21 @@
                                     <StackPanel Orientation="Horizontal">
                                         <Button Content="プロキシを適用" Command="{Binding ApplyCommand}" Margin="0,0,12,0"
                                                 ToolTip="Windows のプロキシ設定(現在のユーザー)に反映します。管理者権限は不要です。" />
-                                        <TextBlock Text="{Binding ResultText}" Style="{StaticResource Caption}"
-                                                   VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding ResultText}"
+                                                   VerticalAlignment="Center" TextWrapping="Wrap">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ResultKind}" Value="Ok">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Ok.Fg}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ResultKind}" Value="Alert">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Error.Fg}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
 
                                     <!--

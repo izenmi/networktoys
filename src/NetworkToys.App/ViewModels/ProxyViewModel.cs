@@ -1,4 +1,5 @@
 using NetworkToys.App.Mvvm;
+using NetworkToys.Core.Design;
 using NetworkToys.App.Services;
 using NetworkToys.Core.Net;
 
@@ -111,6 +112,23 @@ public sealed class ProxyViewModel : ObservableObject
         private set => SetProperty(ref _resultText, value);
     }
 
+    /// <summary>結果の色種別。文言と必ず対で決める（<see cref="SetResult"/> 経由のみ）。</summary>
+    public SeverityKind ResultKind
+    {
+        get => _resultKind;
+        private set => SetProperty(ref _resultKind, value);
+    }
+
+    private SeverityKind _resultKind;
+
+    /// <summary>結果は文言と色種別を同時に書く。片方だけ書ける口を残さない（2026-08-20 の UX 改善）。</summary>
+    private void SetResult(string text, SeverityKind kind)
+    {
+        ResultKind = kind;
+        ResultText = text;
+    }
+
+
     /// <summary>いまの WinHTTP（PC 全体）の設定。読むだけなら管理者権限は要らない。</summary>
     public string WinHttpSummary
     {
@@ -168,7 +186,7 @@ public sealed class ProxyViewModel : ObservableObject
 
         if (plan is null)
         {
-            ResultText = error ?? "入力内容を確かめてください。";
+            SetResult(error ?? "入力内容を確かめてください。", SeverityKind.Alert);
             return;
         }
 
@@ -182,11 +200,16 @@ public sealed class ProxyViewModel : ObservableObject
     {
         _isBusy = true;
         ApplyWinHttpCommand.RaiseCanExecuteChanged();
-        ResultText = "管理者権限で適用しています…";
+        SetResult("管理者権限で適用しています…", SeverityKind.Muted);
 
         try
         {
-            ResultText = await ElevatedNetsh.ApplyAsync(script) ?? done;
+            string? failure = await ElevatedNetsh.ApplyAsync(script);
+
+            if (failure is null)
+                SetResult(done, SeverityKind.Ok);
+            else
+                SetResult(failure, SeverityKind.Alert);
         }
         finally
         {
@@ -201,7 +224,7 @@ public sealed class ProxyViewModel : ObservableObject
         PacUrl = "";
         Server = "";
         Bypass = "<local>";
-        ResultText = "";
+        SetResult("", SeverityKind.Muted);
     }
 
     private void Apply()
@@ -209,18 +232,18 @@ public sealed class ProxyViewModel : ObservableObject
         ProxyPlan? plan = ProxyPlan.Parse(SelectedMode.Mode, PacUrl, Server, Bypass, out string? error);
         if (plan is null)
         {
-            ResultText = error ?? "入力内容を確かめてください。";
+            SetResult(error ?? "入力内容を確かめてください。", SeverityKind.Alert);
             return;
         }
 
         string? failure = ProxySettings.Apply(plan);
         if (failure is not null)
         {
-            ResultText = failure;
+            SetResult(failure, SeverityKind.Alert);
             return;
         }
 
         Refresh();
-        ResultText = "✓ 適用しました(動作中のアプリには再起動後に反映されることがあります)。";
+        SetResult("✓ 適用しました(動作中のアプリには再起動後に反映されることがあります)。", SeverityKind.Ok);
     }
 }

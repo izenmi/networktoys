@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Threading;
 using NetworkToys.App.Mvvm;
+using NetworkToys.Core.Design;
 using NetworkToys.App.Services;
 using NetworkToys.Core.Addressing;
 using NetworkToys.Core.Storage;
@@ -199,6 +200,23 @@ public sealed class IpConfigViewModel : ObservableObject
         private set => SetProperty(ref _resultText, value);
     }
 
+    /// <summary>結果の色種別。文言と必ず対で決める（<see cref="SetResult"/> 経由のみ）。</summary>
+    public SeverityKind ResultKind
+    {
+        get => _resultKind;
+        private set => SetProperty(ref _resultKind, value);
+    }
+
+    private SeverityKind _resultKind;
+
+    /// <summary>結果は文言と色種別を同時に書く。片方だけ書ける口を残さない（2026-08-20 の UX 改善）。</summary>
+    private void SetResult(string text, SeverityKind kind)
+    {
+        ResultKind = kind;
+        ResultText = text;
+    }
+
+
     /// <summary>タブが表示されたときに呼ばれる。列挙は選択時だけで、タイマーは持たない。</summary>
     public void OnActivated()
     {
@@ -244,19 +262,19 @@ public sealed class IpConfigViewModel : ObservableObject
             out string? error, out _);
         if (plan is null)
         {
-            ResultText = error ?? "入力内容を確かめてください。";
+            SetResult(error ?? "入力内容を確かめてください。", SeverityKind.Alert);
             return;
         }
 
         IsApplying = true;
-        ResultText = "適用しています…(UAC の確認が出ます)";
+        SetResult("適用しています…(UAC の確認が出ます)", SeverityKind.Muted);
 
         try
         {
             string? failure = await ElevatedNetsh.ApplyAsync(plan.ToNetshScript());
             if (failure is not null)
             {
-                ResultText = failure;
+                SetResult(failure, SeverityKind.Alert);
                 return;
             }
 
@@ -285,13 +303,14 @@ public sealed class IpConfigViewModel : ObservableObject
                 ? current?.IsDhcp == true
                 : current?.Address?.Equals(plan.Address) == true;
 
-            ResultText = confirmed
-                ? "✓ 適用しました。"
-                : "netsh は完了しましたが、まだ反映を確認できません(DHCP の取得待ちの可能性)。「再読み込み」で確かめてください。";
+            if (confirmed)
+                SetResult("✓ 適用しました。", SeverityKind.Ok);
+            else
+                SetResult("netsh は完了しましたが、まだ反映を確認できません(DHCP の取得待ちの可能性)。「再読み込み」で確かめてください。", SeverityKind.Muted);
         }
         catch (Exception ex)
         {
-            ResultText = "適用に失敗しました。";
+            SetResult("適用に失敗しました。", SeverityKind.Alert);
             CrashLog.Write(ex, "IpConfigViewModel.ApplyAsync");
         }
         finally
@@ -308,7 +327,7 @@ public sealed class IpConfigViewModel : ObservableObject
         PresetName = "";
         SelectedPreset = null;
         ValidationText = "";
-        ResultText = "";
+        SetResult("", SeverityKind.Muted);
         _hasError = false;
         OnPropertyChanged(nameof(CanApply));
         Proxy.Reset();
@@ -337,11 +356,11 @@ public sealed class IpConfigViewModel : ObservableObject
         try
         {
             Settings.Save();
-            ResultText = $"プリセット「{name}」を保存しました。";
+            SetResult($"✓ プリセット「{name}」を保存しました。", SeverityKind.Ok);
         }
         catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
         {
-            ResultText = $"プリセットを保存できませんでした: {ex.Message}";
+            SetResult($"プリセットを保存できませんでした: {ex.Message}", SeverityKind.Alert);
         }
     }
 
@@ -364,11 +383,11 @@ public sealed class IpConfigViewModel : ObservableObject
         try
         {
             Settings.Save();
-            ResultText = $"プリセット「{preset.Name}」を削除しました。";
+            SetResult($"✓ プリセット「{preset.Name}」を削除しました。", SeverityKind.Ok);
         }
         catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
         {
-            ResultText = $"プリセットを削除できませんでした: {ex.Message}";
+            SetResult($"プリセットを削除できませんでした: {ex.Message}", SeverityKind.Alert);
         }
     }
 
