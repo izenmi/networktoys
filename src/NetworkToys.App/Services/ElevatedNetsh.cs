@@ -23,6 +23,7 @@ internal static class ElevatedNetsh
     public static async Task<string?> ApplyAsync(IReadOnlyList<string> scriptLines)
     {
         string path = Path.Combine(Path.GetTempPath(), $"NetworkToys-netsh-{Guid.NewGuid():N}.txt");
+        string outPath = path + ".out";
 
         try
         {
@@ -33,10 +34,14 @@ internal static class ElevatedNetsh
             Process? process;
             try
             {
+                // cmd /S /C 経由で netsh の出力をファイルへ落とす(リダイレクトと ShellExecute は
+                // 両立しないため)。失敗時にそのまま画面へ出す — ロケール依存なので解釈はしない。
+                // UAC の確認は「Windows コマンド プロセッサ」名義になるが、原因の見えない
+                // 「コード 1」よりよい(2026-08-21 ユーザー報告)
                 process = Process.Start(new ProcessStartInfo
                 {
-                    FileName = "netsh",
-                    Arguments = $"-f \"{path}\"",
+                    FileName = "cmd.exe",
+                    Arguments = CommandArguments(path, outPath),
                     UseShellExecute = true,     // UAC の昇格ダイアログを出すのに必須
                     Verb = "runas",
                     WindowStyle = ProcessWindowStyle.Hidden,
@@ -65,7 +70,7 @@ internal static class ElevatedNetsh
                 }
 
                 if (process.ExitCode != 0)
-                    return $"netsh がエラーを返しました(コード {process.ExitCode})。入力内容とアダプタ名を確かめてください。";
+                    return $"netsh がエラーを返しました(コード {process.ExitCode})。{NetshSays(outPath)}";
             }
 
             return null;
@@ -80,11 +85,64 @@ internal static class ElevatedNetsh
             try
             {
                 File.Delete(path);
+                File.Delete(outPath);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // タイムアウト時はまだ掴まれていることがある。%TEMP% なのでいずれ片付く
             }
+        }
+    }
+
+    /// <summary>
+    /// cmd に渡す引数。/S を付けると cmd は<b>最初と最後の引用符だけ</b>を剥がすので、
+    /// 途中の引用符付きパス(空白入りの %TEMP% など)がそのまま残る。
+    /// </summary>
+    internal static string CommandArguments(string scriptPath, string outputPath)
+        => $"/S /C \"netsh -f \"{scriptPath}\" > \"{outputPath}\" 2>&1\"";
+
+    /// <summary>
+    /// netsh が言ったことをそのまま返す(<b>解釈はしない</b> — 出力はロケール依存)。
+    /// 読めなければ従来の一般論に落とす。
+    /// </summary>
+    private static string NetshSays(string outputPath)
+    {
+        const string fallback = "入力内容とアダプタ名を確かめてください。";
+
+        try
+        {
+            // リダイレクトされたコンソール出力は OEM コードページ(日本語環境では cp932)
+            string[] lines = [.. File.ReadAllLines(outputPath, OemEncoding())
+                .Select(l => l.Trim())
+                .Where(l => l.Length > 0)];
+
+            if (lines.Length == 0) return fallback;
+
+            string text = string.Join(" / ", lines.Take(3));
+            return $"netsh の応答: {text}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                      or ArgumentException or NotSupportedException)
+        {
+            return fallback;
+        }
+    }
+
+    private static Encoding OemEncoding()
+    {
+        try
+        {
+            if (!_encodingRegistered)
+            {
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                _encodingRegistered = true;
+            }
+
+            return Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
+        {
+            return Encoding.UTF8;
         }
     }
 

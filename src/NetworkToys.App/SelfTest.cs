@@ -1093,6 +1093,17 @@ internal static class SelfTest
             log.AppendLine($"        アダプタ: {adapters.Count} 枚");
         });
 
+        Check("昇格 netsh は出力をファイルへ集める引数で呼ぶ", () =>
+        {
+            // 実行はしない(上の断りと同じ理由)。cmd /S /C の引用符の剥がれ方だけを固定する
+            // — /S は最初と最後の引用符だけを剥がすので、空白入りのパスが途中にあっても壊れない
+            string args = Services.ElevatedNetsh.CommandArguments(
+                @"C:\Temp Dir\in.txt", @"C:\Temp Dir\out.txt");
+
+            Assert(args == "/S /C \"netsh -f \"C:\\Temp Dir\\in.txt\" > \"C:\\Temp Dir\\out.txt\" 2>&1\"",
+                   $"引数の形が違う: {args}");
+        });
+
         Check("一覧から次の道具へ送れる（行の型からアドレスが取れる）", () =>
         {
             // メニューは 6 つの一覧で 1 つの定義を使い回すので、
