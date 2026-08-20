@@ -528,7 +528,9 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **空の一覧には `EmptyHint` を重ねる。**一覧を `Grid` で包み、
   `Visibility="{Binding Items.Count, ElementName=<一覧の x:Name>, Converter={StaticResource ZeroToVisible}}"`
   の TextBlock（`Style="{StaticResource EmptyHint}"`）で「何を押すとここに出るか」を書く。
-  **ElementName の打ち間違いはバインドが黙って死ぬ**ので、自己診断が Tag を目印に全数を検査する。
+  **ElementName の打ち間違いはバインドが黙って死ぬ**ので、xUnit（埋め込み XAML の字面）が
+  全数の飛び先と文言を突き合わせる。実描画で数える検査は CI で 0 個としか数えられず取りやめた
+  （原因未特定。視覚ツリーの Tag が拾えない）。
 - **進行の帯は `BusyBar` スタイル（高さ 3px・操作列の直下）で統一。ProgressBar を直に置かない**
   （xUnit が全 ProgressBar の Style を検査）。割合を持たない待ちは `IsIndeterminate="True"` —
   共通テンプレートが満タンの帯を明滅させる（WPF は不定モードで帯を全幅にするだけなので、

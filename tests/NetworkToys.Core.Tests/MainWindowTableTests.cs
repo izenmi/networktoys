@@ -106,6 +106,35 @@ public class MainWindowTableTests
     }
 
     [Fact]
+    public void 空の一覧の案内は飛び先と文言がそろっている()
+    {
+        // EmptyHint は ElementName で一覧を指す。打ち間違えるとバインドが黙って死に、
+        // 案内が出っぱなし（or 出ない）になる。埋め込んだ XAML の字面で全数を突き合わせる
+        string xaml = Xaml();
+
+        HashSet<string> names =
+            [.. Regex.Matches(xaml, @"x:Name=""(\w+)""").Select(m => m.Groups[1].Value)];
+
+        MatchCollection hints = Regex.Matches(
+            xaml, @"<TextBlock Style=""{StaticResource EmptyHint}""[^>]*/>", RegexOptions.Singleline);
+
+        Assert.True(hints.Count >= 14, $"EmptyHint が {hints.Count} 個しか無い（14 個のはず）");
+
+        foreach (Match hint in hints)
+        {
+            Match text = Regex.Match(hint.Value, @"Text=""([^""]*)""");
+
+            Assert.True(text.Success && text.Groups[1].Value.Length > 0, "案内文が空の EmptyHint がある");
+
+            Match target = Regex.Match(hint.Value, @"ElementName=(\w+)");
+
+            Assert.True(target.Success, $"ElementName の無い EmptyHint: {text.Groups[1].Value}");
+            Assert.True(names.Contains(target.Groups[1].Value),
+                        $"EmptyHint の飛び先 x:Name が無い: {target.Groups[1].Value}（{text.Groups[1].Value}）");
+        }
+    }
+
+    [Fact]
     public void 進行の帯はすべて共通スタイルで描く()
     {
         // 高さや余白を直書きすると、画面ごとに帯の見た目がずれていく
