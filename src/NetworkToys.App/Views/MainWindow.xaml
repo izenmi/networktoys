@@ -220,6 +220,11 @@
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                             </Trigger>
+                            <!-- キーボードで動かしたときの現在地（2026-08-20 の UX 改善）。
+                                 太さは変えない — 変えると行の高さが揺れて仮想化中にガタつく -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -329,6 +334,11 @@
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Sel" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                             </Trigger>
+                            <!-- キーボードで動かしたときの現在地（2026-08-20 の UX 改善）。
+                                 太さは変えない — 変えると行の高さが揺れて仮想化中にガタつく -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Sel" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -379,6 +389,11 @@
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent.Bg}" />
+                            </Trigger>
+                            <!-- キーボードで動かしたときの現在地（2026-08-20 の UX 改善）。
+                                 太さは変えない — 変えると行の高さが揺れて仮想化中にガタつく -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -435,6 +450,11 @@
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
                             </Trigger>
+                            <!-- キーボードで動かしたときの現在地（2026-08-20 の UX 改善）。
+                                 太さは変えない — 変えると行の高さが揺れて仮想化中にガタつく -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Error.Fg}" />
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -475,6 +495,11 @@
                                 <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                                 <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Fg}" />
                                 <Setter Property="FontWeight" Value="Normal" />
+                            </Trigger>
+                            <!-- キーボードで動かしたときの現在地（2026-08-20 の UX 改善）。
+                                 太さは変えない — 変えると行の高さが揺れて仮想化中にガタつく -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Fg}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

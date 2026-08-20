@@ -547,6 +547,9 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **初期 Status を空にしない。**各 VM は `IdleHint`（何をすれば動くかの一言）を持ち、
   初期値と `Reset()` の戻し先にする（2026-08-20 の UI 改善。自己診断が起動直後の非空を検査）。
   例外は `ReportViewModel` — メニュー帯に常駐するので、常時ヒントを出すと騒がしい。
+- **行コンテナを新設したら `IsKeyboardFocused` のトリガも付ける**（下線の BorderBrush を
+  Brush.Accent.Fg に。応答なし欄だけは Error.Fg — あの欄は緑・アクセントを使わない決まり。
+  太さは変えない: 変えると行の高さが揺れて仮想化中にガタつく。2026-08-20 の UX 改善）。
 - **`ResultText` は `SetResult(text, kind)` 経由でのみ書く**（IpConfig / Proxy。
   文言と色種別を同時に決め、片方だけ書ける口を残さない。成功=Ok（緑）・失敗=Alert（赤）・
   進行/リセット=Muted。2026-08-20 の UX 改善）。
