@@ -131,7 +131,10 @@ public static class DeviceListParser
         List<DeviceEntry> devices = [];
         List<string> errors = [];
 
-        foreach ((string[] fields, int next, bool useSsh) in DeviceLines(text, defaultUseSsh, limit, errors, out int comments))
+        IReadOnlyList<(string[] Fields, int Next, bool UseSsh)> rows =
+            DeviceLines(text, defaultUseSsh, limit, errors, out int comments);
+
+        foreach ((string[] fields, int next, bool useSsh) in rows)
         {
             devices.Add(new DeviceEntry(
                 Host: fields[0],
