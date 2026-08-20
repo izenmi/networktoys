@@ -5124,8 +5124,14 @@
 
                         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <Button Content="宛先リストから選ぶ" Command="{Binding ImportFromTargetsCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                     ToolTip="Ping と TCP のタブに登録してある宛先から、取り込む相手を選びます。" />
+                            <Button Content="CSV から取り込む" Command="{Binding ImportCsvCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
+                                    ToolTip="機器の一覧を CSV ファイルから読み込みます。書き方は「CSV のひな型を保存」で確かめられます。" />
+                            <Button Content="CSV のひな型を保存" Command="{Binding SaveCsvTemplateCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    ToolTip="取り込みに使う CSV のひな型(書き方の見本つき)をファイルに書き出します。Excel でそのまま開けます。" />
 
                             <!-- 機種。コマンド欄の上に置いていたが窓が狭いと目に入らないので、
                                  他の設定と同じこの行へ出す -->
@@ -5142,6 +5148,9 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                            <Button Content="コマンドを既定に戻す" Command="{Binding ResetCommandsCommand}"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    ToolTip="コマンド欄を、選んでいる機種のおすすめに戻します。書き換えた内容は消えます。" />
 
                             <TextBlock Text="接続の待ち" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,4,2" />

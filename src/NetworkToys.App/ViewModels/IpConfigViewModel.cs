@@ -264,6 +264,22 @@ public sealed class IpConfigViewModel : ObservableObject
             await Task.Delay(1500);
             RefreshAdapters();
 
+            // 入力欄はいま適用した内容のままにする。RefreshAdapters がアダプタを選び直すと
+            // 現在値が書き戻されるが、OS の読みが落ち着く前だと固定 IP を当てた直後でも
+            // DHCP と報告され、「DHCP で自動取得する」に勝手にチェックが入る
+            // （2026-08-20 ユーザー報告。設定した本人の意図が現在値より正しい）
+            ApplyPresetToFields = false;
+            UseDhcp = plan.Dhcp;
+            if (!plan.Dhcp)
+            {
+                Address = plan.Address?.ToString() ?? Address;
+                Mask = plan.PrefixLength > 0 ? plan.PrefixLength.ToString() : Mask;
+                Gateway = plan.Gateway?.ToString() ?? "";
+                Dns1 = plan.Dns1?.ToString() ?? "";
+                Dns2 = plan.Dns2?.ToString() ?? "";
+            }
+            ApplyPresetToFields = true;
+
             NetworkAdapterInfo? current = Adapters.FirstOrDefault(a => a.Name == adapter.Name);
             bool confirmed = plan.Dhcp
                 ? current?.IsDhcp == true

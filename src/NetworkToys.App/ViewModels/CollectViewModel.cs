@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
+using System.Text;
+using Microsoft.Win32;
 using NetworkToys.App.Mvvm;
 using NetworkToys.App.Services;
 using NetworkToys.Core.Terminal;
@@ -116,6 +117,9 @@ public sealed class CollectViewModel : ObservableObject
         _selectedPreset = Presets[0];
 
         AddDeviceCommand = new RelayCommand(() => AddRow(new DeviceEntry("", true, "", "")));
+        ResetCommandsCommand = new RelayCommand(() => CommandText = SelectedPreset.Commands);
+        ImportCsvCommand = new RelayCommand(ImportCsv);
+        SaveCsvTemplateCommand = new RelayCommand(SaveCsvTemplate);
         RemoveDeviceCommand = new RelayCommand<CollectRowViewModel>(RemoveRow);
         ImportFromTargetsCommand = new RelayCommand(() => RequestImport?.Invoke(this, EventArgs.Empty));
         StartCommand = new RelayCommand(() => _ = RunAsync(), () => !IsBusy && Rows.Count > 0);
@@ -154,6 +158,15 @@ public sealed class CollectViewModel : ObservableObject
     }
 
     public RelayCommand AddDeviceCommand { get; }
+
+    /// <summary>コマンド欄を、選んでいる機種の既定へ戻す（2026-08-20 ユーザー指示）。</summary>
+    public RelayCommand ResetCommandsCommand { get; }
+
+    /// <summary>機器の一覧を CSV から取り込む（2026-08-20 ユーザー指示）。</summary>
+    public RelayCommand ImportCsvCommand { get; }
+
+    /// <summary>取り込みに使う CSV のひな型をファイルに書き出す。</summary>
+    public RelayCommand SaveCsvTemplateCommand { get; }
 
     /// <summary>行の × から呼ばれる。消す行そのものを受け取る。</summary>
     public RelayCommand<CollectRowViewModel> RemoveDeviceCommand { get; }
@@ -282,6 +295,95 @@ public sealed class CollectViewModel : ObservableObject
         Status = LastImportSummary;
     }
 
+    /// <summary>
+    /// CSV の書き方は設定ファイルと同じ <see cref="DeviceListParser"/> に任せる
+    /// （<c>宛先,ssh|telnet,ユーザー名,メモ</c>。区切りはカンマとタブ、行頭 # は注釈）。
+    /// <b>2 本目の書式を作らない</b> — ひな型もこの書式で書き出す。
+    /// </summary>
+    private const string CsvTemplate =
+        """
+        # ログ採取の機器一覧。1 行 1 台で、この行のような # で始まる行は読み飛ばします。
+        # 列は左から  宛先(IP かホスト名) , 接続方法(ssh か telnet) , ユーザー名 , メモ
+        # ユーザー名とメモは空でも構いません。パスワードは書けません(取り込んだ後に画面で入れます)。
+        192.168.1.1,ssh,admin,本社コアSW
+        192.168.1.2,telnet,,旧ルータ
+        """;
+
+    private void ImportCsv()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "CSV (*.csv)|*.csv|テキスト (*.txt)|*.txt|すべてのファイル (*.*)|*.*",
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        // 文字コードは自動判定(UTF-8 → cp932)。Excel が書く CSV は cp932 のことが多い
+        if (DroppedText.TryRead(dialog.FileName, out string problem) is not { } text)
+        {
+            Status = problem;
+            return;
+        }
+
+        DeviceListParseResult parsed = DeviceListParser.Parse(text, defaultUseSsh: true);
+
+        if (parsed.Devices.Count == 0)
+        {
+            Status = parsed.Errors.Count > 0
+                ? $"読み取れませんでした: {parsed.Errors[0]}"
+                : "機器の行が 1 つもありません。ひな型を保存して書き方を確かめてください。";
+            return;
+        }
+
+        // 宛先リストからの取り込みと同じ足し方(既にある宛先は飛ばす)
+        HashSet<string> known = [.. Rows.Select(r => r.Host)];
+        int added = 0;
+
+        foreach (DeviceEntry entry in parsed.Devices)
+        {
+            if (!known.Add(entry.Host)) continue;
+
+            // ユーザー名が書かれていなければ、前に使ったものを埋める
+            DeviceEntry filled = entry.UserName.Length > 0
+                ? entry
+                : entry with { UserName = Settings.Current.CollectUserNames.GetValueOrDefault(entry.Host, "") };
+
+            AddRow(filled);
+            added++;
+        }
+
+        string skipped = parsed.Devices.Count - added > 0 ? $"（{parsed.Devices.Count - added} 台は追加済み）" : "";
+        string errors = parsed.Errors.Count > 0 ? $"　⚠ {parsed.Errors[0]}" : "";
+
+        LastImportSummary = $"CSV から {added} 台を追加しました{skipped}。パスワードを入れてください。{errors}";
+        Status = LastImportSummary;
+    }
+
+    private void SaveCsvTemplate()
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = "機器一覧.csv",
+            DefaultExt = "csv",
+            Filter = "CSV (*.csv)|*.csv|すべてのファイル (*.*)|*.*",
+            AddExtension = true,
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            // BOM 付き UTF-8。Excel でそのまま開いて書ける
+            File.WriteAllText(dialog.FileName, CsvTemplate,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            Status = $"{Path.GetFileName(dialog.FileName)} に書き出しました。書き換えて「CSV から取り込む」で読み込めます。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status = $"保存できませんでした: {ex.Message}";
+        }
+    }
+
     private void AddRow(DeviceEntry entry)
     {
         Rows.Add(new CollectRowViewModel(entry));
@@ -320,9 +422,9 @@ public sealed class CollectViewModel : ObservableObject
         IsBusy = true;
         _cts = new CancellationTokenSource();
 
-        string folder = Path.Combine(
-            DeviceCollector.RootDirectory,
-            DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
+        // 保存先は collect 直下（2026-08-20 ユーザー指示で回ごとのフォルダをやめた）。
+        // ファイル名に機器名と日時が入るので、同じ場所でも混ざらない
+        string folder = DeviceCollector.RootDirectory;
 
         var options = new CiscoSessionOptions { IdleTimeout = TimeSpan.FromSeconds(IdleSeconds) };
         var progress = new Progress<CollectProgress>(p =>
