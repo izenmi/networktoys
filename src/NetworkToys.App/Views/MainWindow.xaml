@@ -5288,8 +5288,11 @@
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                     ToolTip="機器の一覧を CSV ファイルから読み込みます。書き方は「CSV のひな型を保存」で確かめられます。" />
                             <Button Content="CSV のひな型を保存" Command="{Binding SaveCsvTemplateCommand}"
-                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
                                     ToolTip="取り込みに使う CSV のひな型(書き方の見本つき)をファイルに書き出します。Excel でそのまま開けます。" />
+                            <Button Content="全行に認証情報を入れる..." Click="OnCollectFillCredentials"
+                                    Style="{StaticResource Button.Subtle}" Margin="0,0,16,2"
+                                    ToolTip="一覧の全行に、同じユーザー名・パスワード・enable を一度に入れます(共通の TACACS+/AD の現場向け)。保存はしません。" />
 
                             <!-- 機種。コマンド欄の上に置いていたが窓が狭いと目に入らないので、
                                  他の設定と同じこの行へ出す -->

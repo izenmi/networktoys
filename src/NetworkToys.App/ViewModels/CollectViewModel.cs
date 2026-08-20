@@ -406,6 +406,53 @@ public sealed class CollectViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 全行へ同じ認証情報を流し込む（2026-08-20 の UX 改善。共通 TACACS+/AD の現場向け）。
+    ///
+    /// <b>欄単位</b>で見る — ユーザー名は前回値の自動補完で埋まっている行が多く、
+    /// 行単位の「空だけ」では肝心のパスワードが入らない。<paramref name="overwrite"/> が
+    /// 偽なら空の欄だけ、真なら入力済みも置き換える。引数の空文字は「その欄は触らない」。
+    /// </summary>
+    public void FillCredentials(string user, string password, string enable, bool overwrite)
+    {
+        int touched = 0;
+        bool secrets = false;
+
+        foreach (CollectRowViewModel row in Rows)
+        {
+            bool changed = false;
+
+            if (user.Length > 0 && (overwrite || row.UserName.Length == 0))
+            {
+                row.UserName = user;
+                changed = true;
+            }
+
+            if (password.Length > 0 && (overwrite || row.Password.Length == 0))
+            {
+                row.Password = password;
+                changed = true;
+                secrets = true;
+            }
+
+            if (enable.Length > 0 && (overwrite || row.EnablePassword.Length == 0))
+            {
+                row.EnablePassword = enable;
+                changed = true;
+                secrets = true;
+            }
+
+            if (changed) touched++;
+        }
+
+        // PasswordBox はバインドを持たないので、画面側に映してもらう（CSV 取り込みと同じ経路）
+        if (secrets) SecretsImported?.Invoke(this, EventArgs.Empty);
+
+        Status = touched > 0
+            ? $"{touched} 行に認証情報を入れました。"
+            : "入れる先がありませんでした（すべて入力済みです。上書きするときはチェックを入れてください）。";
+    }
+
     private CollectRowViewModel AddRow(DeviceEntry entry)
     {
         var row = new CollectRowViewModel(entry);

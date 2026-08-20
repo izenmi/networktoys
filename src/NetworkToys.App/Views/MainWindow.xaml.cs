@@ -757,6 +757,14 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnEnableWfpCollection(object sender, RoutedEventArgs e) => _shell.Wfp.EnableCollection();
 
+    /// <summary>ログ採取: 全行へ同じ認証情報を流し込む。伏せ字欄への反映は SecretsImported 経由。</summary>
+    private void OnCollectFillCredentials(object sender, RoutedEventArgs e)
+    {
+        if (CollectCredentialsDialog.Ask(this) is not { } filled) return;
+
+        _shell.Collect.FillCredentials(filled.User, filled.Password, filled.Enable, filled.Overwrite);
+    }
+
     /// <summary>
     /// 接続タブの通信量(ETW)や遮断一覧のための管理者再起動。asInvoker は変えない方針なので、
     /// 昇格したい人だけがここから明示的に選ぶ。

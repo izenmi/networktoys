@@ -867,6 +867,56 @@ internal static class SelfTest
             dialog.Close();
         });
 
+        Check("収集: 認証情報の一括入力の小窓を表示できる", () =>
+        {
+            // 窓はコードで組んでいるので、リソースキーの打ち間違いは実行時にしか出ない
+            var dialog = new Views.CollectCredentialsDialog();
+            dialog.Show();
+            dialog.UpdateLayout();
+
+            Assert(dialog.ActualWidth > 0 && dialog.ActualHeight > 0, "小窓の実サイズが 0");
+            dialog.Close();
+        });
+
+        Check("収集: 一括入力は空の欄だけ埋め、上書きはチェックしたときだけ", () =>
+        {
+            var vm = new ViewModels.CollectViewModel();
+            int fired = 0;
+
+            vm.SecretsImported += (_, _) => fired++;
+
+            try
+            {
+                // 行を 2 つ: 片方は入力済み（ローカル認証の例外機器のつもり）
+                vm.AddDeviceCommand.Execute(null);
+                vm.AddDeviceCommand.Execute(null);
+                vm.Rows[0].UserName = "local";
+                vm.Rows[0].Password = "LocalPass";
+
+                // 既定（上書きなし）: 空の欄だけ埋まる
+                vm.FillCredentials("tacacs", "TacacsPass", "EnablePass", overwrite: false);
+
+                Assert(vm.Rows[0].UserName == "local", "入力済みのユーザー名が潰された");
+                Assert(vm.Rows[0].Password == "LocalPass", "入力済みのパスワードが潰された");
+                Assert(vm.Rows[0].EnablePassword == "EnablePass", "空の enable 欄に入っていない");
+                Assert(vm.Rows[1].UserName == "tacacs" && vm.Rows[1].Password == "TacacsPass",
+                       "空の行に入っていない");
+                Assert(fired == 1, $"SecretsImported が {fired} 回（1 回のはず）");
+
+                // 上書きあり: 全部置き換わる
+                vm.FillCredentials("tacacs", "NewPass", "", overwrite: true);
+
+                Assert(vm.Rows[0].UserName == "tacacs" && vm.Rows[0].Password == "NewPass",
+                       "上書きが効いていない");
+                Assert(vm.Rows[0].EnablePassword == "EnablePass", "空で渡した enable 欄が触られた");
+            }
+            finally
+            {
+                // 検査で作った行を残さない（次の検査が Rows を見るかもしれない）
+                while (vm.Rows.Count > 0) vm.RemoveDeviceCommand.Execute(vm.Rows[0]);
+            }
+        });
+
         Check("差分比較: 比較する対象に合わせた show が既定になる", () =>
         {
             Assert(Core.Work.DeviceComparison.CommandFor(Core.Work.DeviceOutputKind.Configuration)
