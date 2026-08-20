@@ -2506,7 +2506,11 @@
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
                             <PasswordBox x:Name="MerakiKeyBox" Width="230" Margin="0,0,12,2"
                                          PasswordChanged="OnMerakiKeyChanged"
-                                         ToolTip="ダッシュボードの [My profile] で発行したキー。保存しません。" />
+                                         ToolTip="ダッシュボードの [My profile] で発行したキー。保存しません。">
+                                <PasswordBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding FetchCommand}" />
+                                </PasswordBox.InputBindings>
+                            </PasswordBox>
 
                             <!-- 組織を選ぶ必要があることは見落とされやすい。
                                  選ぶまでは見出しごと警告色にする（2026-08-18 ユーザー指示） -->
@@ -3798,7 +3802,11 @@
                                        VerticalAlignment="Center" Margin="0,0,6,2" />
                             <TextBox Width="240"
                                      Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,6,2" />
+                                     Margin="0,0,6,2">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding TraceCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                             <Button Content="経路を調べる" Command="{Binding TraceCommand}" Margin="0,0,6,2" />
                             <Button Content="MTU を調べる" Command="{Binding MtuCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,2"
@@ -3968,7 +3976,11 @@
                                 <TextBox Width="260"
                                          Text="{Binding RangeText, UpdateSourceTrigger=PropertyChanged}"
                                          FontFamily="{DynamicResource Font.Mono}"
-                                         Margin="0,0,8,2" />
+                                         Margin="0,0,8,2">
+                                    <TextBox.InputBindings>
+                                        <KeyBinding Key="Enter" Command="{Binding ScanCommand}" />
+                                    </TextBox.InputBindings>
+                                </TextBox>
                                 <TextBlock Text="{Binding Preview}" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center" Margin="0,0,12,2" />
                                 <CheckBox Content="ホスト名を引く" IsChecked="{Binding ResolveNames}"
@@ -4108,7 +4120,11 @@
                                        VerticalAlignment="Center" Margin="0,0,6,0" />
                             <TextBox Width="240"
                                      Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,6,0" />
+                                     Margin="0,0,6,0">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding QueryCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                             <ComboBox Width="86"
                                       ItemsSource="{Binding RecordTypes}"
                                       SelectedItem="{Binding SelectedType}"
@@ -5575,7 +5591,11 @@
                             <TextBlock Text="接続先" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="150" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
                                      FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0"
-                                     ToolTip="サーバや機器の IP、またはホスト名。" />
+                                     ToolTip="サーバや機器の IP、またはホスト名。">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding ConnectCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                             <RadioButton Content="SFTP" IsChecked="{Binding IsSftp}" GroupName="XferKind"
                                          VerticalAlignment="Center" Margin="0,0,8,0"
                                          ToolTip="SSH の上で運ぶ。経路が暗号化される。" />
@@ -5584,15 +5604,27 @@
                                          ToolTip="暗号化されない。古い機器はこちらしか持っていないことがある。" />
                             <TextBlock Text="ポート" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="52" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0" />
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,10,0">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding ConnectCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                             <TextBlock Text="ユーザー" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="110" Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,10,0" />
+                                     Margin="0,0,10,0">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding ConnectCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                             <TextBlock Text="パスワード" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <!-- TextBox にしない。F12 の画面保存に平文が焼き込まれる -->
                             <PasswordBox Width="110" Tag="xfer" PasswordChanged="OnFileServerPasswordChanged"
                                          Height="{DynamicResource Size.RowHeight.Input}" Margin="0,0,10,0"
-                                         ToolTip="保存しません。閉じると消えます。" />
+                                         ToolTip="保存しません。閉じると消えます。">
+                                <PasswordBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding ConnectCommand}" />
+                                </PasswordBox.InputBindings>
+                            </PasswordBox>
                             <Button Content="接続" Command="{Binding ConnectCommand}" Margin="0,0,6,0" />
                             <Button Content="切断" Command="{Binding DisconnectCommand}"
                                     Style="{StaticResource Button.Subtle}" Margin="0,0,6,0" />
@@ -5843,10 +5875,18 @@
                             <TextBlock Text="宛先" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="140" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
                                      FontFamily="{DynamicResource Font.Mono}" Margin="0,0,12,0"
-                                     ToolTip="機器の IP。" />
+                                     ToolTip="機器の IP。">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding GetCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                             <TextBlock Text="コミュニティ" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="90" Text="{Binding Community, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,12,0" />
+                                     Margin="0,0,12,0">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding GetCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                             <CheckBox Content="v2c" IsChecked="{Binding IsV2c}"
                                       VerticalAlignment="Center" Margin="0,0,12,0"
                                       ToolTip="外すと v1 で問い合わせます。" />
@@ -5864,7 +5904,11 @@
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                             <TextBlock Text="OID" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,5,0" />
                             <TextBox Width="240" Text="{Binding OidText, UpdateSourceTrigger=PropertyChanged}"
-                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,8,0" />
+                                     FontFamily="{DynamicResource Font.Mono}" Margin="0,0,8,0">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding GetCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                             <ComboBox Width="220"
                                       ItemsSource="{Binding Presets}"
                                       SelectedItem="{Binding SelectedPreset}"
@@ -5973,19 +6017,31 @@
                                  （テンプレートに PART_EditableTextBox が無く、入力欄が描かれない） -->
                             <TextBox Width="200" Margin="0,0,12,2"
                                      Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="APIC の IP かホスト名。https:// は付けても付けなくても構いません。前回の接続先が入っています。" />
+                                     ToolTip="APIC の IP かホスト名。https:// は付けても付けなくても構いません。前回の接続先が入っています。">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding FetchCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
 
                             <TextBlock Text="ユーザー" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
                             <TextBox Width="110" Margin="0,0,12,2"
                                      Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="読み取りだけできるユーザーで十分です。" />
+                                     ToolTip="読み取りだけできるユーザーで十分です。">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding FetchCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
 
                             <TextBlock Text="パスワード" Style="{StaticResource Caption}"
                                        VerticalAlignment="Center" Margin="0,0,5,2" />
                             <PasswordBox x:Name="AciPasswordBox" Width="130" Margin="0,0,12,2"
                                          PasswordChanged="OnAciPasswordChanged"
-                                         ToolTip="保存しません。起動するたびに入れ直してください。" />
+                                         ToolTip="保存しません。起動するたびに入れ直してください。">
+                                <PasswordBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding FetchCommand}" />
+                                </PasswordBox.InputBindings>
+                            </PasswordBox>
 
                             <Button Content="取得" Command="{Binding FetchCommand}" Margin="0,0,6,2" />
                             <Button Content="中断" Command="{Binding CancelCommand}"
