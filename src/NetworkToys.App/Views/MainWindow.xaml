@@ -87,6 +87,11 @@
             <!-- すぐ出して、読み終わるまで消えないようにする -->
             <Setter Property="ToolTipService.InitialShowDelay" Value="150" />
             <Setter Property="ToolTipService.ShowDuration" Value="120000" />
+            <!-- クリックでも読める（ホバーで読み切れないとき用。2026-08-20 の UX 改善）。
+                 EventSetter は IStyleConnector 経由の正規の結線で、「Setter の中の
+                 イベントハンドラ付き要素」の罠（CLAUDE.md）の対象外。
+                 ただし x:Class のある XAML（この MainWindow.xaml）でしか使えない -->
+            <EventSetter Event="MouseLeftButtonDown" Handler="OnTabInfoClick" />
         </Style>
 
         <!-- 値の表示欄。読み取り専用の TextBox にして、選択してコピーできるようにする -->

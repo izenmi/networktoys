@@ -1942,6 +1942,18 @@ public partial class MainWindow : Window
 
     private void OnOtherScreensMenu(object sender, RoutedEventArgs e) => OpenOtherTabsMenu();
 
+    /// <summary>
+    /// ⓘ をクリックしたら、ホバーの説明と同じ文面を別窓で出す（選択もコピーもできる）。
+    /// 本文 1 行目がタブ名という TabHelp の決まりがあるので、タイトルは固定でよい。
+    /// </summary>
+    private void OnTabInfoClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not TextBlock { ToolTip: string text } || text.Length == 0) return;
+
+        TextViewDialog.Show(this, "この画面について", text);
+        e.Handled = true;
+    }
+
     /// <summary>そのタブが中に持っている切り替え。無ければ null。</summary>
     /// <summary>
     /// その要素が載っているタブ。<b>論理ツリーでたどる</b> —
