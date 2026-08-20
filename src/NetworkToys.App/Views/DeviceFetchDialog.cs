@@ -171,7 +171,8 @@ internal sealed class DeviceFetchDialog : Window
         return dialog.ShowDialog() == true ? dialog.Output : null;
     }
 
-    private static void AddRow(Grid grid, string label, UIElement input)
+    /// <summary>ラベル付きの入力行を 1 段足す。internal は <see cref="CollectCredentialsDialog"/> と共用のため。</summary>
+    internal static void AddRow(Grid grid, string label, UIElement input)
     {
         int row = grid.RowDefinitions.Count;
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });

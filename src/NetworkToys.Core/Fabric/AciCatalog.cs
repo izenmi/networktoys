@@ -623,12 +623,9 @@ public static class AciCatalog
     /// （2026-08-18 ユーザー指示。以前は「タグ付き／タグなし」と言い換えていた）。
     /// <c>native</c> はタグの無い枠を 802.1p で受ける Access なので、そう添える。
     /// </summary>
-    /// <summary>タグ付き（Trunk）の表示。画面と CSV でこの文字を使う。</summary>
-    public const string TrunkMode = "Trunk";
-
     public static string DescribeMode(string? mode) => mode switch
     {
-        "regular" => TrunkMode,
+        "regular" => "Trunk",
         "native" => "Access (802.1p)",
         "untagged" => "Access",
         null or "" => "—",

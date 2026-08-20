@@ -96,7 +96,6 @@ public static class DeviceListParser
 
     public sealed record CsvParseResult(
         IReadOnlyList<ImportedDevice> Devices,
-        int CommentLines,
         IReadOnlyList<string> Errors);
 
     /// <summary>
@@ -109,82 +108,59 @@ public static class DeviceListParser
     {
         List<ImportedDevice> devices = [];
         List<string> errors = [];
-        int comments = 0;
 
-        if (string.IsNullOrWhiteSpace(text))
-            return new CsvParseResult(devices, 0, errors);
-
-        string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Replace('\r', '\n')
-            .Split('\n');
-
-        for (int i = 0; i < lines.Length; i++)
+        foreach ((string[] fields, int next, bool useSsh) in DeviceLines(text, defaultUseSsh, limit, errors, out _))
         {
-            string line = lines[i].Trim().Trim('　');
-            if (line.Length == 0) continue;
-
-            if (line[0] is '!' or '#' or ';')
-            {
-                comments++;
-                continue;
-            }
-
-            if (devices.Count >= limit)
-            {
-                errors.Add($"{limit} 台を超えたため、{i + 1} 行目以降は読み飛ばしました。");
-                break;
-            }
-
-            string[] fields = line.Split([',', '\t'], StringSplitOptions.TrimEntries);
-            string host = fields[0];
-
-            if (host.Length == 0)
-            {
-                errors.Add($"{i + 1} 行目: 宛先がありません。");
-                continue;
-            }
-
-            // 2 番目が ssh / telnet でなければ、方式を省いた行として読む（Parse と同じ寛容さ）
-            bool useSsh = defaultUseSsh;
-            int next = 1;
-
-            if (fields.Length > 1)
-            {
-                if (string.Equals(fields[1], "ssh", StringComparison.OrdinalIgnoreCase))
-                {
-                    useSsh = true;
-                    next = 2;
-                }
-                else if (string.Equals(fields[1], "telnet", StringComparison.OrdinalIgnoreCase))
-                {
-                    useSsh = false;
-                    next = 2;
-                }
-            }
-
             string At(int offset) => fields.Length > next + offset ? fields[next + offset] : "";
 
             devices.Add(new ImportedDevice(
                 new DeviceEntry(
-                    Host: host,
+                    Host: fields[0],
                     UseSsh: useSsh,
                     UserName: At(0),
-                    Memo: fields.Length > next + 3 ? string.Join(", ", fields[(next + 3)..]) : ""),
+                    Memo: Rest(fields, next + 3)),
                 Password: At(1),
                 EnablePassword: At(2)));
         }
 
-        return new CsvParseResult(devices, comments, errors);
+        return new CsvParseResult(devices, errors);
     }
 
     public static DeviceListParseResult Parse(string? text, bool defaultUseSsh, int limit = DefaultLimit)
     {
         List<DeviceEntry> devices = [];
         List<string> errors = [];
-        int comments = 0;
 
-        if (string.IsNullOrWhiteSpace(text))
-            return new DeviceListParseResult(devices, 0, errors);
+        foreach ((string[] fields, int next, bool useSsh) in DeviceLines(text, defaultUseSsh, limit, errors, out int comments))
+        {
+            devices.Add(new DeviceEntry(
+                Host: fields[0],
+                UseSsh: useSsh,
+                UserName: fields.Length > next ? fields[next] : "",
+                Memo: Rest(fields, next + 1)));
+        }
+
+        return new DeviceListParseResult(devices, comments, errors);
+    }
+
+    /// <summary>指定位置から後ろを全部メモとして繋ぎ直す（メモの中のカンマを守る）。</summary>
+    private static string Rest(string[] fields, int from)
+        => fields.Length > from ? string.Join(", ", fields[from..]) : "";
+
+    /// <summary>
+    /// 機器一覧の 1 行を読む共通の骨組み（<see cref="Parse"/> と <see cref="ParseCsv"/> で共用）。
+    /// 注釈・空行・宛先なし・上限超えをここで捌き、
+    /// <c>next</c> は「ユーザー名が始まる位置」（2 番目が ssh / telnet なら 2、
+    /// 方式を省いた行なら 1 — 方式を持たなかった頃の行をそのまま受けるため）。
+    /// </summary>
+    private static IReadOnlyList<(string[] Fields, int Next, bool UseSsh)> DeviceLines(
+        string? text, bool defaultUseSsh, int limit, List<string> errors, out int comments)
+    {
+        comments = 0;
+
+        var rows = new List<(string[], int, bool)>();
+
+        if (string.IsNullOrWhiteSpace(text)) return rows;
 
         string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace('\r', '\n')
@@ -192,6 +168,7 @@ public static class DeviceListParser
 
         for (int i = 0; i < lines.Length; i++)
         {
+            // 全角スペースも空白として扱う(表計算からの貼り付けで混ざる)
             string line = lines[i].Trim().Trim('　');
             if (line.Length == 0) continue;
 
@@ -201,23 +178,20 @@ public static class DeviceListParser
                 continue;
             }
 
-            if (devices.Count >= limit)
+            if (rows.Count >= limit)
             {
                 errors.Add($"{limit} 台を超えたため、{i + 1} 行目以降は読み飛ばしました。");
                 break;
             }
 
             string[] fields = line.Split([',', '\t'], StringSplitOptions.TrimEntries);
-            string host = fields[0];
 
-            if (host.Length == 0)
+            if (fields[0].Length == 0)
             {
                 errors.Add($"{i + 1} 行目: 宛先がありません。");
                 continue;
             }
 
-            // 2 番目が ssh / telnet なら方式。そうでなければユーザー名として読む
-            // (方式を持たなかった頃に書かれた行をそのまま受けられるように)
             bool useSsh = defaultUseSsh;
             int next = 1;
 
@@ -235,14 +209,10 @@ public static class DeviceListParser
                 }
             }
 
-            devices.Add(new DeviceEntry(
-                Host: host,
-                UseSsh: useSsh,
-                UserName: fields.Length > next ? fields[next] : "",
-                Memo: fields.Length > next + 1 ? string.Join(", ", fields[(next + 1)..]) : ""));
+            rows.Add((fields, next, useSsh));
         }
 
-        return new DeviceListParseResult(devices, comments, errors);
+        return rows;
     }
 
     /// <summary>settings.json へ往復させるための書き戻し。</summary>

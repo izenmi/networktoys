@@ -69,10 +69,10 @@ internal sealed class CollectCredentialsDialog : Window
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        AddRow(form, "ユーザー", _user);
-        AddRow(form, "パスワード", _password);
-        AddRow(form, "enable", _enable);
-        AddRow(form, "", _overwrite);
+        DeviceFetchDialog.AddRow(form, "ユーザー", _user);
+        DeviceFetchDialog.AddRow(form, "パスワード", _password);
+        DeviceFetchDialog.AddRow(form, "enable", _enable);
+        DeviceFetchDialog.AddRow(form, "", _overwrite);
 
         var buttons = new StackPanel
         {
@@ -113,32 +113,6 @@ internal sealed class CollectCredentialsDialog : Window
             : null;
     }
 
-    private static void AddRow(Grid grid, string label, UIElement input)
-    {
-        int row = grid.RowDefinitions.Count;
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        var caption = new TextBlock
-        {
-            Text = label,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 3, 10, 3),
-        };
-
-        Grid.SetRow(caption, row);
-        Grid.SetColumn(caption, 0);
-        grid.Children.Add(caption);
-
-        if (input is FrameworkElement element)
-        {
-            element.HorizontalAlignment = HorizontalAlignment.Left;
-            element.Margin = new Thickness(0, 3, 0, 3);
-        }
-
-        Grid.SetRow(input, row);
-        Grid.SetColumn(input, 1);
-        grid.Children.Add(input);
-    }
 
     protected override void OnSourceInitialized(EventArgs e)
     {

@@ -598,12 +598,6 @@ public partial class MainWindow : Window
         // ノードの列は NodeKey で並べる（101 が 9 より前に来ないように）
         ["acidev"] = ["NodeKey", "Name", "Role", "Model", "Serial", "Version", "State"],
         // RSSI は数値のまま並べる（表示文字列で並べると -100 が -58 より強いことになる）
-        ["wlccl"] = ["Mac", "Ip", "Vendor", "ApName", "Ssid", "Radio", "Rssi", "Quality", "Speed", "State"],
-        ["dnccl"] = ["Mac", "Ip", "HostName", "Kind", "Device", "Port", "Vlan", "Ssid", "Band",
-                     "Health", "Site", "Updated"],
-        ["dncev"] = ["Time", "Name", "Status", "Source", "Detail"],
-        ["dncdev"] = ["Name", "Model", "Serial", "Version", "Ip", "Site", "Role", "Reachability", "Health"],
-        ["dnccll"] = ["Mac", "Ip", "HostName", "Kind", "Device", "Port", "Ssid", "Band", "Health", "Site"],
         ["dnclc"] = ["Device", "Kind", "State", "Date", "Note"],
         ["wlcap"] = ["State", "Name", "Ip", "Mac", "Model", "Version", "Radios", "Clients", "Tags"],
         ["wlcjoin"] = ["State", "Name", "Mac", "LastJoin", "LastDisconnect", "Reason", "Joins", "Failures"],

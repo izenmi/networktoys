@@ -101,7 +101,6 @@ public sealed class CollectRowViewModel(DeviceEntry entry) : ObservableObject
 /// </summary>
 public sealed class CollectViewModel : ObservableObject
 {
-    private string _lastImportSummary = "";
     private string _commandText = RecommendedCommands.Ios;
     private string _status = "宛先リストから取り込むか、機器を直接書いて「収集を開始」を押します。";
     private string _notice = "";
@@ -183,13 +182,6 @@ public sealed class CollectViewModel : ObservableObject
     public RelayCommand RetryFailedCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
-
-    /// <summary>取り込みの結果を短く伝える。</summary>
-    public string LastImportSummary
-    {
-        get => _lastImportSummary;
-        private set => SetProperty(ref _lastImportSummary, value);
-    }
 
     public string CommandText
     {
@@ -298,11 +290,9 @@ public sealed class CollectViewModel : ObservableObject
             added++;
         }
 
-        LastImportSummary = added == 0
+        Status = added == 0
             ? "選んだ宛先はすべて追加済みでした。"
             : $"{added} 台を追加しました。パスワードを入れてください。";
-
-        Status = LastImportSummary;
     }
 
     /// <summary>
@@ -384,8 +374,7 @@ public sealed class CollectViewModel : ObservableObject
             ? $"パスワードも {withSecrets} 台ぶん取り込みました。"
             : "パスワードを入れてください。";
 
-        LastImportSummary = $"CSV から {added} 台を追加しました{skipped}。{secrets}{errors}";
-        Status = LastImportSummary;
+        Status = $"CSV から {added} 台を追加しました{skipped}。{secrets}{errors}";
     }
 
     private void SaveCsvTemplate()
