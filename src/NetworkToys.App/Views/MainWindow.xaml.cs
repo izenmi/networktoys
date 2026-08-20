@@ -2063,7 +2063,7 @@ public partial class MainWindow : Window
 
     private void OnPaneGrab(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
     {
-        if (sender is not Thumb thumb) return;
+        if (sender is not System.Windows.Controls.Primitives.Thumb thumb) return;
 
         // 仕切りの親 Grid。テンプレートの Border から上がることは無い（Thumb 自身が子）
         DependencyObject? node = VisualTreeHelper.GetParent(thumb);
