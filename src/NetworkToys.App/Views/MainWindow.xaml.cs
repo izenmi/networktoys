@@ -798,7 +798,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             CrashLog.Write(ex, "MainWindow.OnScreenshot");
-            ShowNotice("保存できません");
+            ShowNotice("保存できません", isProblem: true);
         }
     }
 
@@ -871,18 +871,28 @@ public partial class MainWindow : Window
     private void OnFileMenuOpened(object sender, RoutedEventArgs e)
         => _shell.Report.RefreshSaveCommands();
 
-    /// <summary>短い知らせをヘッダの文字で 2 秒だけ出す。トーストや別窓は出さない。</summary>
-    private void ShowNotice(string text)
+    /// <summary>知らせを消すタイマー。<b>1 本だけ</b>持つ — 呼ぶたびに作ると、
+    /// 連続で知らせたとき前のタイマーが後の文字を早々に消してしまう（2 秒時代に実際に起きうる作りだった）。</summary>
+    private DispatcherTimer? _noticeTimer;
+
+    /// <summary>
+    /// 短い知らせをヘッダの文字で出す。トーストや別窓は出さない。
+    /// 2 秒では保存の成否を見逃すので、通常 5 秒・<paramref name="isProblem"/> なら 10 秒
+    /// （2026-08-20 の UI 改善。失敗はゆっくり読めるように）。
+    /// </summary>
+    private void ShowNotice(string text, bool isProblem = false)
     {
+        _noticeTimer?.Stop();
+
         HeaderNotice.Text = text;
 
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        timer.Tick += (_, _) =>
+        _noticeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(isProblem ? 10 : 5) };
+        _noticeTimer.Tick += (_, _) =>
         {
-            timer.Stop();
+            _noticeTimer.Stop();
             HeaderNotice.Text = "";
         };
-        timer.Start();
+        _noticeTimer.Start();
     }
 
     private void OnThemeToggle(object sender, RoutedEventArgs e)
@@ -1640,7 +1650,7 @@ public partial class MainWindow : Window
 
         if (Services.DroppedText.TryRead(files[0], out string problem) is not { } text)
         {
-            ShowNotice(problem);
+            ShowNotice(problem, isProblem: true);
             return;
         }
 
@@ -1662,7 +1672,7 @@ public partial class MainWindow : Window
 
         if (Services.DroppedText.TryRead(files[0], out string problem) is not { } text)
         {
-            ShowNotice(problem);
+            ShowNotice(problem, isProblem: true);
             return;
         }
 
