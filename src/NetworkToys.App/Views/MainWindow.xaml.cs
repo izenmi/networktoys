@@ -40,6 +40,9 @@ public partial class MainWindow : Window
         // 「その他」の見出しは件数を数えて組み立てる（直書きにしない）
         UpdateOtherHeader();
 
+        // 管理者で動いているときは、ドロップ欄に「届かない」旨の断りを足す
+        MarkBlockedDropTargets();
+
         DataContext = _shell;
         UpdateThemeToggle();
 
@@ -1821,6 +1824,46 @@ public partial class MainWindow : Window
         ShowNotice(files.Length > 1
             ? $"{System.IO.Path.GetFileName(files[0])} を読み込みました（1 つ目だけ）。"
             : $"{System.IO.Path.GetFileName(files[0])} を読み込みました。");
+    }
+
+    /// <summary>
+    /// 管理者として動いているとき、ドロップを受ける欄のツールチップに断りを書き足す。
+    ///
+    /// 昇格したプロセスへは、エクスプローラー（非管理者）からのドラッグ&ドロップが
+    /// Windows の保護（UIPI）で<b>届かない</b> — DragOver すら来ず、カーソルが 🚫 のままになる。
+    /// アプリでは直せないので、黙って効かない代わりにここで断る（2026-08-21 ユーザー報告）。
+    /// 試験項目の行の並べ替えは同一プロセス内のドラッグなので影響を受けない
+    /// （行テンプレートの中は論理ツリーに載らず、この走査にも掛からない）。
+    /// </summary>
+    internal const string DropBlockedNote =
+        "管理者として実行中は、エクスプローラーからのファイルの放り込みを Windows が遮ります（貼り付けは使えます）。";
+
+    private void MarkBlockedDropTargets()
+    {
+        if (!Services.NetTraceSession.IsAdministrator) return;
+
+        foreach (FrameworkElement target in DropTargets(this))
+            target.ToolTip = target.ToolTip is string { Length: > 0 } tip
+                ? tip + "\n" + DropBlockedNote
+                : DropBlockedNote;
+    }
+
+    /// <summary>ドロップを受ける要素（AllowDrop 付き）を論理ツリーから集める。</summary>
+    internal static List<FrameworkElement> DropTargets(DependencyObject node)
+    {
+        List<FrameworkElement> found = [];
+        Collect(node, found);
+        return found;
+
+        static void Collect(DependencyObject node, List<FrameworkElement> found)
+        {
+            if (node is FrameworkElement { AllowDrop: true } element) found.Add(element);
+
+            foreach (object? child in LogicalTreeHelper.GetChildren(node))
+            {
+                if (child is DependencyObject deeper) Collect(deeper, found);
+            }
+        }
     }
 
     /// <summary>試験の項目一覧にファイルを放り込んだとき。書式の解釈は VM に任せる。</summary>

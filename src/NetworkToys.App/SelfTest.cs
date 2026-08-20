@@ -931,6 +931,25 @@ internal static class SelfTest
             window.ShowNotice("", isProblem: false);   // 後始末（空文字で消す）
         });
 
+        Check("管理者のときだけドロップ欄に断りが入る", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // CI のランナーは管理者なので、断りを足す側の経路が実際に通る
+            var targets = Views.MainWindow.DropTargets(window!);
+            Assert(targets.Count >= 5, $"ドロップを受ける欄が {targets.Count} 個しか見つからない");
+
+            foreach (var target in targets)
+            {
+                bool marked = target.ToolTip is string tip
+                              && tip.Contains(Views.MainWindow.DropBlockedNote, StringComparison.Ordinal);
+                Assert(marked == Services.NetTraceSession.IsAdministrator,
+                       Services.NetTraceSession.IsAdministrator
+                           ? $"管理者なのに断りの無いドロップ欄がある: {target.GetType().Name}"
+                           : $"非管理者なのに断りが入っている: {target.GetType().Name}");
+            }
+        });
+
         Check("収集: 「失敗だけ再実行」は失敗の行があるときだけ押せる", () =>
         {
             // 失敗の定義（✕ と ⛔ だけ。△ 一部失敗は出力が取れているので含めない）
