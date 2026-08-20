@@ -62,7 +62,7 @@ public partial class MainWindow : Window
         InputBindings.Add(new KeyBinding(
             new Mvvm.RelayCommand(StartFromShortcut), new KeyGesture(Key.F5)));
         InputBindings.Add(new KeyBinding(
-            _shell.Monitor.StopCommand, new KeyGesture(Key.F5, ModifierKeys.Shift)));
+            new Mvvm.RelayCommand(StopFromShortcut), new KeyGesture(Key.F5, ModifierKeys.Shift)));
         InputBindings.Add(new KeyBinding(
             new Mvvm.RelayCommand(() => OnScreenshot(this, new RoutedEventArgs())),
             new KeyGesture(Key.F12)));
@@ -307,12 +307,29 @@ public partial class MainWindow : Window
     }
 
     /// <summary>F5 での開始。ボタンと同じく、開始できたら Ping タブへ移る。</summary>
+    /// <summary>
+    /// F5 の相手。<b>TCP Ping タブを開いているときは TCP</b>、それ以外は Ping
+    /// （2026-08-20 の UI 改善。以前は Monitor 固定で、TCP タブで押すと Ping タブへ飛ばされた）。
+    /// </summary>
+    private MonitorViewModel ShortcutTarget => IsShowing(TcpTab) ? _shell.Tcp : _shell.Monitor;
+
     private void StartFromShortcut()
     {
-        if (!_shell.Monitor.StartCommand.CanExecute(null)) return;
+        MonitorViewModel target = ShortcutTarget;
 
-        _shell.Monitor.StartCommand.Execute(null);
-        Show(PingTab);
+        if (!target.StartCommand.CanExecute(null)) return;
+
+        target.StartCommand.Execute(null);
+
+        // TCP タブに居るときはそのまま。ほかのタブからは Ping タブへ
+        if (ReferenceEquals(target, _shell.Monitor)) Show(PingTab);
+    }
+
+    private void StopFromShortcut()
+    {
+        MonitorViewModel target = ShortcutTarget;
+
+        if (target.StopCommand.CanExecute(null)) target.StopCommand.Execute(null);
     }
 
     /// <summary>
