@@ -1447,6 +1447,44 @@ internal static class SelfTest
             }
         });
 
+        Check("空の一覧の案内が全部の対象で生きている", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // EmptyHint は ElementName で一覧を指す。打ち間違えるとバインドが黙って死に、
+            // 案内が出っぱなし（or 出ない）になるので、実描画で全数を確かめる（2026-08-20）
+            object? original = window!.MainTabs.SelectedItem;
+            var problems = new List<string>();
+            int hints = 0;
+
+            VisitTabs(window, window.MainTabs, _ =>
+            {
+                foreach (System.Windows.Controls.TextBlock hint
+                         in FindVisual<System.Windows.Controls.TextBlock>(window))
+                {
+                    if (hint.Tag as string != "EmptyHint") continue;
+
+                    hints++;
+
+                    if (hint.Text.Length == 0)
+                        problems.Add("案内文が空の EmptyHint がある");
+
+                    System.Windows.Data.BindingExpression? binding =
+                        hint.GetBindingExpression(UIElement.VisibilityProperty);
+
+                    if (binding is null || binding.ResolvedSource is null)
+                        problems.Add($"バインドが死んでいる: 「{hint.Text}」");
+                }
+            });
+
+            window.MainTabs.SelectedItem = original;
+            window.UpdateLayout();
+
+            Assert(problems.Count == 0, string.Join(" / ", problems.Distinct()));
+            Assert(hints >= 14, $"EmptyHint が {hints} 個しか見つからない（14 個のはず）");
+            log.AppendLine($"        見合わせた案内: {hints} 個");
+        });
+
         Check("メニューの全項目にアクセスキーがあり、親の中で重複しない", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
@@ -2807,6 +2845,22 @@ internal static class SelfTest
     /// つまみは見出しにだけ置く決まり（行テンプレートに入れると全行に付く）なので、
     /// これを持つ Grid＝見出し、で一意に見分けられる。
     /// </summary>
+    /// <summary>視覚ツリーから型で探す。実体化済みのものしか見つからない（VisitTabs と組で使う）。</summary>
+    private static IEnumerable<T> FindVisual<T>(DependencyObject root) where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(root);
+
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, i);
+
+            if (child is T hit) yield return hit;
+
+            foreach (T found in FindVisual<T>(child))
+                yield return found;
+        }
+    }
+
     private static IEnumerable<System.Windows.Controls.Grid> FindTableHeaders(DependencyObject root)
     {
         if (root is System.Windows.Controls.Grid grid && HasColumnGrip(grid))

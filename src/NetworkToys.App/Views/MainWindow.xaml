@@ -9,6 +9,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:NetworkToys.App.Controls"
         xmlns:vm="clr-namespace:NetworkToys.App.ViewModels"
+        xmlns:mvvm="clr-namespace:NetworkToys.App.Mvvm"
         xmlns:help="clr-namespace:NetworkToys.App.Help"
         xmlns:net="clr-namespace:NetworkToys.Core.Net;assembly=NetworkToys.Core"
         Title="NetworkToys"
@@ -25,6 +26,8 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <!-- 件数 0 のときだけ出す（空の一覧の案内用） -->
+        <mvvm:ZeroToVisibleConverter x:Key="ZeroToVisible" />
 
         <!--
             一覧から次の道具へ送るメニュー。スキャン・接続・遮断・Meraki・syslog・Trap で
@@ -1030,7 +1033,8 @@
                                 <Border DockPanel.Dock="Top" Height="1"
                                         Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
-                                <ListBox ItemsSource="{Binding Rows}"
+                                <Grid>
+                                <ListBox x:Name="WfpList" ItemsSource="{Binding Rows}"
                                          Background="Transparent" BorderThickness="0"
                                          HorizontalContentAlignment="Stretch"
                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -1101,6 +1105,10 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                                    <TextBlock Style="{StaticResource EmptyHint}"
+                                               Text="「一時停止」を外すと、Windows が落とした通信がここに出ます"
+                                               Visibility="{Binding Items.Count, ElementName=WfpList, Converter={StaticResource ZeroToVisible}}" />
+                                </Grid>
                             </DockPanel>
                         </Border>
                     </DockPanel>
@@ -2059,7 +2067,8 @@
 
                                     <!-- TargetListBox は Ping 用の ItemTemplate を既定で当ててくるので使わない。
                                          ここは自前のテンプレートを 1 つ置くだけ -->
-                                    <ListBox ItemsSource="{Binding Results}" Tag="vres"
+                                    <Grid>
+                                    <ListBox x:Name="VerifyResultList" ItemsSource="{Binding Results}" Tag="vres"
                                              Background="Transparent" BorderThickness="0"
                                              HorizontalContentAlignment="Stretch"
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -2140,6 +2149,10 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
+                                        <TextBlock Style="{StaticResource EmptyHint}"
+                                                   Text="「まとめて実行」を押すと、結果がここに並びます"
+                                                   Visibility="{Binding Items.Count, ElementName=VerifyResultList, Converter={StaticResource ZeroToVisible}}" />
+                                    </Grid>
                                 </DockPanel>
                             </Border>
                         </Grid>
@@ -2781,7 +2794,8 @@
                                             <Border DockPanel.Dock="Top" Height="1"
                                                     Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
 
-                                            <ListBox ItemsSource="{Binding DeviceRows}"
+                                            <Grid>
+                                            <ListBox x:Name="MerakiDeviceList" ItemsSource="{Binding DeviceRows}"
                                                      ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                      Background="Transparent" BorderThickness="0"
                                                      HorizontalContentAlignment="Stretch"
@@ -2854,6 +2868,10 @@
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
                                             </ListBox>
+                                                <TextBlock Style="{StaticResource EmptyHint}"
+                                                           Text="API キーを入れて「取得」を押すと、機器がここに出ます"
+                                                           Visibility="{Binding Items.Count, ElementName=MerakiDeviceList, Converter={StaticResource ZeroToVisible}}" />
+                                            </Grid>
                                         </DockPanel>
                                     </Border>
                                 </DockPanel>
@@ -3860,7 +3878,8 @@
                         <!-- 見出しは一覧の外にあるので、スクロールバーの場所は常に空けておく。
                              出たり消えたりすると、そのぶん行だけ狭くなって見出しとずれる -->
                         <ScrollViewer VerticalScrollBarVisibility="Visible">
-                            <ItemsControl ItemsSource="{Binding Hops}" Tag="trace">
+                            <Grid>
+                            <ItemsControl x:Name="TraceHopList" ItemsSource="{Binding Hops}" Tag="trace">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border x:Name="Row" CornerRadius="{DynamicResource Radius.Badge}" Padding="4,0">
@@ -3910,6 +3929,10 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                                <TextBlock Style="{StaticResource EmptyHint}"
+                                           Text="「経路を調べる」を押すと、経由するルータがここに並びます"
+                                           Visibility="{Binding Items.Count, ElementName=TraceHopList, Converter={StaticResource ZeroToVisible}}" />
+                            </Grid>
                         </ScrollViewer>
                     </DockPanel>
                 </Border>
@@ -4001,7 +4024,8 @@
                         <Border DockPanel.Dock="Top" Height="1"
                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,2" />
 
-                        <ListBox ItemsSource="{Binding Results}"
+                        <Grid>
+                        <ListBox x:Name="ScanList" ItemsSource="{Binding Results}"
                                  ItemContainerStyle="{StaticResource PlainRowContainer}"
                                  Background="Transparent"
                                  BorderThickness="0"
@@ -4048,6 +4072,10 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                            <TextBlock Style="{StaticResource EmptyHint}"
+                                       Text="「スキャン」を押すと、応答した機器がここに出ます"
+                                       Visibility="{Binding Items.Count, ElementName=ScanList, Converter={StaticResource ZeroToVisible}}" />
+                        </Grid>
                     </DockPanel>
                 </Border>
             </TabItem>
@@ -4101,7 +4129,8 @@
 
                         <!-- 結果を横並びで比較する -->
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding Results}">
+                            <Grid>
+                            <ItemsControl x:Name="DnsResultList" ItemsSource="{Binding Results}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel />
@@ -4169,6 +4198,10 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                                <TextBlock Style="{StaticResource EmptyHint}"
+                                           Text="「問い合わせ」を押すと、サーバごとの答えがここに並びます"
+                                           Visibility="{Binding Items.Count, ElementName=DnsResultList, Converter={StaticResource ZeroToVisible}}" />
+                            </Grid>
                         </ScrollViewer>
                     </DockPanel>
                 </Border>
@@ -4628,7 +4661,8 @@
                                            Tag="ftplog.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
+                                <Grid>
+                                <ListBox x:Name="FtpLogList" ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
@@ -4655,6 +4689,10 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                                    <TextBlock Style="{StaticResource EmptyHint}"
+                                               Text="「開始」で待ち受けると、受け取った記録がここに出ます"
+                                               Visibility="{Binding Items.Count, ElementName=FtpLogList, Converter={StaticResource ZeroToVisible}}" />
+                                </Grid>
                             </DockPanel>
                         </Border>
                     </DockPanel>
@@ -4732,7 +4770,8 @@
                                            Tag="tftplog.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
+                                <Grid>
+                                <ListBox x:Name="TftpLogList" ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
@@ -4759,6 +4798,10 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                                    <TextBlock Style="{StaticResource EmptyHint}"
+                                               Text="「開始」で待ち受けると、受け取った記録がここに出ます"
+                                               Visibility="{Binding Items.Count, ElementName=TftpLogList, Converter={StaticResource ZeroToVisible}}" />
+                                </Grid>
                             </DockPanel>
                         </Border>
                     </DockPanel>
@@ -4848,7 +4891,8 @@
                                            Tag="sftplog.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
+                                <Grid>
+                                <ListBox x:Name="SftpLogList" ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
@@ -4875,6 +4919,10 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                                    <TextBlock Style="{StaticResource EmptyHint}"
+                                               Text="「開始」で待ち受けると、受け取った記録がここに出ます"
+                                               Visibility="{Binding Items.Count, ElementName=SftpLogList, Converter={StaticResource ZeroToVisible}}" />
+                                </Grid>
                             </DockPanel>
                         </Border>
                     </DockPanel>
@@ -4969,7 +5017,8 @@
                                            Tag="syslog.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
+                                <Grid>
+                                <ListBox x:Name="SyslogList" ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
@@ -5015,6 +5064,10 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                                    <TextBlock Style="{StaticResource EmptyHint}"
+                                               Text="「開始」で待ち受けると、受信した syslog がここに出ます"
+                                               Visibility="{Binding Items.Count, ElementName=SyslogList, Converter={StaticResource ZeroToVisible}}" />
+                                </Grid>
                             </DockPanel>
                         </Border>
                     </DockPanel>
@@ -5090,7 +5143,8 @@
                                            Tag="snmptrap.1" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Log}"
+                                <Grid>
+                                <ListBox x:Name="TrapLogList" ItemsSource="{Binding Log}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
@@ -5119,6 +5173,10 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                                    <TextBlock Style="{StaticResource EmptyHint}"
+                                               Text="「開始」で待ち受けると、受信した Trap がここに出ます"
+                                               Visibility="{Binding Items.Count, ElementName=TrapLogList, Converter={StaticResource ZeroToVisible}}" />
+                                </Grid>
                             </DockPanel>
                         </Border>
                     </DockPanel>
@@ -5273,7 +5331,8 @@
                                             HorizontalAlignment="Left"
                                             Margin="4,4,0,0" />
 
-                                    <ListBox ItemsSource="{Binding Rows}"
+                                    <Grid>
+                                    <ListBox x:Name="CollectDeviceList" ItemsSource="{Binding Rows}"
                                              Background="Transparent" BorderThickness="0"
                                              HorizontalContentAlignment="Stretch"
                                              ItemContainerStyle="{StaticResource PlainRowContainer}"
@@ -5364,6 +5423,10 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
+                                        <TextBlock Style="{StaticResource EmptyHint}"
+                                                   Text="「宛先リストから選ぶ」か「＋ 行を追加」で機器を足してください"
+                                                   Visibility="{Binding Items.Count, ElementName=CollectDeviceList, Converter={StaticResource ZeroToVisible}}" />
+                                    </Grid>
                                 </DockPanel>
                             </Border>
 
@@ -5822,7 +5885,8 @@
                                            Tag="snmpget.2" DragStarted="OnTableColumnGrab" DragDelta="OnTableColumnResize" />
                                 </Grid>
                                 <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                <ListBox ItemsSource="{Binding Rows}"
+                                <Grid>
+                                <ListBox x:Name="SnmpGetList" ItemsSource="{Binding Rows}"
                                          Style="{StaticResource TargetListBox}"
                                          ItemContainerStyle="{StaticResource PlainRowContainer}"
                                          VirtualizingStackPanel.IsVirtualizing="True"
@@ -5854,6 +5918,10 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                                    <TextBlock Style="{StaticResource EmptyHint}"
+                                               Text="「取得」を押すと、OID と値がここに並びます"
+                                               Visibility="{Binding Items.Count, ElementName=SnmpGetList, Converter={StaticResource ZeroToVisible}}" />
+                                </Grid>
                             </DockPanel>
                         </Border>
                     </DockPanel>
@@ -6846,7 +6914,8 @@
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1"
                                                 Background="{DynamicResource Brush.Border}" Margin="0,0,0,3" />
-                                        <ListBox ItemsSource="{Binding DeviceRows}"
+                                        <Grid>
+                                        <ListBox x:Name="AciDeviceList" ItemsSource="{Binding DeviceRows}"
                                                  ItemContainerStyle="{StaticResource PlainRowContainer}"
                                                  Background="Transparent" BorderThickness="0"
                                                  HorizontalContentAlignment="Stretch"
@@ -6900,6 +6969,10 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
+                                            <TextBlock Style="{StaticResource EmptyHint}"
+                                                       Text="「機器一覧」の「取得」を押すと、ファブリックの機器がここに出ます"
+                                                       Visibility="{Binding Items.Count, ElementName=AciDeviceList, Converter={StaticResource ZeroToVisible}}" />
+                                        </Grid>
                                     </DockPanel>
                                 </Border>
                                 </DockPanel>

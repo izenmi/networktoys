@@ -580,6 +580,20 @@
     </Style>
 
     <!--
+        空の一覧に重ねる案内。一覧を Grid で包み、Items.Count を ZeroToVisible で
+        束ねて出す（型は CLAUDE.md 参照）。自己診断が Tag を目印に全数を検査する。
+    -->
+    <Style x:Key="EmptyHint" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+        <Setter Property="FontSize" Value="{DynamicResource Size.Caption}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Margin" Value="0,28,0,0" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="Tag" Value="EmptyHint" />
+    </Style>
+
+    <!--
         実行中の帯。どの画面でも同じ場所（操作列の直下）・同じ太さで出す（2026-08-20 の UI 改善）。
         キー付きスタイルは暗黙スタイルを継承しないので BasedOn を明示する。
     -->

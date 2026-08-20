@@ -522,6 +522,10 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **画面に出す文言では「口」と書かない。**「ポート」（機器のポート）か「インターフェース」を使う
   （2026-08-17 ユーザー指示）。「設定を書く口」のような言い回しも、画面と利用手引きでは
   「設定を書き込む機能」に言い換える。コードのコメントは対象外。
+- **空の一覧には `EmptyHint` を重ねる。**一覧を `Grid` で包み、
+  `Visibility="{Binding Items.Count, ElementName=<一覧の x:Name>, Converter={StaticResource ZeroToVisible}}"`
+  の TextBlock（`Style="{StaticResource EmptyHint}"`）で「何を押すとここに出るか」を書く。
+  **ElementName の打ち間違いはバインドが黙って死ぬ**ので、自己診断が Tag を目印に全数を検査する。
 - **進行の帯は `BusyBar` スタイル（高さ 3px・操作列の直下）で統一。ProgressBar を直に置かない**
   （xUnit が全 ProgressBar の Style を検査）。割合を持たない待ちは `IsIndeterminate="True"` —
   共通テンプレートが満タンの帯を明滅させる（WPF は不定モードで帯を全幅にするだけなので、
