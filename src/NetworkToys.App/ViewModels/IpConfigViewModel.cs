@@ -345,9 +345,16 @@ public sealed class IpConfigViewModel : ObservableObject
         }
     }
 
+    /// <summary>プリセット削除の確認。結線前の既定は「消さない」。</summary>
+    public Func<string, bool>? ConfirmDelete { get; set; }
+
     private void DeletePreset()
     {
         if (SelectedPreset is not { } preset)
+            return;
+
+        // 取り消せないので必ず聞く（2026-08-20 の UI 改善）
+        if (ConfirmDelete?.Invoke($"プリセット「{preset.Name}」を消します。") != true)
             return;
 
         Settings.Current.IpPresets.Remove(preset);

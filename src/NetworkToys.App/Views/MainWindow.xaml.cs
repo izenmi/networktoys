@@ -79,31 +79,63 @@ public partial class MainWindow : Window
         _shell.Collect.SecretsCleared += (_, _) => ClearCollectPasswordBoxes();
 
         // 宛先リストの名前を聞くのも画面の仕事（Ping と TCP で別々に持つ）
-        _shell.Monitor.AskListName = initial => TextPromptDialog.Ask(
-            this,
-            "宛先リストに名前を付けて残す",
-            "いまの宛先リストに名前を付けて残します。同じ名前があれば上書きします。",
-            initial);
+        // 別の名前を打ったのに既存とぶつかるときだけ、上書きしてよいか聞く。
+        // いま選んでいる名前のままの保存（意図した更新）には聞かない（2026-08-20 の UI 改善）
+        string? AskNameGuarded(string title, string message, string initial, Func<string, bool> exists)
+        {
+            string? name = TextPromptDialog.Ask(this, title, message, initial);
 
-        _shell.Tcp.AskListName = initial => TextPromptDialog.Ask(
-            this,
+            if (name is null || name == initial || !exists(name)) return name;
+
+            return ConfirmDialog.Confirm(
+                this, title, $"「{name}」は既にあります。上書きしますか？", okLabel: "上書きする")
+                ? name
+                : null;
+        }
+
+        _shell.Monitor.AskListName = initial => AskNameGuarded(
             "宛先リストに名前を付けて残す",
-            "いまの宛先リストに名前を付けて残します。同じ名前があれば上書きします。",
-            initial);
+            "いまの宛先リストに名前を付けて残します。",
+            initial,
+            name => _shell.Monitor.SavedLists.Contains(name));
+
+        _shell.Tcp.AskListName = initial => AskNameGuarded(
+            "宛先リストに名前を付けて残す",
+            "いまの宛先リストに名前を付けて残します。",
+            initial,
+            name => _shell.Tcp.SavedLists.Contains(name));
 
         // 消すのは取り消せないので必ず聞く
         _shell.Monitor.ConfirmDelete = message => ConfirmDialog.Confirm(
             this, "宛先リストを消す", message, okLabel: "消す");
 
+        _shell.Monitor.ConfirmClear = message => ConfirmDialog.Confirm(
+            this, "履歴を消去", message, okLabel: "消す");
+
+        _shell.Tcp.ConfirmClear = message => ConfirmDialog.Confirm(
+            this, "履歴を消去", message, okLabel: "消す");
+
+        _shell.IpConfig.ConfirmDelete = message => ConfirmDialog.Confirm(
+            this, "プリセットを消す", message, okLabel: "消す");
+
+        // 受信一覧の消去（FTP/TFTP/SFTP/syslog/Trap の 5 画面共通）
+        foreach (ViewModels.FileServerViewModel server in
+                 new ViewModels.FileServerViewModel[]
+                 { _shell.Ftp, _shell.Tftp, _shell.Sftp, _shell.Syslog, _shell.SnmpTrap })
+        {
+            server.ConfirmClear = message => ConfirmDialog.Confirm(
+                this, "一覧を消す", message, okLabel: "消す");
+        }
+
         _shell.Tcp.ConfirmDelete = message => ConfirmDialog.Confirm(
             this, "宛先リストを消す", message, okLabel: "消す");
 
         // ひな型の名前を聞くのは画面の仕事（VM から窓を開かない）
-        _shell.Verify.AskTemplateName = initial => TextPromptDialog.Ask(
-            this,
+        _shell.Verify.AskTemplateName = initial => AskNameGuarded(
             "ひな型に残す",
-            "いまの試験項目に名前を付けて残します。同じ名前があれば上書きします。",
-            initial);
+            "いまの試験項目に名前を付けて残します。",
+            initial,
+            name => _shell.Verify.Templates.Any(t => t.Name == name));
 
         _shell.Verify.ConfirmDelete = message => ConfirmDialog.Confirm(
             this, "ひな型を消す", message, okLabel: "消す");

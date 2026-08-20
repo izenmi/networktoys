@@ -97,7 +97,7 @@ public sealed class MonitorViewModel : ObservableObject
 
         StartCommand = new RelayCommand(() => Start(_alwaysTcp), () => !IsRunning && Rows.Count > 0);
         StopCommand = new RelayCommand(() => _ = StopAsync(), () => IsRunning);
-        ClearHistoryCommand = new RelayCommand(ClearHistory);
+        ClearHistoryCommand = new RelayCommand(ClearHistoryFromButton);
 
         // コマンドを先に作る。SelectedListName の setter が DeleteListCommand を触るので、
         // 逆順にすると生成の途中で落ちる（試験タブのひな型で実際に踏んだ）
@@ -902,6 +902,19 @@ public sealed class MonitorViewModel : ObservableObject
         return builder.ToString();
     }
 
+    /// <summary>「履歴を消去」の確認。結線前の既定は「消さない」。</summary>
+    public Func<string, bool>? ConfirmClear { get; set; }
+
+    /// <summary>ボタンからの「履歴を消去」。取り消せないので必ず聞く（2026-08-20 の UI 改善）。</summary>
+    private void ClearHistoryFromButton()
+    {
+        if (ConfirmClear?.Invoke("測定の履歴（RTT・ロス率・推移）を消します。宛先は残ります。") != true)
+            return;
+
+        ClearHistory();
+    }
+
+    /// <summary>確認なしの実体。「すべて消す」など、確認済みの経路からも呼ばれる。</summary>
     private void ClearHistory()
     {
         foreach (TargetRowViewModel row in Rows)

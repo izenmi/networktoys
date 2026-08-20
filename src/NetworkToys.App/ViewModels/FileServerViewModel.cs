@@ -68,7 +68,7 @@ public abstract class FileServerViewModel : ObservableObject
         StopCommand = new RelayCommand(Stop, () => IsRunning);
         OpenFolderCommand = new RelayCommand(OpenFolder);
         SaveCommand = new RelayCommand(Save, () => Log.Count > 0);
-        ClearCommand = new RelayCommand(ClearLog, () => Log.Count > 0);
+        ClearCommand = new RelayCommand(ClearLogFromButton, () => Log.Count > 0);
     }
 
     /// <summary>公開するフォルダ。派生でプロトコルごとに分ける。</summary>
@@ -256,6 +256,19 @@ public abstract class FileServerViewModel : ObservableObject
             || row.Remote.Contains(needle, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>「一覧を消す」の確認。結線前の既定は「消さない」。</summary>
+    public Func<string, bool>? ConfirmClear { get; set; }
+
+    /// <summary>ボタンからの「一覧を消す」。取り消せないので必ず聞く（2026-08-20 の UI 改善）。</summary>
+    private void ClearLogFromButton()
+    {
+        if (ConfirmClear?.Invoke("受信の一覧を消します。ファイルに残した記録は消えません。") != true)
+            return;
+
+        ClearLog();
+    }
+
+    /// <summary>確認なしの実体。「すべて消す」（Reset）からも呼ばれる。</summary>
     private void ClearLog()
     {
         _all.Clear();
