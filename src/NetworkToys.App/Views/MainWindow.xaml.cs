@@ -960,7 +960,7 @@ public partial class MainWindow : Window
         bool dark = ThemeManager.Current == AppTheme.Dark;
 
         ThemeToggle.Content = dark ? "☀ ライト" : "☾ ダーク";
-        ThemeMenuItem.Header = dark ? "☀ ライトモードにする" : "☾ ダークモードにする";
+        ThemeMenuItem.Header = dark ? "☀ ライトモードにする(_M)" : "☾ ダークモードにする(_M)";
     }
 
     /// <summary>

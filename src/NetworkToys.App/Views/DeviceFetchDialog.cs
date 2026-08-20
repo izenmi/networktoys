@@ -35,7 +35,8 @@ internal sealed class DeviceFetchDialog : Window
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
     private readonly Button _pick = new() { Content = "宛先から", Margin = new Thickness(6, 0, 0, 0) };
 
-    private readonly Button _fetch = new() { Content = "取得", MinWidth = 96, Margin = new Thickness(0, 0, 8, 0) };
+    // Enter で取得できるように IsDefault。取得中は IsEnabled=false なので再入はしない
+    private readonly Button _fetch = new() { Content = "取得", MinWidth = 96, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
     private readonly Button _cancel = new() { Content = "やめる", MinWidth = 96, IsCancel = true };
 
     private CancellationTokenSource? _cts;

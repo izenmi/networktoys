@@ -122,6 +122,9 @@ internal sealed class TargetPickerDialog : Window
 
         Content = body;
         UpdateCount();
+
+        // 開いたらすぐ打てるように、絞り込み欄へフォーカス（2026-08-20 の UI 改善）
+        Loaded += (_, _) => filter.Focus();
     }
 
     /// <summary>選ばれた相手。</summary>

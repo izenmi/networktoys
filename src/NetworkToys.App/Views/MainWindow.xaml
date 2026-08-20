@@ -530,48 +530,48 @@
                  ここを逃すと起動直後の判定のまま押せなくなる -->
             <MenuItem Header="ファイル(_F)" Style="{StaticResource MenuBarItem}"
                       SubmenuOpened="OnFileMenuOpened">
-                <MenuItem Header="レポートを HTML で保存..." Command="{Binding Report.SaveHtmlCommand}" />
-                <MenuItem Header="レポートをテキストで保存..." Command="{Binding Report.SaveTextCommand}" />
-                <MenuItem Header="レポートを CSV で保存..." Command="{Binding Report.SaveCsvCommand}" />
+                <MenuItem Header="レポートを HTML で保存(_H)..." Command="{Binding Report.SaveHtmlCommand}" />
+                <MenuItem Header="レポートをテキストで保存(_T)..." Command="{Binding Report.SaveTextCommand}" />
+                <MenuItem Header="レポートを CSV で保存(_C)..." Command="{Binding Report.SaveCsvCommand}" />
                 <Separator />
-                <MenuItem Header="画面を撮って保存" InputGestureText="F12" Click="OnScreenshot" />
-                <MenuItem Header="データフォルダを開く" Click="OnOpenDataFolder" />
+                <MenuItem Header="画面を撮って保存(_S)" InputGestureText="F12" Click="OnScreenshot" />
+                <MenuItem Header="データフォルダを開く(_D)" Click="OnOpenDataFolder" />
                 <Separator />
-                <MenuItem Header="管理者として再起動..." Click="OnRelaunchAsAdmin" />
+                <MenuItem Header="管理者として再起動(_R)..." Click="OnRelaunchAsAdmin" />
                 <Separator />
                 <!-- 消す操作もここに置く（2026-08-16 ユーザー指示で「測定」メニューを畳んだ）。
                      開始と停止は Ping タブの中だけ。F5 / Shift+F5 は InputBindings 側に残る -->
-                <MenuItem Header="Ping の測定結果だけ消す" Click="OnClearPingResults" />
+                <MenuItem Header="Ping の測定結果だけ消す(_P)" Click="OnClearPingResults" />
                 <!-- 重さがまるで違う 2 つを隣接させない（押し間違い対策。2026-08-20） -->
                 <Separator />
-                <MenuItem Header="すべて消す（起動直後に戻す）" Click="OnClearAll" />
+                <MenuItem Header="すべて消す（起動直後に戻す）(_A)" Click="OnClearAll" />
                 <Separator />
-                <MenuItem Header="終了" Click="OnExit" />
+                <MenuItem Header="終了(_X)" Click="OnExit" />
             </MenuItem>
             <MenuItem Header="表示(_V)" Style="{StaticResource MenuBarItem}">
                 <MenuItem x:Name="ThemeMenuItem" Click="OnThemeToggle" />
-                <MenuItem x:Name="TopmostMenuItem" Header="最前面に固定" IsCheckable="True"
+                <MenuItem x:Name="TopmostMenuItem" Header="最前面に固定(_P)" IsCheckable="True"
                           Click="OnTopmostMenu" />
                 <Separator />
                 <!-- 文字の大きさ。サブメニューは作れない作りなので並べる。
                      Tag が倍率で、選ばれているものにチェックが付く -->
-                <MenuItem x:Name="ScaleSmall" Header="文字サイズ 小" IsCheckable="True"
+                <MenuItem x:Name="ScaleSmall" Header="文字サイズ 小(_1)" IsCheckable="True"
                           Tag="0.85" Click="OnScaleMenu" />
-                <MenuItem x:Name="ScaleNormal" Header="文字サイズ 標準" IsCheckable="True"
+                <MenuItem x:Name="ScaleNormal" Header="文字サイズ 標準(_2)" IsCheckable="True"
                           Tag="1.0" Click="OnScaleMenu" />
-                <MenuItem x:Name="ScaleLarge" Header="文字サイズ 大" IsCheckable="True"
+                <MenuItem x:Name="ScaleLarge" Header="文字サイズ 大(_3)" IsCheckable="True"
                           Tag="1.25" Click="OnScaleMenu" />
-                <MenuItem x:Name="ScaleExtraLarge" Header="文字サイズ 特大" IsCheckable="True"
+                <MenuItem x:Name="ScaleExtraLarge" Header="文字サイズ 特大(_4)" IsCheckable="True"
                           Tag="1.5" Click="OnScaleMenu" />
                 <Separator />
                 <!-- 列幅はドラッグで変えられる（保存はしないが、その場で戻したいとき用） -->
-                <MenuItem Header="列幅を既定に戻す" Click="OnResetColumns" />
+                <MenuItem Header="列幅を既定に戻す(_R)" Click="OnResetColumns" />
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)" Style="{StaticResource MenuBarItem}">
-                <MenuItem Header="使い方" Click="OnShowUsage" />
+                <MenuItem Header="使い方(_U)" Click="OnShowUsage" />
                 <Separator />
-                <MenuItem Header="ライセンス情報" Click="OnShowLicenses" />
-                <MenuItem Header="バージョン情報" Click="OnAbout" />
+                <MenuItem Header="ライセンス情報(_L)" Click="OnShowLicenses" />
+                <MenuItem Header="バージョン情報(_A)" Click="OnAbout" />
             </MenuItem>
         </Menu>
 

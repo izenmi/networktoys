@@ -1447,6 +1447,43 @@ internal static class SelfTest
             }
         });
 
+        Check("メニューの全項目にアクセスキーがあり、親の中で重複しない", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // Alt からキーボードだけで押せるように、(_X) を全項目に付ける決まり
+            // （2026-08-20 の UI 改善）。付け忘れも同キーの取り合いも黙って起きるので検査する
+            var problems = new List<string>();
+
+            foreach (object? top in window!.MainMenu.Items)
+            {
+                if (top is not System.Windows.Controls.MenuItem parent) continue;
+
+                var used = new Dictionary<char, string>();
+
+                foreach (object? item in parent.Items)
+                {
+                    if (item is not System.Windows.Controls.MenuItem child) continue;
+
+                    string header = child.Header?.ToString() ?? "";
+                    int at = header.IndexOf('_');
+
+                    if (at < 0 || at + 1 >= header.Length)
+                    {
+                        problems.Add($"アクセスキーが無い: {header}");
+                        continue;
+                    }
+
+                    char key = char.ToUpperInvariant(header[at + 1]);
+
+                    if (!used.TryAdd(key, header))
+                        problems.Add($"アクセスキーが重複: {used[key]} と {header}");
+                }
+            }
+
+            Assert(problems.Count == 0, string.Join(" / ", problems));
+        });
+
         Check("どの画面も、起動直後に何をすればよいかが出ている", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");
