@@ -2045,7 +2045,9 @@ public partial class MainWindow : Window
     {
         if (sender is not TextBlock { ToolTip: string text } || text.Length == 0) return;
 
-        TextViewDialog.Show(this, "この画面について", text);
+        // TabHelp は全角スペースで頭を揃えた箇条書き。桁を揃えた文は折り返さない決まり
+        // （ライセンスと同じ扱い。2026-08-20 のレビュー指摘）
+        TextViewDialog.Show(this, "この画面について", text, wrap: false);
         e.Handled = true;
     }
 
@@ -2064,6 +2066,9 @@ public partial class MainWindow : Window
 
     private void OnPaneGrab(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
     {
+        // 掴み損ねたときに前回の仕切りが残らないよう、先に必ず捨てる
+        _paneGrid = null;
+
         if (sender is not System.Windows.Controls.Primitives.Thumb thumb) return;
 
         // 仕切りの親 Grid。テンプレートの Border から上がることは無い（Thumb 自身が子）
