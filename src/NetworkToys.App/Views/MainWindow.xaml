@@ -594,6 +594,11 @@
                 <Separator />
                 <!-- 列幅はドラッグで変えられる（保存はしないが、その場で戻したいとき用） -->
                 <MenuItem Header="列幅を既定に戻す(_R)" Click="OnResetColumns" />
+                <Separator />
+                <!-- 「その他」16 画面へのキーボード動線（Alt+V → O → 矢印 → Enter）。
+                     メニューバーは葉項目専用（サブメニュー不可）なので、見出しクリックと
+                     同じドロップダウンを降ろす -->
+                <MenuItem Header="その他の画面(_O)..." Click="OnOtherScreensMenu" />
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)" Style="{StaticResource MenuBarItem}">
                 <MenuItem Header="使い方(_U)" Click="OnShowUsage" />

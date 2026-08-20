@@ -1876,6 +1876,23 @@ public partial class MainWindow : Window
         // （2026-08-17 ユーザー指摘）
         if (!ReferenceEquals(tab, OtherTab)) return;
 
+        OpenOtherTabsMenu();
+
+        // タブそのものは選ばない。メニューを閉じただけで画面が変わると、
+        // 「見に行っただけ」のつもりが測定中の画面から飛ばされる
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 「その他」のドロップダウンを降ろす。見出しクリックと表示メニューの
+    /// 「その他の画面(_O)...」の両方から使う（2026-08-20 の UX 改善で
+    /// キーボード動線 Alt+V → O を足した。メニューバーは葉項目専用なので、
+    /// サブメニューではなく同じ ContextMenu を出す — 出る場所も学習も 1 つで済む）。
+    /// </summary>
+    private void OpenOtherTabsMenu()
+    {
+        TabItem tab = OtherTab;
+
         if (InnerTabsOf(tab) is not { } inner || inner.Items.Count == 0) return;
 
         var menu = new ContextMenu
@@ -1921,11 +1938,9 @@ public partial class MainWindow : Window
         }
 
         menu.IsOpen = true;
-
-        // タブそのものは選ばない。メニューを閉じただけで画面が変わると、
-        // 「見に行っただけ」のつもりが測定中の画面から飛ばされる
-        e.Handled = true;
     }
+
+    private void OnOtherScreensMenu(object sender, RoutedEventArgs e) => OpenOtherTabsMenu();
 
     /// <summary>そのタブが中に持っている切り替え。無ければ null。</summary>
     /// <summary>
