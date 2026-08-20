@@ -2034,7 +2034,8 @@
                                                  Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100"
                                                  Visibility="{Binding HasProgress, Converter={StaticResource BoolToVisibility}}" />
                                     <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                          Tag="vres" MouseLeftButtonDown="OnTableHeaderSort">
+                                          Tag="vres" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.0]}" />
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[vres.1]}" />
@@ -2604,7 +2605,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrcheck" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrcheck" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrcheck.0]}" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrcheck.1]}" />
@@ -2753,7 +2755,8 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mdev" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mdev" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mdev.1]}" />
@@ -2924,7 +2927,8 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mup" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mup" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mup.1]}" />
@@ -3092,7 +3096,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mcli" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mcli.0]}" />
                                                 <ColumnDefinition Width="*" />
@@ -3233,7 +3238,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrsite" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrsite" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrsite.1]}" />
@@ -3338,7 +3344,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrdhcp" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mrdhcp" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.0]}" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mrdhcp.1]}" />
@@ -3493,7 +3500,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mralert" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="mralert" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.0]}" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[mralert.1]}" />
@@ -3844,7 +3852,8 @@
                                    Style="{StaticResource Caption}"
                                    TextWrapping="Wrap" Margin="4,6,0,0" />
 
-                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="trace" MouseLeftButtonDown="OnTableHeaderSort">
+                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="trace" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.0]}" />
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[trace.1]}" />
@@ -3988,7 +3997,8 @@
                         </StackPanel>
 
                         <!-- 一覧のヘッダ -->
-                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="scan" MouseLeftButtonDown="OnTableHeaderSort">
+                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="scan" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.0]}" />
                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[scan.1]}" />
@@ -4642,7 +4652,8 @@
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
                                 <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="ftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                      Tag="ftplog" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                     <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.0]}" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[ftplog.1]}" />
@@ -4751,7 +4762,8 @@
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="転送の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
                                 <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="tftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                      Tag="tftplog" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                     <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.0]}" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[tftplog.1]}" />
@@ -4872,7 +4884,8 @@
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="接続の記録" Style="{StaticResource Caption}" Margin="0,0,0,4" />
                                 <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="sftplog" MouseLeftButtonDown="OnTableHeaderSort">
+                                      Tag="sftplog" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                     <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.0]}" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[sftplog.1]}" />
@@ -4993,7 +5006,8 @@
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="受信したメッセージ" Style="{StaticResource Caption}" Margin="0,0,0,4" />
                                 <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="syslog" MouseLeftButtonDown="OnTableHeaderSort">
+                                      Tag="syslog" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.0]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[syslog.1]}" />
@@ -5124,7 +5138,8 @@
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="受信した Trap" Style="{StaticResource Caption}" Margin="0,0,0,4" />
                                 <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent"
-                                      Tag="snmptrap" MouseLeftButtonDown="OnTableHeaderSort">
+                                      Tag="snmptrap" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                     <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.0]}" />
                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmptrap.1]}" />
@@ -5665,7 +5680,8 @@
                                                  ToolTip="場所を直接書き換えて Tab を押すと移れます。" />
                                     </DockPanel>
 
-                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="local" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="local" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[local.0]}" />
                                             <ColumnDefinition Width="*" MinWidth="90" />
@@ -5744,7 +5760,8 @@
                                                  ToolTip="いま見ている場所。フォルダをダブルクリックして移ります。" />
                                     </DockPanel>
 
-                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="remote" MouseLeftButtonDown="OnTableHeaderSort">
+                                    <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="remote" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[remote.0]}" />
                                             <ColumnDefinition Width="*" MinWidth="90" />
@@ -5861,7 +5878,8 @@
                                 BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                             <DockPanel>
-                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="snmpget" MouseLeftButtonDown="OnTableHeaderSort">
+                                <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="snmpget" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.0]}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[snmpget.1]}" />
@@ -6022,7 +6040,8 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acihl" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acihl" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acihl.0]}" />
                                                     <ColumnDefinition Width="*" />
@@ -6130,7 +6149,8 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciflt" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciflt" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciflt.1]}" />
@@ -6272,7 +6292,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciport" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciport" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.0]}" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciport.1]}" />
@@ -6454,7 +6475,8 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciepg" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciepg" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciepg.0]}" />
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciepg.1]}" />
@@ -6543,7 +6565,8 @@
                                             BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                             CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                         <DockPanel>
-                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciepgm" MouseLeftButtonDown="OnTableHeaderSort">
+                                            <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciepgm" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciepgm.0]}" />
                                                     <ColumnDefinition Width="*" />
@@ -6630,7 +6653,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciep" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="aciep" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciep.0]}" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[aciep.1]}" />
@@ -6760,7 +6784,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acilog" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acilog" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acilog.0]}" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acilog.1]}" />
@@ -6875,7 +6900,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acidev" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acidev" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acidev.0]}" />
                                                 <ColumnDefinition Width="*" />
@@ -7001,7 +7027,8 @@
                                         BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                         CornerRadius="{DynamicResource Radius.Card}" Padding="6">
                                     <DockPanel>
-                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acibd" MouseLeftButtonDown="OnTableHeaderSort">
+                                        <Grid DockPanel.Dock="Top" Margin="4,0,18,3" Background="Transparent" Tag="acibd" MouseLeftButtonDown="OnTableHeaderSort"
+                                      Cursor="Hand" ToolTip="クリックで並べ替え（もう一度で逆順）">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acibd.0]}" />
                                                 <ColumnDefinition Width="{Binding Source={x:Static vm:TableColumns.Instance}, Path=[acibd.1]}" />

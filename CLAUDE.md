@@ -102,6 +102,9 @@ Windows ネイティブのネットワーク診断ツール。C# + WPF + .NET 10
 - **見出しと行の左右の余白は 1 つの規約に揃える。** 見出しは一覧の外にある別の Grid なので、食い違うと列が噛み合わない。**見出しの `Margin` は `4,0,18,3`、行は `PlainRowContainer`（`Padding="4,0"`）、一覧は縦スクロールバーを常時確保**（`ScrollViewer.VerticalScrollBarVisibility="Visible"`）。右の 18 は行の 4 + スクロールバーの 14 で、幅は `Controls.xaml` の `ScrollBar` スタイルで 14px に固定してあるから予約が確実に合う。自己診断が全タブを回って突き合わせる。
   - 実際に踏んだずれ方 3 つ: ①行テンプレートを包む枠にも `Padding="4,0"` を書いて**二重に 4px** 入った（接続のプロセス見出し行）②`ItemContainerStyle` の指定漏れで**既定の `ListBoxItem`**（枠 1px + `Padding="2,0,0,0"`）で描かれた（Meraki の 4 一覧）③スクロールバーが出た瞬間に**行だけ 14px 狭くなり**、可変幅(星)列より右が全部ずれた。**③は 16 表のうち 10 表が該当した** — 星列が最後にある表だけは星が縮んで吸収するので見えない。
   - **行を包む枠に余白を足さない。** 左右は行コンテナが持っている。地色を敷きたいだけなら `Background` だけ指定する。
+- **並べ替えできる見出し（`OnTableHeaderSort` の対象）には `Cursor="Hand"` と ToolTip を付ける**
+  （2026-08-20 の UI 改善。押せることが見た目で分からなかった）。自己診断が `SortPaths` と
+  突き合わせて欠落を捕まえる。新しい表を足すときは見出し Grid に 2 属性を忘れない。
 - 並べ替えは 2 系統ある。自前で並べ替える一覧（Ping/TCP・接続・無線・遮断）は VM の `SortBy` を `OnListHeaderSort` から呼ぶ。それ以外は `OnTableHeaderSort` が `ICollectionView.SortDescriptions` に任せる（VM を触らずに済み、仮想化も効いたまま）。**列は見出しのクリック位置から求める** — 列ごとに当たり判定を置くとヘッダ 1 つにつき数個ずつ増えるため。
 - **一覧は `FindList` が見出しから探す。見出しと同じ `Tag` を持つ `ItemsControl` を先に見る。** かつては `ListBox` しか見ておらず、`ItemsControl` で組んだ経路のホップ一覧だけ並べ替えが無反応だった。かといって「最初の `ItemsControl`」にはできない — 経路タブには手前に「何が変わったか」の一覧があり、**`ComboBox` も `ItemsControl`** なので別物を掴む。
 

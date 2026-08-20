@@ -556,7 +556,8 @@ public partial class MainWindow : Window
     /// 表ごとの「列番号 → 並べ替えに使うプロパティ」。空文字の列は並べ替えない。
     /// 行テンプレートの Binding と同じ名前でないと効かないので、列を足したらここも直す。
     /// </summary>
-    private static readonly Dictionary<string, string[]> SortPaths = new()
+    // internal は自己診断のため（並べ替えできるヘッダに Cursor と ToolTip が付いているかを突き合わせる）
+    internal static readonly Dictionary<string, string[]> SortPaths = new()
     {
         ["trace"] = ["Ttl", "Address", "HostName", "Rtt", "Note"],
         ["scan"] = ["Address", "Rtt", "HostName", "Mac", "Vendor", "Ports", ""],

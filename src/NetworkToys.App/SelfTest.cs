@@ -348,6 +348,17 @@ internal static class SelfTest
 
                     if (header.Margin != expected)
                         problems.Add($"見出しの余白が {header.Margin}（期待は {expected}）");
+
+                    // 並べ替えできるヘッダは、押せることが見た目で分かること（2026-08-20 の UI 改善）。
+                    // Tag が SortPaths にある＝OnTableHeaderSort の対象
+                    if (header.Tag is string table && Views.MainWindow.SortPaths.ContainsKey(table))
+                    {
+                        if (header.Cursor != System.Windows.Input.Cursors.Hand)
+                            problems.Add($"{table}: ソートできるのに Cursor が Hand でない");
+
+                        if (header.ToolTip is not string tip || tip.Length == 0)
+                            problems.Add($"{table}: ソートできるのに ToolTip が無い");
+                    }
                 }
             });
 
