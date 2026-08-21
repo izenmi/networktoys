@@ -92,6 +92,7 @@ public class IpPlanTests
     {
         Parse(name: "", expectError: "アダプタを選んで");
         Parse(name: "イーサ\"ネット", expectError: "引用符");
+        Parse(name: "イーサ'ネット", expectError: "引用符");
     }
 
     [Fact]
@@ -112,62 +113,64 @@ public class IpPlanTests
     }
 
     // ===== ToPowerShellScript =====
-    // IP 設定の適用は netsh でなく PowerShell(NetTCPIP)。netsh には DHCP の旗を
-    // 直接切り替える命令が無く、旗と実アドレスが食い違った機械では
-    // set address source=dhcp が「すでに有効です」の断りから抜けられなかった(2026-08-21)
+    // 適用の本体は WMI(Win32_NetworkAdapterConfiguration)の EnableStatic / EnableDHCP。
+    // netsh(旗を直接切り替えられない)と NetTCPIP(New-NetIPAddress が PersistentStore の
+    // DHCP 旗との矛盾で断り続ける)が実機で通らなかったための選択(2026-08-21)
 
     [Fact]
-    public void 固定の適用は旗を下ろし掃除してから値を入れる()
+    public void 固定の適用はEnableStaticとSetGatewaysとDNSの3手()
     {
         IpPlan plan = Parse(index: 12, gateway: "192.168.1.1", dns1: "8.8.8.8", dns2: "8.8.4.4")!;
 
         Assert.Equal(new[]
         {
             "$ErrorActionPreference = 'Stop'",
-            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled -PolicyStore ActiveStore",
-            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled -PolicyStore PersistentStore",
-            "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
+            "$nic = Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'InterfaceIndex=12'",
+            "if ($null -eq $nic) { throw 'アダプタが見つかりません。' }",
             "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
-            "New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 -DefaultGateway 192.168.1.1 | Out-Null",
-            "Set-DnsClientServerAddress -InterfaceIndex 12 -ServerAddresses '8.8.8.8','8.8.4.4'",
+            "$r = ($nic | Invoke-CimMethod -MethodName EnableStatic -Arguments @{ IPAddress = @('192.168.1.10'); SubnetMask = @('255.255.255.0') }).ReturnValue; if ($r -gt 1) { throw \"EnableStatic: code $r\" }",
+            "$r = ($nic | Invoke-CimMethod -MethodName SetGateways -Arguments @{ DefaultIPGateway = @('192.168.1.1') }).ReturnValue; if ($r -gt 1) { throw \"SetGateways: code $r\" }",
+            "$r = ($nic | Invoke-CimMethod -MethodName SetDNSServerSearchOrder -Arguments @{ DNSServerSearchOrder = @('8.8.8.8','8.8.4.4') }).ReturnValue; if ($r -gt 1) { throw \"SetDNSServerSearchOrder: code $r\" }",
         }, plan.ToPowerShellScript());
     }
 
     [Fact]
-    public void ゲートウェイ無しはDefaultGatewayを付けずDNS無しはクリアする()
+    public void ゲートウェイ無しはSetGatewaysを呼ばずDNS無しは引数なしでクリアする()
     {
         IpPlan plan = Parse(index: 12)!;
         IReadOnlyList<string> lines = plan.ToPowerShellScript();
 
-        Assert.Equal("New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 | Out-Null", lines[5]);
+        Assert.DoesNotContain(lines, l => l.Contains("SetGateways", StringComparison.Ordinal));
         // DNS 空は「クリア」— プリセットの決定性を優先し、前の現場の DNS を残さない
-        Assert.Equal("Set-DnsClientServerAddress -InterfaceIndex 12 -ResetServerAddresses", lines[6]);
+        Assert.Equal("$r = ($nic | Invoke-CimMethod -MethodName SetDNSServerSearchOrder).ReturnValue; if ($r -gt 1) { throw \"SetDNSServerSearchOrder: code $r\" }",
+            lines[^1]);
     }
 
     [Fact]
-    public void DHCPへ戻すのは旗を上げて掃除するだけ()
+    public void DHCPへ戻すのはEnableDHCPとDNSクリアの2手()
     {
         IpPlan plan = Parse(index: 12, dhcp: true)!;
 
         Assert.Equal(new[]
         {
             "$ErrorActionPreference = 'Stop'",
-            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Enabled -PolicyStore ActiveStore",
-            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Enabled -PolicyStore PersistentStore",
-            "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
+            "$nic = Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'InterfaceIndex=12'",
+            "if ($null -eq $nic) { throw 'アダプタが見つかりません。' }",
             "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
-            "Set-DnsClientServerAddress -InterfaceIndex 12 -ResetServerAddresses",
+            "$r = ($nic | Invoke-CimMethod -MethodName EnableDHCP).ReturnValue; if ($r -gt 1) { throw \"EnableDHCP: code $r\" }",
+            "$r = ($nic | Invoke-CimMethod -MethodName SetDNSServerSearchOrder).ReturnValue; if ($r -gt 1) { throw \"SetDNSServerSearchOrder: code $r\" }",
         }, plan.ToPowerShellScript());
     }
 
     [Fact]
-    public void 番号が取れないアダプタは名前を単一引用符で渡す()
+    public void 番号が取れないアダプタは接続名で引く()
     {
-        // 名前に ' が入っても '' に畳んで壊れない(BOM 付き UTF-8 なので日本語も届く)
-        IpPlan plan = Parse(name: "ローカル エリア接続 'テスト'", dhcp: true)!;
+        IpPlan plan = Parse(name: "ローカル エリア接続 2", dhcp: true)!;
+        IReadOnlyList<string> lines = plan.ToPowerShellScript();
 
-        Assert.Equal("Set-NetIPInterface -InterfaceAlias 'ローカル エリア接続 ''テスト''' -AddressFamily IPv4 -Dhcp Enabled -PolicyStore ActiveStore",
-            plan.ToPowerShellScript()[1]);
+        Assert.Equal("$nic = Get-CimInstance Win32_NetworkAdapter -Filter 'NetConnectionID=''ローカル エリア接続 2''' | Get-CimAssociatedInstance -ResultClassName Win32_NetworkAdapterConfiguration",
+            lines[1]);
+        Assert.Contains("-InterfaceAlias 'ローカル エリア接続 2'", lines[3], StringComparison.Ordinal);
     }
 
 }

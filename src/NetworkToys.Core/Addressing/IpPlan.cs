@@ -38,9 +38,9 @@ public sealed record IpPlan(
             return null;
         }
 
-        // netsh のクォート内エスケープ仕様は文書化されていないので、発明せず拒否する。
+        // 引用符のエスケープ仕様(WQL/PowerShell)を発明しない。
         // Windows のアダプタ名に引用符が現れることはまず無い
-        if (name.Contains('"'))
+        if (name.Contains('"') || name.Contains('\''))
         {
             error = "アダプタ名に引用符が含まれていて扱えません。";
             return null;
@@ -119,55 +119,70 @@ public sealed record IpPlan(
     }
 
     /// <summary>
-    /// 適用スクリプト(PowerShell / NetTCPIP)。<b>IP 設定に netsh を使わない</b> —
-    /// netsh には「DHCP の旗」を直接切り替える命令が無く、旗と実アドレスが食い違った
-    /// 機械では <c>set address source=dhcp</c> が「すでに有効です」の断りだけで
-    /// 何もできなかった(static の入れ直しでも旗は下りない。2026-08-21 実機)。
-    /// <c>Set-NetIPInterface -Dhcp</c> は旗そのものを明示的に切り替えるので、
-    /// どんな状態からでも同じ結果に揃う。指定は番号(ifIndex)で行い、
-    /// 取れないアダプタだけ名前(単一引用符・'' エスケープ)で指定する。
+    /// 適用スクリプト(PowerShell)。<b>本体は WMI(Win32_NetworkAdapterConfiguration)の
+    /// EnableStatic / EnableDHCP</b> — DHCP と固定の切り替えを 1 メソッドで原子的に行うので、
+    /// ストア間の矛盾という概念が無い。ここに至る脱落の記録(すべて 2026-08-21 実機):
+    /// ①netsh は DHCP の旗を直接切り替えられず「すでに有効です」から抜けられない
+    /// ②NetTCPIP は旗を両ストアへ明示しても New-NetIPAddress が
+    /// 「Inconsistent parameters PolicyStore PersistentStore and Dhcp Enabled」で断り続けた。
+    /// 戻り値は数値(0=成功 / 1=要再起動)なのでロケールに依らず成否を取れる。
+    /// 指定は番号(ifIndex)。取れないアダプタだけ接続名(NetConnectionID)で引く。
     /// </summary>
     public IReadOnlyList<string> ToPowerShellScript()
     {
-        string target = InterfaceIndex > 0
-            ? $"-InterfaceIndex {InterfaceIndex.ToString(CultureInfo.InvariantCulture)}"
-            : $"-InterfaceAlias '{InterfaceName.Replace("'", "''", StringComparison.Ordinal)}'";
+        string index = InterfaceIndex.ToString(CultureInfo.InvariantCulture);
 
-        // 旗 → 掃除(古いアドレスと既定ルート) → 新しい値、の順。掃除は無くても失敗にしない。
-        // 旗は両ストアに明示して書く — Set-NetIPInterface は -PolicyStore 省略時
-        // ActiveStore しか書き換えず、PersistentStore に DHCP 有効が残ると
-        // New-NetIPAddress が「Inconsistent parameters PolicyStore PersistentStore and
-        // Dhcp Enabled」で断る(2026-08-21 実機で発生。混成状態の根もこれ)
-        string dhcpFlag = Dhcp ? "Enabled" : "Disabled";
+        string lookup = InterfaceIndex > 0
+            ? $"$nic = Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'InterfaceIndex={index}'"
+            : $"$nic = Get-CimInstance Win32_NetworkAdapter -Filter 'NetConnectionID=''{InterfaceName}''' | Get-CimAssociatedInstance -ResultClassName Win32_NetworkAdapterConfiguration";
+
+        string routeTarget = InterfaceIndex > 0
+            ? $"-InterfaceIndex {index}"
+            : $"-InterfaceAlias '{InterfaceName}'";
+
+        // 古い既定ルートは名指しで掃除する(EnableDHCP が静的 GW を残す環境があるため)。
+        // 無ければ無いでよいので失敗にしない
         var lines = new List<string>
         {
             "$ErrorActionPreference = 'Stop'",
-            $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp {dhcpFlag} -PolicyStore ActiveStore",
-            $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp {dhcpFlag} -PolicyStore PersistentStore",
-            $"Remove-NetIPAddress {target} -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
-            $"Remove-NetRoute {target} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
+            lookup,
+            "if ($null -eq $nic) { throw 'アダプタが見つかりません。' }",
+            $"Remove-NetRoute {routeTarget} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
         };
 
         if (Dhcp)
         {
-            lines.Add($"Set-DnsClientServerAddress {target} -ResetServerAddresses");
+            lines.Add(Invoke("EnableDHCP", null));
+            // 引数なし = DNS も DHCP から受ける
+            lines.Add(Invoke("SetDNSServerSearchOrder", null));
             return lines;
         }
 
-        string newAddress = $"New-NetIPAddress {target} -IPAddress {Address} -PrefixLength {PrefixLength.ToString(CultureInfo.InvariantCulture)}";
-        if (Gateway is not null)
-            newAddress += $" -DefaultGateway {Gateway}";
-        lines.Add(newAddress + " | Out-Null");
+        string mask = IpMath.FromUInt32(IpMath.PrefixToMask(PrefixLength)).ToString();
+        lines.Add(Invoke("EnableStatic", $"@{{ IPAddress = @('{Address}'); SubnetMask = @('{mask}') }}"));
 
-        // DNS 空は「クリア」— プリセットは「選べば同じ状態になる」決定性を優先し、
+        if (Gateway is not null)
+            lines.Add(Invoke("SetGateways", $"@{{ DefaultIPGateway = @('{Gateway}') }}"));
+
+        // DNS 空は「クリア」(引数なし) — プリセットは「選べば同じ状態になる」決定性を優先し、
         // 前の現場の DNS を残さない(netsh 時代からの決まり)
         lines.Add(Dns1 is null
-            ? $"Set-DnsClientServerAddress {target} -ResetServerAddresses"
-            : Dns2 is null
-                ? $"Set-DnsClientServerAddress {target} -ServerAddresses '{Dns1}'"
-                : $"Set-DnsClientServerAddress {target} -ServerAddresses '{Dns1}','{Dns2}'");
+            ? Invoke("SetDNSServerSearchOrder", null)
+            : Invoke("SetDNSServerSearchOrder", Dns2 is null
+                ? $"@{{ DNSServerSearchOrder = @('{Dns1}') }}"
+                : $"@{{ DNSServerSearchOrder = @('{Dns1}','{Dns2}') }}"));
 
         return lines;
+    }
+
+    /// <summary>CIM メソッド呼び出しの 1 行。戻り値 0(成功)/1(要再起動)以外は失敗として投げる。</summary>
+    private static string Invoke(string method, string? arguments)
+    {
+        string call = arguments is null
+            ? $"($nic | Invoke-CimMethod -MethodName {method})"
+            : $"($nic | Invoke-CimMethod -MethodName {method} -Arguments {arguments})";
+
+        return $"$r = {call}.ReturnValue; if ($r -gt 1) {{ throw \"{method}: code $r\" }}";
     }
 
     /// <summary>マスク欄は「255.255.255.0」「24」「/24」の 3 形を受ける。</summary>
