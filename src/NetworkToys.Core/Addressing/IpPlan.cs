@@ -229,13 +229,19 @@ public sealed record IpPlan(
             return lines;
         }
 
-        // -DefaultGateway は内部で経路も作るため -PolicyStore PersistentStore と併用できない
-        // (「Invalid parameter PolicyStore PersistentStore」。2026-08-21 実機)。
-        // アドレスと既定ルートを分けて、どちらも永続ストアへ書く
-        lines.Add($"New-NetIPAddress {target} -IPAddress {Address} -PrefixLength {PrefixLength.ToString(CultureInfo.InvariantCulture)} -PolicyStore PersistentStore | Out-Null");
+        // 通常書きの前に、両ストアの残骸も掃除する(上の掃除は永続ストア限定のため)
+        lines.Add($"Remove-NetIPAddress {target} -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue");
+        lines.Add($"Remove-NetRoute {target} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue");
 
+        // New-NetIPAddress は永続ストア単独への作成(-PolicyStore PersistentStore)を
+        // 「Invalid parameter」で受け付けない(2026-08-21 実機。経路を分けても同じ)。
+        // 通常書き(両ストア)にする — 以前これが「Inconsistent parameters」で落ちたのは
+        // 永続ストアの DHCP 旗が有効のままだったからで、上の行で旗を下ろした今は通る
+        string newAddress =
+            $"New-NetIPAddress {target} -IPAddress {Address} -PrefixLength {PrefixLength.ToString(CultureInfo.InvariantCulture)}";
         if (Gateway is not null)
-            lines.Add($"New-NetRoute {target} -DestinationPrefix '0.0.0.0/0' -NextHop {Gateway} -PolicyStore PersistentStore | Out-Null");
+            newAddress += $" -DefaultGateway {Gateway}";
+        lines.Add(newAddress + " | Out-Null");
 
         // DNS 空は「クリア」— プリセットの決定性を優先し、前の現場の DNS を残さない
         lines.Add(Dns1 is null
