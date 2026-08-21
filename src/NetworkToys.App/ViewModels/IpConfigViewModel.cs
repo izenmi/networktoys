@@ -259,7 +259,7 @@ public sealed class IpConfigViewModel : ObservableObject
             return;
 
         IpPlan? plan = IpPlan.Parse(adapter.Name, adapter.InterfaceIndex, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
-            out string? error, out _);
+            adapter.IsManualAddress ? adapter.Address : null, out string? error, out _);
         if (plan is null)
         {
             SetResult(error ?? "入力内容を確かめてください。", SeverityKind.Alert);
@@ -420,6 +420,7 @@ public sealed class IpConfigViewModel : ObservableObject
         }
 
         IpPlan? plan = IpPlan.Parse(SelectedAdapter.Name, SelectedAdapter.InterfaceIndex, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
+            SelectedAdapter.IsManualAddress ? SelectedAdapter.Address : null,
             out string? error, out string? warning);
 
         _hasError = plan is null;

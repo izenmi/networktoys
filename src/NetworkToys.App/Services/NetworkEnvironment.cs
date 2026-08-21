@@ -41,12 +41,17 @@ internal sealed record NetworkSnapshot(
 /// <c>name=</c> にそのまま使う接続名。
 /// (public なのは IpConfigViewModel の公開プロパティに載るため)
 /// </summary>
+/// <param name="IsDhcp">いまのアドレスが DHCP 由来か。<b>アダプタの DHCP 旗ではなく
+/// アドレスの出自(PrefixOrigin)で判定する</b> — 旗は「有効のまま手動アドレスが付いている」
+/// 混成状態で嘘をつく(固定にしたのに DHCP と表示された。2026-08-21 実機報告)。</param>
+/// <param name="IsManualAddress">いまのアドレスが手動構成か(混成状態からの復帰に使う)。</param>
 public sealed record NetworkAdapterInfo(
     string Name,
     string Description,
     int InterfaceIndex,
     bool IsUp,
     bool IsDhcp,
+    bool IsManualAddress,
     IPAddress? Address,
     int PrefixLength,
     IPAddress? Gateway,
@@ -116,6 +121,21 @@ internal static class NetworkEnvironment
                     // IPv4 が無効なアダプタでは取れない。固定扱い・番号なし(=名前で渡す)にしておく
                 }
 
+                // 旗より実際のアドレスの出自を信じる(旗は混成状態で嘘をつく)
+                bool isManualAddress = false;
+                if (unicast is not null)
+                {
+                    try
+                    {
+                        isManualAddress = unicast.PrefixOrigin == PrefixOrigin.Manual;
+                        isDhcp = unicast.PrefixOrigin == PrefixOrigin.Dhcp;
+                    }
+                    catch (PlatformNotSupportedException)
+                    {
+                        // 取れない環境では旗の値のままにする
+                    }
+                }
+
                 IPAddress? gateway = properties.GatewayAddresses
                     .Select(g => g.Address)
                     .FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork && !a.Equals(IPAddress.Any));
@@ -128,6 +148,7 @@ internal static class NetworkEnvironment
                     interfaceIndex,
                     nic.OperationalStatus == OperationalStatus.Up,
                     isDhcp,
+                    isManualAddress,
                     unicast?.Address,
                     prefix,
                     gateway,

@@ -9,10 +9,11 @@ public class IpPlanTests
         string name = "イーサネット", int index = 0, bool dhcp = false,
         string address = "192.168.1.10", string mask = "255.255.255.0",
         string gateway = "", string dns1 = "", string dns2 = "",
+        System.Net.IPAddress? currentManualAddress = null,
         string? expectError = null, string? expectWarningContains = null)
     {
         IpPlan? plan = IpPlan.Parse(name, index, dhcp, address, mask, gateway, dns1, dns2,
-            out string? error, out string? warning);
+            currentManualAddress, out string? error, out string? warning);
 
         if (expectError is null)
             Assert.Null(error);
@@ -134,6 +135,23 @@ public class IpPlanTests
             "interface ipv4 set dnsservers name=12 source=dhcp",
             "interface ipv4 set address name=12 source=dhcp",
         }, viaDhcp.ToNetshScript());
+    }
+
+    [Fact]
+    public void DHCPへ戻すとき手動アドレスが残っていれば名指しで消す()
+    {
+        // Windows は「DHCP の旗が立ったまま手動アドレスが付いている」混成状態になることがあり、
+        // その状態の set address source=dhcp は「すでに有効」のエラーで何もしない。
+        // 消す行を先に入れておくと、どちらの状態からでも DHCP に揃う
+        IpPlan plan = Parse(index: 12, dhcp: true,
+            currentManualAddress: System.Net.IPAddress.Parse("192.168.1.10"))!;
+
+        Assert.Equal(new[]
+        {
+            "interface ipv4 set dnsservers name=12 source=dhcp",
+            "interface ipv4 delete address name=12 address=192.168.1.10",
+            "interface ipv4 set address name=12 source=dhcp",
+        }, plan.ToNetshScript());
     }
 
     [Fact]
