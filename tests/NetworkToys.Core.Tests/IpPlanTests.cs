@@ -147,13 +147,14 @@ public class IpPlanTests
     {
         IpPlan plan = Parse(index: 12, gateway: "192.168.1.1", dns1: "8.8.8.8", dns2: "8.8.4.4")!;
 
-        Assert.Equal(new[]
-        {
+        string[] expected =
+        [
             .. ScriptHeader,
             "Invoke-Nic 'EnableStatic' @{ IPAddress = @('192.168.1.10'); SubnetMask = @('255.255.255.0') }",
             "Invoke-Nic 'SetGateways' @{ DefaultIPGateway = @('192.168.1.1') }",
             "Invoke-Nic 'SetDNSServerSearchOrder' @{ DNSServerSearchOrder = @('8.8.8.8','8.8.4.4') }",
-        }, plan.ToPowerShellScript());
+        ];
+        Assert.Equal(expected, plan.ToPowerShellScript());
     }
 
     [Fact]
@@ -172,12 +173,13 @@ public class IpPlanTests
     {
         IpPlan plan = Parse(index: 12, dhcp: true)!;
 
-        Assert.Equal(new[]
-        {
+        string[] expected =
+        [
             .. ScriptHeader,
             "Invoke-Nic 'EnableDHCP' $null",
             "Invoke-Nic 'SetDNSServerSearchOrder' $null",
-        }, plan.ToPowerShellScript());
+        ];
+        Assert.Equal(expected, plan.ToPowerShellScript());
     }
 
     [Fact]
