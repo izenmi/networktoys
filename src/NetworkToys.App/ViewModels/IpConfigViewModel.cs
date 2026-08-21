@@ -284,9 +284,13 @@ public sealed class IpConfigViewModel : ObservableObject
                 RefreshAdapters();
 
                 NetworkAdapterInfo? current = Adapters.FirstOrDefault(a => a.Name == adapter.Name);
+
+                // 固定はアドレスの一致だけで判定しない — DHCP のリースが目標と同じ値のことがあり
+                // (切り替えを繰り返すとまさにそうなる)、モードが違うのに「済んでいる」と
+                // 誤判定して本当の失敗を飲み込む(2026-08-21 報告)
                 confirmed = plan.Dhcp
                     ? current?.IsDhcp == true
-                    : current?.Address?.Equals(plan.Address) == true;
+                    : current is { IsDhcp: false } && current.Address?.Equals(plan.Address) == true;
             }
 
             if (!confirmed && failure is not null)

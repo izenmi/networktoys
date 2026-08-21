@@ -23,7 +23,7 @@ internal static class ElevatedNetsh
     public static Task<string?> ApplyAsync(IReadOnlyList<string> scriptLines)
         // ANSI(日本語環境では cp932)で書く。UTF-8 だと日本語が netsh 側で一致せず、静かに失敗する
         => RunAsync("netsh", ".txt", AnsiEncoding(), scriptLines,
-            path => $"netsh -f \"{path}\"");
+            path => $"netsh -f \"{path}\"", TimeSpan.FromSeconds(30));
 
     /// <summary>
     /// PowerShell(NetTCPIP)のスクリプトを実行する。<b>IP 設定はこちら</b> —
@@ -32,14 +32,15 @@ internal static class ElevatedNetsh
     /// スクリプトは BOM 付き UTF-8 で書く(PowerShell は BOM を正しく読むので環境依存が無い)。
     /// </summary>
     public static Task<string?> ApplyPowerShellAsync(IReadOnlyList<string> scriptLines)
+        // 昇格した新しいセッションは NetTCPIP などのモジュール読込で netsh より立ち上がりが遅い
         => RunAsync("PowerShell", ".ps1",
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), scriptLines,
-            path => $"powershell -NoProfile -ExecutionPolicy Bypass -File \"{path}\"");
+            path => $"powershell -NoProfile -ExecutionPolicy Bypass -File \"{path}\"", TimeSpan.FromSeconds(90));
 
     /// <summary>実行する。null = 成功。それ以外はそのまま画面に出せる日本語メッセージ。</summary>
     private static async Task<string?> RunAsync(
         string tool, string extension, Encoding encoding,
-        IReadOnlyList<string> scriptLines, Func<string, string> command)
+        IReadOnlyList<string> scriptLines, Func<string, string> command, TimeSpan timeout)
     {
         string path = Path.Combine(Path.GetTempPath(), $"NetworkToys-netsh-{Guid.NewGuid():N}{extension}");
         string outPath = path + ".out";
@@ -74,16 +75,16 @@ internal static class ElevatedNetsh
 
             using (process)
             {
-                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                using var cutoff = new CancellationTokenSource(timeout);
                 try
                 {
-                    await process.WaitForExitAsync(timeout.Token);
+                    await process.WaitForExitAsync(cutoff.Token);
                 }
                 catch (OperationCanceledException)
                 {
                     // 非昇格のこちらからは昇格した子を Kill できない(AccessDenied)。
                     // 放置して、現在値の確認を促す
-                    return $"{tool} から 30 秒応答がありません。現在値を確認してください。";
+                    return $"{tool} から {timeout.TotalSeconds:0} 秒応答がありません。現在値を確認してください。";
                 }
 
                 if (process.ExitCode != 0)
