@@ -2101,8 +2101,10 @@ public partial class MainWindow : Window
     private double _paneStartNext;
     private double _paneStartPos;
 
-    /// <summary>宛先リスト(編集欄)を開いていたときの行の高さ。閉じている間だけ覚える(プロセス内)。</summary>
-    private GridLength _pingEditorHeight = GridLength.Auto;
+    /// <summary>宛先リスト(編集欄)を開いていたときの行の高さ。閉じている間だけ覚える(プロセス内)。
+    /// 既定は結果の行と同じ 1*(=ほぼ半々)。Auto にすると宛先が多いとき中身なりに伸びて、
+    /// 仕切りが画面の外まで行ってしまう(2026-08-21 ユーザー報告)。</summary>
+    private GridLength _pingEditorHeight = new(1, GridUnitType.Star);
 
     /// <summary>
     /// 宛先リストの開閉。仕切りのドラッグで星になった行は、閉じても空のまま場所を
