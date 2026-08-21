@@ -272,15 +272,28 @@ public sealed class IpConfigViewModel : ObservableObject
         try
         {
             string? failure = await ElevatedNetsh.ApplyAsync(plan.ToNetshScript());
-            if (failure is not null)
+
+            // netsh の終了コードだけで成否を決めない。「すでに DHCP になっています」のような
+            // 「もう希望の状態」もコード 1 で返る(2026-08-21 報告)ため、OS の現在値と
+            // 突き合わせて判定する(応答の文面は解釈しない — ロケール依存)。
+            // 反映まで間があるので、netsh が成功したときは少し粘って読み直す
+            bool confirmed = false;
+            for (int attempt = failure is null ? 4 : 1; attempt > 0 && !confirmed; attempt--)
+            {
+                await Task.Delay(1500);
+                RefreshAdapters();
+
+                NetworkAdapterInfo? current = Adapters.FirstOrDefault(a => a.Name == adapter.Name);
+                confirmed = plan.Dhcp
+                    ? current?.IsDhcp == true
+                    : current?.Address?.Equals(plan.Address) == true;
+            }
+
+            if (!confirmed && failure is not null)
             {
                 SetResult(failure, SeverityKind.Alert);
                 return;
             }
-
-            // 反映まで少し間があるので、待ってから現在値を読み直して突き合わせる
-            await Task.Delay(1500);
-            RefreshAdapters();
 
             // 入力欄はいま適用した内容のままにする。RefreshAdapters がアダプタを選び直すと
             // 現在値が書き戻されるが、OS の読みが落ち着く前だと固定 IP を当てた直後でも
@@ -298,13 +311,10 @@ public sealed class IpConfigViewModel : ObservableObject
             }
             ApplyPresetToFields = true;
 
-            NetworkAdapterInfo? current = Adapters.FirstOrDefault(a => a.Name == adapter.Name);
-            bool confirmed = plan.Dhcp
-                ? current?.IsDhcp == true
-                : current?.Address?.Equals(plan.Address) == true;
-
             if (confirmed)
-                SetResult("✓ 適用しました。", SeverityKind.Ok);
+                SetResult(failure is null
+                    ? "✓ 適用しました。"
+                    : "✓ すでにこの内容になっていました。", SeverityKind.Ok);
             else
                 SetResult("netsh は完了しましたが、まだ反映を確認できません(DHCP の取得待ちの可能性)。「再読み込み」で確かめてください。", SeverityKind.Muted);
         }

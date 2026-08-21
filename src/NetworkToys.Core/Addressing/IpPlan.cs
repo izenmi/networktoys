@@ -139,8 +139,10 @@ public sealed record IpPlan(
 
         if (Dhcp)
         {
-            lines.Add($"interface ipv4 set address name={target} source=dhcp");
+            // DNS を先に戻す。アドレスが既に DHCP だと netsh はその行をエラーにする
+            // (「すでに有効です」もコード 1)ので、後ろに置いた行が道連れにならない順にする
             lines.Add($"interface ipv4 set dnsservers name={target} source=dhcp");
+            lines.Add($"interface ipv4 set address name={target} source=dhcp");
             return lines;
         }
 

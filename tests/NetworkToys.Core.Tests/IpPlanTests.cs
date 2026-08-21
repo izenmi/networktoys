@@ -131,8 +131,8 @@ public class IpPlanTests
 
         Assert.Equal(new[]
         {
-            "interface ipv4 set address name=12 source=dhcp",
             "interface ipv4 set dnsservers name=12 source=dhcp",
+            "interface ipv4 set address name=12 source=dhcp",
         }, viaDhcp.ToNetshScript());
     }
 
@@ -188,8 +188,8 @@ public class IpPlanTests
 
         Assert.Equal(new[]
         {
-            "interface ipv4 set address name=\"ローカル エリア接続 2\" source=dhcp",
             "interface ipv4 set dnsservers name=\"ローカル エリア接続 2\" source=dhcp",
+            "interface ipv4 set address name=\"ローカル エリア接続 2\" source=dhcp",
         }, plan.ToNetshScript());
     }
 }
