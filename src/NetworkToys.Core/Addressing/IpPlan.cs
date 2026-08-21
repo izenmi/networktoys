@@ -126,6 +126,11 @@ public sealed record IpPlan(
     /// ②NetTCPIP は旗を両ストアへ明示しても New-NetIPAddress が
     /// 「Inconsistent parameters PolicyStore PersistentStore and Dhcp Enabled」で断り続けた。
     /// 戻り値は数値(0=成功 / 1=要再起動)なのでロケールに依らず成否を取れる。
+    ///
+    /// <b>戻り値 84(IP not enabled)だけは再試行する</b> — EnableStatic の直後は IP スタックが
+    /// 再初期化中で、続く SetDNSServerSearchOrder などが一瞬 84 を返す(実機で発生。
+    /// 昔の配備スクリプトが呼び出しの間に sleep を挟んでいたのはこのため)。
+    /// インスタンスを取り直しながら最大 10 秒粘る。84 以外は即失敗。
     /// 指定は番号(ifIndex)。取れないアダプタだけ接続名(NetConnectionID)で引く。
     /// </summary>
     public IReadOnlyList<string> ToPowerShellScript()
@@ -133,56 +138,61 @@ public sealed record IpPlan(
         string index = InterfaceIndex.ToString(CultureInfo.InvariantCulture);
 
         string lookup = InterfaceIndex > 0
-            ? $"$nic = Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'InterfaceIndex={index}'"
-            : $"$nic = Get-CimInstance Win32_NetworkAdapter -Filter 'NetConnectionID=''{InterfaceName}''' | Get-CimAssociatedInstance -ResultClassName Win32_NetworkAdapterConfiguration";
+            ? $"Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'InterfaceIndex={index}'"
+            : $"Get-CimInstance Win32_NetworkAdapter -Filter 'NetConnectionID=''{InterfaceName}''' | Get-CimAssociatedInstance -ResultClassName Win32_NetworkAdapterConfiguration";
 
         string routeTarget = InterfaceIndex > 0
             ? $"-InterfaceIndex {index}"
             : $"-InterfaceAlias '{InterfaceName}'";
 
-        // 古い既定ルートは名指しで掃除する(EnableDHCP が静的 GW を残す環境があるため)。
-        // 無ければ無いでよいので失敗にしない
         var lines = new List<string>
         {
             "$ErrorActionPreference = 'Stop'",
-            lookup,
-            "if ($null -eq $nic) { throw 'アダプタが見つかりません。' }",
+            $"function Get-Nic {{ {lookup} }}",
+            "function Invoke-Nic([string]$Method, [hashtable]$Arguments) {",
+            "    $seen = $false",
+            "    for ($i = 0; $i -lt 20; $i++) {",
+            "        $nic = Get-Nic",
+            "        if ($null -ne $nic) {",
+            "            $seen = $true",
+            "            if ($null -eq $Arguments) { $r = ($nic | Invoke-CimMethod -MethodName $Method).ReturnValue }",
+            "            else { $r = ($nic | Invoke-CimMethod -MethodName $Method -Arguments $Arguments).ReturnValue }",
+            "            if ($r -le 1) { return }",
+            "            if ($r -ne 84) { throw \"${Method}: code $r\" }",
+            "        }",
+            "        Start-Sleep -Milliseconds 500",
+            "    }",
+            "    if (-not $seen) { throw 'アダプタが見つかりません。' }",
+            "    throw \"${Method}: code 84 (IP の有効化を待ちましたが時間切れです)\"",
+            "}",
+            // 古い既定ルートは名指しで掃除する(EnableDHCP が静的 GW を残す環境があるため)。
+            // 無ければ無いでよいので失敗にしない
             $"Remove-NetRoute {routeTarget} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
         };
 
         if (Dhcp)
         {
-            lines.Add(Invoke("EnableDHCP", null));
+            lines.Add("Invoke-Nic 'EnableDHCP' $null");
             // 引数なし = DNS も DHCP から受ける
-            lines.Add(Invoke("SetDNSServerSearchOrder", null));
+            lines.Add("Invoke-Nic 'SetDNSServerSearchOrder' $null");
             return lines;
         }
 
         string mask = IpMath.FromUInt32(IpMath.PrefixToMask(PrefixLength)).ToString();
-        lines.Add(Invoke("EnableStatic", $"@{{ IPAddress = @('{Address}'); SubnetMask = @('{mask}') }}"));
+        lines.Add($"Invoke-Nic 'EnableStatic' @{{ IPAddress = @('{Address}'); SubnetMask = @('{mask}') }}");
 
         if (Gateway is not null)
-            lines.Add(Invoke("SetGateways", $"@{{ DefaultIPGateway = @('{Gateway}') }}"));
+            lines.Add($"Invoke-Nic 'SetGateways' @{{ DefaultIPGateway = @('{Gateway}') }}");
 
-        // DNS 空は「クリア」(引数なし) — プリセットは「選べば同じ状態になる」決定性を優先し、
+        // DNS 空は「クリア」($null) — プリセットは「選べば同じ状態になる」決定性を優先し、
         // 前の現場の DNS を残さない(netsh 時代からの決まり)
         lines.Add(Dns1 is null
-            ? Invoke("SetDNSServerSearchOrder", null)
-            : Invoke("SetDNSServerSearchOrder", Dns2 is null
-                ? $"@{{ DNSServerSearchOrder = @('{Dns1}') }}"
-                : $"@{{ DNSServerSearchOrder = @('{Dns1}','{Dns2}') }}"));
+            ? "Invoke-Nic 'SetDNSServerSearchOrder' $null"
+            : Dns2 is null
+                ? $"Invoke-Nic 'SetDNSServerSearchOrder' @{{ DNSServerSearchOrder = @('{Dns1}') }}"
+                : $"Invoke-Nic 'SetDNSServerSearchOrder' @{{ DNSServerSearchOrder = @('{Dns1}','{Dns2}') }}");
 
         return lines;
-    }
-
-    /// <summary>CIM メソッド呼び出しの 1 行。戻り値 0(成功)/1(要再起動)以外は失敗として投げる。</summary>
-    private static string Invoke(string method, string? arguments)
-    {
-        string call = arguments is null
-            ? $"($nic | Invoke-CimMethod -MethodName {method})"
-            : $"($nic | Invoke-CimMethod -MethodName {method} -Arguments {arguments})";
-
-        return $"$r = {call}.ReturnValue; if ($r -gt 1) {{ throw \"{method}: code $r\" }}";
     }
 
     /// <summary>マスク欄は「255.255.255.0」「24」「/24」の 3 形を受ける。</summary>
