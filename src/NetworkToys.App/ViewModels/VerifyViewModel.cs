@@ -572,6 +572,22 @@ public sealed class VerifyViewModel : ObservableObject
             return;
         }
 
+        // 目視の項目はブラウザで見るので、Windows のプロキシ設定を切り替えてから開く。
+        // CheckRunner にそのまま流すと切り替え無しで開いてしまい、選んだプロキシで
+        // 見ていないことになる(2026-08-21 報告)。まとめて実行と同じ待ち行列に 1 件だけ
+        // 積めば、開き方も「判定が終わったら必ず戻す」もあちらの決まりがそのまま効く
+        if (item.Kind == CheckKind.Manual)
+        {
+            if (Results.Any(r => r.NeedsPerson))
+            {
+                Status = "目視の判定が残っています。先に ○ か ✕ を付けてください。";
+                return;
+            }
+
+            StartBrowserQueue([item], [proxy]);
+            return;
+        }
+
         IsBusy = true;
         _cts = new CancellationTokenSource();
 
