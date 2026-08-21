@@ -41,11 +41,11 @@ internal sealed class DeviceFetchDialog : Window
 
     private CancellationTokenSource? _cts;
 
-    /// <summary>Ping / TCP に登録してある宛先。<b>空なら「宛先から」は押せない。</b></summary>
-    private readonly IReadOnlyList<(string Host, string Memo)> _targets;
+    /// <summary>選べる宛先リスト(いまの宛先 + 保存したリスト)。<b>空なら「宛先から」は押せない。</b></summary>
+    private readonly IReadOnlyList<TargetListSource> _targets;
 
     internal DeviceFetchDialog(
-        string title, string command, IReadOnlyList<(string Host, string Memo)>? targets = null)
+        string title, string command, IReadOnlyList<TargetListSource>? targets = null)
     {
         _targets = targets ?? [];
 
@@ -86,10 +86,10 @@ internal sealed class DeviceFetchDialog : Window
         _fetch.Click += async (_, _) => await FetchAsync().ConfigureAwait(true);
 
         _pick.SetResourceReference(StyleProperty, "Button.Subtle");
-        _pick.IsEnabled = _targets.Count > 0;
-        _pick.ToolTip = _targets.Count > 0
-            ? "Ping / TCP タブに登録してある宛先から選びます。打ち込んでも構いません。"
-            : "Ping / TCP タブに宛先が登録されていません。";
+        _pick.IsEnabled = _targets.Any(s => s.Targets.Count > 0);
+        _pick.ToolTip = _targets.Any(s => s.Targets.Count > 0)
+            ? "いまの宛先や保存したリストから選びます。打ち込んでも構いません。"
+            : "Ping / TCP タブに宛先が無く、保存したリストもありません。";
 
         _pick.Click += (_, _) =>
         {
@@ -164,7 +164,7 @@ internal sealed class DeviceFetchDialog : Window
     /// <param name="targets">接続先の候補（Ping / TCP の宛先）。<b>打ち込みも受ける。</b></param>
     public static string? Fetch(
         Window owner, string title, string command,
-        IReadOnlyList<(string Host, string Memo)>? targets = null)
+        IReadOnlyList<TargetListSource>? targets = null)
     {
         var dialog = new DeviceFetchDialog(title, command, targets) { Owner = owner };
 

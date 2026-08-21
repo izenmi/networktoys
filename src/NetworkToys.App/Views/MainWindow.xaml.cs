@@ -252,7 +252,7 @@ public partial class MainWindow : Window
                 this,
                 before ? "機器から取得（作業前）" : "機器から取得（作業後）",
                 command,
-                KnownTargets())
+                AllTargetLists())
             is not { Length: > 0 } output)
         {
             return;
@@ -1312,6 +1312,36 @@ public partial class MainWindow : Window
     /// Ping / TCP に登録してある宛先。<b>同じ宛先が両方にあることがあるので畳む</b>。
     /// 収集タブへの取り込みと、差分比較の「機器から」の両方で使う。
     /// </summary>
+    /// <summary>
+    /// 機器から取得の「宛先から」に出すリスト一覧。いま出ている宛先に加えて、
+    /// 名前を付けて残したリスト(Ping / TCP)全部から選べる(2026-08-21 ユーザー指示)。
+    /// </summary>
+    private IReadOnlyList<TargetListSource> AllTargetLists()
+    {
+        List<TargetListSource> sources = [new("いまの宛先（Ping / TCP）", KnownTargets())];
+
+        foreach ((string prefix, System.Collections.Generic.Dictionary<string, string> store) in
+                 new (string, System.Collections.Generic.Dictionary<string, string>)[]
+                 {
+                     ("Ping: ", Settings.Current.PingTargetLists),
+                     ("TCP: ", Settings.Current.TcpTargetLists),
+                 })
+        {
+            foreach (string name in store.Keys.OrderBy(n => n, StringComparer.CurrentCulture))
+            {
+                (string Host, string Memo)[] targets =
+                    [.. TargetListParser.Parse(store[name]).Targets
+                        .Where(t => t.Host.Length > 0)
+                        .Select(t => (t.Host, t.Comment))];
+
+                if (targets.Length > 0)
+                    sources.Add(new($"{prefix}{name}", targets));
+            }
+        }
+
+        return sources;
+    }
+
     private IReadOnlyList<(string Host, string Memo)> KnownTargets()
     {
         Dictionary<string, string> unique = [];

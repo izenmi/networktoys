@@ -950,6 +950,29 @@ internal static class SelfTest
             }
         });
 
+        Check("宛先の選択窓は複数リストを持てて、選択はリスト横断で拾う", () =>
+        {
+            // 「機器から」の宛先選択は保存したリストも全部並ぶ(2026-08-21 ユーザー指示)。
+            // 実描画で ComboBox 込みの組み立てが通ること、選択が重複を先勝ちで
+            // まとめられることを見る
+            var dialog = new Views.TargetPickerDialog(
+            [
+                new Views.TargetListSource("いまの宛先", [("10.0.0.1", "a")]),
+                new Views.TargetListSource("Ping: 現場A", [("10.0.0.1", "b"), ("10.0.0.2", "")]),
+            ]);
+
+            dialog.Show();
+            dialog.UpdateLayout();
+
+            foreach (Views.PickableTarget row in dialog.AllRowsForSelfTest)
+                row.Selected = true;
+
+            Assert(dialog.Selected.Count == 2, $"重複がまとまっていない: {dialog.Selected.Count} 件");
+            Assert(dialog.Selected[0].Memo == "a", "先勝ちの備考になっていない");
+
+            dialog.Close();
+        });
+
         Check("Ping: 宛先リストを閉じると仕切りの行ごと畳まれる", () =>
         {
             Assert(window is not null, "ウィンドウが生成されていないため確認できない");

@@ -31,6 +31,9 @@ public sealed class PickableTarget(string host, string memo) : INotifyPropertyCh
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
+/// <summary>選択元のリスト 1 本(「いまの宛先」や保存したリスト)。</summary>
+internal sealed record TargetListSource(string Name, IReadOnlyList<(string Host, string Memo)> Targets);
+
 /// <summary>
 /// 宛先リストから取り込む相手を選ぶ小窓。
 ///
@@ -40,11 +43,21 @@ public sealed class PickableTarget(string host, string memo) : INotifyPropertyCh
 /// </summary>
 internal sealed class TargetPickerDialog : Window
 {
-    private readonly ObservableCollection<PickableTarget> _all = [];
+    /// <summary>リストごとの行。選択はリストをまたいで覚えたまま切り替えられる。</summary>
+    private readonly IReadOnlyList<(TargetListSource Source, ObservableCollection<PickableTarget> Rows)> _sources;
+
+    /// <summary>いま表示しているリストの行。</summary>
+    private ObservableCollection<PickableTarget> _all;
+
     private readonly ListBox _list;
     private readonly TextBlock _count;
 
     internal TargetPickerDialog(IEnumerable<(string Host, string Memo)> targets)
+        : this([new TargetListSource("いまの宛先", [.. targets])])
+    {
+    }
+
+    internal TargetPickerDialog(IReadOnlyList<TargetListSource> sources)
     {
         Title = "宛先リストから取り込む";
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -59,8 +72,13 @@ internal sealed class TargetPickerDialog : Window
         SetResourceReference(FontFamilyProperty, "Font.Ui");
         SetResourceReference(FontSizeProperty, "Size.Body");
 
-        foreach ((string host, string memo) in targets)
-            _all.Add(new PickableTarget(host, memo));
+        _sources =
+        [
+            .. sources.Select(s => (s,
+                new ObservableCollection<PickableTarget>(
+                    s.Targets.Select(t => new PickableTarget(t.Host, t.Memo))))),
+        ];
+        _all = _sources[0].Rows;
 
         var filter = new TextBox { Margin = new Thickness(0, 0, 0, 6) };
         filter.SetResourceReference(FontFamilyProperty, "Font.Mono");
@@ -107,6 +125,35 @@ internal sealed class TargetPickerDialog : Window
         buttons.Children.Add(cancel);
 
         var body = new DockPanel { Margin = new Thickness(14) };
+
+        // どのリストから選ぶか。保存したリスト(Ping/TCP)も全部並ぶ(2026-08-21 ユーザー指示)。
+        // 選択はリストをまたいで残るので、複数のリストから拾って一度に取り込める
+        if (_sources.Count > 1)
+        {
+            var listLabel = new TextBlock { Text = "宛先リスト", Margin = new Thickness(0, 0, 0, 3) };
+            listLabel.SetResourceReference(StyleProperty, "Caption");
+
+            var picker = new ComboBox
+            {
+                ItemsSource = _sources.Select(s => s.Source.Name).ToList(),
+                SelectedIndex = 0,
+                Margin = new Thickness(0, 0, 0, 6),
+            };
+            picker.SelectionChanged += (_, _) =>
+            {
+                if (picker.SelectedIndex < 0) return;
+
+                _all = _sources[picker.SelectedIndex].Rows;
+                _list.ItemsSource = _all;
+                ApplyFilter(filter.Text);
+            };
+
+            DockPanel.SetDock(listLabel, Dock.Top);
+            DockPanel.SetDock(picker, Dock.Top);
+            body.Children.Add(listLabel);
+            body.Children.Add(picker);
+        }
+
         DockPanel.SetDock(filterLabel, Dock.Top);
         DockPanel.SetDock(filter, Dock.Top);
         DockPanel.SetDock(tools, Dock.Bottom);
@@ -127,9 +174,15 @@ internal sealed class TargetPickerDialog : Window
         Loaded += (_, _) => filter.Focus();
     }
 
-    /// <summary>選ばれた相手。</summary>
+    /// <summary>全リストの全行。自己診断が選択の横断をなぞるためだけの口。</summary>
+    internal IEnumerable<PickableTarget> AllRowsForSelfTest => _sources.SelectMany(s => s.Rows);
+
+    /// <summary>選ばれた相手(全リスト横断・重複は先勝ち)。</summary>
     public IReadOnlyList<(string Host, string Memo)> Selected =>
-        [.. _all.Where(t => t.Selected).Select(t => (t.Host, t.Memo))];
+        [.. _sources.SelectMany(s => s.Rows)
+            .Where(t => t.Selected)
+            .DistinctBy(t => t.Host, StringComparer.OrdinalIgnoreCase)
+            .Select(t => (t.Host, t.Memo))];
 
     private DataTemplate BuildRowTemplate()
     {
@@ -207,6 +260,15 @@ internal sealed class TargetPickerDialog : Window
         Window owner, IEnumerable<(string Host, string Memo)> targets)
     {
         var dialog = new TargetPickerDialog(targets) { Owner = owner };
+
+        return dialog.ShowDialog() == true ? dialog.Selected : [];
+    }
+
+    /// <summary>複数のリストから選ばせる版。</summary>
+    public static IReadOnlyList<(string Host, string Memo)> Pick(
+        Window owner, IReadOnlyList<TargetListSource> sources)
+    {
+        var dialog = new TargetPickerDialog(sources) { Owner = owner };
 
         return dialog.ShowDialog() == true ? dialog.Selected : [];
     }
