@@ -12,8 +12,11 @@ public sealed record CiscoSessionOptions
     /// <summary>最後の 1 バイトからこれだけ黙ったら諦める。</summary>
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromSeconds(15);
 
-    /// <summary>1 コマンドの上限。無音にならないまま終わらない出力を必ず切る。</summary>
-    public TimeSpan CommandTimeout { get; init; } = TimeSpan.FromSeconds(180);
+    /// <summary>1 コマンドの上限。無音にならないまま終わらない出力を必ず切る<b>保険</b>で、
+    /// 平常の打ち切りは <see cref="IdleTimeout"/> の仕事。180 秒にしていた頃、遅い回線の
+    /// show tech-support がまだ流れている途中で切れた(2026-08-21 報告)。流れ続けている間は
+    /// 正当な出力なので、保険はうんと緩くとる。</summary>
+    public TimeSpan CommandTimeout { get; init; } = TimeSpan.FromMinutes(30);
 
     /// <summary>プロンプトを学習するときの静穏時間。長いバナーを吸収する。</summary>
     public TimeSpan SettleTime { get; init; } = TimeSpan.FromMilliseconds(300);
@@ -29,11 +32,13 @@ public sealed record CiscoSessionOptions
     /// <summary>ログインの待ち。</summary>
     public TimeSpan LoginTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>1 コマンドで返してよい最大の文字数。</summary>
-    public int MaxOutputChars { get; init; } = 4 * 1024 * 1024;
+    /// <summary>1 コマンドで返してよい最大の文字数。show tech-support は数十 MB になるので、
+    /// 4 MB では最後まで入らなかった(2026-08-21 報告)。</summary>
+    public int MaxOutputChars { get; init; } = 64 * 1024 * 1024;
 
-    /// <summary>ページャに応答してよい回数。</summary>
-    public int MaxMoreResponses { get; init; } = 2000;
+    /// <summary>ページャに応答してよい回数。無効化が効かない機器で大物を取ると
+    /// 2000 ページでは足りない。1 ページ約 24 行 × 20000 ≒ 48 万行まで受ける。</summary>
+    public int MaxMoreResponses { get; init; } = 20000;
 }
 
 /// <summary>
