@@ -222,6 +222,40 @@ public class TextDiffTests
     }
 
     [Fact]
+    public void show_ip_routeの経過時間だけの違いは差分にしない()
+    {
+        // 上段の「経路として見た変化」は構造化側が時間を読み捨てるが、
+        // 下段の行差分が素通しで、時間の違いが差分に出ていた(2026-08-21 報告)
+        const string before = "O        10.0.2.0/24 [110/2] via 192.168.1.2, 00:12:34, GigabitEthernet0/1";
+        const string aged = "O        10.0.2.0/24 [110/2] via 192.168.1.2, 2d05h, GigabitEthernet0/1";
+
+        Assert.True(TextDiff.Compare(before, aged).HasChanges);
+        Assert.False(TextDiff.Compare(before, aged, DiffNoiseFilter.CiscoRoutes).HasChanges);
+
+        // BGP のようにインターフェイス無しで時間が行末に来る形も落ちる
+        Assert.False(TextDiff.Compare(
+            "B        10.9.0.0/16 [20/0] via 198.51.100.7, 3w4d",
+            "B        10.9.0.0/16 [20/0] via 198.51.100.7, 1y2w",
+            DiffNoiseFilter.CiscoRoutes).HasChanges);
+    }
+
+    [Fact]
+    public void 向き先の変わった経路は時間の掃除をしても差分に残る()
+    {
+        const string before = "O        10.0.2.0/24 [110/2] via 192.168.1.2, 00:12:34, GigabitEthernet0/1";
+        const string moved = "O        10.0.2.0/24 [110/2] via 192.168.1.9, 00:00:05, GigabitEthernet0/1";
+
+        TextDiffResult result = TextDiff.Compare(before, moved, DiffNoiseFilter.CiscoRoutes);
+
+        Assert.True(result.HasChanges);
+        Assert.Contains(result.Lines, l => l.Kind == DiffKind.Added && l.Text.Contains("192.168.1.9", StringComparison.Ordinal));
+
+        // 時間を持たない行(直結)はそのまま比べられる
+        const string direct = "C        192.168.1.0/24 is directly connected, GigabitEthernet0/1";
+        Assert.False(TextDiff.Compare(direct, direct, DiffNoiseFilter.CiscoRoutes).HasChanges);
+    }
+
+    [Fact]
     public void Completely_different_inputs_are_shown_as_a_full_replacement()
     {
         // 共通の行が 1 本も無い。行どうしの対応は付けようがないので、

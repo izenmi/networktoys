@@ -61,6 +61,7 @@ public static class DeviceComparison
     public static DiffNoiseFilter? NoiseFilterFor(DeviceOutputKind kind) => kind switch
     {
         DeviceOutputKind.Configuration => DiffNoiseFilter.CiscoConfig,
+        DeviceOutputKind.RouteTable => DiffNoiseFilter.CiscoRoutes,
         _ => null,
     };
 

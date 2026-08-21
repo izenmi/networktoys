@@ -365,6 +365,15 @@ public sealed partial class DiffNoiseFilter
     public static DiffNoiseFilter RouteTable { get; } = new([], NormalizeRouteLine);
 
     /// <summary>
+    /// Cisco の <c>show ip route</c> 用。
+    /// 経過時間(<c>00:12:34</c> / <c>2d05h</c> / <c>1w2d</c> / <c>1y2w</c>)は作業と無関係に
+    /// 毎回変わるので、行を落とさず時間だけを取り除いて比べる。
+    /// 上段の「経路として見た変化」は構造化(CiscoRouteParser)側が時間を読み捨てるが、
+    /// 下段の行差分はこちらで守る(2026-08-21 ユーザー報告)。
+    /// </summary>
+    public static DiffNoiseFilter CiscoRoutes { get; } = new([], NormalizeCiscoRouteLine);
+
+    /// <summary>
     /// Cisco の <c>show run</c> 用。
     /// 設定を何も変えていなくても、取得のたびに必ず変わる行がある。
     /// </summary>
@@ -401,4 +410,10 @@ public sealed partial class DiffNoiseFilter
 
     [GeneratedRegex(@"^(\s*\d{1,3}(?:\.\d{1,3}){3}\s+.*?)\s+\d+\s*$")]
     private static partial Regex RouteLine();
+
+    /// <summary>「, 00:12:34」のような経過時間の節を取り除く(次が区切りか行末のときだけ)。</summary>
+    private static string NormalizeCiscoRouteLine(string line) => CiscoRouteAge().Replace(line, "");
+
+    [GeneratedRegex(@",\s*(?:\d{1,2}:\d{2}:\d{2}|\d+y\d+w|\d+w\d+d|\d+d\d{2}h)(?=,|\s*$)")]
+    private static partial Regex CiscoRouteAge();
 }
