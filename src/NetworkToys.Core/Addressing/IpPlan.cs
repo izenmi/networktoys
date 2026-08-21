@@ -7,15 +7,8 @@ namespace NetworkToys.Core.Addressing;
 /// PC の IPv4 設定として適用する内容。ここに入った時点で矛盾はない
 /// (画面の文字列は必ず <see cref="Parse"/> を通す)。
 ///
-/// 適用は netsh のスクリプト実行(<see cref="ToNetshScript"/>)で行い、
-/// <b>netsh の出力は読まない</b>(ロケール依存のため。arp/netstat と同じ理由)。
+/// 適用は PowerShell(NetTCPIP)のスクリプト実行(<see cref="ToPowerShellScript"/>)で行う。
 /// </summary>
-/// <param name="CurrentManualAddress">いま付いている手動構成のアドレス(DHCP へ戻すときだけ使う)。
-/// Windows は「DHCP の旗が立ったまま手動アドレスが残る」混成状態になることがあり、
-/// その状態では <c>set address source=dhcp</c> が「すでに有効」のエラーで何もしない
-/// (<c>delete address</c> でも旗は下りず、ゲートウェイも残る。2026-08-21 実機で発生)。
-/// 一度 static を明示して旗を確実に下ろしてから切り替えるのに使う。</param>
-/// <param name="CurrentPrefixLength">その手動アドレスのプレフィクス長(不明なら 0 → /24 とみなす)。</param>
 public sealed record IpPlan(
     string InterfaceName,
     int InterfaceIndex,
@@ -24,9 +17,7 @@ public sealed record IpPlan(
     int PrefixLength,
     IPAddress? Gateway,
     IPAddress? Dns1,
-    IPAddress? Dns2,
-    IPAddress? CurrentManualAddress = null,
-    int CurrentPrefixLength = 0)
+    IPAddress? Dns2)
 {
     /// <summary>
     /// 画面の入力から適用内容を組み立てる。error 非 null なら失敗(最初の 1 件のみ)。
@@ -35,7 +26,6 @@ public sealed record IpPlan(
     public static IpPlan? Parse(
         string interfaceName, int interfaceIndex, bool dhcp,
         string address, string mask, string gateway, string dns1, string dns2,
-        IPAddress? currentManualAddress, int currentManualPrefix,
         out string? error, out string? warning)
     {
         error = null;
@@ -57,7 +47,7 @@ public sealed record IpPlan(
         }
 
         if (dhcp)
-            return new IpPlan(name, interfaceIndex, true, null, 0, null, null, null, currentManualAddress, currentManualPrefix);
+            return new IpPlan(name, interfaceIndex, true, null, 0, null, null, null);
 
         address = (address ?? "").Trim();
         mask = (mask ?? "").Trim();
@@ -129,56 +119,47 @@ public sealed record IpPlan(
     }
 
     /// <summary>
-    /// netsh -f に渡すスクリプトの行。マスクは常に点区切りへ正規化する
-    /// (netsh は /24 表記を受けない)。DNS 空は「クリア」— プリセットは
-    /// 「選べば同じ状態になる」決定性を優先し、前の現場の DNS を残さない。
+    /// 適用スクリプト(PowerShell / NetTCPIP)。<b>IP 設定に netsh を使わない</b> —
+    /// netsh には「DHCP の旗」を直接切り替える命令が無く、旗と実アドレスが食い違った
+    /// 機械では <c>set address source=dhcp</c> が「すでに有効です」の断りだけで
+    /// 何もできなかった(static の入れ直しでも旗は下りない。2026-08-21 実機)。
+    /// <c>Set-NetIPInterface -Dhcp</c> は旗そのものを明示的に切り替えるので、
+    /// どんな状態からでも同じ結果に揃う。指定は番号(ifIndex)で行い、
+    /// 取れないアダプタだけ名前(単一引用符・'' エスケープ)で指定する。
     /// </summary>
-    public IReadOnlyList<string> ToNetshScript()
+    public IReadOnlyList<string> ToPowerShellScript()
     {
-        // name= には名前でなく番号を渡す。日本語のアダプタ名は文字コード事故の入口で、
-        // スクリプトの書き方と netsh の読み方が食い違うと ERROR_INVALID_NAME
-        // (「ファイル名、ディレクトリ名、またはボリューム ラベルの構文が間違っています」)に
-        // なる(2026-08-21 実機報告)。番号は純 ASCII なのでこの罠が構造的に消える。
-        // 番号が取れなかったアダプタ(IPv4 が無効など)だけ名前で渡す
         string target = InterfaceIndex > 0
-            ? InterfaceIndex.ToString(CultureInfo.InvariantCulture)
-            : $"\"{InterfaceName}\"";
+            ? $"-InterfaceIndex {InterfaceIndex.ToString(CultureInfo.InvariantCulture)}"
+            : $"-InterfaceAlias '{InterfaceName.Replace("'", "''", StringComparison.Ordinal)}'";
 
-        var lines = new List<string>(3);
+        // 旗 → 掃除(古いアドレスと既定ルート) → 新しい値、の順。掃除は無くても失敗にしない
+        var lines = new List<string>
+        {
+            "$ErrorActionPreference = 'Stop'",
+            $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp {(Dhcp ? "Enabled" : "Disabled")}",
+            $"Remove-NetIPAddress {target} -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
+            $"Remove-NetRoute {target} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
+        };
 
         if (Dhcp)
         {
-            // DNS を先に戻す。アドレスが既に DHCP だと netsh はその行をエラーにする
-            // (「すでに有効です」もコード 1)ので、後ろに置いた行が道連れにならない順にする
-            lines.Add($"interface ipv4 set dnsservers name={target} source=dhcp");
-
-            // 混成状態(旗が立ったまま手動アドレスが残る)では source=dhcp が
-            // 「すでに有効」のエラーで何もしない(delete address でも旗は下りず、
-            // ゲートウェイも残る。2026-08-21 実機)。一度 static を明示して旗を確実に下ろし
-            // (冪等。ゲートウェイも none で剥がす)、その上で dhcp へ切り替える
-            if (CurrentManualAddress is not null)
-            {
-                string mask = IpMath.FromUInt32(IpMath.PrefixToMask(
-                    CurrentPrefixLength is >= 1 and <= 32 ? CurrentPrefixLength : 24)).ToString();
-                lines.Add($"interface ipv4 set address name={target} static {CurrentManualAddress} {mask} none");
-            }
-
-            lines.Add($"interface ipv4 set address name={target} source=dhcp");
+            lines.Add($"Set-DnsClientServerAddress {target} -ResetServerAddresses");
             return lines;
         }
 
-        string maskText = IpMath.FromUInt32(IpMath.PrefixToMask(PrefixLength)).ToString();
-        string addressLine = $"interface ipv4 set address name={target} static {Address} {maskText}";
+        string newAddress = $"New-NetIPAddress {target} -IPAddress {Address} -PrefixLength {PrefixLength.ToString(CultureInfo.InvariantCulture)}";
         if (Gateway is not null)
-            addressLine += $" {Gateway}";
-        lines.Add(addressLine);
+            newAddress += $" -DefaultGateway {Gateway}";
+        lines.Add(newAddress + " | Out-Null");
 
-        lines.Add(Dns1 is not null
-            ? $"interface ipv4 set dnsservers name={target} static {Dns1} primary validate=no"
-            : $"interface ipv4 set dnsservers name={target} static none validate=no");
-
-        if (Dns2 is not null)
-            lines.Add($"interface ipv4 add dnsservers name={target} {Dns2} index=2 validate=no");
+        // DNS 空は「クリア」— プリセットは「選べば同じ状態になる」決定性を優先し、
+        // 前の現場の DNS を残さない(netsh 時代からの決まり)
+        lines.Add(Dns1 is null
+            ? $"Set-DnsClientServerAddress {target} -ResetServerAddresses"
+            : Dns2 is null
+                ? $"Set-DnsClientServerAddress {target} -ServerAddresses '{Dns1}'"
+                : $"Set-DnsClientServerAddress {target} -ServerAddresses '{Dns1}','{Dns2}'");
 
         return lines;
     }

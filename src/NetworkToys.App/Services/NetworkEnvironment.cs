@@ -44,14 +44,12 @@ internal sealed record NetworkSnapshot(
 /// <param name="IsDhcp">いまのアドレスが DHCP 由来か。<b>アダプタの DHCP 旗ではなく
 /// アドレスの出自(PrefixOrigin)で判定する</b> — 旗は「有効のまま手動アドレスが付いている」
 /// 混成状態で嘘をつく(固定にしたのに DHCP と表示された。2026-08-21 実機報告)。</param>
-/// <param name="IsManualAddress">いまのアドレスが手動構成か(混成状態からの復帰に使う)。</param>
 public sealed record NetworkAdapterInfo(
     string Name,
     string Description,
     int InterfaceIndex,
     bool IsUp,
     bool IsDhcp,
-    bool IsManualAddress,
     IPAddress? Address,
     int PrefixLength,
     IPAddress? Gateway,
@@ -122,12 +120,10 @@ internal static class NetworkEnvironment
                 }
 
                 // 旗より実際のアドレスの出自を信じる(旗は混成状態で嘘をつく)
-                bool isManualAddress = false;
                 if (unicast is not null)
                 {
                     try
                     {
-                        isManualAddress = unicast.PrefixOrigin == PrefixOrigin.Manual;
                         isDhcp = unicast.PrefixOrigin == PrefixOrigin.Dhcp;
                     }
                     catch (PlatformNotSupportedException)
@@ -148,7 +144,6 @@ internal static class NetworkEnvironment
                     interfaceIndex,
                     nic.OperationalStatus == OperationalStatus.Up,
                     isDhcp,
-                    isManualAddress,
                     unicast?.Address,
                     prefix,
                     gateway,

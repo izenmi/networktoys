@@ -259,7 +259,7 @@ public sealed class IpConfigViewModel : ObservableObject
             return;
 
         IpPlan? plan = IpPlan.Parse(adapter.Name, adapter.InterfaceIndex, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
-            adapter.IsManualAddress ? adapter.Address : null, adapter.PrefixLength, out string? error, out _);
+            out string? error, out _);
         if (plan is null)
         {
             SetResult(error ?? "入力内容を確かめてください。", SeverityKind.Alert);
@@ -271,7 +271,7 @@ public sealed class IpConfigViewModel : ObservableObject
 
         try
         {
-            string? failure = await ElevatedNetsh.ApplyAsync(plan.ToNetshScript());
+            string? failure = await ElevatedNetsh.ApplyPowerShellAsync(plan.ToPowerShellScript());
 
             // netsh の終了コードだけで成否を決めない。「すでに DHCP になっています」のような
             // 「もう希望の状態」もコード 1 で返る(2026-08-21 報告)ため、OS の現在値と
@@ -420,7 +420,6 @@ public sealed class IpConfigViewModel : ObservableObject
         }
 
         IpPlan? plan = IpPlan.Parse(SelectedAdapter.Name, SelectedAdapter.InterfaceIndex, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
-            SelectedAdapter.IsManualAddress ? SelectedAdapter.Address : null, SelectedAdapter.PrefixLength,
             out string? error, out string? warning);
 
         _hasError = plan is null;

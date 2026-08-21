@@ -19,17 +19,34 @@ internal static class ElevatedNetsh
 {
     private static bool _encodingRegistered;
 
+    /// <summary>netsh のスクリプトを実行する(プロキシ設定用)。null = 成功。</summary>
+    public static Task<string?> ApplyAsync(IReadOnlyList<string> scriptLines)
+        // ANSI(日本語環境では cp932)で書く。UTF-8 だと日本語が netsh 側で一致せず、静かに失敗する
+        => RunAsync("netsh", ".txt", AnsiEncoding(), scriptLines,
+            path => $"netsh -f \"{path}\"");
+
+    /// <summary>
+    /// PowerShell(NetTCPIP)のスクリプトを実行する。<b>IP 設定はこちら</b> —
+    /// netsh には DHCP の旗を直接切り替える命令が無く、旗と実アドレスが食い違った機械では
+    /// 「すでに有効です」の断りから抜けられない(2026-08-21 実機)。
+    /// スクリプトは BOM 付き UTF-8 で書く(PowerShell は BOM を正しく読むので環境依存が無い)。
+    /// </summary>
+    public static Task<string?> ApplyPowerShellAsync(IReadOnlyList<string> scriptLines)
+        => RunAsync("PowerShell", ".ps1",
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), scriptLines,
+            path => $"powershell -NoProfile -ExecutionPolicy Bypass -File \"{path}\"");
+
     /// <summary>実行する。null = 成功。それ以外はそのまま画面に出せる日本語メッセージ。</summary>
-    public static async Task<string?> ApplyAsync(IReadOnlyList<string> scriptLines)
+    private static async Task<string?> RunAsync(
+        string tool, string extension, Encoding encoding,
+        IReadOnlyList<string> scriptLines, Func<string, string> command)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"NetworkToys-netsh-{Guid.NewGuid():N}.txt");
+        string path = Path.Combine(Path.GetTempPath(), $"NetworkToys-netsh-{Guid.NewGuid():N}{extension}");
         string outPath = path + ".out";
 
         try
         {
-            // ANSI(日本語環境では cp932)で書く。UTF-8 だと「イーサネット」のような
-            // 日本語アダプタ名が netsh 側で一致せず、静かに失敗する
-            File.WriteAllLines(path, scriptLines, AnsiEncoding());
+            File.WriteAllLines(path, scriptLines, encoding);
 
             Process? process;
             try
@@ -41,7 +58,7 @@ internal static class ElevatedNetsh
                 process = Process.Start(new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = CommandArguments(path, outPath),
+                    Arguments = CommandArguments(command(path), outPath),
                     UseShellExecute = true,     // UAC の昇格ダイアログを出すのに必須
                     Verb = "runas",
                     WindowStyle = ProcessWindowStyle.Hidden,
@@ -53,7 +70,7 @@ internal static class ElevatedNetsh
             }
 
             if (process is null)
-                return "netsh を起動できませんでした。";
+                return $"{tool} を起動できませんでした。";
 
             using (process)
             {
@@ -66,18 +83,18 @@ internal static class ElevatedNetsh
                 {
                     // 非昇格のこちらからは昇格した子を Kill できない(AccessDenied)。
                     // 放置して、現在値の確認を促す
-                    return "netsh から 30 秒応答がありません。現在値を確認してください。";
+                    return $"{tool} から 30 秒応答がありません。現在値を確認してください。";
                 }
 
                 if (process.ExitCode != 0)
-                    return $"netsh がエラーを返しました(コード {process.ExitCode})。{NetshSays(outPath)}";
+                    return $"{tool} がエラーを返しました(コード {process.ExitCode})。{ToolSays(tool, outPath)}";
             }
 
             return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception)
         {
-            CrashLog.Write(ex, "ElevatedNetsh.ApplyAsync");
+            CrashLog.Write(ex, "ElevatedNetsh.RunAsync");
             return $"適用に失敗しました: {ex.Message}";
         }
         finally
@@ -98,14 +115,14 @@ internal static class ElevatedNetsh
     /// cmd に渡す引数。/S を付けると cmd は<b>最初と最後の引用符だけ</b>を剥がすので、
     /// 途中の引用符付きパス(空白入りの %TEMP% など)がそのまま残る。
     /// </summary>
-    internal static string CommandArguments(string scriptPath, string outputPath)
-        => $"/S /C \"netsh -f \"{scriptPath}\" > \"{outputPath}\" 2>&1\"";
+    internal static string CommandArguments(string command, string outputPath)
+        => $"/S /C \"{command} > \"{outputPath}\" 2>&1\"";
 
     /// <summary>
     /// netsh が言ったことをそのまま返す(<b>解釈はしない</b> — 出力はロケール依存)。
     /// 読めなければ従来の一般論に落とす。
     /// </summary>
-    private static string NetshSays(string outputPath)
+    private static string ToolSays(string tool, string outputPath)
     {
         const string fallback = "入力内容とアダプタ名を確かめてください。";
 
@@ -119,7 +136,7 @@ internal static class ElevatedNetsh
             if (lines.Length == 0) return fallback;
 
             string text = string.Join(" / ", lines.Take(3));
-            return $"netsh の応答: {text}";
+            return $"{tool} の応答: {text}";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                       or ArgumentException or NotSupportedException)

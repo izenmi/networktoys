@@ -9,11 +9,10 @@ public class IpPlanTests
         string name = "イーサネット", int index = 0, bool dhcp = false,
         string address = "192.168.1.10", string mask = "255.255.255.0",
         string gateway = "", string dns1 = "", string dns2 = "",
-        System.Net.IPAddress? currentManualAddress = null, int currentManualPrefix = 0,
         string? expectError = null, string? expectWarningContains = null)
     {
         IpPlan? plan = IpPlan.Parse(name, index, dhcp, address, mask, gateway, dns1, dns2,
-            currentManualAddress, currentManualPrefix, out string? error, out string? warning);
+            out string? error, out string? warning);
 
         if (expectError is null)
             Assert.Null(error);
@@ -112,109 +111,61 @@ public class IpPlanTests
         Assert.Null(plan.Address);
     }
 
-    // ===== ToNetshScript =====
+    // ===== ToPowerShellScript =====
+    // IP 設定の適用は netsh でなく PowerShell(NetTCPIP)。netsh には DHCP の旗を
+    // 直接切り替える命令が無く、旗と実アドレスが食い違った機械では
+    // set address source=dhcp が「すでに有効です」の断りから抜けられなかった(2026-08-21)
 
     [Fact]
-    public void 番号が取れたアダプタは名前でなく番号で流す()
+    public void 固定の適用は旗を下ろし掃除してから値を入れる()
     {
-        // 日本語のアダプタ名は文字コード事故の入口(netsh が ERROR_INVALID_NAME を返した実例あり)。
-        // 番号は純 ASCII なので、スクリプトの文字コードに依らず届く
         IpPlan plan = Parse(index: 12, gateway: "192.168.1.1", dns1: "8.8.8.8", dns2: "8.8.4.4")!;
 
         Assert.Equal(new[]
         {
-            "interface ipv4 set address name=12 static 192.168.1.10 255.255.255.0 192.168.1.1",
-            "interface ipv4 set dnsservers name=12 static 8.8.8.8 primary validate=no",
-            "interface ipv4 add dnsservers name=12 8.8.4.4 index=2 validate=no",
-        }, plan.ToNetshScript());
-
-        IpPlan viaDhcp = Parse(index: 12, dhcp: true)!;
-
-        Assert.Equal(new[]
-        {
-            "interface ipv4 set dnsservers name=12 source=dhcp",
-            "interface ipv4 set address name=12 source=dhcp",
-        }, viaDhcp.ToNetshScript());
+            "$ErrorActionPreference = 'Stop'",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled",
+            "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
+            "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
+            "New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 -DefaultGateway 192.168.1.1 | Out-Null",
+            "Set-DnsClientServerAddress -InterfaceIndex 12 -ServerAddresses '8.8.8.8','8.8.4.4'",
+        }, plan.ToPowerShellScript());
     }
 
     [Fact]
-    public void DHCPへ戻すときは一度staticを明示して旗を下ろしてから切り替える()
+    public void ゲートウェイ無しはDefaultGatewayを付けずDNS無しはクリアする()
     {
-        // Windows は「DHCP の旗が立ったまま手動アドレスが付いている」混成状態になることがあり、
-        // その状態の set address source=dhcp は「すでに有効」のエラーで何もしない
-        // (delete address でも旗は下りず、ゲートウェイも残る)。
-        // static を明示すると旗が確実に下り(冪等・GW も none で剥がれ)、次の dhcp が必ず通る
-        IpPlan plan = Parse(index: 12, dhcp: true,
-            currentManualAddress: System.Net.IPAddress.Parse("192.168.1.10"), currentManualPrefix: 16)!;
+        IpPlan plan = Parse(index: 12)!;
+        IReadOnlyList<string> lines = plan.ToPowerShellScript();
 
-        Assert.Equal(new[]
-        {
-            "interface ipv4 set dnsservers name=12 source=dhcp",
-            "interface ipv4 set address name=12 static 192.168.1.10 255.255.0.0 none",
-            "interface ipv4 set address name=12 source=dhcp",
-        }, plan.ToNetshScript());
-
-        // プレフィクス長が取れていなければ /24 とみなす(次の行で dhcp に戻るので実害はない)
-        IpPlan noPrefix = Parse(index: 12, dhcp: true,
-            currentManualAddress: System.Net.IPAddress.Parse("192.168.1.10"))!;
-
-        Assert.Contains("static 192.168.1.10 255.255.255.0 none", noPrefix.ToNetshScript()[1], StringComparison.Ordinal);
+        Assert.Equal("New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 | Out-Null", lines[4]);
+        // DNS 空は「クリア」— プリセットの決定性を優先し、前の現場の DNS を残さない
+        Assert.Equal("Set-DnsClientServerAddress -InterfaceIndex 12 -ResetServerAddresses", lines[5]);
     }
 
     [Fact]
-    public void Full_static_config_produces_three_lines()
+    public void DHCPへ戻すのは旗を上げて掃除するだけ()
     {
-        IpPlan plan = Parse(gateway: "192.168.1.1", dns1: "8.8.8.8", dns2: "8.8.4.4")!;
+        IpPlan plan = Parse(index: 12, dhcp: true)!;
 
         Assert.Equal(new[]
         {
-            "interface ipv4 set address name=\"イーサネット\" static 192.168.1.10 255.255.255.0 192.168.1.1",
-            "interface ipv4 set dnsservers name=\"イーサネット\" static 8.8.8.8 primary validate=no",
-            "interface ipv4 add dnsservers name=\"イーサネット\" 8.8.4.4 index=2 validate=no",
-        }, plan.ToNetshScript());
+            "$ErrorActionPreference = 'Stop'",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Enabled",
+            "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
+            "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
+            "Set-DnsClientServerAddress -InterfaceIndex 12 -ResetServerAddresses",
+        }, plan.ToPowerShellScript());
     }
 
     [Fact]
-    public void Without_gateway_the_address_line_ends_at_the_mask()
+    public void 番号が取れないアダプタは名前を単一引用符で渡す()
     {
-        IpPlan plan = Parse(dns1: "192.168.1.1")!;
+        // 名前に ' が入っても '' に畳んで壊れない(BOM 付き UTF-8 なので日本語も届く)
+        IpPlan plan = Parse(name: "ローカル エリア接続 'テスト'", dhcp: true)!;
 
-        Assert.Equal(new[]
-        {
-            "interface ipv4 set address name=\"イーサネット\" static 192.168.1.10 255.255.255.0",
-            "interface ipv4 set dnsservers name=\"イーサネット\" static 192.168.1.1 primary validate=no",
-        }, plan.ToNetshScript());
+        Assert.Equal("Set-NetIPInterface -InterfaceAlias 'ローカル エリア接続 ''テスト''' -AddressFamily IPv4 -Dhcp Enabled",
+            plan.ToPowerShellScript()[1]);
     }
 
-    [Fact]
-    public void Without_dns_the_servers_are_cleared_not_left_over()
-    {
-        IpPlan plan = Parse(gateway: "192.168.1.1")!;
-
-        Assert.Equal(new[]
-        {
-            "interface ipv4 set address name=\"イーサネット\" static 192.168.1.10 255.255.255.0 192.168.1.1",
-            "interface ipv4 set dnsservers name=\"イーサネット\" static none validate=no",
-        }, plan.ToNetshScript());
-    }
-
-    [Fact]
-    public void Prefix_masks_are_normalized_to_dotted_form()
-    {
-        IpPlan plan = Parse(mask: "/16")!;
-
-        Assert.Contains("static 192.168.1.10 255.255.0.0", plan.ToNetshScript()[0], StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Dhcp_produces_two_lines()
-    {
-        IpPlan plan = Parse(name: "ローカル エリア接続 2", dhcp: true)!;
-
-        Assert.Equal(new[]
-        {
-            "interface ipv4 set dnsservers name=\"ローカル エリア接続 2\" source=dhcp",
-            "interface ipv4 set address name=\"ローカル エリア接続 2\" source=dhcp",
-        }, plan.ToNetshScript());
-    }
 }

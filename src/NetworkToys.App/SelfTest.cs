@@ -1098,7 +1098,7 @@ internal static class SelfTest
             // 実行はしない(上の断りと同じ理由)。cmd /S /C の引用符の剥がれ方だけを固定する
             // — /S は最初と最後の引用符だけを剥がすので、空白入りのパスが途中にあっても壊れない
             string args = Services.ElevatedNetsh.CommandArguments(
-                @"C:\Temp Dir\in.txt", @"C:\Temp Dir\out.txt");
+                "netsh -f \"C:\\Temp Dir\\in.txt\"", @"C:\Temp Dir\out.txt");
 
             Assert(args == "/S /C \"netsh -f \"C:\\Temp Dir\\in.txt\" > \"C:\\Temp Dir\\out.txt\" 2>&1\"",
                    $"引数の形が違う: {args}");
