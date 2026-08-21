@@ -9,9 +9,12 @@ namespace NetworkToys.Core.Addressing;
 ///
 /// 適用は PowerShell(NetTCPIP)のスクリプト実行(<see cref="ToPowerShellScript"/>)で行う。
 /// </summary>
+/// <param name="InterfaceIsUp">リンクアップしているか。<b>リンクダウン中は書き方が変わる</b>
+/// (WMI は 84 を返して設定できないため、永続ストアへ書いてリンクアップ時に適用させる)。</param>
 public sealed record IpPlan(
     string InterfaceName,
     int InterfaceIndex,
+    bool InterfaceIsUp,
     bool Dhcp,
     IPAddress? Address,
     int PrefixLength,
@@ -24,7 +27,7 @@ public sealed record IpPlan(
     /// warning は「適用はできるが確認してほしい」(ゲートウェイがサブネット外、など)。
     /// </summary>
     public static IpPlan? Parse(
-        string interfaceName, int interfaceIndex, bool dhcp,
+        string interfaceName, int interfaceIndex, bool interfaceIsUp, bool dhcp,
         string address, string mask, string gateway, string dns1, string dns2,
         out string? error, out string? warning)
     {
@@ -47,7 +50,7 @@ public sealed record IpPlan(
         }
 
         if (dhcp)
-            return new IpPlan(name, interfaceIndex, true, null, 0, null, null, null);
+            return new IpPlan(name, interfaceIndex, interfaceIsUp, true, null, 0, null, null, null);
 
         address = (address ?? "").Trim();
         mask = (mask ?? "").Trim();
@@ -115,7 +118,7 @@ public sealed record IpPlan(
                 warning ??= "ブロードキャストアドレスを指定しています。";
         }
 
-        return new IpPlan(name, interfaceIndex, false, ip, prefix, gw, d1, d2);
+        return new IpPlan(name, interfaceIndex, interfaceIsUp, false, ip, prefix, gw, d1, d2);
     }
 
     /// <summary>
@@ -135,6 +138,9 @@ public sealed record IpPlan(
     /// </summary>
     public IReadOnlyList<string> ToPowerShellScript()
     {
+        if (!InterfaceIsUp)
+            return ToPersistentStoreScript();
+
         string index = InterfaceIndex.ToString(CultureInfo.InvariantCulture);
 
         string lookup = InterfaceIndex > 0
@@ -191,6 +197,50 @@ public sealed record IpPlan(
             : Dns2 is null
                 ? $"Invoke-Nic 'SetDNSServerSearchOrder' @{{ DNSServerSearchOrder = @('{Dns1}') }}"
                 : $"Invoke-Nic 'SetDNSServerSearchOrder' @{{ DNSServerSearchOrder = @('{Dns1}','{Dns2}') }}");
+
+        return lines;
+    }
+
+    /// <summary>
+    /// <b>リンクダウン中のアダプタ用</b>: 永続ストア(PersistentStore)へ明示的に書く。
+    /// リンクが無いあいだ WMI の EnableStatic/EnableDHCP は 84(IP not enabled)を返して
+    /// 一切設定できない(2026-08-21 実機。ユーザーの本来の使い方は「つなぐ前に仕込む」)。
+    /// 永続ストアへの書き込みはリンクアップした瞬間に Windows が適用する。
+    /// DHCP の旗も同じストアへ先に書くので、New-NetIPAddress の
+    /// 「Inconsistent parameters PolicyStore PersistentStore and Dhcp Enabled」も起きない。
+    /// </summary>
+    private IReadOnlyList<string> ToPersistentStoreScript()
+    {
+        string target = InterfaceIndex > 0
+            ? $"-InterfaceIndex {InterfaceIndex.ToString(CultureInfo.InvariantCulture)}"
+            : $"-InterfaceAlias '{InterfaceName}'";
+
+        var lines = new List<string>
+        {
+            "$ErrorActionPreference = 'Stop'",
+            $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp {(Dhcp ? "Enabled" : "Disabled")} -PolicyStore PersistentStore",
+            $"Remove-NetIPAddress {target} -AddressFamily IPv4 -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+            $"Remove-NetRoute {target} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+        };
+
+        if (Dhcp)
+        {
+            lines.Add($"Set-DnsClientServerAddress {target} -ResetServerAddresses");
+            return lines;
+        }
+
+        string newAddress =
+            $"New-NetIPAddress {target} -IPAddress {Address} -PrefixLength {PrefixLength.ToString(CultureInfo.InvariantCulture)} -PolicyStore PersistentStore";
+        if (Gateway is not null)
+            newAddress += $" -DefaultGateway {Gateway}";
+        lines.Add(newAddress + " | Out-Null");
+
+        // DNS 空は「クリア」— プリセットの決定性を優先し、前の現場の DNS を残さない
+        lines.Add(Dns1 is null
+            ? $"Set-DnsClientServerAddress {target} -ResetServerAddresses"
+            : Dns2 is null
+                ? $"Set-DnsClientServerAddress {target} -ServerAddresses '{Dns1}'"
+                : $"Set-DnsClientServerAddress {target} -ServerAddresses '{Dns1}','{Dns2}'");
 
         return lines;
     }

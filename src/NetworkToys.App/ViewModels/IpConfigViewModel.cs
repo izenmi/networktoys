@@ -258,7 +258,7 @@ public sealed class IpConfigViewModel : ObservableObject
         if (SelectedAdapter is not { } adapter || IsApplying)
             return;
 
-        IpPlan? plan = IpPlan.Parse(adapter.Name, adapter.InterfaceIndex, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
+        IpPlan? plan = IpPlan.Parse(adapter.Name, adapter.InterfaceIndex, adapter.IsUp, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
             out string? error, out _);
         if (plan is null)
         {
@@ -280,6 +280,14 @@ public sealed class IpConfigViewModel : ObservableObject
             if (failure is not null)
             {
                 SetResult(failure, SeverityKind.Alert);
+                return;
+            }
+
+            // リンクダウン中は永続ストアへ書くだけで、現在値には現れない。
+            // 確認を待たず「リンクアップ時に有効」と伝える(入力欄もそのまま)
+            if (!adapter.IsUp)
+            {
+                SetResult("✓ 設定を書き込みました。リンクアップしたとき(ケーブルをつないだとき)に有効になります。", SeverityKind.Ok);
                 return;
             }
 
@@ -422,7 +430,7 @@ public sealed class IpConfigViewModel : ObservableObject
             return;
         }
 
-        IpPlan? plan = IpPlan.Parse(SelectedAdapter.Name, SelectedAdapter.InterfaceIndex, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
+        IpPlan? plan = IpPlan.Parse(SelectedAdapter.Name, SelectedAdapter.InterfaceIndex, SelectedAdapter.IsUp, UseDhcp, Address, Mask, Gateway, Dns1, Dns2,
             out string? error, out string? warning);
 
         _hasError = plan is null;

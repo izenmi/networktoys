@@ -6,12 +6,12 @@ namespace NetworkToys.Core.Tests;
 public class IpPlanTests
 {
     private static IpPlan? Parse(
-        string name = "イーサネット", int index = 0, bool dhcp = false,
+        string name = "イーサネット", int index = 0, bool isUp = true, bool dhcp = false,
         string address = "192.168.1.10", string mask = "255.255.255.0",
         string gateway = "", string dns1 = "", string dns2 = "",
         string? expectError = null, string? expectWarningContains = null)
     {
-        IpPlan? plan = IpPlan.Parse(name, index, dhcp, address, mask, gateway, dns1, dns2,
+        IpPlan? plan = IpPlan.Parse(name, index, isUp, dhcp, address, mask, gateway, dns1, dns2,
             out string? error, out string? warning);
 
         if (expectError is null)
@@ -180,6 +180,40 @@ public class IpPlanTests
             "Invoke-Nic 'SetDNSServerSearchOrder' $null",
         ];
         Assert.Equal(expected, plan.ToPowerShellScript());
+    }
+
+    [Fact]
+    public void リンクダウン中は永続ストアへ書いてリンクアップ時に適用させる()
+    {
+        // リンクが無いあいだ WMI は 84(IP not enabled)を返して一切設定できない(2026-08-21 実機)。
+        // 「つなぐ前に仕込む」が本来の使い方なので、PersistentStore へ明示的に書く。
+        // DHCP の旗を同じストアへ先に書くので New-NetIPAddress の矛盾エラーも起きない
+        IpPlan plan = Parse(index: 12, isUp: false, gateway: "192.168.1.1", dns1: "8.8.8.8")!;
+
+        Assert.Equal(new[]
+        {
+            "$ErrorActionPreference = 'Stop'",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled -PolicyStore PersistentStore",
+            "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+            "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+            "New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 -PolicyStore PersistentStore -DefaultGateway 192.168.1.1 | Out-Null",
+            "Set-DnsClientServerAddress -InterfaceIndex 12 -ServerAddresses '8.8.8.8'",
+        }, plan.ToPowerShellScript());
+    }
+
+    [Fact]
+    public void リンクダウン中のDHCP化も永続ストアだけで完結する()
+    {
+        IpPlan plan = Parse(index: 12, isUp: false, dhcp: true)!;
+
+        Assert.Equal(new[]
+        {
+            "$ErrorActionPreference = 'Stop'",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Enabled -PolicyStore PersistentStore",
+            "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+            "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+            "Set-DnsClientServerAddress -InterfaceIndex 12 -ResetServerAddresses",
+        }, plan.ToPowerShellScript());
     }
 
     [Fact]
