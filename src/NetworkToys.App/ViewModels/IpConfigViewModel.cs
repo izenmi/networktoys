@@ -273,12 +273,19 @@ public sealed class IpConfigViewModel : ObservableObject
         {
             string? failure = await ElevatedNetsh.ApplyPowerShellAsync(plan.ToPowerShellScript());
 
-            // netsh の終了コードだけで成否を決めない。「すでに DHCP になっています」のような
-            // 「もう希望の状態」もコード 1 で返る(2026-08-21 報告)ため、OS の現在値と
-            // 突き合わせて判定する(応答の文面は解釈しない — ロケール依存)。
-            // 反映まで間があるので、netsh が成功したときは少し粘って読み直す
+            // PowerShell の失敗は本物としてそのまま見せる。netsh 時代の「すでに有効です、も
+            // コード 1」への手当て(現在値が合っていれば成功扱い)は、DHCP のリースが目標と
+            // 同値のときに本当の失敗を「✓ すでにこの内容」で握り潰した(2026-08-21 報告)。
+            // NetTCPIP に無害なエラーは無いので、包む理由がもう無い
+            if (failure is not null)
+            {
+                SetResult(failure, SeverityKind.Alert);
+                return;
+            }
+
+            // 反映まで間があるので、少し粘って現在値を読み直して突き合わせる
             bool confirmed = false;
-            for (int attempt = failure is null ? 4 : 1; attempt > 0 && !confirmed; attempt--)
+            for (int attempt = 4; attempt > 0 && !confirmed; attempt--)
             {
                 await Task.Delay(1500);
                 RefreshAdapters();
@@ -291,12 +298,6 @@ public sealed class IpConfigViewModel : ObservableObject
                 confirmed = plan.Dhcp
                     ? current?.IsDhcp == true
                     : current is { IsDhcp: false } && current.Address?.Equals(plan.Address) == true;
-            }
-
-            if (!confirmed && failure is not null)
-            {
-                SetResult(failure, SeverityKind.Alert);
-                return;
             }
 
             // 入力欄はいま適用した内容のままにする。RefreshAdapters がアダプタを選び直すと
@@ -316,9 +317,7 @@ public sealed class IpConfigViewModel : ObservableObject
             ApplyPresetToFields = true;
 
             if (confirmed)
-                SetResult(failure is null
-                    ? "✓ 適用しました。"
-                    : "✓ すでにこの内容になっていました。", SeverityKind.Ok);
+                SetResult("✓ 適用しました。", SeverityKind.Ok);
             else
                 SetResult("netsh は完了しましたが、まだ反映を確認できません(DHCP の取得待ちの可能性)。「再読み込み」で確かめてください。", SeverityKind.Muted);
         }
