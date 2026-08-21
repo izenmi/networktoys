@@ -196,7 +196,8 @@ public class IpPlanTests
             "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled -PolicyStore PersistentStore",
             "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
             "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
-            "New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 -PolicyStore PersistentStore -DefaultGateway 192.168.1.1 | Out-Null",
+            "New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 -PolicyStore PersistentStore | Out-Null",
+            "New-NetRoute -InterfaceIndex 12 -DestinationPrefix '0.0.0.0/0' -NextHop 192.168.1.1 -PolicyStore PersistentStore | Out-Null",
             "Set-DnsClientServerAddress -InterfaceIndex 12 -ServerAddresses '8.8.8.8'",
         }, plan.ToPowerShellScript());
     }

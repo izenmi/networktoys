@@ -229,11 +229,13 @@ public sealed record IpPlan(
             return lines;
         }
 
-        string newAddress =
-            $"New-NetIPAddress {target} -IPAddress {Address} -PrefixLength {PrefixLength.ToString(CultureInfo.InvariantCulture)} -PolicyStore PersistentStore";
+        // -DefaultGateway は内部で経路も作るため -PolicyStore PersistentStore と併用できない
+        // (「Invalid parameter PolicyStore PersistentStore」。2026-08-21 実機)。
+        // アドレスと既定ルートを分けて、どちらも永続ストアへ書く
+        lines.Add($"New-NetIPAddress {target} -IPAddress {Address} -PrefixLength {PrefixLength.ToString(CultureInfo.InvariantCulture)} -PolicyStore PersistentStore | Out-Null");
+
         if (Gateway is not null)
-            newAddress += $" -DefaultGateway {Gateway}";
-        lines.Add(newAddress + " | Out-Null");
+            lines.Add($"New-NetRoute {target} -DestinationPrefix '0.0.0.0/0' -NextHop {Gateway} -PolicyStore PersistentStore | Out-Null");
 
         // DNS 空は「クリア」— プリセットの決定性を優先し、前の現場の DNS を残さない
         lines.Add(Dns1 is null
