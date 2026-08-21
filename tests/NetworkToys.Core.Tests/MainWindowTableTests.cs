@@ -151,7 +151,7 @@ public class MainWindowTableTests
                 .Distinct(),
         ];
 
-        Assert.Equal(6, hosts.Length);
+        Assert.Equal(7, hosts.Length);
 
         foreach (XElement grid in hosts)
         {

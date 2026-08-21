@@ -950,6 +950,25 @@ internal static class SelfTest
             }
         });
 
+        Check("Ping: 宛先リストを閉じると仕切りの行ごと畳まれる", () =>
+        {
+            Assert(window is not null, "ウィンドウが生成されていないため確認できない");
+
+            // 仕切りのドラッグで行が星になっても、閉じれば Auto + Min 0 に戻ること
+            window!.TargetListToggle.IsChecked = true;
+            Assert(window.PingEditorRow.MinHeight > 0, "開いたのに行の下限が入っていない");
+
+            window.PingEditorRow.Height = new GridLength(200, GridUnitType.Star);
+            window.TargetListToggle.IsChecked = false;
+            Assert(window.PingEditorRow.Height.IsAuto, "閉じたのに行が畳まれていない");
+            Assert(window.PingEditorRow.MinHeight == 0, "閉じたのに行の下限が残っている");
+
+            // もう一度開くと前の高さへ戻る
+            window.TargetListToggle.IsChecked = true;
+            Assert(window.PingEditorRow.Height.IsStar, "開き直したのに前の高さへ戻っていない");
+            window.TargetListToggle.IsChecked = false;
+        });
+
         Check("収集: 「失敗だけ再実行」は失敗の行があるときだけ押せる", () =>
         {
             // 失敗の定義（✕ と ⛔ だけ。△ 一部失敗は出力が取れているので含めない）

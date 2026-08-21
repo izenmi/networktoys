@@ -722,6 +722,7 @@
                             <!-- 宛先リストの編集。別タブに分けていたが、測りながら書き換える
                                  使い方が多いのでこの画面に畳んだ（2026-08-16 ユーザー指示） -->
                             <ToggleButton x:Name="TargetListToggle" Content="宛先リスト ▾"
+                                          Checked="OnTargetListToggle" Unchecked="OnTargetListToggle"
                                           Style="{StaticResource ToggleButton.Subtle}"
                                           Margin="0,0,12,0"
                                           ToolTip="測りたい相手をまとめて書く欄を開きます。書き換えると自動で反映され、測定は止まりません。" />
@@ -750,7 +751,17 @@
                             書式は EXPing に合わせてあり、書き換えると自動で反映される。
                             ファイルを放り込んでも読み込める。
                         -->
-                        <Border DockPanel.Dock="Top" MaxHeight="260" Margin="0,0,0,6"
+                        <!-- 宛先リストと結果は仕切りで割合を変えられる(2026-08-21 ユーザー指示)。
+                             編集欄は開閉式なので、閉じたら行ごと畳む(OnTargetListToggle。
+                             星のままだと空の行が場所を取り続ける) -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition x:Name="PingEditorRow" Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" MinHeight="120" />
+                            </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0"
                                 Background="{DynamicResource Brush.Surface}"
                                 BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}"
                                 CornerRadius="{DynamicResource Radius.Card}" Padding="7,6"
@@ -802,6 +813,13 @@
                                          ToolTip="宛先を書いたテキストファイルを、この欄に放り込んでも読み込めます。" />
                             </DockPanel>
                         </Border>
+
+                        <Thumb Grid.Row="1" Height="11" Style="{StaticResource PaneGrip.H}"
+                               DragStarted="OnPaneGrab" DragDelta="OnPaneDrag"
+                               Visibility="{Binding IsChecked, ElementName=TargetListToggle,
+                                            Converter={StaticResource BoolToVisibility}}" />
+
+                        <DockPanel Grid.Row="2">
 
                         <!-- 選択行の詳細。一覧に列を増やさずに済ませるための置き場 -->
                         <Border DockPanel.Dock="Bottom"
@@ -990,6 +1008,8 @@
                                              Style="{StaticResource TargetListBox}" />
                                 </DockPanel>
                             </Border>
+                        </Grid>
+                        </DockPanel>
                         </Grid>
                     </DockPanel>
                 </Border>

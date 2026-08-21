@@ -2101,6 +2101,25 @@ public partial class MainWindow : Window
     private double _paneStartNext;
     private double _paneStartPos;
 
+    /// <summary>宛先リスト(編集欄)を開いていたときの行の高さ。閉じている間だけ覚える(プロセス内)。</summary>
+    private GridLength _pingEditorHeight = GridLength.Auto;
+
+    /// <summary>
+    /// 宛先リストの開閉。仕切りのドラッグで星になった行は、閉じても空のまま場所を
+    /// 取り続けるので、行ごと畳んで(Auto + Min 0)、開いたら前回の高さへ戻す。
+    /// 比率を保存しない決まりはそのまま(覚えるのはプロセスの中だけ)。
+    /// </summary>
+    private void OnTargetListToggle(object sender, RoutedEventArgs e)
+    {
+        bool open = TargetListToggle.IsChecked == true;
+
+        if (!open)
+            _pingEditorHeight = PingEditorRow.Height;
+
+        PingEditorRow.Height = open ? _pingEditorHeight : GridLength.Auto;
+        PingEditorRow.MinHeight = open ? 90 : 0;
+    }
+
     private void OnPaneGrab(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
     {
         // 掴み損ねたときに前回の仕切りが残らないよう、先に必ず捨てる
