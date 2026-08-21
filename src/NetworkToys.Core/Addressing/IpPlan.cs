@@ -12,8 +12,10 @@ namespace NetworkToys.Core.Addressing;
 /// </summary>
 /// <param name="CurrentManualAddress">いま付いている手動構成のアドレス(DHCP へ戻すときだけ使う)。
 /// Windows は「DHCP の旗が立ったまま手動アドレスが残る」混成状態になることがあり、
-/// その状態では <c>set address source=dhcp</c> が「すでに有効」のエラーで何もしないため、
-/// 手動アドレスを名指しで消す行が要る(2026-08-21 実機で発生)。</param>
+/// その状態では <c>set address source=dhcp</c> が「すでに有効」のエラーで何もしない
+/// (<c>delete address</c> でも旗は下りず、ゲートウェイも残る。2026-08-21 実機で発生)。
+/// 一度 static を明示して旗を確実に下ろしてから切り替えるのに使う。</param>
+/// <param name="CurrentPrefixLength">その手動アドレスのプレフィクス長(不明なら 0 → /24 とみなす)。</param>
 public sealed record IpPlan(
     string InterfaceName,
     int InterfaceIndex,
@@ -23,7 +25,8 @@ public sealed record IpPlan(
     IPAddress? Gateway,
     IPAddress? Dns1,
     IPAddress? Dns2,
-    IPAddress? CurrentManualAddress = null)
+    IPAddress? CurrentManualAddress = null,
+    int CurrentPrefixLength = 0)
 {
     /// <summary>
     /// 画面の入力から適用内容を組み立てる。error 非 null なら失敗(最初の 1 件のみ)。
@@ -32,7 +35,8 @@ public sealed record IpPlan(
     public static IpPlan? Parse(
         string interfaceName, int interfaceIndex, bool dhcp,
         string address, string mask, string gateway, string dns1, string dns2,
-        IPAddress? currentManualAddress, out string? error, out string? warning)
+        IPAddress? currentManualAddress, int currentManualPrefix,
+        out string? error, out string? warning)
     {
         error = null;
         warning = null;
@@ -53,7 +57,7 @@ public sealed record IpPlan(
         }
 
         if (dhcp)
-            return new IpPlan(name, interfaceIndex, true, null, 0, null, null, null, currentManualAddress);
+            return new IpPlan(name, interfaceIndex, true, null, 0, null, null, null, currentManualAddress, currentManualPrefix);
 
         address = (address ?? "").Trim();
         mask = (mask ?? "").Trim();
@@ -148,9 +152,16 @@ public sealed record IpPlan(
             // (「すでに有効です」もコード 1)ので、後ろに置いた行が道連れにならない順にする
             lines.Add($"interface ipv4 set dnsservers name={target} source=dhcp");
 
-            // 旗が立ったまま残った手動アドレスは set source=dhcp では剥がれない。名指しで消す
+            // 混成状態(旗が立ったまま手動アドレスが残る)では source=dhcp が
+            // 「すでに有効」のエラーで何もしない(delete address でも旗は下りず、
+            // ゲートウェイも残る。2026-08-21 実機)。一度 static を明示して旗を確実に下ろし
+            // (冪等。ゲートウェイも none で剥がす)、その上で dhcp へ切り替える
             if (CurrentManualAddress is not null)
-                lines.Add($"interface ipv4 delete address name={target} address={CurrentManualAddress}");
+            {
+                string mask = IpMath.FromUInt32(IpMath.PrefixToMask(
+                    CurrentPrefixLength is >= 1 and <= 32 ? CurrentPrefixLength : 24)).ToString();
+                lines.Add($"interface ipv4 set address name={target} static {CurrentManualAddress} {mask} none");
+            }
 
             lines.Add($"interface ipv4 set address name={target} source=dhcp");
             return lines;

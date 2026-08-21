@@ -9,11 +9,11 @@ public class IpPlanTests
         string name = "イーサネット", int index = 0, bool dhcp = false,
         string address = "192.168.1.10", string mask = "255.255.255.0",
         string gateway = "", string dns1 = "", string dns2 = "",
-        System.Net.IPAddress? currentManualAddress = null,
+        System.Net.IPAddress? currentManualAddress = null, int currentManualPrefix = 0,
         string? expectError = null, string? expectWarningContains = null)
     {
         IpPlan? plan = IpPlan.Parse(name, index, dhcp, address, mask, gateway, dns1, dns2,
-            currentManualAddress, out string? error, out string? warning);
+            currentManualAddress, currentManualPrefix, out string? error, out string? warning);
 
         if (expectError is null)
             Assert.Null(error);
@@ -138,20 +138,27 @@ public class IpPlanTests
     }
 
     [Fact]
-    public void DHCPへ戻すとき手動アドレスが残っていれば名指しで消す()
+    public void DHCPへ戻すときは一度staticを明示して旗を下ろしてから切り替える()
     {
         // Windows は「DHCP の旗が立ったまま手動アドレスが付いている」混成状態になることがあり、
-        // その状態の set address source=dhcp は「すでに有効」のエラーで何もしない。
-        // 消す行を先に入れておくと、どちらの状態からでも DHCP に揃う
+        // その状態の set address source=dhcp は「すでに有効」のエラーで何もしない
+        // (delete address でも旗は下りず、ゲートウェイも残る)。
+        // static を明示すると旗が確実に下り(冪等・GW も none で剥がれ)、次の dhcp が必ず通る
         IpPlan plan = Parse(index: 12, dhcp: true,
-            currentManualAddress: System.Net.IPAddress.Parse("192.168.1.10"))!;
+            currentManualAddress: System.Net.IPAddress.Parse("192.168.1.10"), currentManualPrefix: 16)!;
 
         Assert.Equal(new[]
         {
             "interface ipv4 set dnsservers name=12 source=dhcp",
-            "interface ipv4 delete address name=12 address=192.168.1.10",
+            "interface ipv4 set address name=12 static 192.168.1.10 255.255.0.0 none",
             "interface ipv4 set address name=12 source=dhcp",
         }, plan.ToNetshScript());
+
+        // プレフィクス長が取れていなければ /24 とみなす(次の行で dhcp に戻るので実害はない)
+        IpPlan noPrefix = Parse(index: 12, dhcp: true,
+            currentManualAddress: System.Net.IPAddress.Parse("192.168.1.10"))!;
+
+        Assert.Contains("static 192.168.1.10 255.255.255.0 none", noPrefix.ToNetshScript()[1], StringComparison.Ordinal);
     }
 
     [Fact]
