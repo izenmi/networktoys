@@ -133,11 +133,17 @@ public sealed record IpPlan(
             ? $"-InterfaceIndex {InterfaceIndex.ToString(CultureInfo.InvariantCulture)}"
             : $"-InterfaceAlias '{InterfaceName.Replace("'", "''", StringComparison.Ordinal)}'";
 
-        // 旗 → 掃除(古いアドレスと既定ルート) → 新しい値、の順。掃除は無くても失敗にしない
+        // 旗 → 掃除(古いアドレスと既定ルート) → 新しい値、の順。掃除は無くても失敗にしない。
+        // 旗は両ストアに明示して書く — Set-NetIPInterface は -PolicyStore 省略時
+        // ActiveStore しか書き換えず、PersistentStore に DHCP 有効が残ると
+        // New-NetIPAddress が「Inconsistent parameters PolicyStore PersistentStore and
+        // Dhcp Enabled」で断る(2026-08-21 実機で発生。混成状態の根もこれ)
+        string dhcpFlag = Dhcp ? "Enabled" : "Disabled";
         var lines = new List<string>
         {
             "$ErrorActionPreference = 'Stop'",
-            $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp {(Dhcp ? "Enabled" : "Disabled")}",
+            $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp {dhcpFlag} -PolicyStore ActiveStore",
+            $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp {dhcpFlag} -PolicyStore PersistentStore",
             $"Remove-NetIPAddress {target} -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
             $"Remove-NetRoute {target} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
         };

@@ -124,7 +124,8 @@ public class IpPlanTests
         Assert.Equal(new[]
         {
             "$ErrorActionPreference = 'Stop'",
-            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled -PolicyStore ActiveStore",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled -PolicyStore PersistentStore",
             "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
             "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
             "New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 -DefaultGateway 192.168.1.1 | Out-Null",
@@ -138,9 +139,9 @@ public class IpPlanTests
         IpPlan plan = Parse(index: 12)!;
         IReadOnlyList<string> lines = plan.ToPowerShellScript();
 
-        Assert.Equal("New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 | Out-Null", lines[4]);
+        Assert.Equal("New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 | Out-Null", lines[5]);
         // DNS 空は「クリア」— プリセットの決定性を優先し、前の現場の DNS を残さない
-        Assert.Equal("Set-DnsClientServerAddress -InterfaceIndex 12 -ResetServerAddresses", lines[5]);
+        Assert.Equal("Set-DnsClientServerAddress -InterfaceIndex 12 -ResetServerAddresses", lines[6]);
     }
 
     [Fact]
@@ -151,7 +152,8 @@ public class IpPlanTests
         Assert.Equal(new[]
         {
             "$ErrorActionPreference = 'Stop'",
-            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Enabled",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Enabled -PolicyStore ActiveStore",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Enabled -PolicyStore PersistentStore",
             "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
             "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
             "Set-DnsClientServerAddress -InterfaceIndex 12 -ResetServerAddresses",
@@ -164,7 +166,7 @@ public class IpPlanTests
         // 名前に ' が入っても '' に畳んで壊れない(BOM 付き UTF-8 なので日本語も届く)
         IpPlan plan = Parse(name: "ローカル エリア接続 'テスト'", dhcp: true)!;
 
-        Assert.Equal("Set-NetIPInterface -InterfaceAlias 'ローカル エリア接続 ''テスト''' -AddressFamily IPv4 -Dhcp Enabled",
+        Assert.Equal("Set-NetIPInterface -InterfaceAlias 'ローカル エリア接続 ''テスト''' -AddressFamily IPv4 -Dhcp Enabled -PolicyStore ActiveStore",
             plan.ToPowerShellScript()[1]);
     }
 
