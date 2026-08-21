@@ -202,53 +202,68 @@ public sealed record IpPlan(
     }
 
     /// <summary>
-    /// <b>リンクダウン中のアダプタ用</b>: 永続ストア(PersistentStore)へ明示的に書く。
-    /// リンクが無いあいだ WMI の EnableStatic/EnableDHCP は 84(IP not enabled)を返して
-    /// 一切設定できない(2026-08-21 実機。ユーザーの本来の使い方は「つなぐ前に仕込む」)。
-    /// 永続ストアへの書き込みはリンクアップした瞬間に Windows が適用する。
-    /// DHCP の旗も同じストアへ先に書くので、New-NetIPAddress の
-    /// 「Inconsistent parameters PolicyStore PersistentStore and Dhcp Enabled」も起きない。
+    /// <b>リンクダウン中のアダプタ用</b>。リンクが無いあいだ WMI の EnableStatic/EnableDHCP は
+    /// 84(IP not enabled)を返して一切設定できない(本来の使い方は「つなぐ前に仕込む」)。
+    ///
+    /// <b>DHCP へ</b>: NetTCPIP の永続ストア明示書き(実機で動作実証済み)。リンクアップした
+    /// 瞬間に Windows が適用する。
+    ///
+    /// <b>固定へ</b>: netsh の <c>set address … static</c>(実機で唯一成功した方法)。
+    /// NetTCPIP では作れない — Set-NetIPInterface -Dhcp Disabled -PolicyStore PersistentStore は
+    /// エラーなく通るのに<b>永続側の旗が実際には下りず</b>、直後の New-NetIPAddress が
+    /// 「Inconsistent parameters PolicyStore PersistentStore and Dhcp Enabled」で落ち続ける。
+    /// 永続単独のアドレス作成(-PolicyStore PersistentStore)も「Invalid parameter」で拒否される
+    /// (いずれも 2026-08-21 実機)。旗とアドレスを一括で書ける netsh だけがこの構成を作れる。
+    /// <b>netsh は PowerShell からコマンドラインで呼ぶ</b> — かつての文字化け
+    /// (ERROR_INVALID_NAME)は netsh -f のスクリプトファイルの文字コードが原因で、
+    /// 引数渡しなら起きない。仕上げに旗の実行時側も best-effort で下ろしておく。
     /// </summary>
     private IReadOnlyList<string> ToPersistentStoreScript()
     {
+        string index = InterfaceIndex.ToString(CultureInfo.InvariantCulture);
+
         string target = InterfaceIndex > 0
-            ? $"-InterfaceIndex {InterfaceIndex.ToString(CultureInfo.InvariantCulture)}"
+            ? $"-InterfaceIndex {index}"
             : $"-InterfaceAlias '{InterfaceName}'";
+
+        if (Dhcp)
+        {
+            return
+            [
+                "$ErrorActionPreference = 'Stop'",
+                $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp Enabled -PolicyStore PersistentStore",
+                $"Remove-NetIPAddress {target} -AddressFamily IPv4 -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+                $"Remove-NetRoute {target} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+                $"Set-DnsClientServerAddress {target} -ResetServerAddresses",
+            ];
+        }
+
+        string netshName = InterfaceIndex > 0 ? index : $"\"{InterfaceName}\"";
+        string mask = IpMath.FromUInt32(IpMath.PrefixToMask(PrefixLength)).ToString();
+
+        string address = $"netsh interface ipv4 set address name={netshName} static {Address} {mask}";
+        if (Gateway is not null)
+            address += $" {Gateway}";
 
         var lines = new List<string>
         {
             "$ErrorActionPreference = 'Stop'",
-            $"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp {(Dhcp ? "Enabled" : "Disabled")} -PolicyStore PersistentStore",
-            $"Remove-NetIPAddress {target} -AddressFamily IPv4 -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
-            $"Remove-NetRoute {target} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
+            $"$r = {address}",
+            "if ($LASTEXITCODE -ne 0) { throw \"set address: $r\" }",
+            Dns1 is null
+                ? $"$r = netsh interface ipv4 set dnsservers name={netshName} static none validate=no"
+                : $"$r = netsh interface ipv4 set dnsservers name={netshName} static {Dns1} primary validate=no",
+            "if ($LASTEXITCODE -ne 0) { throw \"set dnsservers: $r\" }",
         };
 
-        if (Dhcp)
+        if (Dns2 is not null)
         {
-            lines.Add($"Set-DnsClientServerAddress {target} -ResetServerAddresses");
-            return lines;
+            lines.Add($"$r = netsh interface ipv4 add dnsservers name={netshName} {Dns2} index=2 validate=no");
+            lines.Add("if ($LASTEXITCODE -ne 0) { throw \"add dnsservers: $r\" }");
         }
 
-        // 通常書きの前に、両ストアの残骸も掃除する(上の掃除は永続ストア限定のため)
-        lines.Add($"Remove-NetIPAddress {target} -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue");
-        lines.Add($"Remove-NetRoute {target} -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue");
-
-        // New-NetIPAddress は永続ストア単独への作成(-PolicyStore PersistentStore)を
-        // 「Invalid parameter」で受け付けない(2026-08-21 実機。経路を分けても同じ)。
-        // 通常書き(両ストア)にする — 以前これが「Inconsistent parameters」で落ちたのは
-        // 永続ストアの DHCP 旗が有効のままだったからで、上の行で旗を下ろした今は通る
-        string newAddress =
-            $"New-NetIPAddress {target} -IPAddress {Address} -PrefixLength {PrefixLength.ToString(CultureInfo.InvariantCulture)}";
-        if (Gateway is not null)
-            newAddress += $" -DefaultGateway {Gateway}";
-        lines.Add(newAddress + " | Out-Null");
-
-        // DNS 空は「クリア」— プリセットの決定性を優先し、前の現場の DNS を残さない
-        lines.Add(Dns1 is null
-            ? $"Set-DnsClientServerAddress {target} -ResetServerAddresses"
-            : Dns2 is null
-                ? $"Set-DnsClientServerAddress {target} -ServerAddresses '{Dns1}'"
-                : $"Set-DnsClientServerAddress {target} -ServerAddresses '{Dns1}','{Dns2}'");
+        // 実行時(NSI)側の旗も下ろしておく。リンクダウン中は効かない環境もあるので best-effort
+        lines.Add($"Set-NetIPInterface {target} -AddressFamily IPv4 -Dhcp Disabled -ErrorAction SilentlyContinue");
 
         return lines;
     }

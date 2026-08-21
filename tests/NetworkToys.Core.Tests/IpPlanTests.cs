@@ -186,20 +186,18 @@ public class IpPlanTests
     public void リンクダウン中は永続ストアへ書いてリンクアップ時に適用させる()
     {
         // リンクが無いあいだ WMI は 84(IP not enabled)を返して一切設定できない(2026-08-21 実機)。
-        // 「つなぐ前に仕込む」が本来の使い方なので、PersistentStore へ明示的に書く。
-        // DHCP の旗を同じストアへ先に書くので New-NetIPAddress の矛盾エラーも起きない
+        // 「つなぐ前に仕込む」が本来の使い方。固定化は netsh だけが「DHCP 無効+アドレス」を
+        // 一括で書ける(NetTCPIP は Invalid parameter / Inconsistent parameters で書けない)
         IpPlan plan = Parse(index: 12, isUp: false, gateway: "192.168.1.1", dns1: "8.8.8.8")!;
 
         Assert.Equal(new[]
         {
             "$ErrorActionPreference = 'Stop'",
-            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled -PolicyStore PersistentStore",
-            "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
-            "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -PolicyStore PersistentStore -Confirm:$false -ErrorAction SilentlyContinue",
-            "Remove-NetIPAddress -InterfaceIndex 12 -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue",
-            "Remove-NetRoute -InterfaceIndex 12 -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -Confirm:$false -ErrorAction SilentlyContinue",
-            "New-NetIPAddress -InterfaceIndex 12 -IPAddress 192.168.1.10 -PrefixLength 24 -DefaultGateway 192.168.1.1 | Out-Null",
-            "Set-DnsClientServerAddress -InterfaceIndex 12 -ServerAddresses '8.8.8.8'",
+            "$r = netsh interface ipv4 set address name=12 static 192.168.1.10 255.255.255.0 192.168.1.1",
+            "if ($LASTEXITCODE -ne 0) { throw \"set address: $r\" }",
+            "$r = netsh interface ipv4 set dnsservers name=12 static 8.8.8.8 primary validate=no",
+            "if ($LASTEXITCODE -ne 0) { throw \"set dnsservers: $r\" }",
+            "Set-NetIPInterface -InterfaceIndex 12 -AddressFamily IPv4 -Dhcp Disabled -ErrorAction SilentlyContinue",
         }, plan.ToPowerShellScript());
     }
 
