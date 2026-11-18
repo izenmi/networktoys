@@ -56,8 +56,8 @@ public static class CommandListParser
 
         for (int i = 0; i < lines.Length; i++)
         {
-            // 全角スペースも空白として扱う(表計算からの貼り付けで混ざる)
-            string line = lines[i].Trim().Trim('　');
+            // 全角スペースや BOM(\uFEFF) も空白として扱う(表計算からの貼り付けや UTF-8 BOM で混ざる)
+            string line = lines[i].Trim('\uFEFF').Trim().Trim('　');
             if (line.Length == 0) continue;
 
             if (line[0] is '!' or '#' or ';')
@@ -171,8 +171,8 @@ public static class DeviceListParser
 
         for (int i = 0; i < lines.Length; i++)
         {
-            // 全角スペースも空白として扱う(表計算からの貼り付けで混ざる)
-            string line = lines[i].Trim().Trim('　');
+            // 全角スペースや BOM(\uFEFF) も空白として扱う(表計算からの貼り付けや UTF-8 BOM で混ざる)
+            string line = lines[i].Trim('\uFEFF').Trim().Trim('　');
             if (line.Length == 0) continue;
 
             if (line[0] is '!' or '#' or ';')

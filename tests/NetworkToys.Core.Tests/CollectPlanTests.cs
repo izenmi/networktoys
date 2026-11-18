@@ -292,7 +292,7 @@ public class DeviceListParserTests
 
 public class DeviceReportTests
 {
-    private static DeviceCollectionResult Sample(params CommandResult[] commands) => new(
+    private static DeviceCollectionResult Sample(string transcript = "", params CommandResult[] commands) => new(
         Host: "192.168.10.1",
         Port: 22,
         LearnedHostname: "R1",
@@ -304,27 +304,28 @@ public class DeviceReportTests
         ReachedEnable: true,
         PagerNote: "無効化を実施",
         Commands: commands,
-        FailureMessage: null);
+        FailureMessage: null,
+        Transcript: transcript);
 
     [Fact]
-    public void Every_command_gets_its_own_section()
+    public void Only_the_raw_transcript_is_rendered_without_headers_or_sections()
     {
         string text = DeviceReport.Render(Sample(
-            new CommandResult(1, "show clock", "15:30:13 JST\n", TimeSpan.FromSeconds(0.3), null),
-            new CommandResult(2, "show version", "Cisco IOS\n", TimeSpan.FromSeconds(1.2), null)));
+            "R1#show clock\n15:30:13 JST\nR1#\n",
+            new CommandResult(1, "show clock", "15:30:13 JST\n", TimeSpan.FromSeconds(0.3), null)));
 
-        Assert.Contains("===[ 1/2 ] show clock", text);
-        Assert.Contains("===[ 2/2 ] show version", text);
-        Assert.Contains("15:30:13 JST", text);
+        Assert.Equal("R1#show clock\r\n15:30:13 JST\r\nR1#\r\n", text);
+        Assert.DoesNotContain("NetworkToys 収集ログ", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("===[", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("生ログ", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void A_command_that_failed_says_why_in_japanese()
+    public void Empty_transcript_renders_as_empty_string()
     {
-        string text = DeviceReport.Render(Sample(
-            new CommandResult(1, "show vpc", "", TimeSpan.Zero, "この機器では使えないコマンドです。")));
+        string text = DeviceReport.Render(Sample());
 
-        Assert.Contains("この機器では使えないコマンドです。", text);
+        Assert.Equal("", text);
     }
 
     [Fact]
@@ -332,6 +333,7 @@ public class DeviceReportTests
     {
         // 認証情報は入れ物すら作っていないが、退行したら必ず気づけるようにする
         string text = DeviceReport.Render(Sample(
+            "R1#show clock\n15:30:13\nR1#\n",
             new CommandResult(1, "show clock", "15:30:13\n", TimeSpan.FromSeconds(0.3), null)));
 
         Assert.DoesNotContain("password", text, StringComparison.OrdinalIgnoreCase);
@@ -341,8 +343,7 @@ public class DeviceReportTests
     [Fact]
     public void Line_endings_are_crlf_for_notepad()
     {
-        string text = DeviceReport.Render(Sample(
-            new CommandResult(1, "show clock", "a\nb\n", TimeSpan.Zero, null)));
+        string text = DeviceReport.Render(Sample("a\nb\n"));
 
         Assert.Contains("\r\n", text);
 
@@ -425,5 +426,37 @@ public class DeviceReportTests
         // DeviceEntry は settings.json へ往復する。パスワードは ImportedDevice の側だけが持ち、
         // Format が書く行にパスワードが混ざる道は型の上で存在しないことを固定する
         Assert.DoesNotContain("Password", typeof(DeviceEntry).GetProperties().Select(p => p.Name));
+    }
+
+    [Fact]
+    public void CSVの先頭にBOMがあっても1行目のコメント判定と宛先が壊れない()
+    {
+        // 1 行目がコメントの場合: BOM があると '#' と見なされず、コメント行が 1 台目として取り込まれる
+        DeviceListParser.CsvParseResult withComment = DeviceListParser.ParseCsv(
+            "\uFEFF# コメント\r\n192.168.1.1,ssh,admin,Pass1",
+            defaultUseSsh: true);
+
+        DeviceListParser.ImportedDevice only = Assert.Single(withComment.Devices);
+        Assert.Equal("192.168.1.1", only.Entry.Host);
+
+        // 1 行目から宛先が始まる場合: BOM が残ると Host が "\uFEFF192.168.1.1" になり接続に失敗する
+        DeviceListParser.CsvParseResult directHost = DeviceListParser.ParseCsv(
+            "\uFEFF192.168.1.1,ssh,admin,Pass1\r\n192.168.1.2,ssh,admin,Pass2",
+            defaultUseSsh: true);
+
+        Assert.Equal(2, directHost.Devices.Count);
+        Assert.Equal("192.168.1.1", directHost.Devices[0].Entry.Host);
+        Assert.Equal("192.168.1.2", directHost.Devices[1].Entry.Host);
+    }
+
+    [Fact]
+    public void コマンド一覧の先頭にBOMがあっても1行目のコメント判定とコマンドが壊れない()
+    {
+        CommandListParseResult withComment = CommandListParser.Parse("\uFEFF! コメント\r\nshow clock");
+        Assert.Equal(1, withComment.CommentLines);
+        Assert.Equal("show clock", Assert.Single(withComment.Commands).Command);
+
+        CommandListParseResult direct = CommandListParser.Parse("\uFEFFshow version\r\nshow clock");
+        Assert.Equal("show version", direct.Commands[0].Command);
     }
 }

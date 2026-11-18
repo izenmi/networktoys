@@ -274,4 +274,14 @@ public class TargetListParserTests
         Assert.Empty(result.Targets);
         Assert.True(result.HasErrors);
     }
+
+    [Fact]
+    public void Leading_bom_does_not_corrupt_the_first_line()
+    {
+        TargetListParseResult result = TargetListParser.Parse("\uFEFF# コメント\n192.168.1.1");
+
+        Assert.Equal("192.168.1.1", Assert.Single(result.Targets).Host);
+        Assert.Equal(1, result.CommentLines);
+        Assert.False(result.HasErrors);
+    }
 }

@@ -553,4 +553,18 @@ public class CiscoSessionTests
 
         Assert.Contains("使えない", Assert.Single(result.Commands).Problem);
     }
+
+    [Fact]
+    public async Task Transcript_keeps_outputs_beyond_one_megabyte()
+    {
+        // 生ログをそのまま保存ファイルにするため、1 MB を超える大物の出力が途中で切れないこと
+        string big = new('A', 1_200_000);
+        var device = new FakeCiscoDevice("\r\nR1#", AlreadyEnabled(text =>
+            text == "show tech" ? big : null));
+
+        DeviceCollectionResult result = await RunAsync(device, ["show tech"]);
+
+        Assert.True(result.Transcript.Length >= 1_200_000, $"Transcript truncated: {result.Transcript.Length}");
+        Assert.DoesNotContain("これ以上は記録していません", result.Transcript, StringComparison.Ordinal);
+    }
 }

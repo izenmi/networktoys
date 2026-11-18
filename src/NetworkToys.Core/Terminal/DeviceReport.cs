@@ -28,82 +28,24 @@ public sealed record DeviceCollectionResult(
     string Transcript = "");
 
 /// <summary>
-/// 収集結果を 1 台 1 ファイルのテキストにする。
+/// 収集結果から 1 台 1 ファイルのテキストを作る。
 ///
 /// <b>認証情報はここに一切入れない。</b>入れ物すら作らない
 /// （<see cref="DeviceCollectionResult"/> にパスワードのプロパティが無いのはそのため）。
+/// 機器から届いた生のログ（<see cref="DeviceCollectionResult.Transcript"/>）だけを保存する。
 /// </summary>
 public static class DeviceReport
 {
-    private const string Rule = "================================================================";
-
     public static string Render(DeviceCollectionResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        var text = new StringBuilder();
-        TimeSpan elapsed = result.FinishedAt - result.StartedAt;
+        if (string.IsNullOrEmpty(result.Transcript))
+            return "";
 
-        int done = result.Commands.Count(c => c.Problem is null);
-
-        text.AppendLine(Rule);
-        text.AppendLine("NetworkToys 収集ログ");
-        text.AppendLine($"機器      : {result.LearnedHostname ?? "(不明)"}  ({result.Host}:{result.Port})");
-        text.AppendLine($"接続      : {(result.UsedSsh ? "SSH" : "Telnet")} / ユーザー {Or(result.UserName, "(なし)")}");
-
-        if (result.HostKeyFingerprint is { Length: > 0 })
-            text.AppendLine($"ホスト鍵  : {result.HostKeyFingerprint}");
-
-        text.AppendLine($"開始      : {result.StartedAt:yyyy/MM/dd HH:mm:ss}");
-        text.AppendLine($"終了      : {result.FinishedAt:yyyy/MM/dd HH:mm:ss}  ({Describe(elapsed)})");
-        text.AppendLine(result.ReachedEnable
-            ? "特権      : ● 特権モード(#)"
-            : "特権      : ◌ ユーザーモード(>)　※ show running-config などの特権コマンドは断られます"
-              + "（enable のパスワードを確かめてください）");
-        text.AppendLine($"ページャ  : {result.PagerNote}");
-        text.AppendLine($"結果      : {result.Commands.Count} 本中 {done} 本成功");
-
-        if (result.FailureMessage is { Length: > 0 })
-            text.AppendLine($"失敗      : {result.FailureMessage}");
-
-        text.AppendLine(Rule);
-        text.AppendLine();
-
-        foreach (CommandResult command in result.Commands)
-        {
-            string head = $"===[ {command.Index}/{result.Commands.Count} ] {command.Command} ";
-            text.AppendLine(head.PadRight(Rule.Length, '='));
-
-            if (command.Problem is { Length: > 0 })
-                text.AppendLine($"[{command.Problem}]");
-
-            // 出力が空でも区画は出す(「打ったが何も返らなかった」ことが情報になる)
-            if (command.Output.Length > 0)
-            {
-                text.AppendLine(command.Output.TrimEnd('\n'));
-            }
-
-            int lines = command.Output.Length == 0
-                ? 0
-                : command.Output.TrimEnd('\n').Split('\n').Length;
-
-            text.AppendLine($"（{command.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)} 秒 / {lines} 行）");
-            text.AppendLine();
-        }
-
-        // 生の会話を最後に付ける。区画のずれや取りこぼしは、これが無いと切り分けられない
-        // （表の元になった文字を残す。WLC の「取得した出力」と同じ考え方）
-        if (result.Transcript is { Length: > 0 })
-        {
-            text.AppendLine(Rule);
-            text.AppendLine("生ログ（機器から届いた文字そのもの。ずれの切り分け用）");
-            text.AppendLine(Rule);
-            text.AppendLine(result.Transcript.TrimEnd('\n'));
-            text.AppendLine();
-        }
-
-        // Excel やメモ帳で開くので改行は CRLF に揃える
-        return text.ToString().Replace("\r\n", "\n", StringComparison.Ordinal)
+        // メモ帳などで開くので改行は CRLF に揃える
+        return result.Transcript
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace("\n", "\r\n", StringComparison.Ordinal);
     }
 
@@ -171,11 +113,4 @@ public static class DeviceReport
         "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
         "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     ];
-
-    private static string Or(string value, string fallback) => value.Length > 0 ? value : fallback;
-
-    private static string Describe(TimeSpan elapsed)
-        => elapsed.TotalMinutes >= 1
-            ? $"{(int)elapsed.TotalMinutes} 分 {elapsed.Seconds} 秒"
-            : $"{elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)} 秒";
 }

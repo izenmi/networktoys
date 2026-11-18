@@ -117,10 +117,13 @@ internal static class DeviceCollector
         {
             Directory.CreateDirectory(directory);
 
+            string content = DeviceReport.Render(result);
+            if (content.Length == 0) return null;
+
             string path = Path.Combine(directory, DeviceReport.FileName(result));
 
             // BOM が無いとメモ帳と Excel で文字化けする
-            File.WriteAllText(path, DeviceReport.Render(result),
+            File.WriteAllText(path, content,
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
             return null;

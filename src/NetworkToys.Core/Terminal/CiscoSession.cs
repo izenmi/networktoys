@@ -32,9 +32,8 @@ public sealed record CiscoSessionOptions
     /// <summary>ログインの待ち。</summary>
     public TimeSpan LoginTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>1 コマンドで返してよい最大の文字数。show tech-support は数十 MB になるので、
-    /// 4 MB では最後まで入らなかった(2026-08-21 報告)。</summary>
-    public int MaxOutputChars { get; init; } = 64 * 1024 * 1024;
+    /// <summary>1 コマンドで返してよい最大の文字数。null のときは上限なし（既定）。</summary>
+    public int? MaxOutputChars { get; init; }
 
     /// <summary>ページャに応答してよい回数。無効化が効かない機器で大物を取ると
     /// 2000 ページでは足りない。1 ページ約 24 行 × 20000 ≒ 48 万行まで受ける。</summary>
@@ -64,9 +63,6 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     /// （機器はパスワードをエコーしないので、届いた文字だけなら安全）。
     /// </summary>
     private readonly StringBuilder _transcript = new();
-
-    /// <summary>生ログの上限。これを超えたら以降は捨てる（1 台で数百 MB にしない）。</summary>
-    private const int MaxTranscript = 1024 * 1024;
     private readonly Lock _gate = new();
 
     /// <summary>読めたことの合図。読み取りは専用タスクが回し、本体はここで待つ。</summary>
@@ -426,7 +422,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                 break;
             }
 
-            if (BufferLength > options.MaxOutputChars)
+            if (options.MaxOutputChars is int maxChars && BufferLength > maxChars)
             {
                 problem = "出力が大きすぎたため打ち切りました。";
                 break;
@@ -673,8 +669,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
                     lock (_gate)
                     {
                         _buffer.Append(chars, 0, count);
-
-                        if (_transcript.Length < MaxTranscript) _transcript.Append(chars, 0, count);
+                        _transcript.Append(chars, 0, count);
                     }
 
                     _arrived.Release();
@@ -704,13 +699,7 @@ public sealed class CiscoSession(Stream io, CiscoSessionOptions options)
     private string Transcript()
     {
         lock (_gate)
-        {
-            string text = TerminalText.Clean(_transcript.ToString());
-
-            return _transcript.Length >= MaxTranscript
-                ? text + "\n（ここまで。これ以上は記録していません）\n"
-                : text;
-        }
+            return TerminalText.Clean(_transcript.ToString());
     }
 
     private string Clean()
