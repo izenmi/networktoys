@@ -70,9 +70,12 @@ internal static class DroppedText
 
         try
         {
-            // throwOnInvalidBytes: これが無いと、化けたまま「読めた」ことになる
+            // throwOnInvalidBytes: これが無いと、化けたまま「読めた」ことになる。
+            // UTF-8 の BOM（0xEF 0xBB 0xBF）は Encoding.GetString が \uFEFF として残すため、
+            // 1 行目の値やコメント判定に混ざらないよう先頭から落とす
             return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
-                .GetString(bytes);
+                .GetString(bytes)
+                .TrimStart('\uFEFF');
         }
         catch (DecoderFallbackException)
         {

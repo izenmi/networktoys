@@ -1150,6 +1150,30 @@ internal static class SelfTest
             }
         });
 
+        Check("収集: BOM 付き UTF-8 の CSV を取り込んでも 1 行目の宛先に BOM が残らない", () =>
+        {
+            var vm = new ViewModels.CollectViewModel();
+
+            try
+            {
+                while (vm.Rows.Count > 0) vm.RemoveDeviceCommand.Execute(vm.Rows[0]);
+
+                const string csv = "# コメント\r\n192.168.1.1,ssh,admin,Pass1,Enable1,機器1\r\n192.168.1.2,ssh,admin,Pass2,,機器2";
+                byte[] withBom = [.. System.Text.Encoding.UTF8.GetPreamble(), .. System.Text.Encoding.UTF8.GetBytes(csv)];
+
+                vm.ImportCsvText(Services.DroppedText.Decode(withBom));
+
+                Assert(vm.Rows.Count == 2, $"2 台のはずが {vm.Rows.Count} 台（コメント行を取り込んだ可能性）");
+                Assert(vm.Rows[0].Host == "192.168.1.1", $"1 行目の宛先にゴミが残っている: 「{vm.Rows[0].Host}」");
+                Assert(vm.Rows[0].Password == "Pass1", "1 行目のパスワードが読めていない");
+                Assert(vm.Rows[1].Host == "192.168.1.2", $"2 行目の宛先が違う: 「{vm.Rows[1].Host}」");
+            }
+            finally
+            {
+                while (vm.Rows.Count > 0) vm.RemoveDeviceCommand.Execute(vm.Rows[0]);
+            }
+        });
+
         Check("差分比較: 比較する対象に合わせた show が既定になる", () =>
         {
             Assert(Core.Work.DeviceComparison.CommandFor(Core.Work.DeviceOutputKind.Configuration)
@@ -1914,6 +1938,12 @@ internal static class SelfTest
 
             Assert(Services.DroppedText.Decode(utf8) == "ホスト名 の設定", "UTF-8 を読めていない");
 
+            // BOM 付き UTF-8 を読んでも先頭に \uFEFF が残らないこと（CSV の 1 行目の宛先に混ざる事故を防ぐ）
+            byte[] utf8Bom = [.. System.Text.Encoding.UTF8.GetPreamble(), .. utf8];
+
+            Assert(Services.DroppedText.Decode(utf8Bom) == "ホスト名 の設定",
+                   "BOM 付き UTF-8 の先頭に BOM が残っている");
+
             // UTF-8 として通らないバイト列は cp932 とみなす（Linux では Latin1 に落ちる）
             byte[] broken = [0x83, 0x7A, 0x83, 0x58, 0x83, 0x67];
 
@@ -2072,17 +2102,23 @@ internal static class SelfTest
             Assert(command.Output.Contains("Cisco IOS Software", StringComparison.Ordinal),
                    $"出力が取れていない: {command.Output}");
 
-            // 保存テキストに認証情報が混ざらないこと。
-            // 生ログ（届いた文字そのもの）を末尾に付けるようにしたので、
-            // 「Password:」のような機器側の文言は当然出る。<b>秘密そのもの</b>を名指しで見る
+            // 保存テキストは生ログだけを含み、認証情報が混ざらないこと。
+            // 機器側の文言（「Password:」など）は出るが、<b>秘密そのもの</b>は出ない。
             string report = Core.Terminal.DeviceReport.Render(result);
             Assert(!report.Contains("zq7-login-secret", StringComparison.Ordinal),
                    "保存テキストにログインのパスワードが混ざっている");
             Assert(!report.Contains("zq7-enable-secret", StringComparison.Ordinal),
                    "保存テキストに enable のパスワードが混ざっている");
 
-            // 生ログが付いていること（ずれの切り分けはこれが無いとできない）
-            Assert(report.Contains("生ログ", StringComparison.Ordinal), "生ログが付いていない");
+            // 生ログだけが保存され、整形ヘッダやコマンド区画が付かないこと
+            Assert(report.Contains("Cisco IOS Software", StringComparison.Ordinal),
+                   "生ログに機器の出力が含まれていない");
+            Assert(!report.Contains("NetworkToys 収集ログ", StringComparison.Ordinal),
+                   "生ログ以外に整形ヘッダが付いている");
+            Assert(!report.Contains("===[", StringComparison.Ordinal),
+                   "生ログ以外にコマンド区画が付いている");
+            Assert(!report.Contains("生ログ（", StringComparison.Ordinal),
+                   "生ログ以外に区切り見出しが付いている");
 
             log.AppendLine($"        {command.Output.Split('\n').Length} 行を取得");
         });

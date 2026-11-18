@@ -5619,7 +5619,7 @@
                                                     <TextBox Grid.Column="6" Text="{Binding Memo, UpdateSourceTrigger=PropertyChanged}"
                                                              FontSize="{DynamicResource Size.Caption}"
                                                              Margin="0,0,4,0" VerticalAlignment="Center"
-                                                             ToolTip="機器の覚え書き。集めたファイルの先頭にも書き出されます。" />
+                                                             ToolTip="機器の覚え書き。" />
 
                                                     <TextBlock Grid.Column="7" Text="{Binding Status}"
                                                                Style="{StaticResource ExpandableCell}"

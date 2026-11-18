@@ -50,6 +50,8 @@ public static class TargetListParser
         if (string.IsNullOrEmpty(text))
             return result;
 
+        text = text.TrimStart('\uFEFF');
+
         int lineNumber = 0;
 
         foreach (string rawLine in text.Split('\n'))
